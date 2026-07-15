@@ -4,6 +4,7 @@ import StarterKit from "@tiptap/starter-kit";
 import Toolbar from "./Toolbar.jsx";
 import Editor from "./Editor.jsx";
 import ReviewPanel from "./ReviewPanel.jsx";
+import { checkGrammar } from "./api.js";
 
 const storageKey = "lexicon:document";
 
@@ -20,6 +21,7 @@ function selectionText(editor) {
 export default function App() {
   const [selectedText, setSelectedText] = useState("");
   const [activeTool, setActiveTool] = useState("");
+  const [grammarMatches, setGrammarMatches] = useState([]);
 
   const editor = useEditor({
     extensions: [StarterKit],
@@ -44,8 +46,19 @@ export default function App() {
     };
   }, [editor]);
 
+  async function runGrammarCheck() {
+    if (!editor) {
+      return;
+    }
+    const matches = await checkGrammar(editor.getText());
+    setGrammarMatches(matches);
+  }
+
   function handleToolClick(name) {
     setActiveTool((current) => (current === name ? "" : name));
+    if (name === "Proofread") {
+      runGrammarCheck();
+    }
   }
 
   return (
@@ -72,6 +85,7 @@ export default function App() {
           <ReviewPanel
             selectedText={selectedText}
             activeTool={activeTool}
+            grammarMatches={grammarMatches}
             onClear={() => setActiveTool("")}
           />
         </aside>
