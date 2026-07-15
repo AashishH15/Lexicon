@@ -50,10 +50,16 @@ export default function Toolbar() {
               <li key={name}>
                 <button
                   type="button"
-                  className="flex w-full items-center gap-2.5 rounded px-2 py-1.5 text-left text-sm text-ink hover:bg-hairline/60"
+                  className="group flex w-full items-center gap-2.5 rounded px-2 py-1.5 text-left text-sm text-ink hover:bg-hairline/60"
                 >
-                  <Icon size={16} weight="bold" className="text-muted" />
-                  {name}
+                  <Icon
+                    size={16}
+                    weight="bold"
+                    className="text-muted transition-transform duration-200 group-hover:scale-125"
+                  />
+                  <span className="transition-transform duration-200 group-hover:scale-105">
+                    {name}
+                  </span>
                 </button>
               </li>
             ))}

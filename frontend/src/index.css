@@ -8,3 +8,54 @@
     line-height: 1.6;
   }
 }
+
+@layer components {
+  .ProseMirror {
+    outline: none;
+    min-height: 100%;
+  }
+
+  .ProseMirror:focus {
+    outline: none;
+  }
+
+  .ProseMirror h1 {
+    @apply font-serif;
+    font-size: 32px;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+    margin: 0.6em 0 0.3em;
+  }
+
+  .ProseMirror h2 {
+    @apply font-serif;
+    font-size: 24px;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+    margin: 0.5em 0 0.3em;
+  }
+
+  .ProseMirror ul {
+    list-style: disc;
+    padding-left: 1.5rem;
+    margin: 0.4em 0;
+  }
+
+  .ProseMirror ol {
+    list-style: decimal;
+    padding-left: 1.5rem;
+    margin: 0.4em 0;
+  }
+
+  .ProseMirror li {
+    margin: 0.2em 0;
+  }
+
+  .ProseMirror li p {
+    margin: 0;
+  }
+
+  .ProseMirror p {
+    margin: 0.4em 0;
+  }
+}
