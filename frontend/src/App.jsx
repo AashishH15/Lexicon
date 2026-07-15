@@ -36,6 +36,7 @@ const storageKey = "lexicon:document";
 const languageKey = "lexicon:language";
 const fontSizeKey = "lexicon:fontSize";
 const focusModeKey = "lexicon:focusMode";
+const lineSpacingKey = "lexicon:lineSpacing";
 
 function loadContent() {
   const saved = localStorage.getItem(storageKey);
@@ -55,6 +56,10 @@ function loadFocusMode() {
   return localStorage.getItem(focusModeKey) === "true";
 }
 
+function loadLineSpacing() {
+  return Number(localStorage.getItem(lineSpacingKey)) || 1.6;
+}
+
 function selectionText(editor) {
   const { from, to } = editor.state.selection;
   return editor.state.doc.textBetween(from, to, " ");
@@ -69,6 +74,7 @@ export default function App() {
   const [language, setLanguage] = useState(loadLanguage);
   const [fontSize, setFontSize] = useState(loadFontSize);
   const [focusMode, setFocusMode] = useState(loadFocusMode);
+  const [lineSpacing, setLineSpacing] = useState(loadLineSpacing);
   const [editorFocused, setEditorFocused] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
@@ -222,6 +228,11 @@ export default function App() {
     localStorage.setItem(focusModeKey, String(next));
   }
 
+  function handleLineSpacingChange(next) {
+    setLineSpacing(next);
+    localStorage.setItem(lineSpacingKey, String(next));
+  }
+
   useEffect(() => {
     if (activeTool === "Proofread") {
       runGrammarCheck();
@@ -345,7 +356,7 @@ export default function App() {
         </aside>
 
         <section className="flex-1 min-w-0 p-6">
-          <Editor editor={editor} fontSize={fontSize} />
+          <Editor editor={editor} fontSize={fontSize} lineSpacing={lineSpacing} />
         </section>
 
         <aside className={"w-80 shrink-0 border-l border-hairline " + panelDim}>
@@ -386,6 +397,8 @@ export default function App() {
         onLanguageChange={handleLanguageChange}
         fontSize={fontSize}
         onFontSizeChange={handleFontSizeChange}
+        lineSpacing={lineSpacing}
+        onLineSpacingChange={handleLineSpacingChange}
         focusMode={focusMode}
         onFocusModeChange={handleFocusModeChange}
         onClose={() => setSettingsOpen(false)}

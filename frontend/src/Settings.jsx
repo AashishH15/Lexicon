@@ -14,6 +14,11 @@ export const LANGUAGES = [
 
 export const FONT_SIZES = [14, 16, 18];
 
+export const LINE_SPACINGS = [
+  { value: 1.6, label: "Standard" },
+  { value: 1.8, label: "Comfortable" },
+];
+
 const isMac =
   typeof navigator !== "undefined" && /Mac|iPod|iPhone|iPad/.test(navigator.platform);
 const mod = isMac ? "Cmd" : "Ctrl";
@@ -32,6 +37,8 @@ export default function Settings({
   onLanguageChange,
   fontSize,
   onFontSizeChange,
+  lineSpacing,
+  onLineSpacingChange,
   focusMode,
   onFocusModeChange,
   onClose,
@@ -144,6 +151,33 @@ export default function Settings({
                 onChange={onFocusModeChange}
                 label="Toggle focus mode"
               />
+            </div>
+          </div>
+
+          <div className="mt-6">
+            <p className="font-mono text-[10px] uppercase tracking-widest text-muted">
+              Line Spacing
+            </p>
+            <p className="mt-1 font-sans text-xs text-muted">
+              Adjust text row height for layout readability.
+            </p>
+            <div className="mt-3 flex overflow-hidden rounded border border-hairline">
+              {LINE_SPACINGS.map((option, i) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => onLineSpacingChange(option.value)}
+                  className={
+                    "flex flex-1 items-center justify-center py-2 font-mono text-xs uppercase leading-none tracking-widest transition-colors " +
+                    (i > 0 ? "border-l border-hairline " : "") +
+                    (lineSpacing === option.value
+                      ? "bg-pale-blue text-ink"
+                      : "bg-canvas text-muted hover:text-ink")
+                  }
+                >
+                  {option.label}
+                </button>
+              ))}
             </div>
           </div>
 
