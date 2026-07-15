@@ -37,7 +37,7 @@ const groups = [
   },
 ];
 
-export default function Toolbar() {
+export default function Toolbar({ editor, activeTool, onToolClick }) {
   return (
     <nav className="flex flex-col gap-6">
       {groups.map((group) => (
@@ -50,12 +50,19 @@ export default function Toolbar() {
               <li key={name}>
                 <button
                   type="button"
-                  className="group flex w-full items-center gap-2.5 rounded px-2 py-1.5 text-left text-sm text-ink hover:bg-hairline/60"
+                  onClick={() => onToolClick(name)}
+                  aria-pressed={activeTool === name}
+                  className={
+                    "group flex w-full items-center gap-2.5 rounded px-2 py-1.5 text-left text-sm transition-colors " +
+                    (activeTool === name
+                      ? "bg-ink text-white"
+                      : "text-ink hover:bg-hairline/60")
+                  }
                 >
                   <Icon
                     size={16}
                     weight="bold"
-                    className="text-muted transition-transform duration-200 group-hover:scale-125"
+                    className="transition-transform duration-200 group-hover:scale-125"
                   />
                   <span className="transition-transform duration-200 group-hover:scale-105">
                     {name}

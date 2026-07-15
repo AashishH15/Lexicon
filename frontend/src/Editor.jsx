@@ -1,23 +1,7 @@
-import { useEditor, EditorContent } from "@tiptap/react";
-import StarterKit from "@tiptap/starter-kit";
+import { EditorContent } from "@tiptap/react";
 import FormatToolbar from "./FormatToolbar.jsx";
 
-const storageKey = "lexicon:document";
-
-function loadContent() {
-  const saved = localStorage.getItem(storageKey);
-  return saved ?? "<p></p>";
-}
-
-export default function Editor() {
-  const editor = useEditor({
-    extensions: [StarterKit],
-    content: loadContent(),
-    onUpdate: ({ editor }) => {
-      localStorage.setItem(storageKey, editor.getHTML());
-    },
-  });
-
+export default function Editor({ editor }) {
   return (
     <div className="flex flex-col h-full">
       <p className="font-mono text-[10px] uppercase tracking-[0.08em] text-muted mb-3">
