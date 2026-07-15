@@ -5,6 +5,12 @@ import Toolbar from "./Toolbar.jsx";
 import Editor from "./Editor.jsx";
 import ReviewPanel from "./ReviewPanel.jsx";
 import { checkGrammar } from "./api.js";
+import {
+  GrammarHighlight,
+  buildTextWithMap,
+  applyGrammarDecorations,
+  clearGrammarDecorations,
+} from "./grammarHighlight.js";
 
 const storageKey = "lexicon:document";
 
@@ -24,7 +30,12 @@ export default function App() {
   const [grammarMatches, setGrammarMatches] = useState([]);
 
   const editor = useEditor({
-    extensions: [StarterKit],
+    extensions: [StarterKit, GrammarHighlight],
+    editorProps: {
+      attributes: {
+        spellcheck: "false",
+      },
+    },
     content: loadContent(),
     onUpdate: ({ editor }) => {
       localStorage.setItem(storageKey, editor.getHTML());
@@ -38,11 +49,9 @@ export default function App() {
     const syncSelection = () => setSelectedText(selectionText(editor));
     editor.on("selectionUpdate", syncSelection);
     editor.on("update", syncSelection);
-    editor.on("blur", () => setActiveTool(""));
     return () => {
       editor.off("selectionUpdate", syncSelection);
       editor.off("update", syncSelection);
-      editor.off("blur", () => setActiveTool(""));
     };
   }, [editor]);
 
@@ -50,14 +59,22 @@ export default function App() {
     if (!editor) {
       return;
     }
-    const matches = await checkGrammar(editor.getText());
+    const { text, map } = buildTextWithMap(editor.state.doc);
+    const matches = await checkGrammar(text);
     setGrammarMatches(matches);
+    applyGrammarDecorations(editor, matches, map);
   }
 
   function handleToolClick(name) {
-    setActiveTool((current) => (current === name ? "" : name));
+    const nextTool = activeTool === name ? "" : name;
+    setActiveTool(nextTool);
     if (name === "Proofread") {
-      runGrammarCheck();
+      if (nextTool === "Proofread") {
+        runGrammarCheck();
+      } else if (editor) {
+        setGrammarMatches([]);
+        clearGrammarDecorations(editor);
+      }
     }
   }
 
@@ -86,7 +103,13 @@ export default function App() {
             selectedText={selectedText}
             activeTool={activeTool}
             grammarMatches={grammarMatches}
-            onClear={() => setActiveTool("")}
+            onClear={() => {
+              setActiveTool("");
+              setGrammarMatches([]);
+              if (editor) {
+                clearGrammarDecorations(editor);
+              }
+            }}
           />
         </aside>
       </main>
