@@ -81,6 +81,36 @@ export function findErrorRange(editor, id) {
   return { from: found.from, to: found.to };
 }
 
+export function dismissError(editor, id) {
+  const tr = editor.state.tr.setMeta(grammarPluginKey, { removeId: id });
+  editor.view.dispatch(tr);
+}
+
+// Scrolls the editor to a given error and briefly flashes it so the user can
+// see where in the document the suggestion applies. The flash is applied as a
+// ProseMirror decoration rather than a raw DOM class, because ProseMirror owns
+// the decoration spans and would otherwise repaint over a manual class.
+export function focusError(editor, id) {
+  const range = findErrorRange(editor, id);
+  if (!range) {
+    return;
+  }
+  const errorEl = editor.view.dom.querySelector(
+    `.lex-error[data-error-id="${id}"]`,
+  );
+  if (errorEl) {
+    errorEl.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+  editor.view.dispatch(
+    editor.state.tr.setMeta(grammarPluginKey, { flash: range }),
+  );
+  setTimeout(() => {
+    editor.view.dispatch(
+      editor.state.tr.setMeta(grammarPluginKey, { unflash: true }),
+    );
+  }, 1200);
+}
+
 export function applySuggestion(editor, id, replacement) {
   const range = findErrorRange(editor, id);
   if (!range) {
@@ -121,6 +151,19 @@ export const GrammarHighlight = Extension.create({
                 .find()
                 .filter((deco) => deco.spec && deco.spec.id === meta.removeId);
               set = set.remove(gone);
+            }
+            if (meta && meta.flash) {
+              const flash = Decoration.inline(
+                meta.flash.from,
+                meta.flash.to,
+                { class: "lex-error-flash" },
+                { flash: true },
+              );
+              set = set.add(tr.doc, [flash]);
+            }
+            if (meta && meta.unflash) {
+              const flashes = set.find().filter((deco) => deco.spec && deco.spec.flash);
+              set = set.remove(flashes);
             }
             return set;
           },

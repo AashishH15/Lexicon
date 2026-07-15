@@ -8,7 +8,7 @@ export default function Editor({ editor }) {
         Source Document
       </p>
       <FormatToolbar editor={editor} />
-      <div className="flex-1 overflow-auto rounded border border-hairline bg-white">
+      <div className="lex-scroll flex-1 overflow-auto rounded border border-hairline bg-white">
         <EditorContent
           editor={editor}
           className="h-full px-4 py-3 leading-relaxed text-ink [&_.ProseMirror]:outline-none [&_.ProseMirror]:min-h-full"

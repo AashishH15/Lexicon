@@ -12,7 +12,21 @@ import {
   applyGrammarDecorations,
   clearGrammarDecorations,
   applySuggestion,
+  dismissError,
+  focusError,
 } from "./grammarHighlight.js";
+
+function categoryLabel(match) {
+  const id = (match.rule?.id || "").toUpperCase();
+  const description = (match.rule?.description || "").toLowerCase();
+  if (id.includes("SPELL") || description.includes("spell") || description.includes("typo")) {
+    return "Spelling";
+  }
+  if (id.includes("PUNCT") || description.includes("punctuation")) {
+    return "Punctuation";
+  }
+  return "Grammar";
+}
 
 const storageKey = "lexicon:document";
 
@@ -84,7 +98,12 @@ export default function App() {
     }
     const { text, map } = buildTextWithMap(editor.state.doc);
     const rawMatches = await checkGrammar(text);
-    const matches = rawMatches.map((match, i) => ({ ...match, id: i }));
+    const matches = rawMatches.map((match, i) => ({
+      ...match,
+      id: i,
+      original: text.slice(match.offset, match.offset + match.length),
+      category: categoryLabel(match),
+    }));
     setGrammarMatches(matches);
     applyGrammarDecorations(editor, matches, map);
   }
@@ -96,6 +115,22 @@ export default function App() {
     applySuggestion(editor, match.id, replacement);
     setGrammarMatches((current) => current.filter((m) => m.id !== match.id));
     setHoveredError(null);
+  }
+
+  function handleDismiss(match) {
+    if (!editor) {
+      return;
+    }
+    dismissError(editor, match.id);
+    setGrammarMatches((current) => current.filter((m) => m.id !== match.id));
+    setHoveredError(null);
+  }
+
+  function handleLocate(match) {
+    if (!editor) {
+      return;
+    }
+    focusError(editor, match.id);
   }
 
   function handleToolClick(name) {
@@ -127,16 +162,18 @@ export default function App() {
           <Toolbar editor={editor} activeTool={activeTool} onToolClick={handleToolClick} />
         </aside>
 
-        <section className="flex-1 min-w-0 border-r border-hairline p-6">
+        <section className="flex-1 min-w-0 p-6">
           <Editor editor={editor} />
         </section>
 
-        <aside className="w-80 shrink-0 p-4">
+        <aside className="w-80 shrink-0 border-l border-hairline">
           <ReviewPanel
             selectedText={selectedText}
             activeTool={activeTool}
             grammarMatches={grammarMatches}
             onApply={handleApplySuggestion}
+            onDismiss={handleDismiss}
+            onLocate={handleLocate}
             onClear={() => {
               setActiveTool("");
               setGrammarMatches([]);
