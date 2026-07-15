@@ -1,10 +1,23 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from languagetool import check_text
+from languagetool import check_text, warm_up
 
-app = FastAPI()
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Pre-launch the LanguageTool JVM on boot so the first user request
+    # doesn't pay the multi-second cold-start cost. A failure here (e.g. the
+    # JVM isn't installed) shouldn't crash the server; the first real request
+    # will attempt to warm up again.
+    warm_up()
+    yield
+
+
+app = FastAPI(lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,

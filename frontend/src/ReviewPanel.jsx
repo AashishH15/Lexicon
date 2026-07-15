@@ -5,6 +5,7 @@ export default function ReviewPanel({
   editor,
   activeTool,
   grammarMatches,
+  checking,
   onApply,
   onDismiss,
   onLocate,
@@ -40,6 +41,10 @@ export default function ReviewPanel({
         {!activeTool ? (
           <p className="font-mono text-xs lowercase tracking-[0.04em] text-muted">
             status :: awaiting selection...
+          </p>
+        ) : checking ? (
+          <p className="font-mono text-xs lowercase tracking-[0.04em] text-muted">
+            status :: initializing engine...
           </p>
         ) : count === 0 ? (
           <p className="font-mono text-xs lowercase tracking-[0.04em] text-muted">

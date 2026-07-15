@@ -69,6 +69,7 @@ export default function App() {
   const [selectedText, setSelectedText] = useState("");
   const [activeTool, setActiveTool] = useState("");
   const [grammarMatches, setGrammarMatches] = useState([]);
+  const [checking, setChecking] = useState(false);
   const [hoveredError, setHoveredError] = useState(null);
   const [activeErrorId, setActiveErrorId] = useState(null);
   const [language, setLanguage] = useState(loadLanguage);
@@ -162,8 +163,10 @@ export default function App() {
     if (!editor) {
       return;
     }
-    const { text, map } = buildTextWithMap(editor.state.doc);
-    const rawMatches = await checkGrammar(text, language);
+    setChecking(true);
+    try {
+      const { text, map } = buildTextWithMap(editor.state.doc);
+      const rawMatches = await checkGrammar(text, language);
     const matches = rawMatches.map((match, i) => ({
       ...match,
       id: i,
@@ -172,6 +175,9 @@ export default function App() {
     }));
     setGrammarMatches(matches);
     applyGrammarDecorations(editor, matches, map, activeErrorId);
+    } finally {
+      setChecking(false);
+    }
   }
 
   function handleApplySuggestion(match, replacement) {
@@ -365,6 +371,7 @@ export default function App() {
             selectedText={selectedText}
             activeTool={activeTool}
             grammarMatches={grammarMatches}
+            checking={checking}
             onApply={handleApplySuggestion}
             onDismiss={handleDismiss}
             onLocate={handleLocate}

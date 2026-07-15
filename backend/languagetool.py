@@ -7,6 +7,7 @@ CHECK_URL = f"{SERVER_URL}/v2/check" if SERVER_URL else None
 REQUEST_TIMEOUT = 30
 
 _tool = None
+_warm = False
 
 
 def _get_tool():
@@ -16,6 +17,23 @@ def _get_tool():
 
         _tool = language_tool_python.LanguageTool("en-US")
     return _tool
+
+
+def warm_up():
+    """Launch the LanguageTool JVM up front so the first check is fast.
+
+    Safe to call repeatedly; only the first successful launch does work. A
+    failure (missing JVM, etc.) is swallowed so it doesn't crash startup, and
+    the next check will retry lazily.
+    """
+    global _warm
+    if _warm:
+        return
+    try:
+        _get_tool()
+        _warm = True
+    except Exception:
+        _warm = False
 
 
 def check_text(text, language="en-US"):
