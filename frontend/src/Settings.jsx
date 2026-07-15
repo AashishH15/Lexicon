@@ -88,7 +88,7 @@ export default function Settings({
         <div
           ref={scrollRef}
           className={
-            "scrollbar-none flex-1 overflow-y-auto px-6 py-6 pr-2 " +
+            "scrollbar-none flex-1 overflow-y-auto pl-6 pr-6 py-6 " +
             (overflowing ? "lex-fade-scroll" : "")
           }
         >
