@@ -9,4 +9,5 @@ module.exports = {
   parserOptions: { ecmaVersion: "latest", sourceType: "module" },
   settings: { react: { version: "detect" } },
   plugins: ["react", "react-refresh"],
+  ignorePatterns: ["dist", "node_modules"],
 };

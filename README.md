@@ -1,18 +1,18 @@
-# Grammar Checker v3
+# Lexicon
 
 A local-first AI writing assistant that runs entirely on your machine. No
 accounts, no cloud, no usage costs. The UI is a web app inspired by the web
 versions of Grammarly and Quillbot, with the kind of writing tools Apple
 ships in its "Writing Tools" feature.
 
-## Why a v3
+## Why Lexicon
 
 The earlier versions were desktop Tkinter apps with weak engines:
 
 - v1 ([GrammarCheck](https://github.com/AashishH15/GrammarCheck)) used LanguageTool for grammar but had no AI rewriting.
 - v2 ([Grammar-Checker-v2](https://github.com/AashishH15/Grammar-Checker-v2)) used TextBlob, which is really just a spellchecker.
 
-Both were dated desktop UIs. v3 moves to a browser-based app and pairs a real
+Both were dated desktop UIs. Lexicon moves to a browser-based app and pairs a real
 grammar engine with a local LLM for rewriting and tone.
 
 ## What it does

@@ -1,5 +1,5 @@
 {
-  "name": "grammar-checker-frontend",
+  "name": "lexicon-frontend",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -11,6 +11,7 @@
     "format": "prettier --write ."
   },
   "dependencies": {
+    "@phosphor-icons/react": "^2.1.10",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
