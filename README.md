@@ -43,3 +43,13 @@ real Grammarly.
 
 Everything runs offline. The only setup step is pulling a model once with
 `ollama pull <model>`.
+
+## Running the backend
+
+```
+cd backend
+pip install -r requirements.txt
+uvicorn main:app --reload
+```
+
+The API is then available at http://localhost:8000.
