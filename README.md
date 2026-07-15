@@ -53,3 +53,13 @@ uvicorn main:app --reload
 ```
 
 The API is then available at http://localhost:8000.
+
+## Running the frontend
+
+```
+cd frontend
+npm install
+npm run dev
+```
+
+The app is then available at http://localhost:5173.
