@@ -10,7 +10,16 @@ export const LANGUAGES = [
   { code: "en-ZA", label: "English (South Africa)" },
 ];
 
-export default function Settings({ open, language, onLanguageChange, onClose }) {
+export const FONT_SIZES = [14, 16, 18];
+
+export default function Settings({
+  open,
+  language,
+  onLanguageChange,
+  fontSize,
+  onFontSizeChange,
+  onClose,
+}) {
   if (!open) {
     return null;
   }
@@ -51,6 +60,33 @@ export default function Settings({ open, language, onLanguageChange, onClose }) 
               value={language}
               onChange={onLanguageChange}
             />
+          </div>
+        </div>
+
+        <div className="mt-6">
+          <p className="font-mono text-[10px] uppercase tracking-widest text-muted">
+            Font Size
+          </p>
+          <p className="mt-1 font-sans text-xs text-muted">
+            Scales the text in the editor for comfortable reading.
+          </p>
+          <div className="mt-3 flex overflow-hidden rounded border border-hairline">
+            {FONT_SIZES.map((size, i) => (
+              <button
+                key={size}
+                type="button"
+                onClick={() => onFontSizeChange(size)}
+                className={
+                  "flex flex-1 items-center justify-center py-2 font-mono text-xs uppercase leading-none tracking-widest transition-colors " +
+                  (i > 0 ? "border-l border-hairline " : "") +
+                  (fontSize === size
+                    ? "bg-pale-blue text-ink"
+                    : "bg-canvas text-muted hover:text-ink")
+                }
+              >
+                {size}px
+              </button>
+            ))}
           </div>
         </div>
       </div>

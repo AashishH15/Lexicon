@@ -32,6 +32,7 @@ function categoryLabel(match) {
 
 const storageKey = "lexicon:document";
 const languageKey = "lexicon:language";
+const fontSizeKey = "lexicon:fontSize";
 
 function loadContent() {
   const saved = localStorage.getItem(storageKey);
@@ -40,6 +41,11 @@ function loadContent() {
 
 function loadLanguage() {
   return localStorage.getItem(languageKey) ?? "en-US";
+}
+
+function loadFontSize() {
+  const saved = Number(localStorage.getItem(fontSizeKey));
+  return saved || 16;
 }
 
 function selectionText(editor) {
@@ -53,6 +59,7 @@ export default function App() {
   const [grammarMatches, setGrammarMatches] = useState([]);
   const [hoveredError, setHoveredError] = useState(null);
   const [language, setLanguage] = useState(loadLanguage);
+  const [fontSize, setFontSize] = useState(loadFontSize);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   const editor = useEditor({
@@ -147,6 +154,11 @@ export default function App() {
     localStorage.setItem(languageKey, nextLanguage);
   }
 
+  function handleFontSizeChange(nextSize) {
+    setFontSize(nextSize);
+    localStorage.setItem(fontSizeKey, String(nextSize));
+  }
+
   useEffect(() => {
     if (activeTool === "Proofread") {
       runGrammarCheck();
@@ -207,7 +219,7 @@ export default function App() {
         </aside>
 
         <section className="flex-1 min-w-0 p-6">
-          <Editor editor={editor} />
+          <Editor editor={editor} fontSize={fontSize} />
         </section>
 
         <aside className="w-80 shrink-0 border-l border-hairline">
@@ -244,6 +256,8 @@ export default function App() {
         open={settingsOpen}
         language={language}
         onLanguageChange={handleLanguageChange}
+        fontSize={fontSize}
+        onFontSizeChange={handleFontSizeChange}
         onClose={() => setSettingsOpen(false)}
       />
     </div>
