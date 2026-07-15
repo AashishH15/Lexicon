@@ -1,5 +1,6 @@
 import { X } from "@phosphor-icons/react";
 import LanguageDropdown from "./LanguageDropdown.jsx";
+import Toggle from "./Toggle.jsx";
 
 export const LANGUAGES = [
   { code: "en-US", label: "English (United States)" },
@@ -18,6 +19,8 @@ export default function Settings({
   onLanguageChange,
   fontSize,
   onFontSizeChange,
+  focusMode,
+  onFocusModeChange,
   onClose,
 }) {
   if (!open) {
@@ -87,6 +90,25 @@ export default function Settings({
                 {size}px
               </button>
             ))}
+          </div>
+        </div>
+
+        <div className="mt-6 flex items-start justify-between gap-4">
+          <div>
+            <p className="font-mono text-[10px] uppercase tracking-widest text-muted">
+              Focus Mode
+            </p>
+            <p className="mt-1 font-sans text-xs text-muted">
+              Fades the interface layout while typing to maximize core writing
+              concentration.
+            </p>
+          </div>
+          <div className="pt-0.5">
+            <Toggle
+              checked={focusMode}
+              onChange={onFocusModeChange}
+              label="Toggle focus mode"
+            />
           </div>
         </div>
       </div>

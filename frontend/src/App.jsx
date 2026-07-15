@@ -33,6 +33,7 @@ function categoryLabel(match) {
 const storageKey = "lexicon:document";
 const languageKey = "lexicon:language";
 const fontSizeKey = "lexicon:fontSize";
+const focusModeKey = "lexicon:focusMode";
 
 function loadContent() {
   const saved = localStorage.getItem(storageKey);
@@ -48,6 +49,10 @@ function loadFontSize() {
   return saved || 16;
 }
 
+function loadFocusMode() {
+  return localStorage.getItem(focusModeKey) === "true";
+}
+
 function selectionText(editor) {
   const { from, to } = editor.state.selection;
   return editor.state.doc.textBetween(from, to, " ");
@@ -60,6 +65,8 @@ export default function App() {
   const [hoveredError, setHoveredError] = useState(null);
   const [language, setLanguage] = useState(loadLanguage);
   const [fontSize, setFontSize] = useState(loadFontSize);
+  const [focusMode, setFocusMode] = useState(loadFocusMode);
+  const [editorFocused, setEditorFocused] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   const editor = useEditor({
@@ -80,11 +87,17 @@ export default function App() {
       return;
     }
     const syncSelection = () => setSelectedText(selectionText(editor));
+    const handleFocus = () => setEditorFocused(true);
+    const handleBlur = () => setEditorFocused(false);
     editor.on("selectionUpdate", syncSelection);
     editor.on("update", syncSelection);
+    editor.on("focus", handleFocus);
+    editor.on("blur", handleBlur);
     return () => {
       editor.off("selectionUpdate", syncSelection);
       editor.off("update", syncSelection);
+      editor.off("focus", handleFocus);
+      editor.off("blur", handleBlur);
     };
   }, [editor]);
 
@@ -159,6 +172,11 @@ export default function App() {
     localStorage.setItem(fontSizeKey, String(nextSize));
   }
 
+  function handleFocusModeChange(next) {
+    setFocusMode(next);
+    localStorage.setItem(focusModeKey, String(next));
+  }
+
   useEffect(() => {
     if (activeTool === "Proofread") {
       runGrammarCheck();
@@ -181,6 +199,11 @@ export default function App() {
     }
   }
 
+  const dimmed = focusMode && editorFocused && grammarMatches.length === 0;
+  const panelDim =
+    "transition-opacity duration-700 ease-in-out " +
+    (dimmed ? "opacity-[0.02] hover:opacity-100" : "opacity-100");
+
   return (
     <div className="flex flex-col h-screen bg-canvas text-ink">
       <header className="flex items-center justify-between px-6 h-14 border-b border-hairline">
@@ -201,7 +224,7 @@ export default function App() {
       </header>
 
       <main className="flex flex-1 min-h-0">
-        <aside className="flex w-64 shrink-0 flex-col justify-between border-r border-hairline p-4">
+        <aside className={"flex w-64 shrink-0 flex-col justify-between border-r border-hairline p-4 " + panelDim}>
           <Toolbar editor={editor} activeTool={activeTool} onToolClick={handleToolClick} />
           <button
             type="button"
@@ -222,7 +245,7 @@ export default function App() {
           <Editor editor={editor} fontSize={fontSize} />
         </section>
 
-        <aside className="w-80 shrink-0 border-l border-hairline">
+        <aside className={"w-80 shrink-0 border-l border-hairline " + panelDim}>
           <ReviewPanel
             editor={editor}
             selectedText={selectedText}
@@ -258,6 +281,8 @@ export default function App() {
         onLanguageChange={handleLanguageChange}
         fontSize={fontSize}
         onFontSizeChange={handleFontSizeChange}
+        focusMode={focusMode}
+        onFocusModeChange={handleFocusModeChange}
         onClose={() => setSettingsOpen(false)}
       />
     </div>
