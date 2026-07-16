@@ -111,6 +111,8 @@ export default function App() {
   const activeToolRef = useRef(activeTool);
   const scheduleCheckRef = useRef(() => {});
   const checkTimer = useRef(null);
+  const checkAbortRef = useRef(null);
+  const checkingRef = useRef(false);
   const userDictionaryRef = useRef(userDictionary);
   activeToolRef.current = activeTool;
   userDictionaryRef.current = userDictionary;
@@ -225,10 +227,13 @@ export default function App() {
     },
     content: loadContent(),
     onUpdate: ({ editor }) => {
+      const text = editor.getText();
       localStorage.setItem(storageKey, editor.getHTML());
-      setDocText(editor.getText());
-      setToneResult(detectTone(editor.getText()));
-      scheduleCheckRef.current();
+      setDocText(text);
+      setToneResult(detectTone(text));
+      // Smart trigger: once a word or sentence is clearly finished
+      const smartTrigger = /[.?\s]$/.test(text);
+      scheduleCheckRef.current(smartTrigger);
     },
   });
 
@@ -293,22 +298,45 @@ export default function App() {
     if (!editor) {
       return;
     }
+    if (checkingRef.current) {
+      return;
+    }
+    // Cancel any prior in-flight fetch so a superseded check can't linger.
+    if (checkAbortRef.current) {
+      checkAbortRef.current.abort();
+    }
+    const abortController = new AbortController();
+    checkAbortRef.current = abortController;
+    checkingRef.current = true;
     if (!silent) {
       setChecking(true);
     }
     try {
       const { text, map } = buildTextWithMap(editor.state.doc);
       const ignore = ignoreOverride ?? userDictionaryRef.current;
-      const rawMatches = await checkGrammar(text, language, ignore);
-    const matches = rawMatches.map((match, i) => ({
-      ...match,
-      id: i,
-      original: text.slice(match.offset, match.offset + match.length),
-      category: categoryLabel(match),
-    }));
-    setGrammarMatches(matches);
-    applyGrammarDecorations(editor, matches, map, activeErrorId);
+      const rawMatches = await checkGrammar(
+        text,
+        language,
+        ignore,
+        abortController.signal,
+      );
+      const matches = rawMatches.map((match, i) => ({
+        ...match,
+        id: i,
+        original: text.slice(match.offset, match.offset + match.length),
+        category: categoryLabel(match),
+      }));
+      setGrammarMatches(matches);
+      applyGrammarDecorations(editor, matches, map, activeErrorId);
+    } catch (error) {
+      if (error?.name !== "AbortError") {
+        throw error;
+      }
     } finally {
+      if (checkAbortRef.current === abortController) {
+        checkAbortRef.current = null;
+      }
+      checkingRef.current = false;
       if (!silent) {
         setChecking(false);
       }
@@ -480,19 +508,23 @@ export default function App() {
 
   proofreadRef.current = triggerProofread;
 
-  // Reactive sync: after 800ms of typing silence, re-run the grammar pass in
-  // the background without flashing the loading state. Only fires while
-  // Proofread is active, so the editor stays quiet otherwise.
-  function scheduleCheck() {
+  // Reactive grammar sync while Proofread is active. 
+  // 300-400ms is the sweet spot
+  const GRAMMAR_DEBOUNCE_MS = 350;
+  function scheduleCheck(immediate = false) {
     if (activeToolRef.current !== "Proofread") {
       return;
     }
     if (checkTimer.current) {
       clearTimeout(checkTimer.current);
     }
+    if (immediate) {
+      runGrammarCheck(true);
+      return;
+    }
     checkTimer.current = setTimeout(() => {
       runGrammarCheck(true);
-    }, 800);
+    }, GRAMMAR_DEBOUNCE_MS);
   }
 
   scheduleCheckRef.current = scheduleCheck;
