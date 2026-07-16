@@ -23,9 +23,13 @@ import {
   TextAlignRight,
   TextAlignJustify,
   Quotes,
+  ArrowCounterClockwise,
+  ArrowClockwise,
 } from "@phosphor-icons/react";
 
 const buttons = [
+  { icon: ArrowCounterClockwise, label: "Undo", action: (e) => e.chain().focus().undo().run(), isActive: () => false, canRun: (e) => e.can().undo() },
+  { icon: ArrowClockwise, label: "Redo", action: (e) => e.chain().focus().redo().run(), isActive: () => false, canRun: (e) => e.can().redo() },
   { icon: TextB, label: "Bold", action: (e) => e.chain().focus().toggleBold().run(), isActive: (e) => e.isActive("bold") },
   { icon: TextItalic, label: "Italic", action: (e) => e.chain().focus().toggleItalic().run(), isActive: (e) => e.isActive("italic") },
   { icon: TextUnderline, label: "Underline", action: (e) => e.chain().focus().toggleUnderline().run(), isActive: (e) => e.isActive("underline") },
@@ -247,11 +251,14 @@ function AlignMenu({ editor }) {
 }
 
 export default function FormatToolbar({ editor }) {
-  const active = useEditorState({
+  const state = useEditorState({
     editor,
     selector: (snapshot) => {
       const e = snapshot.editor;
-      return buttons.map((b) => b.isActive(e));
+      return buttons.map((b) => ({
+        active: b.isActive(e),
+        enabled: b.canRun ? b.canRun(e) : true,
+      }));
     },
   });
 
@@ -267,18 +274,22 @@ export default function FormatToolbar({ editor }) {
           type="button"
           title={label}
           aria-label={label}
-          aria-pressed={active[i]}
+          aria-pressed={state[i].active}
+          disabled={!state[i].enabled}
           onClick={() => action(editor)}
           className={
-            "group flex h-8 w-8 items-center justify-center rounded border text-ink " +
-            (active[i]
+            "group flex h-8 w-8 items-center justify-center rounded border text-ink transition-colors " +
+            (state[i].active
               ? "border-ink bg-ink text-white"
-              : "border-transparent hover:bg-hairline/60")
+              : state[i].enabled
+                ? "border-transparent hover:bg-hairline/60"
+                : "border-transparent text-muted/40 cursor-not-allowed")
           }
         >
           <Icon size={16} weight="bold" className="transition-transform duration-200 group-hover:scale-125" />
         </button>
       ))}
+      <span className="mx-1 h-5 w-px bg-hairline" aria-hidden="true" />
 
       <HeadingMenu editor={editor} />
       <AlignMenu editor={editor} />
