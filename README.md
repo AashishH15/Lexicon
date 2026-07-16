@@ -75,3 +75,23 @@ npm run dev
 ```
 
 The app is then available at http://localhost:5173.
+
+## Credits
+
+Lexicon is built on the shoulders of several super awesome open-source projects and tools:
+
+- **[TipTap](https://github.com/ueberdosis/tiptap):** the headless rich-text editor framework
+  (built on ProseMirror) that powers the writing canvas, inline grammar
+  squiggles, and formatting toolbar.
+- **[Phosphor Icons](https://github.com/phosphor-icons/homepage):** the icon set used across
+  the tool matrix, format toolbar, settings, and suggestion cards.
+- **[LanguageTool](https://github.com/languagetool-org/languagetool):** the rule-based grammar and
+  spell-checking engine (`language_tool_python`) that drives inline squiggles
+  and the Proofread pass.
+- **[React](https://github.com/react/react):** the UI library behind the frontend.
+- **[Vite](https://github.com/vitejs/vite):** the build tool and dev server.
+- **[Tailwind CSS](https://github.com/tailwindlabs/tailwindcss):** the utility-first styling
+  layer that implements the Lexicon design system.
+- **[FastAPI](https://github.com/fastapi/fastapi):** the Python backend that serves
+  the API and the frontend.
+- **[Uvicorn](https://github.com/Kludex/uvicorn):** the ASGI server running the backend.
