@@ -15,6 +15,7 @@ import {
   TextAlignCenter,
   TextAlignRight,
   TextAlignJustify,
+  Quotes,
 } from "@phosphor-icons/react";
 
 const buttons = [
@@ -33,6 +34,7 @@ const buttons = [
   { icon: TextAlignCenter, label: "Align center", action: (e) => e.chain().focus().setTextAlign("center").run(), isActive: (e) => e.isActive({ textAlign: "center" }) },
   { icon: TextAlignRight, label: "Align right", action: (e) => e.chain().focus().setTextAlign("right").run(), isActive: (e) => e.isActive({ textAlign: "right" }) },
   { icon: TextAlignJustify, label: "Justify", action: (e) => e.chain().focus().setTextAlign("justify").run(), isActive: (e) => e.isActive({ textAlign: "justify" }) },
+  { icon: Quotes, label: "Blockquote", action: (e) => e.chain().focus().toggleBlockquote().run(), isActive: (e) => e.isActive("blockquote") },
 ];
 
 export default function FormatToolbar({ editor }) {

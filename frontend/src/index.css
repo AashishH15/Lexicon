@@ -59,6 +59,13 @@
     margin: 0.4em 0;
   }
 
+  .ProseMirror blockquote {
+    margin: 0.6em 0;
+    padding: 0.2em 0 0.2em 1rem;
+    border-left: 3px solid #e1f3fe;
+    color: #787774;
+  }
+
   .ProseMirror .lex-error {
     background-color: #fdebec;
     color: #9f2f2d;
