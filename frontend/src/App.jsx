@@ -13,6 +13,7 @@ import TaskItem from "@tiptap/extension-task-item";
 import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight";
 import Image from "@tiptap/extension-image";
 import Placeholder from "@tiptap/extension-placeholder";
+import Typography from "@tiptap/extension-typography";
 import { createLowlight, common } from "lowlight";
 import { ProofreadShortcut } from "./proofreadShortcut.js";
 import { detectTone } from "./toneScore.js";
@@ -160,6 +161,9 @@ export default function App() {
       Placeholder.configure({
         placeholder: "Start writing, and press Proofread to check your draft…",
       }),
+      // Typography smart rules: ... -> ellipsis, -- -> em dash, and straight
+      // quotes -> curly quotes, applied live as the user types.
+      Typography,
       ProofreadShortcut.configure({
         onProofread: () => proofreadRef.current(),
       }),
