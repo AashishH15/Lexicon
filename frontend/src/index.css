@@ -153,6 +153,15 @@
     margin: 0.4em 0;
   }
 
+  /* Empty-draft placeholder (Placeholder extension) */
+  .ProseMirror p.is-editor-empty:first-child::before {
+    content: attr(data-placeholder);
+    float: left;
+    height: 0;
+    pointer-events: none;
+    color: #787774;
+  }
+
   .ProseMirror blockquote {
     margin: 0.6em 0;
     padding: 0.2em 0 0.2em 1rem;

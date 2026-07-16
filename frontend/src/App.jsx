@@ -12,6 +12,7 @@ import TaskList from "@tiptap/extension-task-list";
 import TaskItem from "@tiptap/extension-task-item";
 import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight";
 import Image from "@tiptap/extension-image";
+import Placeholder from "@tiptap/extension-placeholder";
 import { createLowlight, common } from "lowlight";
 import { ProofreadShortcut } from "./proofreadShortcut.js";
 import { detectTone } from "./toneScore.js";
@@ -154,6 +155,11 @@ export default function App() {
         },
       }),
       GrammarHighlight,
+      // Clean empty-draft hint. Only shows when the document has no content,
+      // so it stays out of the way once the user starts writing.
+      Placeholder.configure({
+        placeholder: "Start writing, and press Proofread to check your draft…",
+      }),
       ProofreadShortcut.configure({
         onProofread: () => proofreadRef.current(),
       }),

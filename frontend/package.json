@@ -15,6 +15,7 @@
     "@tiptap/extension-code-block-lowlight": "3.27.4",
     "@tiptap/extension-highlight": "3.27.4",
     "@tiptap/extension-image": "3.27.4",
+    "@tiptap/extension-placeholder": "3.27.4",
     "@tiptap/extension-subscript": "3.27.4",
     "@tiptap/extension-superscript": "3.27.4",
     "@tiptap/extension-task-item": "3.27.4",
