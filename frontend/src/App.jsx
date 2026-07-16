@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
+import Strike from "@tiptap/extension-strike";
 import { ProofreadShortcut } from "./proofreadShortcut.js";
 import { detectTone } from "./toneScore.js";
 import Toolbar from "./Toolbar.jsx";
@@ -108,6 +109,7 @@ export default function App() {
     extensions: [
       StarterKit,
       Underline,
+      Strike,
       GrammarHighlight,
       ProofreadShortcut.configure({
         onProofread: () => proofreadRef.current(),
