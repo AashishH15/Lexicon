@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { X } from "@phosphor-icons/react";
+import { X, CaretDown } from "@phosphor-icons/react";
 import LanguageDropdown from "./LanguageDropdown.jsx";
 import Toggle from "./Toggle.jsx";
 
@@ -27,8 +27,22 @@ const SHORTCUTS = [
   { action: "Trigger Proofread", keys: [mod, "Enter"] },
   { action: "Accept Suggestion", keys: ["Ctrl", "Alt", "A"] },
   { action: "Dismiss Suggestion", keys: ["Ctrl", "Alt", "D"] },
+  { action: "Toggle Settings", keys: [mod, ","] },
   { action: "Close Settings", keys: ["Esc"] },
-  { action: "Toggle Settings", keys: ["Ctrl", ","] },
+  { action: "Bold", keys: [mod, "B"] },
+  { action: "Italic", keys: [mod, "I"] },
+  { action: "Underline", keys: [mod, "U"] },
+  { action: "Strikethrough", keys: [mod, "Shift", "S"] },
+  { action: "Heading 1", keys: [mod, "Alt", "1"] },
+  { action: "Heading 2", keys: [mod, "Alt", "2"] },
+  { action: "Heading 3", keys: [mod, "Alt", "3"] },
+  { action: "Heading 4", keys: [mod, "Alt", "4"] },
+  { action: "Heading 5", keys: [mod, "Alt", "5"] },
+  { action: "Heading 6", keys: [mod, "Alt", "6"] },
+  { action: "Undo", keys: [mod, "Z"] },
+  { action: "Redo", keys: [mod, "Shift", "Z"] },
+  { action: "Indent list item", keys: ["Tab"] },
+  { action: "Outdent list item", keys: ["Shift", "Tab"] },
 ];
 
 export default function Settings({
@@ -49,6 +63,18 @@ export default function Settings({
 
   const scrollRef = useRef(null);
   const [overflowing, setOverflowing] = useState(false);
+  const [shortcutsOpen, setShortcutsOpen] = useState(() => {
+    const saved = localStorage.getItem("lexicon:shortcutsOpen");
+    return saved === null ? false : saved === "true";
+  });
+
+  function toggleShortcuts() {
+    setShortcutsOpen((current) => {
+      const next = !current;
+      localStorage.setItem("lexicon:shortcutsOpen", String(next));
+      return next;
+    });
+  }
 
   useEffect(() => {
     const el = scrollRef.current;
@@ -64,7 +90,7 @@ export default function Settings({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center bg-ink/20 px-4 pt-24"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-ink/20 px-4"
       onClick={onClose}
     >
       <div
@@ -115,18 +141,25 @@ export default function Settings({
             <p className="mt-1 font-sans text-xs text-muted">
               Scales the text in the editor for comfortable reading.
             </p>
-            <div className="mt-3 flex overflow-hidden rounded border border-hairline">
+            <div className="relative isolate mt-3 flex overflow-hidden rounded border border-hairline bg-canvas">
+              <span
+                className="pointer-events-none absolute inset-y-0 left-0 bg-pale-blue transition-transform duration-200 ease-out"
+                style={{
+                  width: `${100 / FONT_SIZES.length}%`,
+                  transform: `translateX(${FONT_SIZES.indexOf(fontSize) * 100}%)`,
+                }}
+              />
               {FONT_SIZES.map((size, i) => (
                 <button
                   key={size}
                   type="button"
                   onClick={() => onFontSizeChange(size)}
                   className={
-                    "flex flex-1 items-center justify-center py-2 font-mono text-xs uppercase leading-none tracking-widest transition-colors " +
+                    "relative z-10 flex flex-1 items-center justify-center py-2 font-mono text-xs uppercase leading-none tracking-widest transition-colors " +
                     (i > 0 ? "border-l border-hairline " : "") +
                     (fontSize === size
-                      ? "bg-pale-blue text-ink"
-                      : "bg-canvas text-muted hover:text-ink")
+                      ? "text-ink"
+                      : "bg-transparent text-muted hover:text-ink")
                   }
                 >
                   {size}px
@@ -163,18 +196,25 @@ export default function Settings({
             <p className="mt-1 font-sans text-xs text-muted">
               Adjust text row height for layout readability.
             </p>
-            <div className="mt-3 flex overflow-hidden rounded border border-hairline">
+            <div className="relative isolate mt-3 flex overflow-hidden rounded border border-hairline bg-canvas">
+              <span
+                className="pointer-events-none absolute inset-y-0 left-0 bg-pale-blue transition-transform duration-200 ease-out"
+                style={{
+                  width: `${100 / LINE_SPACINGS.length}%`,
+                  transform: `translateX(${LINE_SPACINGS.findIndex((o) => o.value === lineSpacing) * 100}%)`,
+                }}
+              />
               {LINE_SPACINGS.map((option, i) => (
                 <button
                   key={option.value}
                   type="button"
                   onClick={() => onLineSpacingChange(option.value)}
                   className={
-                    "flex flex-1 items-center justify-center py-2 font-mono text-xs uppercase leading-none tracking-widest transition-colors " +
+                    "relative z-10 flex flex-1 items-center justify-center py-2 font-mono text-xs uppercase leading-none tracking-widest transition-colors " +
                     (i > 0 ? "border-l border-hairline " : "") +
                     (lineSpacing === option.value
-                      ? "bg-pale-blue text-ink"
-                      : "bg-canvas text-muted hover:text-ink")
+                      ? "text-ink"
+                      : "bg-transparent text-muted hover:text-ink")
                   }
                 >
                   {option.label}
@@ -184,26 +224,43 @@ export default function Settings({
           </div>
 
           <div className="mt-6">
-            <p className="font-mono text-xs uppercase tracking-widest text-muted">
-              Keyboard Shortcuts
-            </p>
-            <div className="mt-3">
-              {SHORTCUTS.map((shortcut) => (
-                <div
-                  key={shortcut.action}
-                  className="flex items-center justify-between border-b border-hairline py-2.5 last:border-b-0"
-                >
-                  <span className="font-mono text-xs text-ink">{shortcut.action}</span>
-                  <span className="flex items-center gap-1">
-                    {shortcut.keys.map((key, i) => (
-                      <span key={key} className="flex items-center gap-1">
-                        {i > 0 && <span className="text-[10px] text-muted">+</span>}
-                        <kbd className="lex-kbd">{key}</kbd>
-                      </span>
-                    ))}
-                  </span>
-                </div>
-              ))}
+            <button
+              type="button"
+              onClick={toggleShortcuts}
+              aria-expanded={shortcutsOpen}
+              className="flex w-full items-center justify-between font-mono text-xs uppercase tracking-widest text-muted transition-colors hover:text-ink"
+            >
+              <span>Keyboard Shortcuts</span>
+              <CaretDown
+                size={14}
+                weight="bold"
+                className={"transition-transform duration-300 ease-out " + (shortcutsOpen ? "rotate-180" : "")}
+              />
+            </button>
+            <div
+              className={
+                "grid transition-all duration-300 ease-out " +
+                (shortcutsOpen ? "mt-3 grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0")
+              }
+            >
+              <div className="overflow-hidden">
+                {SHORTCUTS.map((shortcut) => (
+                  <div
+                    key={shortcut.action}
+                    className="flex items-center justify-between border-b border-hairline py-2.5 last:border-b-0"
+                  >
+                    <span className="font-mono text-xs text-ink">{shortcut.action}</span>
+                    <span className="flex items-center gap-1">
+                      {shortcut.keys.map((key, i) => (
+                        <span key={key} className="flex items-center gap-1">
+                          {i > 0 && <span className="text-[10px] text-muted">+</span>}
+                          <kbd className="lex-kbd">{key}</kbd>
+                        </span>
+                      ))}
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>

@@ -36,7 +36,7 @@ export default function LanguageDropdown({ options, value, onChange }) {
       </button>
 
       {open && (
-        <ul className="lex-pop absolute left-0 right-0 top-full z-10 mt-1 overflow-hidden rounded-lg border border-hairline bg-white">
+        <ul className="lex-pop absolute left-0 right-0 top-full z-20 mt-1 overflow-hidden rounded-lg border border-hairline bg-white">
           {options.map((item) => {
             const active = item.code === value;
             return (
