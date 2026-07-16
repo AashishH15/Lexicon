@@ -283,6 +283,38 @@
     border-radius: 8px;
   }
 
+  /* Drag handle grip (DragHandle extension). */
+  .lex-drag-handle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 24px;
+    margin-right: 2px;
+    border-radius: 4px;
+    background: transparent;
+    cursor: grab;
+    opacity: 0.45;
+    transition: opacity 150ms ease, background 150ms ease, transform 150ms ease;
+    z-index: 20;
+  }
+
+  .lex-drag-handle:hover {
+    background: #f7f6f3;
+    opacity: 1;
+    transform: scale(1.1);
+  }
+
+  .lex-drag-handle:active {
+    cursor: grabbing;
+  }
+
+  /* Nudge the grip into the list gutter so it clears the bullet/number
+     marker instead of overlapping it. */
+  .lex-drag-handle--list {
+    margin-left: -1.4rem;
+  }
+
   .ProseMirror mark {
     background-color: #fce79a;
     color: inherit;

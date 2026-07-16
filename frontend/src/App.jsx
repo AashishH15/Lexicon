@@ -14,6 +14,7 @@ import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight";
 import Image from "@tiptap/extension-image";
 import Placeholder from "@tiptap/extension-placeholder";
 import Typography from "@tiptap/extension-typography";
+import DragHandle from "@tiptap/extension-drag-handle";
 import { createLowlight, common } from "lowlight";
 import { ProofreadShortcut } from "./proofreadShortcut.js";
 import { detectTone } from "./toneScore.js";
@@ -34,6 +35,18 @@ import {
   focusError,
   findErrorAt,
 } from "./grammarHighlight.js";
+
+// Six-dot grip used for the drag handle
+const DRAG_HANDLE_GRIP_SVG = `
+  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+    <circle cx="4" cy="3" r="1.3" fill="#787774" />
+    <circle cx="10" cy="3" r="1.3" fill="#787774" />
+    <circle cx="4" cy="7" r="1.3" fill="#787774" />
+    <circle cx="10" cy="7" r="1.3" fill="#787774" />
+    <circle cx="4" cy="11" r="1.3" fill="#787774" />
+    <circle cx="10" cy="11" r="1.3" fill="#787774" />
+  </svg>
+`;
 
 function categoryLabel(match) {
   const id = (match.rule?.id || "").toUpperCase();
@@ -164,6 +177,33 @@ export default function App() {
       // Typography smart rules: ... -> ellipsis, -- -> em dash, and straight
       // quotes -> curly quotes, applied live as the user types.
       Typography,
+      // Drag handle: a grip that appears beside the hovered block so the user
+      // can reorder paragraphs, headings, images, code blocks, and (with
+      // nested: true) grab parent containers like lists/blockquotes.
+      DragHandle.configure({
+        nested: {
+          edgeDetection: "none",
+        },
+        onNodeChange: ({ node, editor }) => {
+          const handle = editor.view.dom.parentElement?.querySelector(
+            ".lex-drag-handle",
+          );
+          if (!handle) {
+            return;
+          }
+          const isListItem = node?.type?.name === "listItem";
+          handle.classList.toggle("lex-drag-handle--list", isListItem);
+        },
+        render: () => {
+          const el = document.createElement("div");
+          el.className = "lex-drag-handle";
+          el.setAttribute("role", "button");
+          el.setAttribute("aria-label", "Drag to move block");
+          el.setAttribute("contenteditable", "false");
+          el.innerHTML = DRAG_HANDLE_GRIP_SVG;
+          return el;
+        },
+      }),
       ProofreadShortcut.configure({
         onProofread: () => proofreadRef.current(),
       }),
@@ -211,6 +251,9 @@ export default function App() {
         return true;
       },
       handleDrop: (view, event) => {
+        if (view.dragging) {
+          return false;
+        }
         const files = Array.from(event.dataTransfer?.files || []);
         const images = files.filter((file) => file.type.startsWith("image/"));
         if (images.length === 0) {

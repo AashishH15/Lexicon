@@ -363,7 +363,7 @@ export default function Editor({
         <EditorContent
           editor={editor}
           style={{ fontSize: `${fontSize}px`, lineHeight: lineSpacing }}
-          className="h-full px-4 py-3 text-ink [&_.ProseMirror]:outline-none [&_.ProseMirror]:min-h-full"
+          className="h-full px-8 py-3 text-ink [&_.ProseMirror]:outline-none [&_.ProseMirror]:min-h-full"
         />
       </div>
 
