@@ -27,7 +27,8 @@ import Editor from "./Editor.jsx";
 import ReviewPanel from "./ReviewPanel.jsx";
 import GrammarTooltip from "./GrammarTooltip.jsx";
 import Settings from "./Settings.jsx";
-import { Gear } from "@phosphor-icons/react";
+import DictionaryPanel from "./DictionaryPanel.jsx";
+import { Gear, BookBookmark } from "@phosphor-icons/react";
 import { checkGrammar } from "./api.js";
 import {
   GrammarHighlight,
@@ -132,6 +133,7 @@ export default function App() {
   const [toneResult, setToneResult] = useState(null);
   const [editorFocused, setEditorFocused] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [dictionaryOpen, setDictionaryOpen] = useState(false);
 
   const proofreadRef = useRef(() => {});
   const activeErrorRef = useRef(null);
@@ -486,6 +488,30 @@ export default function App() {
     runGrammarCheck(false, next);
   }
 
+  function handleAddWordToDictionary(rawWord) {
+    const word = (rawWord || "").trim();
+    if (!word) {
+      return "empty";
+    }
+    if (userDictionary.includes(word)) {
+      return "duplicate";
+    }
+    const next = [...userDictionary, word];
+    setUserDictionary(next);
+    localStorage.setItem(dictionaryKey, JSON.stringify(next));
+    runGrammarCheck(false, next);
+    return "added";
+  }
+
+  // Remove a word from the user dictionary. Re-runs the check so any errors
+  // that were previously ignored for that word show up again.
+  function handleRemoveFromDictionary(word) {
+    const next = userDictionary.filter((w) => w !== word);
+    setUserDictionary(next);
+    localStorage.setItem(dictionaryKey, JSON.stringify(next));
+    runGrammarCheck(false, next);
+  }
+
   function handleLocate(match) {
     if (!editor) {
       return;
@@ -666,19 +692,34 @@ export default function App() {
       <main className="flex flex-1 min-h-0">
         <aside className={"flex w-64 shrink-0 flex-col justify-between border-r border-hairline p-4 " + panelDim}>
           <Toolbar editor={editor} activeTool={activeTool} onToolClick={handleToolClick} />
-          <button
-            type="button"
-            onClick={() => setSettingsOpen(true)}
-            className="group mt-6 flex items-center gap-2.5 rounded px-2 py-1.5 text-left text-sm text-muted transition-colors hover:bg-hairline/60 hover:text-ink"
-            aria-label="Open settings"
-          >
-            <Gear
-              size={16}
-              weight="bold"
-              className="transition-transform duration-200 group-hover:rotate-45"
-            />
-            <span>Settings</span>
-          </button>
+          <div className="flex flex-col gap-1">
+            <button
+              type="button"
+              onClick={() => setDictionaryOpen(true)}
+              className="group flex items-center gap-2.5 rounded px-2 py-1.5 text-left text-sm text-muted transition-colors hover:bg-hairline/60 hover:text-ink"
+              aria-label="Open your dictionary"
+            >
+              <BookBookmark
+                size={16}
+                weight="bold"
+                className="transition-transform duration-200 group-hover:scale-110"
+              />
+              <span>Your Dictionary</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setSettingsOpen(true)}
+              className="group flex items-center gap-2.5 rounded px-2 py-1.5 text-left text-sm text-muted transition-colors hover:bg-hairline/60 hover:text-ink"
+              aria-label="Open settings"
+            >
+              <Gear
+                size={16}
+                weight="bold"
+                className="transition-transform duration-200 group-hover:rotate-45"
+              />
+              <span>Settings</span>
+            </button>
+          </div>
         </aside>
 
         <section className="flex-1 min-w-0 p-6">
@@ -741,6 +782,14 @@ export default function App() {
         focusMode={focusMode}
         onFocusModeChange={handleFocusModeChange}
         onClose={() => setSettingsOpen(false)}
+      />
+
+      <DictionaryPanel
+        open={dictionaryOpen}
+        userDictionary={userDictionary}
+        onAddWord={handleAddWordToDictionary}
+        onRemoveWord={handleRemoveFromDictionary}
+        onClose={() => setDictionaryOpen(false)}
       />
     </div>
   );
