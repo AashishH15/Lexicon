@@ -31,6 +31,16 @@ import {
   Link as LinkIcon,
   MathOperations,
   Function,
+  Table as TableIcon,
+  Plus,
+  Trash,
+  Rows,
+  Columns,
+  TextColumns,
+  ColumnsPlusLeft,
+  ArrowsMerge,
+  ArrowsSplit,
+  Wrench,
 } from "@phosphor-icons/react";
 
 const buttons = [
@@ -346,6 +356,140 @@ function ListMenu({ editor }) {
   );
 }
 
+// Grid-picker limits. The hover preview highlights a rows x cols block so the
+// user can choose e.g. 3x6 or 6x3 (or up to 10x10) before inserting.
+const GRID_COLS = 10;
+const GRID_ROWS = 10;
+
+function TableMenu({ editor }) {
+  const [open, setOpen] = useState(false);
+  const [hover, setHover] = useState({ rows: 0, cols: 0 });
+  const containerRef = useRef(null);
+
+  const insideTable = useEditorState({
+    editor,
+    selector: ({ editor: e }) => e.isActive("table"),
+  });
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+    const handleClick = (event) => {
+      if (containerRef.current && !containerRef.current.contains(event.target)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [open]);
+
+  function insertTable(rows, cols) {
+    editor.chain().focus().insertTable({ rows, cols, withHeaderRow: true }).run();
+    setOpen(false);
+    setHover({ rows: 0, cols: 0 });
+  }
+
+  function runTableCommand(command) {
+    editor.chain().focus()[command]().run();
+    setOpen(false);
+  }
+
+  return (
+    <div ref={containerRef} className="relative">
+      <button
+        type="button"
+        title="Table"
+        aria-label="Table"
+        aria-pressed={open || insideTable}
+        aria-expanded={open}
+        onClick={() => setOpen((current) => !current)}
+        className={
+          "group flex h-8 w-8 items-center justify-center rounded border text-ink transition-colors " +
+          (open || insideTable
+            ? "border-ink bg-ink text-white"
+            : "border-transparent hover:bg-hairline/60")
+        }
+      >
+        <TableIcon size={16} weight="bold" className="transition-transform duration-200 group-hover:scale-125" />
+      </button>
+
+      {open && (
+        <div className="lex-pop absolute left-0 top-full z-10 mt-1 w-60 overflow-hidden rounded-lg border border-hairline bg-white p-3">
+          {!insideTable ? (
+            <>
+              <div className="mb-2 text-xs font-medium text-muted">
+                {hover.rows > 0
+                  ? `${hover.rows} × ${hover.cols} table`
+                  : "Insert table"}
+              </div>
+              <div
+                className="grid gap-1"
+                style={{ gridTemplateColumns: `repeat(${GRID_COLS}, minmax(0, 1fr))` }}
+                onMouseLeave={() => setHover({ rows: 0, cols: 0 })}
+              >
+                {Array.from({ length: GRID_ROWS * GRID_COLS }).map((_, i) => {
+                  const r = Math.floor(i / GRID_COLS) + 1;
+                  const c = (i % GRID_COLS) + 1;
+                  const filled = r <= hover.rows && c <= hover.cols;
+                  return (
+                    <button
+                      key={i}
+                      type="button"
+                      aria-label={`${r} by ${c} table`}
+                      onMouseEnter={() => setHover({ rows: r, cols: c })}
+                      onClick={() => insertTable(r, c)}
+                      className={
+                        "aspect-square rounded-sm border transition-colors " +
+                        (filled
+                          ? "border-ink bg-ink"
+                          : "border-hairline bg-canvas hover:border-muted")
+                      }
+                    />
+                  );
+                })}
+              </div>
+            </>
+          ) : (
+            <div className="flex flex-col gap-1">
+              <div className="mb-1 text-xs font-medium text-muted">Edit table</div>
+              <TableActionButton icon={Plus} label="Add row below" onClick={() => runTableCommand("addRowAfter")} />
+              <TableActionButton icon={Plus} label="Add column after" onClick={() => runTableCommand("addColumnAfter")} />
+              <TableActionButton icon={Rows} label="Delete row" onClick={() => runTableCommand("deleteRow")} />
+              <TableActionButton icon={Columns} label="Delete column" onClick={() => runTableCommand("deleteColumn")} />
+              <TableActionButton icon={TextColumns} label="Toggle header row" onClick={() => runTableCommand("toggleHeaderRow")} />
+              <TableActionButton icon={ColumnsPlusLeft} label="Toggle header column" onClick={() => runTableCommand("toggleHeaderColumn")} />
+              <TableActionButton icon={ArrowsMerge} label="Merge cells" onClick={() => runTableCommand("mergeCells")} />
+              <TableActionButton icon={ArrowsSplit} label="Split cell" onClick={() => runTableCommand("splitCell")} />
+              <TableActionButton icon={Wrench} label="Fix table" onClick={() => runTableCommand("fixTables")} />
+              <div className="my-1 h-px bg-hairline" aria-hidden="true" />
+              <TableActionButton icon={Trash} label="Delete table" onClick={() => runTableCommand("deleteTable")} danger />
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TableActionButton({ icon: Icon, label, onClick, danger }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={
+        "flex w-full items-center gap-2.5 rounded px-2 py-1.5 text-left text-sm transition-colors " +
+        (danger
+          ? "text-red-600 hover:bg-red-50"
+          : "text-ink hover:bg-pale-blue hover:text-pale-blue-text")
+      }
+    >
+      <Icon size={16} weight="bold" />
+      <span>{label}</span>
+    </button>
+  );
+}
+
 const MATH_OPTIONS = [
   { value: "inlineMath", icon: MathOperations, label: "Inline math", kind: "inline" },
   { value: "blockMath", icon: Function, label: "Block math", kind: "block" },
@@ -643,6 +787,7 @@ export default function FormatToolbar({ editor, onRequestLink, onRequestMath }) 
       <HeadingMenu editor={editor} />
       <AlignMenu editor={editor} />
       <ListMenu editor={editor} />
+      <TableMenu editor={editor} />
       <MathMenu editor={editor} onRequestMath={onRequestMath} />
       <ImageButton editor={editor} />
       <LinkButton editor={editor} onRequestLink={onRequestLink} />

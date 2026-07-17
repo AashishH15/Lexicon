@@ -515,4 +515,59 @@
       transform: translateY(0);
     }
   }
+
+  /* Tables (TipTap TableKit) */
+  .ProseMirror .tableWrapper {
+    overflow-x: auto;
+    margin: 1em 0;
+  }
+
+  .ProseMirror table {
+    border-collapse: collapse;
+    table-layout: fixed;
+    width: 100%;
+    margin: 0;
+    overflow: hidden;
+  }
+
+  .ProseMirror td,
+  .ProseMirror th {
+    border: 1px solid #d9d6d0;
+    padding: 6px 8px;
+    vertical-align: top;
+    box-sizing: border-box;
+    position: relative;
+    min-width: 1em;
+  }
+
+  .ProseMirror th {
+    background: #f7f6f3;
+    font-weight: 600;
+    text-align: left;
+  }
+
+  .ProseMirror .selectedCell::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: rgba(31, 108, 159, 0.12);
+    pointer-events: none;
+  }
+
+  /* Column resize handles (resizable: true) */
+  .ProseMirror .column-resize-handle,
+  .ProseMirror .tableResizer {
+    position: absolute;
+    right: -2px;
+    top: 0;
+    bottom: -2px;
+    width: 4px;
+    background: #1f6c9f;
+    cursor: col-resize;
+    z-index: 20;
+  }
+
+  body.resize-cursor {
+    cursor: col-resize;
+  }
 }

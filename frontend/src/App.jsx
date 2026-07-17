@@ -15,6 +15,7 @@ import Image from "@tiptap/extension-image";
 import Placeholder from "@tiptap/extension-placeholder";
 import Typography from "@tiptap/extension-typography";
 import DragHandle from "@tiptap/extension-drag-handle";
+import { TableKit } from "@tiptap/extension-table";
 import { Mathematics } from "@tiptap/extension-mathematics";
 import "katex/dist/katex.min.css";
 import SlashCommand from "./slashCommand.js";
@@ -167,6 +168,12 @@ export default function App() {
       }),
       TaskList,
       TaskItem.configure({ nested: true }),
+      // Tables: TableKit bundles the Table / TableRow / TableHeader /
+      // TableCell nodes. `resizable: true` enables the drag handles on column
+      // borders so users can adjust column widths.
+      TableKit.configure({
+        table: { resizable: true },
+      }),
       CodeBlockLowlight.configure({ lowlight }),
       // Mathematics: inline ($...$) and block ($$$...$$$) LaTeX rendered via
       // KaTeX. Errors render inline (throwOnError:false) instead of crashing.
