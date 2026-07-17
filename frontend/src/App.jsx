@@ -121,6 +121,7 @@ export default function App() {
   const [selectedText, setSelectedText] = useState("");
   const [activeTool, setActiveTool] = useState("");
   const [grammarMatches, setGrammarMatches] = useState([]);
+  const [dismissedKeys, setDismissedKeys] = useState(() => new Set());
   const [checking, setChecking] = useState(false);
   const [hoveredError, setHoveredError] = useState(null);
   const [activeErrorId, setActiveErrorId] = useState(null);
@@ -144,8 +145,10 @@ export default function App() {
   const checkAbortRef = useRef(null);
   const checkingRef = useRef(false);
   const userDictionaryRef = useRef(userDictionary);
+  const dismissedKeysRef = useRef(dismissedKeys);
   activeToolRef.current = activeTool;
   userDictionaryRef.current = userDictionary;
+  dismissedKeysRef.current = dismissedKeys;
 
   const lowlight = createLowlight(common);
 
@@ -392,6 +395,13 @@ export default function App() {
     };
   }, [editor]);
 
+  function matchKey(match, text) {
+    const original = text
+      ? text.slice(match.offset, match.offset + match.length)
+      : match.original;
+    return `${match.message}::${match.offset}::${match.length}::${original}`;
+  }
+
   async function runGrammarCheck(silent = false, ignoreOverride = null) {
     if (!editor) {
       return;
@@ -418,12 +428,27 @@ export default function App() {
         ignore,
         abortController.signal,
       );
-      const matches = rawMatches.map((match, i) => ({
-        ...match,
-        id: i,
-        original: text.slice(match.offset, match.offset + match.length),
-        category: categoryLabel(match),
-      }));
+      if (dismissedKeysRef.current.size > 0) {
+        const trimmed = new Set();
+        dismissedKeysRef.current.forEach((key) => {
+          const offset = Number(key.split("::")[1]);
+          if (!Number.isNaN(offset) && offset <= text.length) {
+            trimmed.add(key);
+          }
+        });
+        if (trimmed.size !== dismissedKeysRef.current.size) {
+          setDismissedKeys(trimmed);
+          dismissedKeysRef.current = trimmed;
+        }
+      }
+      const matches = rawMatches
+        .filter((match) => !dismissedKeysRef.current.has(matchKey(match, text)))
+        .map((match, i) => ({
+          ...match,
+          id: i,
+          original: text.slice(match.offset, match.offset + match.length),
+          category: categoryLabel(match),
+        }));
       setGrammarMatches(matches);
       applyGrammarDecorations(editor, matches, map, activeErrorId);
     } catch (error) {
@@ -458,10 +483,23 @@ export default function App() {
     runGrammarCheck();
   }
 
+  function rememberDismissed(match) {
+    setDismissedKeys((current) => {
+      const key = matchKey(match, null);
+      if (current.has(key)) {
+        return current;
+      }
+      const next = new Set(current);
+      next.add(key);
+      return next;
+    });
+  }
+
   function handleDismiss(match) {
     if (!editor) {
       return;
     }
+    rememberDismissed(match);
     dismissError(editor, match.id);
     setGrammarMatches((current) => {
       const next = current.filter((m) => m.id !== match.id);
@@ -552,9 +590,6 @@ export default function App() {
     localStorage.setItem(lineSpacingKey, String(next));
   }
 
-  // Reset every tweakable setting back to its smart default (C16.20). Clears
-  // the stored keys so a future load falls back to defaults too, and updates
-  // React state through the same setters used by the controls.
   function handleResetDefaults() {
     setLanguage(SETTINGS_DEFAULTS.language);
     setFontSize(SETTINGS_DEFAULTS.fontSize);
