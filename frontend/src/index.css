@@ -426,6 +426,20 @@
     }
   }
 
+  @keyframes lex-ellipsis-typing {
+    0% {
+      clip-path: inset(0 100% 0 0);
+    }
+    100% {
+      clip-path: inset(0 -10% 0 0);
+    }
+  }
+
+  .lex-ellipsis {
+    display: inline-block;
+    animation: lex-ellipsis-typing 1s steps(4, end) infinite;
+  }
+
   .lex-scroll {
     scrollbar-width: thin;
     scrollbar-color: rgba(0, 0, 0, 0.12) transparent;

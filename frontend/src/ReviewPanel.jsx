@@ -59,7 +59,7 @@ export default function ReviewPanel({
           </p>
         ) : checking ? (
           <p className="font-mono text-xs lowercase tracking-[0.04em] text-muted">
-            status :: initializing engine...
+            status :: initializing engine<span className="lex-ellipsis">...</span>
           </p>
         ) : count === 0 ? (
           <p className="font-mono text-xs lowercase tracking-[0.04em] text-muted">
