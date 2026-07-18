@@ -726,6 +726,7 @@ export default function App() {
   }
 
   const [resizing, setResizing] = useState(null); // "left" | "right" | null
+  const [aboutToCollapse, setAboutToCollapse] = useState(null); // "left" | "right" | null
   function startResize(side) {
     return (e) => {
       e.preventDefault();
@@ -749,6 +750,9 @@ export default function App() {
           latest = raw;
           overshoot = 0;
         }
+        // Once the user has pulled past the collapse threshold, flag the panel
+        // so the UI can show a "release to collapse" indicator.
+        setAboutToCollapse(overshoot >= COLLAPSE_PAST ? side : null);
         if (rafId == null) {
           rafId = requestAnimationFrame(() => {
             rafId = null;
@@ -764,6 +768,7 @@ export default function App() {
         document.body.style.userSelect = "";
         document.body.style.cursor = "";
         setResizing(null);
+        setAboutToCollapse(null);
         if (overshoot >= COLLAPSE_PAST) {
           const reset = side === "left"
             ? Math.max(startWidth, 256)
@@ -1062,8 +1067,9 @@ export default function App() {
           ref={leftPanelRef}
           style={{ width: leftWidth }}
           className={
-            "relative shrink-0 overflow-hidden border-r border-hairline " +
-            (leftVisible ? " " + panelDim : "")
+            "relative shrink-0 overflow-hidden border-r border-hairline transition-opacity duration-200 " +
+            (leftVisible ? " " + panelDim : "") +
+            (aboutToCollapse === "left" ? " opacity-70" : "")
           }
           onMouseEnter={() => focusMode && openLeftPeek()}
           onMouseLeave={() => focusMode && scheduleCloseLeft()}
@@ -1073,10 +1079,12 @@ export default function App() {
             <div
               onPointerDown={startResize("left")}
               className={
-                "absolute right-0 top-0 z-20 h-full w-1.5 cursor-ew-resize transition-colors " +
-                (resizing === "left"
-                  ? "bg-accent/60"
-                  : "bg-transparent hover:bg-accent/30")
+                "absolute right-0 top-0 z-20 h-full w-1.5 cursor-ew-resize transition-all " +
+                (aboutToCollapse === "left"
+                  ? "w-2.0 bg-amber-500/70 animate-pulse"
+                  : resizing === "left"
+                    ? "bg-accent/60"
+                    : "bg-transparent hover:bg-accent/30")
               }
               title="Drag to resize"
               aria-label="Resize left panel"
@@ -1089,7 +1097,12 @@ export default function App() {
               <button
                 type="button"
                 onClick={handleCollapseLeft}
-                className="rounded p-1 text-muted transition-colors hover:bg-hairline/60 hover:text-ink"
+                className={
+                  "rounded p-1 transition-colors hover:bg-hairline/60 " +
+                  (aboutToCollapse === "left"
+                    ? "text-amber-500"
+                    : "text-muted hover:text-ink")
+                }
                 aria-label="Collapse left panel"
                 title="Collapse panel"
               >
@@ -1172,8 +1185,9 @@ export default function App() {
           ref={rightPanelRef}
           style={{ width: rightWidth }}
           className={
-            "relative shrink-0 overflow-hidden border-l border-hairline " +
-            (rightVisible ? " " + panelDim : "")
+            "relative shrink-0 overflow-hidden border-l border-hairline transition-opacity duration-200 " +
+            (rightVisible ? " " + panelDim : "") +
+            (aboutToCollapse === "right" ? " opacity-70" : "")
           }
           onMouseEnter={() => focusMode && openRightPeek()}
           onMouseLeave={() => focusMode && scheduleCloseRight()}
@@ -1183,10 +1197,12 @@ export default function App() {
             <div
               onPointerDown={startResize("right")}
               className={
-                "absolute left-0 top-0 z-20 h-full w-1.5 cursor-ew-resize transition-colors " +
-                (resizing === "right"
-                  ? "bg-accent/60"
-                  : "bg-transparent hover:bg-accent/30")
+                "absolute left-0 top-0 z-20 h-full w-1.5 cursor-ew-resize transition-all " +
+                (aboutToCollapse === "right"
+                  ? "w-2.0 bg-amber-500/70 animate-pulse"
+                  : resizing === "right"
+                    ? "bg-accent/60"
+                    : "bg-transparent hover:bg-accent/30")
               }
               title="Drag to resize"
               aria-label="Resize right panel"
@@ -1199,6 +1215,7 @@ export default function App() {
               grammarMatches={grammarMatches}
               checking={checking}
               activeErrorId={activeErrorId}
+              aboutToCollapse={aboutToCollapse === "right"}
               onApply={handleApplySuggestion}
               onDismiss={handleDismiss}
               onAcceptAll={handleAcceptAll}

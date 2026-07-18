@@ -8,6 +8,7 @@ export default function ReviewPanel({
   grammarMatches,
   checking,
   activeErrorId,
+  aboutToCollapse,
   onApply,
   onDismiss,
   onAcceptAll,
@@ -26,7 +27,12 @@ export default function ReviewPanel({
           <button
             type="button"
             onClick={onCollapse}
-            className="rounded p-1 text-muted transition-colors hover:bg-hairline/60 hover:text-ink"
+            className={
+              "rounded p-1 transition-colors hover:bg-hairline/60 " +
+              (aboutToCollapse
+                ? "text-amber-500"
+                : "text-muted hover:text-ink")
+            }
             aria-label="Collapse right panel"
             title="Collapse panel"
           >
