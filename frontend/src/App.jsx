@@ -1098,7 +1098,7 @@ export default function App() {
             />
           )}
             <div className="flex items-center justify-between px-4 pt-4">
-              <p className="font-mono text-[10px] uppercase tracking-[0.08em] text-muted">
+              <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.08em] text-muted">
                 Actions
               </p>
               <button
@@ -1180,7 +1180,7 @@ export default function App() {
           />
         </div>
 
-        <section className="flex-1 min-w-0 p-6">
+        <section className="flex-1 min-w-0 px-6 pt-4 pb-6">
           <Editor
             editor={editor}
             fontSize={fontSize}

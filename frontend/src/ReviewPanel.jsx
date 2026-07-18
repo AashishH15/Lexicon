@@ -39,7 +39,7 @@ export default function ReviewPanel({
             <ArrowLineRight size={14} weight="bold" />
           </button>
         )}
-        <p className="font-mono text-[10px] uppercase tracking-[0.08em] text-muted">
+        <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.08em] text-muted">
           Review
         </p>
       </div>

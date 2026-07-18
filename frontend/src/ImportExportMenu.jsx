@@ -73,10 +73,7 @@ export default function ImportExportMenu({ editor }) {
   }
 
   function triggerImport() {
-    // Keep the dropdown open until after the native picker opens; the input
-    // is always mounted (outside the {open} block) so its ref stays valid.
     setOpen(false);
-    // Defer so React commits the (now-hidden) input before we click it.
     requestAnimationFrame(() => fileInputRef.current?.click());
   }
 

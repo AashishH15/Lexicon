@@ -382,7 +382,7 @@ export default function Editor({
   return (
     <div className="flex flex-col h-full">
       <div className="mb-3 flex items-center justify-between">
-        <p className="font-mono text-[10px] uppercase tracking-[0.08em] text-muted">
+        <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.08em] text-muted">
           Source Document
         </p>
         <button
