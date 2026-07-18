@@ -18,7 +18,7 @@ export default function ReviewPanel({
   const count = grammarMatches.length;
 
   return (
-    <div className="flex h-full flex-col px-6 pb-6 pt-4">
+    <div className="flex h-full flex-col px-4 pb-6 pt-4">
       <div className="flex items-center justify-between gap-3">
         {onCollapse && (
           <button
