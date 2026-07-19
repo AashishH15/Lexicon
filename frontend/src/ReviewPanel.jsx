@@ -75,9 +75,16 @@ export default function ReviewPanel({
 
       <div className="lex-scroll mt-4 flex-1 overflow-auto pr-1">
         {!activeTool ? (
-          <p className="font-mono text-xs lowercase tracking-[0.04em] text-muted">
-            status :: awaiting selection...
-          </p>
+          <>
+            <p className="text-sm leading-relaxed text-muted">
+              Click <span className="font-semibold text-ink">Proofread</span> to
+              scan the draft. Suggestions appear here as cards you can accept or
+              dismiss.
+            </p>
+            <p className="font-mono text-xs lowercase tracking-[0.04em] text-muted mt-3">
+              status :: awaiting selection...
+            </p>
+          </>
         ) : checking ? (
           <p className="font-mono text-xs lowercase tracking-[0.04em] text-muted">
             status :: initializing engine<span className="lex-ellipsis">...</span>
