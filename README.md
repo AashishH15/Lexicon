@@ -1,17 +1,21 @@
+<div align="center">
+
+![Lexicon](media/Lexicon.jpg)
+
 # Lexicon
 
-A local-first AI writing assistant that runs entirely on your machine. No
-accounts, no cloud, no usage costs. The UI is a web app inspired by the web
-versions of Grammarly and Quillbot, with the kind of writing tools Apple
-ships in its "Writing Tools" feature.
+**Open Source • Privacy-First**<br>
+**Local-First AI Writing Assistant**<br>
+**Grammar, Rewriting & Tone — Entirely Offline**
 
-## Watch: what Lexicon is
+</div>
 
-[![Lexicon — local-first AI writing assistant](media/Lexicon.jpg)](https://github.com/user-attachments/assets/494357bb-02e4-4f3c-8170-e2183fe1f932)
+A 20-second tour of what Lexicon is:
 
-A 20-second tour: a distraction-free rich-text editor, inline grammar
-squiggles, and one-click suggestion cards — all running offline on your own
-machine.
+https://github.com/user-attachments/assets/494357bb-02e4-4f3c-8170-e2183fe1f932
+
+A distraction-free rich-text editor, inline grammar squiggles, and
+one-click suggestion cards — all running offline on your own machine.
 
 ## Why Lexicon
 
