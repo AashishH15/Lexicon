@@ -109,6 +109,31 @@ A rich, Grammarly-style editor:
 - Keyboard shortcuts (e.g. `Ctrl/Cmd + Enter` to Proofread, accept/dismiss
   shortcuts, `Esc` / `Mod-,` for settings) with an in-app cheat sheet.
 
+## Quick start
+
+Download and write locally — the **editor and Proofread are live today**; AI
+rewriting/tone tools arrive in a later release. Requires **Python 3**, **Node.js
++ npm**, and **Java** (LanguageTool downloads on first proofread).
+
+From the project root, run **one** command:
+
+```bash
+# macOS / Linux
+./start.sh
+```
+```bat
+REM Windows
+.\start.bat
+```
+
+This installs both sides (if needed) and launches them. Then open:
+
+- **App:** http://localhost:5173
+- **API:** http://localhost:8000
+
+Close the terminals / windows to stop. For the manual, two-step setup, see
+*Running the backend* and *Running the frontend* below.
+
 ## Running the backend
 
 ```
