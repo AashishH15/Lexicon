@@ -7,7 +7,7 @@ ships in its "Writing Tools" feature.
 
 ## Watch: what Lexicon is
 
-[![Lexicon — local-first AI writing assistant](media/Lexicon.jpg)](media/Lexicon.mp4)
+[![Lexicon — local-first AI writing assistant](media/Lexicon.jpg)](https://github.com/AashishH15/Lexicon/blob/master/media/Lexicon.mp4)
 
 A 20-second tour: a distraction-free rich-text editor, inline grammar
 squiggles, and one-click suggestion cards — all running offline on your own
