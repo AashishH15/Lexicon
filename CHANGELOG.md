@@ -73,7 +73,10 @@ but not part of v0.3.0.
 
 - Bundled or detected local LLM backend (Ollama auto-detect, bundled
   `llama.cpp` model, model download/setup flow).
-- Dark mode, unit/end-to-end tests, bundle-size optimization.
+- AI asisted tools (i.e. Refinement, Tones, Structure)
+- Dark mode
+- unit/end-to-end tests
+- bundle-size optimization.
 - Packaged desktop installer and auto-update (Tauri).
 - Mobile layout.
 
