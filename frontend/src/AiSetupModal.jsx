@@ -30,7 +30,8 @@ export default function AiSetupModal({ onClose }) {
     </div>
   );
 
-  function renderFooter({ phase, wantBundle, useOllama, modelKey, status, handleDownload }) {
+  function renderFooter({ phase, wantBundle, modelKey, status, handleDownload }) {
+    const ollamaActive = status.preference?.backend === "ollama";
     return (
       <div className="mt-6 flex items-center justify-end gap-2 border-t border-hairline pt-4">
         <button
@@ -74,7 +75,7 @@ export default function AiSetupModal({ onClose }) {
               <DownloadSimple size={16} weight="bold" /> Download & enable
             </button>
           )
-        ) : useOllama ? (
+        ) : ollamaActive ? (
           <button
             type="button"
             onClick={finish}

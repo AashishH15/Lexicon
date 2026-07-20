@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Cpu, DownloadSimple, ArrowRight, X } from "@phosphor-icons/react";
+import { Cpu, DownloadSimple } from "@phosphor-icons/react";
 import Toggle from "./Toggle.jsx";
 import {
   getAiStatus,
@@ -21,6 +21,47 @@ function adviseModelKey() {
   const ram = navigator.deviceMemory; // GB, coarse, Chromium-only
   if (typeof ram === "number" && ram > 0 && ram < 8) return "0.8b";
   return "2b";
+}
+
+function describeActive(status) {
+  const pref = status.preference || { backend: "auto", model_key: "2b" };
+  if (pref.backend === "ollama") {
+    return {
+      tone: "ollama",
+      text: status.ollama_available
+        ? "Using your Ollama server"
+        : "Using your Ollama server (not detected — will fall back)",
+    };
+  }
+  if (pref.backend === "bundled") {
+    const label = MODEL_TIERS.find((t) => t.key === pref.model_key)?.label;
+    if (label && status.models_ready?.[pref.model_key]) {
+      return { tone: "bundled", text: `Using local model · ${label}` };
+    }
+    return { tone: "none", text: "Not configured — download a model or connect Ollama" };
+  }
+  const autoKey = status.model_key;
+  const autoLabel = MODEL_TIERS.find((t) => t.key === autoKey)?.label;
+  if (autoLabel && status.models_ready?.[autoKey]) {
+    return { tone: "bundled", text: `Using local model · ${autoLabel}` };
+  }
+  return { tone: "none", text: "Not configured — download a model or connect Ollama" };
+}
+
+function ActiveStatus({ status }) {
+  const { tone, text } = describeActive(status);
+  const dot =
+    tone === "ollama"
+      ? "bg-pale-blue-text"
+      : tone === "bundled"
+        ? "bg-pale-green-text"
+        : "bg-muted";
+  return (
+    <div className="mt-4 flex items-center gap-2 rounded-lg border border-hairline bg-canvas px-3 py-2">
+      <span className={`h-2 w-2 shrink-0 rounded-full ${dot}`} />
+      <span className="font-sans text-xs text-ink">{text}</span>
+    </div>
+  );
 }
 
 /**
@@ -45,7 +86,6 @@ export default function ModelManager({ mode = "onboarding", onPreferenceChange, 
   const [probeDone, setProbeDone] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [wantBundle, setWantBundle] = useState(mode === "settings");
-  const [useOllama, setUseOllama] = useState(false);
   const [modelKey, setModelKey] = useState(adviseModelKey());
   const [phase, setPhase] = useState("choose"); // choose | downloading | done | error
   const [progress, setProgress] = useState(null);
@@ -61,10 +101,6 @@ export default function ModelManager({ mode = "onboarding", onPreferenceChange, 
         if (cancelled) return;
         setStatus(s);
         if (!userPickedRef.current && s.model_key) setModelKey(s.model_key);
-        // In settings, reflect the saved preference (Ollama chosen?).
-        if (mode === "settings" && s.preference) {
-          setUseOllama(s.preference.backend === "ollama");
-        }
       })
       .catch(() => {
         if (!cancelled)
@@ -176,11 +212,14 @@ export default function ModelManager({ mode = "onboarding", onPreferenceChange, 
     }
   }
 
-  function commitOllama(on) {
-    setUseOllama(on);
+  async function commitOllama(on) {
     if (on) {
       setWantBundle(false);
-      if (onPreferenceChange) onPreferenceChange({ backend: "ollama", model_key });
+      if (onPreferenceChange) await onPreferenceChange({ backend: "ollama", model_key: modelKey });
+      refreshStatus();
+    } else if (onPreferenceChange) {
+      await onPreferenceChange({ backend: "bundled", model_key: modelKey });
+      refreshStatus();
     }
   }
 
@@ -231,7 +270,19 @@ export default function ModelManager({ mode = "onboarding", onPreferenceChange, 
         </>
       )}
 
-      {/* Model-size selector */}
+      {/* Active backend readout — gated on probeDone so we don't flash the
+          stale default ("Not configured") before the real status arrives. */}
+      {probeDone ? (
+        <ActiveStatus status={status} />
+      ) : (
+        <div className="mt-4 flex items-center gap-2 rounded-lg border border-hairline bg-canvas px-3 py-2">
+          <span className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-muted" />
+          <span className="animate-pulse font-mono text-[10px] uppercase tracking-widest text-muted">
+            Checking AI status…
+          </span>
+        </div>
+      )}
+
       {(wantBundle || mode === "settings") && (
         <div className={mode === "settings" ? "grid grid-cols-2 gap-2" : "mt-3 grid grid-cols-2 gap-2"}>
           {MODEL_TIERS.map((tier) => {
@@ -252,6 +303,7 @@ export default function ModelManager({ mode = "onboarding", onPreferenceChange, 
                   if (mode === "settings" && status.models_ready?.[tier.key]) {
                     if (onPreferenceChange)
                       onPreferenceChange({ backend: "bundled", model_key: tier.key });
+                    refreshStatus();
                   }
                 }}
                 onKeyDown={(e) => {
@@ -263,6 +315,7 @@ export default function ModelManager({ mode = "onboarding", onPreferenceChange, 
                     if (mode === "settings" && status.models_ready?.[tier.key]) {
                       if (onPreferenceChange)
                         onPreferenceChange({ backend: "bundled", model_key: tier.key });
+                      refreshStatus();
                     }
                   }
                 }}
@@ -402,7 +455,7 @@ export default function ModelManager({ mode = "onboarding", onPreferenceChange, 
               <label className="flex cursor-pointer items-center gap-3">
                 <input
                   type="checkbox"
-                  checked={useOllama}
+                  checked={status.preference?.backend === "ollama"}
                   disabled={!probeDone || !ollamaAvailable}
                   onChange={(e) => commitOllama(e.target.checked)}
                   className="h-4 w-4 shrink-0 cursor-pointer accent-pale-blue-text"
@@ -427,7 +480,6 @@ export default function ModelManager({ mode = "onboarding", onPreferenceChange, 
         renderFooter({
           phase,
           wantBundle,
-          useOllama,
           modelKey,
           status,
           handleDownload,
