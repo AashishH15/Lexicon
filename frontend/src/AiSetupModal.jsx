@@ -9,7 +9,7 @@ export default function AiSetupModal({ onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="flex max-h-[85vh] h-auto w-full max-w-md flex-col overflow-hidden rounded-2xl border border-hairline bg-paper shadow-2xl">
+      <div className="flex max-h-[85vh] h-auto w-full max-w-md flex-col overflow-hidden rounded-2xl border border-hairline bg-canvas shadow-2xl">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-hairline px-6 py-4">
           <p className="font-sans text-sm font-semibold text-ink">Set up Lexicon AI</p>

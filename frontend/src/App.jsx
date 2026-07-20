@@ -29,7 +29,6 @@ import ReviewPanel from "./ReviewPanel.jsx";
 import GrammarTooltip from "./GrammarTooltip.jsx";
 import Settings, { SETTINGS_DEFAULTS } from "./Settings.jsx";
 import DictionaryPanel from "./DictionaryPanel.jsx";
-import ComingSoonNotice from "./ComingSoonNotice.jsx";
 import AiSetupModal from "./AiSetupModal.jsx";
 import {
   Gear,
@@ -41,7 +40,7 @@ import {
   ArrowSquareLeft,
   ArrowSquareRight,
 } from "@phosphor-icons/react";
-import { checkGrammar } from "./api.js";
+import { checkGrammar, getAiStatus } from "./api.js";
 import {
   GrammarHighlight,
   buildTextWithMap,
@@ -175,11 +174,30 @@ export default function App() {
   const [editorFocused, setEditorFocused] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [dictionaryOpen, setDictionaryOpen] = useState(false);
-  const [aiNotice, setAiNotice] = useState("");
+  const [aiConfigured, setAiConfigured] = useState(false);
   const [aiSetupOpen, setAiSetupOpen] = useState(() => {
     // First-run AI setup flow: shown once, gated by a localStorage flag.
     return localStorage.getItem("lexicon:aiSetupDone") !== "true";
   });
+
+  // C21: probe whether an AI backend is configured (a bundled model on disk
+  // or a chosen Ollama server). Drives the greyed/unavailable treatment on
+  // the rewriting/tone/structure tools until they are wired in C22+.
+  const refreshAiConfigured = useCallback(async () => {
+    try {
+      const s = await getAiStatus();
+      const configured =
+        s.preference?.backend === "ollama"
+          ? s.ollama_available
+          : Boolean(s.models_ready?.[s.preference?.model_key || s.model_key]);
+      setAiConfigured(configured);
+    } catch {
+      setAiConfigured(false);
+    }
+  }, []);
+  useEffect(() => {
+    refreshAiConfigured();
+  }, [refreshAiConfigured]);
   const [leftPanelOpen, setLeftPanelOpen] = useState(() =>
     loadPanelOpen(leftPanelKey),
   );
@@ -932,7 +950,13 @@ export default function App() {
       return;
     }
     setActiveTool("");
-    setAiNotice(name);
+    // C21: AI tools aren't wired to /transform yet (C22+). When no
+    // backend is configured, open setup instead of a dead "coming soon" toast.
+    // Once configured, the actual transform call lands in C22 (this branch is
+    // a no-op placeholder until then).
+    if (!aiConfigured) {
+      setAiSetupOpen(true);
+    }
   }
 
   function triggerProofread() {
@@ -1135,9 +1159,27 @@ export default function App() {
                 editor={editor}
                 activeTool={activeTool}
                 onToolClick={handleToolClick}
+                onAiSetup={() => setAiSetupOpen(true)}
+                aiConfigured={aiConfigured}
                 panelWidth={leftWidth}
                 isMac={isMac}
               />
+              {!aiConfigured && (
+                <div className="mt-2 rounded-lg border border-dashed border-hairline bg-canvas px-3 py-2.5">
+                  <p className="font-sans text-xs leading-snug text-muted">
+                    AI tools aren&rsquo;t set up yet. Download a local model or
+                    connect your Ollama server to enable Rewrite, Tones,
+                    Summary and more.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setAiSetupOpen(true)}
+                    className="mt-2 rounded bg-pale-blue-text px-2.5 py-1 font-sans text-xs font-medium text-white transition-colors hover:bg-pale-blue-text/90"
+                  >
+                    Set up AI
+                  </button>
+                </div>
+              )}
             </div>
             <div className="flex flex-col gap-1 border-t border-hairline p-4">
               <button
@@ -1320,9 +1362,13 @@ export default function App() {
         onRemoveWord={handleRemoveFromDictionary}
         onClose={() => setDictionaryOpen(false)}
       />
-      <ComingSoonNotice tool={aiNotice} onDismiss={() => setAiNotice("")} />
       {aiSetupOpen && (
-        <AiSetupModal onClose={() => setAiSetupOpen(false)} />
+        <AiSetupModal
+          onClose={async () => {
+            await refreshAiConfigured();
+            setAiSetupOpen(false);
+          }}
+        />
       )}
     </div>
   );
