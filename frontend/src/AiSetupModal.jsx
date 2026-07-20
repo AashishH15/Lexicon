@@ -4,24 +4,42 @@ import Toggle from "./Toggle.jsx";
 import { getAiStatus, downloadModel, getModelStatus } from "./api.js";
 
 const AI_SETUP_KEY = "lexicon:aiSetupDone";
-// Approximate download size shown up-front so the user can judge disk impact
-// before opting in. The hard guard lives server-side.
-const BUNDLE_SIZE_GB = 1.4;
+// Model tiers offered in the bundle opt-in. 2B is the quality default; 0.8B
+// is the lighter/faster fallback for weaker hardware. (A 4B "Pro" tier is
+// deferred until the backend can report GPU capability — see discussion.)
+const MODEL_TIERS = [
+  { key: "2b", label: "Standard", detail: "Best balance of quality and size. ~1.4 GB." },
+  { key: "0.8b", label: "Light", detail: "Smallest and fastest, near-lossless quality. ~0.8 GB." },
+];
+// Advisory only: bias toward the lighter model when the browser reports
+// constrained RAM. The user's choice is the source of truth, never forced.
+function adviseModelKey() {
+  const ram = navigator.deviceMemory; // GB, coarse, Chromium-only
+  if (typeof ram === "number" && ram > 0 && ram < 8) return "0.8b";
+  return "2b";
+}
 
 export default function AiSetupModal({ onClose }) {
   const [status, setStatus] = useState({
     ollama_available: false,
-    model_ready: false,
+    models_ready: {},
+    model_key: "2b",
     active_backend: "bundled",
   });
   const [probeDone, setProbeDone] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [wantBundle, setWantBundle] = useState(false); // opt-in, OFF by default
   const [useOllama, setUseOllama] = useState(false);
+  // Pre-select the advisory tier, but let the probe's default override it once
+  // we know the backend's preferred key.
+  const [modelKey, setModelKey] = useState(adviseModelKey());
   const [phase, setPhase] = useState("choose"); // choose | downloading | done | error
   const [progress, setProgress] = useState(null); // {bytes_done, bytes_total}
   const [error, setError] = useState("");
   const pollRef = useRef(null);
+  // Becomes true the first time the user clicks a tier card, so a late probe
+  // response can't override their selection (see mount effect below).
+  const userPickedRef = useRef(false);
 
   // Probe backend state once on mount. Render immediately with a safe default
   // (no Ollama assumed) so the modal appears at once; fill in the real status
@@ -30,11 +48,17 @@ export default function AiSetupModal({ onClose }) {
     let cancelled = false;
     getAiStatus()
       .then((s) => {
-        if (!cancelled) setStatus(s);
+        if (!cancelled) {
+          setStatus(s);
+          // Apply the backend's preferred default ONLY until the user makes
+          // an explicit choice. Otherwise a late probe response can silently
+          // reset a selected "Light" tier back to "Standard" mid-download.
+          if (s.model_key && !userPickedRef.current) setModelKey(s.model_key);
+        }
       })
       .catch(() => {
         if (!cancelled)
-          setStatus({ ollama_available: false, model_ready: false, active_backend: "bundled" });
+          setStatus({ ollama_available: false, models_ready: {}, model_key: "2b", active_backend: "bundled" });
       })
       .finally(() => {
         if (!cancelled) setProbeDone(true);
@@ -55,15 +79,21 @@ export default function AiSetupModal({ onClose }) {
     stopPolling();
     pollRef.current = setInterval(async () => {
       try {
-        const st = await getModelStatus();
+        // Poll the *selected* key so switching tiers can't make the bar
+        // flicker between different models' sizes.
+        const st = await getModelStatus(modelKey);
         setProgress({ bytes_done: st.bytes_done, bytes_total: st.bytes_total });
         if (st.state === "ready") {
           stopPolling();
+          refreshStatus();
           setPhase("done");
         } else if (st.state === "error") {
           stopPolling();
           setPhase("error");
           setError(st.error || "Download failed.");
+        } else if (st.state === "cancelled") {
+          stopPolling();
+          setPhase("choose");
         }
       } catch {
         // ignore transient poll errors; next tick retries
@@ -71,22 +101,57 @@ export default function AiSetupModal({ onClose }) {
     }, 500);
   }
 
+  // Re-read backend status (per-key readiness) so the "installed" tags and
+  // the ability to switch/delete stay in sync after a download or delete.
+  async function refreshStatus() {
+    try {
+      const s = await getAiStatus();
+      setStatus(s);
+    } catch {
+      /* best-effort */
+    }
+  }
+
   async function handleDownload() {
+    if (phase === "downloading") return; // ignore double-clicks / re-entry
     setPhase("downloading");
     setProgress({ bytes_done: 0, bytes_total: 0 });
     startPolling();
     try {
-      await downloadModel("2b");
-      // download_model resolves only after completion; ensure final state.
-      const st = await getModelStatus();
+      await downloadModel(modelKey);
+      const st = await getModelStatus(modelKey);
       setProgress({ bytes_done: st.bytes_done, bytes_total: st.bytes_total });
       stopPolling();
+      refreshStatus();
       setPhase(st.state === "ready" ? "done" : "error");
       if (st.state !== "ready") setError(st.error || "Download did not complete.");
     } catch (exc) {
       stopPolling();
       setPhase("error");
       setError(exc.message || "Download failed.");
+    }
+  }
+
+  async function handleCancel() {
+    stopPolling();
+    try {
+      await cancelModelDownload();
+      // Remove the partial file so the user is free to pick another tier.
+      await deleteModel(modelKey);
+    } catch {
+      /* best-effort */
+    }
+    refreshStatus();
+    setPhase("choose");
+    setProgress(null);
+  }
+
+  async function handleDelete(key) {
+    try {
+      await deleteModel(key);
+      refreshStatus();
+    } catch (exc) {
+      setError(exc.message || "Delete failed.");
     }
   }
 
@@ -135,8 +200,8 @@ export default function AiSetupModal({ onClose }) {
               <p className="mt-1 font-sans text-xs leading-relaxed text-muted">
                 Lexicon can rewrite, tighten, and retune your writing with a
                 small local model. Nothing leaves your computer — no account,
-                no cloud. The model downloads once (~{BUNDLE_SIZE_GB} GB) and
-                lives in your app-data folder.
+                no cloud. The model downloads once and lives in your app-data
+                folder.
               </p>
             </div>
           </div>
@@ -161,6 +226,76 @@ export default function AiSetupModal({ onClose }) {
               label="Download the Lexicon model"
             />
           </div>
+
+          {/* Model-size selector — only shown once the bundle is opted into.
+              Advisory RAM pre-selection picks Light on weak machines, but the
+              user's choice wins. 4B "Pro" tier is deferred (needs backend GPU
+              reporting). Clicking a card selects it; the footer "Download &
+              enable" starts the download. While downloading, the other card is
+              locked until Cancel removes the partial file. An installed tier
+              shows an "installed" tag and a Delete action. */}
+          {wantBundle && (
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              {MODEL_TIERS.map((tier) => {
+                const selected = modelKey === tier.key;
+                const ready = status.models_ready?.[tier.key];
+                const downloading = phase === "downloading";
+                return (
+                  <button
+                    type="button"
+                    key={tier.key}
+                    disabled={downloading}
+                    onClick={() => {
+                      userPickedRef.current = true;
+                      setModelKey(tier.key);
+                    }}
+                    className={
+                      "rounded-lg border px-3 py-2 text-left transition-colors " +
+                      (selected
+                        ? "border-pale-blue-text bg-pale-blue/40"
+                        : "border-hairline bg-canvas hover:border-muted") +
+                      (downloading ? " cursor-not-allowed opacity-50" : "")
+                    }
+                  >
+                    <span className="flex items-center justify-between">
+                      <span className="font-sans text-sm font-medium text-ink">
+                        {tier.label}
+                      </span>
+                      {ready && (
+                        <span className="font-mono text-[9px] uppercase tracking-widest text-pale-green-text">
+                          installed
+                        </span>
+                      )}
+                    </span>
+                    <span className="mt-0.5 block font-sans text-[11px] text-muted">
+                      {tier.detail}
+                    </span>
+                    {ready && (
+                      <span className="mt-2 inline-block">
+                        <span
+                          role="button"
+                          tabIndex={0}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDelete(tier.key);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.stopPropagation();
+                              handleDelete(tier.key);
+                            }
+                          }}
+                          className="cursor-pointer rounded border border-hairline px-2 py-1 font-sans text-[11px] text-pale-red-text transition-colors hover:border-pale-red-text"
+                        >
+                          Delete
+                        </span>
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          )}
 
           {/* Download progress (only while downloading) */}
           {phase === "downloading" && (
@@ -187,6 +322,13 @@ export default function AiSetupModal({ onClose }) {
                   ? `${Math.round(progress.bytes_done / 1e6)} / ${Math.round(progress.bytes_total / 1e6)} MB`
                   : `${Math.round((progress?.bytes_done || 0) / 1e6)} MB`}
               </p>
+              <button
+                type="button"
+                onClick={handleCancel}
+                className="mt-2 rounded border border-hairline px-2 py-1 font-sans text-[11px] text-muted transition-colors hover:border-muted hover:text-ink"
+              >
+                Cancel
+              </button>
             </div>
           )}
 
@@ -266,13 +408,31 @@ export default function AiSetupModal({ onClose }) {
               Continue <ArrowRight size={16} weight="bold" />
             </button>
           ) : wantBundle ? (
-            <button
-              type="button"
-              onClick={handleDownload}
-              className="flex items-center gap-1.5 rounded bg-pale-blue-text px-4 py-2 font-sans text-sm font-medium text-white transition-colors hover:bg-pale-blue-text/90"
-            >
-              <DownloadSimple size={16} weight="bold" /> Download & enable
-            </button>
+            phase === "downloading" ? (
+              <button
+                type="button"
+                disabled
+                className="flex cursor-not-allowed items-center gap-1.5 rounded bg-pale-blue-text/60 px-4 py-2 font-sans text-sm font-medium text-white/80"
+              >
+                <DownloadSimple size={16} weight="bold" /> Downloading…
+              </button>
+            ) : status.models_ready?.[modelKey] ? (
+              <button
+                type="button"
+                onClick={finish}
+                className="flex items-center gap-1.5 rounded bg-pale-blue-text px-4 py-2 font-sans text-sm font-medium text-white transition-colors hover:bg-pale-blue-text/90"
+              >
+                Continue <ArrowRight size={16} weight="bold" />
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handleDownload}
+                className="flex items-center gap-1.5 rounded bg-pale-blue-text px-4 py-2 font-sans text-sm font-medium text-white transition-colors hover:bg-pale-blue-text/90"
+              >
+                <DownloadSimple size={16} weight="bold" /> Download & enable
+              </button>
+            )
           ) : useOllama ? (
             <button
               type="button"

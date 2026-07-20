@@ -1,5 +1,7 @@
 from contextlib import asynccontextmanager
 
+import os
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -8,7 +10,14 @@ from fastapi.responses import JSONResponse
 
 from inference import get_backend, InferenceUnavailable, BundledBackend, OllamaBackend
 from languagetool import check_text, warm_up
-from model_manager import download_model, model_state
+from model_manager import (
+    download_model,
+    model_state,
+    model_path,
+    models_ready,
+    cancel_download,
+    delete_model,
+)
 
 
 @asynccontextmanager
@@ -67,24 +76,42 @@ def grammar_check(request: GrammarRequest):
 
 
 @app.get("/model/status")
-def model_status():
-    """Current bundled-model download/ready state."""
-    return model_state()
+def model_status(key: str = "2b"):
+    """Download/ready state for a specific model key (per-key, so switching
+    models doesn't make the progress bar flicker between sizes)."""
+    return model_state(key)
 
 
 @app.get("/ai/status")
 def ai_status():
     """Single probe the frontend calls on load: which backend is active, is
-    Ollama reachable, and is the bundled model ready. Drives the first-run
-    setup flow and the settings surface."""
+    Ollama reachable, and which bundled models are ready. Drives the first-run
+    setup flow (C19.1) and the settings surface (C19.2)."""
     ollama = OllamaBackend()
-    bundled = BundledBackend()
     active = get_backend()
     return {
         "ollama_available": ollama.available(),
-        "model_ready": bundled.available(),
+        "models_ready": models_ready(),
+        "model_key": "2b",  # default selection
         "active_backend": active.name,
     }
+
+
+@app.post("/model/cancel")
+def model_cancel():
+    """Signal an in-flight download to abort at the next chunk."""
+    cancel_download()
+    return {"cancelled": True}
+
+
+@app.post("/model/delete")
+def model_delete(request: ModelDownloadRequest):
+    """Remove a downloaded GGUF (user switched models / freed space)."""
+    try:
+        delete_model(request.model_key)
+    except ValueError as exc:
+        return JSONResponse(status_code=400, content={"error": str(exc)})
+    return {"deleted": request.model_key}
 
 
 @app.post("/model/download")
