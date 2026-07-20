@@ -286,6 +286,7 @@ export default function Settings({
                 onPreferenceChange={(pref) => {
                   setAiPreference(pref.backend, pref.model_key).catch(() => {});
                 }}
+                onConfigured={() => window.dispatchEvent(new CustomEvent("lexicon:ai-configured"))}
               />
             </div>
           </div>

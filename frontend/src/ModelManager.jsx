@@ -75,7 +75,12 @@ function ActiveStatus({ status }) {
  *  - onPreferenceChange(pref): called when a choice is committed
  *  - renderFooter(api): returns the action buttons (parent-owned chrome)
  */
-export default function ModelManager({ mode = "onboarding", onPreferenceChange, renderFooter }) {
+export default function ModelManager({
+  mode = "onboarding",
+  onPreferenceChange,
+  onConfigured,
+  renderFooter,
+}) {
   const [status, setStatus] = useState({
     ollama_available: false,
     models_ready: {},
@@ -156,6 +161,13 @@ export default function ModelManager({ mode = "onboarding", onPreferenceChange, 
     try {
       const s = await getAiStatus();
       setStatus(s);
+      // Let the parent know a usable backend now exists (e.g. App can
+      // un-grey the AI tools immediately, without waiting for modal close).
+      const ready =
+        s.preference?.backend === "ollama"
+          ? s.ollama_available
+          : Boolean(s.models_ready?.[s.preference?.model_key || s.model_key]);
+      if (ready && onConfigured) onConfigured();
     } catch {
       /* best-effort */
     }

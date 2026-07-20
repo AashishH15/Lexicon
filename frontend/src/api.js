@@ -96,3 +96,18 @@ export async function deleteModel(modelKey = "2b") {
   }
   return response.json();
 }
+
+// Run an AI transform (Rewrite, Tone, Summary, …) via the backend.
+export async function transformText({ prompt, text, modelKey, backend, signal }) {
+  const response = await fetch(`${API_URL}/transform`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ prompt, text, model_key: modelKey, backend }),
+    signal,
+  });
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.error || `Transform failed: ${response.status}`);
+  }
+  return response.json();
+}

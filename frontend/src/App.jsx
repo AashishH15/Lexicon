@@ -180,9 +180,6 @@ export default function App() {
     return localStorage.getItem("lexicon:aiSetupDone") !== "true";
   });
 
-  // C21: probe whether an AI backend is configured (a bundled model on disk
-  // or a chosen Ollama server). Drives the greyed/unavailable treatment on
-  // the rewriting/tone/structure tools until they are wired in C22+.
   const refreshAiConfigured = useCallback(async () => {
     try {
       const s = await getAiStatus();
@@ -197,6 +194,13 @@ export default function App() {
   }, []);
   useEffect(() => {
     refreshAiConfigured();
+  }, [refreshAiConfigured]);
+  // Settings-panel model changes (delete / re-select) fire this so the
+  // toolbar can un-grey without the modal close path.
+  useEffect(() => {
+    const onCfg = () => refreshAiConfigured();
+    window.addEventListener("lexicon:ai-configured", onCfg);
+    return () => window.removeEventListener("lexicon:ai-configured", onCfg);
   }, [refreshAiConfigured]);
   const [leftPanelOpen, setLeftPanelOpen] = useState(() =>
     loadPanelOpen(leftPanelKey),
@@ -674,8 +678,6 @@ export default function App() {
     runGrammarCheck();
   }
 
-  // C16.23: dismiss every current suggestion and remember them so a re-run
-  // won't surface them again.
   function handleDismissAll() {
     grammarMatches.forEach((match) => rememberDismissed(match));
     if (editor) {
@@ -950,10 +952,6 @@ export default function App() {
       return;
     }
     setActiveTool("");
-    // C21: AI tools aren't wired to /transform yet (C22+). When no
-    // backend is configured, open setup instead of a dead "coming soon" toast.
-    // Once configured, the actual transform call lands in C22 (this branch is
-    // a no-op placeholder until then).
     if (!aiConfigured) {
       setAiSetupOpen(true);
     }
@@ -1364,6 +1362,7 @@ export default function App() {
       />
       {aiSetupOpen && (
         <AiSetupModal
+          onConfigured={refreshAiConfigured}
           onClose={async () => {
             await refreshAiConfigured();
             setAiSetupOpen(false);

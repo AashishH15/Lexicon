@@ -1,7 +1,7 @@
 import { X, DownloadSimple, ArrowRight } from "@phosphor-icons/react";
 import ModelManager from "./ModelManager.jsx";
 
-export default function AiSetupModal({ onClose }) {
+export default function AiSetupModal({ onClose, onConfigured }) {
   function finish() {
     localStorage.setItem("lexicon:aiSetupDone", "true");
     onClose?.();
@@ -24,7 +24,7 @@ export default function AiSetupModal({ onClose }) {
         </div>
 
         <div className="lex-scroll min-h-0 flex-1 overflow-y-auto px-6 py-6">
-          <ModelManager mode="onboarding" renderFooter={renderFooter} />
+          <ModelManager mode="onboarding" onConfigured={onConfigured} renderFooter={renderFooter} />
         </div>
       </div>
     </div>
