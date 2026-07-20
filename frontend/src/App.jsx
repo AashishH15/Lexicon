@@ -32,6 +32,7 @@ import DictionaryPanel from "./DictionaryPanel.jsx";
 import AiSetupModal from "./AiSetupModal.jsx";
 import useTransform from "./useTransform.js";
 import { isAiTool, promptForTool } from "./prompts.js";
+import { marked } from "marked";
 import {
   Gear,
   BookBookmark,
@@ -1004,15 +1005,33 @@ export default function App() {
     });
   }
 
+  function normalizeTableCells(html) {
+    const doc = new DOMParser().parseFromString(html, "text/html");
+    doc.querySelectorAll("th, td").forEach((cell) => {
+      const hasBlock = cell.querySelector("p, div, ul, ol, blockquote, pre, h1, h2, h3, h4, h5, h6");
+      if (!hasBlock) {
+        const para = doc.createElement("p");
+        para.innerHTML = cell.innerHTML;
+        cell.innerHTML = "";
+        cell.appendChild(para);
+      }
+    });
+    return doc.body.innerHTML;
+  }
+
   function applyTransformResult() {
     if (!editor || !transformResult) {
       return;
     }
     const { from, to, text } = transformResult;
+    let html = marked.parse(text);
+    if (/<table/i.test(html)) {
+      html = normalizeTableCells(html);
+    }
     editor
       .chain()
       .focus()
-      .insertContentAt({ from, to }, text)
+      .insertContentAt({ from, to }, html)
       .run();
     setTransformResult(null);
     setActiveTool("");
