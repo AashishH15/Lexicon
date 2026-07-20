@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
+from ai_prefs import load_prefs, save_prefs
 from inference import BundledBackend, InferenceUnavailable, OllamaBackend, get_backend
 from languagetool import check_text, warm_up
 from model_manager import (
@@ -81,16 +82,40 @@ def model_status(key: str = "2b"):
 @app.get("/ai/status")
 def ai_status():
     """Single probe the frontend calls on load: which backend is active, is
-    Ollama reachable, and which bundled models are ready. Drives the first-run
-    setup flow (C19.1) and the settings surface (C19.2)."""
+    Ollama reachable, which bundled models are ready, and the user's saved
+    preference. Drives the first-run setup flow and the settings
+    surface."""
     ollama = OllamaBackend()
     active = get_backend()
+    prefs = load_prefs()
     return {
         "ollama_available": ollama.available(),
         "models_ready": models_ready(),
-        "model_key": "2b",  # default selection
+        "model_key": prefs["model_key"],
+        "preference": prefs,
         "active_backend": active.name,
     }
+
+
+@app.get("/ai/preference")
+def ai_preference_get():
+    """Current persisted backend choice."""
+    return load_prefs()
+
+
+class AiPreferenceRequest(BaseModel):
+    backend: str  # "auto" | "ollama" | "bundled"
+    model_key: str = "2b"  # "2b" | "0.8b"
+
+
+@app.post("/ai/preference")
+def ai_preference_set(request: AiPreferenceRequest):
+    """Persist the user's backend choice so it survives restarts and drives
+    get_backend(). The editor's AI tools read this via get_backend()."""
+    prefs = save_prefs(request.backend, request.model_key)
+    # Force the cached backend to re-resolve against the new preference.
+    get_backend(force_refresh=True)
+    return prefs
 
 
 @app.post("/model/cancel")

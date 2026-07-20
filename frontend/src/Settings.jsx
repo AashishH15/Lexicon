@@ -3,6 +3,8 @@ import { useEffect, useRef, useState } from "react";
 import { X, CaretDown, ArrowCounterClockwise, IconBase } from "@phosphor-icons/react";
 import LanguageDropdown from "./LanguageDropdown.jsx";
 import Toggle from "./Toggle.jsx";
+import ModelManager from "./ModelManager.jsx";
+import { setAiPreference } from "./api.js";
 
 // GitHub mark (official Phosphor `github-logo` artwork). It isn't bundled in
 // @phosphor-icons/react@2.1.10, so we register it locally via Phosphor's
@@ -179,6 +181,26 @@ export default function Settings({
             </div>
           </div>
 
+          <div className="mt-6 flex items-start justify-between gap-4">
+            <div>
+              <p className="font-mono text-[10px] uppercase tracking-widest text-muted">
+                Focus Mode
+              </p>
+              <p className="mt-1 font-sans text-xs text-muted">
+                Collapses both side panels for a distraction-free writing view.
+                Hover a screen-edge rail to peek a panel open; it auto-closes
+                when you move away.
+              </p>
+            </div>
+            <div className="pt-0.5">
+              <Toggle
+                checked={focusMode}
+                onChange={onFocusModeChange}
+                label="Toggle focus mode"
+              />
+            </div>
+          </div>
+
           <div className="mt-6">
             <p className="font-mono text-[10px] uppercase tracking-widest text-muted">
               Font Size
@@ -213,26 +235,6 @@ export default function Settings({
             </div>
           </div>
 
-          <div className="mt-6 flex items-start justify-between gap-4">
-            <div>
-              <p className="font-mono text-[10px] uppercase tracking-widest text-muted">
-                Focus Mode
-              </p>
-              <p className="mt-1 font-sans text-xs text-muted">
-                Collapses both side panels for a distraction-free writing view.
-                Hover a screen-edge rail to peek a panel open; it auto-closes
-                when you move away.
-              </p>
-            </div>
-            <div className="pt-0.5">
-              <Toggle
-                checked={focusMode}
-                onChange={onFocusModeChange}
-                label="Toggle focus mode"
-              />
-            </div>
-          </div>
-
           <div className="mt-6">
             <p className="font-mono text-[10px] uppercase tracking-widest text-muted">
               Line Spacing
@@ -264,6 +266,27 @@ export default function Settings({
                   {option.label}
                 </button>
               ))}
+            </div>
+          </div>
+
+          {/* AI Model — management surface shared with the onboarding modal.
+              Selecting a tier or Ollama here persists the choice server-side
+              (survives restart) and drives which backend the editor uses. */}
+          <div className="mt-8 border-t border-hairline pt-6">
+            <p className="font-mono text-[10px] uppercase tracking-widest text-muted">
+              AI Model
+            </p>
+            <p className="mt-1 font-sans text-xs text-muted">
+              Runs entirely on your device. Download a local model or use your
+              own Ollama server. Your selection is saved and used until changed.
+            </p>
+            <div className="mt-3">
+              <ModelManager
+                mode="settings"
+                onPreferenceChange={(pref) => {
+                  setAiPreference(pref.backend, pref.model_key).catch(() => {});
+                }}
+              />
             </div>
           </div>
 

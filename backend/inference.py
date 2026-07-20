@@ -22,6 +22,7 @@ import re
 
 import requests
 
+from ai_prefs import load_prefs
 from model_manager import model_path
 
 OLLAMA_SERVER = os.environ.get("OLLAMA_SERVER", "http://localhost:11434")
@@ -219,21 +220,56 @@ _backend = None
 def get_backend(force_refresh: bool = False) -> InferenceBackend:
     """Pick a backend once and cache it.
 
-    Startup probe: use Ollama when reachable (a user who already runs it),
-    otherwise fall back to the bundled backend. `LEXICON_INFERENCE` forces a
-    specific backend and skips detection.
+    Resolution order:
+      1. `LEXICON_INFERENCE` env override (highest priority, dev/CI use).
+      2. The user's persisted preference (ai_prefs.json): "ollama" or
+         "bundled" (with a model_key). "auto" means prefer Ollama if present.
+      3. Fallback: Ollama when reachable, else the bundled backend.
+
+    When the preferred backend isn't actually usable (Ollama down, or the
+    chosen bundled tier isn't downloaded), we fall back gracefully so a saved
+    preference can never wedge the app into a broken state.
     """
     global _backend
     if _backend is not None and not force_refresh:
         return _backend
 
-    if FORCE_BACKEND == "ollama":
-        _backend = OllamaBackend()
-    elif FORCE_BACKEND == "bundled":
-        _backend = BundledBackend()
-    else:
+    if FORCE_BACKEND in ("ollama", "bundled"):
+        _backend = OllamaBackend() if FORCE_BACKEND == "ollama" else BundledBackend()
+        return _backend
+
+    prefs = load_prefs()
+    choice = prefs["backend"]
+    key = prefs["model_key"]
+
+    if choice == "ollama":
         ollama = OllamaBackend()
-        _backend = ollama if ollama.available() else BundledBackend()
+        if ollama.available():
+            _backend = ollama
+            return _backend
+        # Ollama preferred but unavailable — fall back to bundled if we can.
+        bundled = BundledBackend(model_key=key)
+        _backend = bundled if bundled.available() else ollama
+        return _backend
+
+    if choice == "bundled":
+        bundled = BundledBackend(model_key=key)
+        if bundled.available():
+            _backend = bundled
+            return _backend
+        # Chosen tier missing — try the other tier, then Ollama as last resort.
+        other = "0.8b" if key == "2b" else "2b"
+        alt = BundledBackend(model_key=other)
+        if alt.available():
+            _backend = alt
+            return _backend
+        ollama = OllamaBackend()
+        _backend = ollama if ollama.available() else bundled
+        return _backend
+
+    # "auto": prefer Ollama when reachable, else bundled.
+    ollama = OllamaBackend()
+    _backend = ollama if ollama.available() else BundledBackend(model_key=key)
     return _backend
 
 

@@ -28,6 +28,29 @@ export async function getAiStatus() {
   return response.json();
 }
 
+// Read the user's persisted backend preference.
+export async function getAiPreference() {
+  const response = await fetch(`${API_URL}/ai/preference`);
+  if (!response.ok) {
+    throw new Error(`AI preference failed: ${response.status}`);
+  }
+  return response.json();
+}
+
+// Persist the user's backend choice (survives restart, drives get_backend).
+export async function setAiPreference(backend, modelKey = "2b") {
+  const response = await fetch(`${API_URL}/ai/preference`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ backend, model_key: modelKey }),
+  });
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.error || `Set AI preference failed: ${response.status}`);
+  }
+  return response.json();
+}
+
 // Trigger the bundled-model download (runs synchronously server-side).
 export async function downloadModel(modelKey = "2b") {
   const response = await fetch(`${API_URL}/model/download`, {
