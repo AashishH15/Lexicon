@@ -9,6 +9,16 @@ venv/
 dist/
 build/
 
+# Tauri / Rust
+frontend/src-tauri/binaries/
+frontend/src-tauri/target/
+frontend/src-tauri/gen/
+frontend/src-tauri/lexicon-backend/
+Cargo.lock
+# keep resource placeholders
+!frontend/src-tauri/jre/.gitkeep
+!frontend/src-tauri/models/.gitkeep
+
 # Environment
 .env
 

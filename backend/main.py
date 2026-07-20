@@ -38,7 +38,16 @@ app = FastAPI(lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        # Tauri's bundled WebView origin, so the desktop app can call the
+        # sidecar API on localhost:8000 without a CORS block.
+        "tauri://localhost",
+        "http://localhost",
+        "http://localhost:8000",
+        "http://127.0.0.1:8000",
+    ],
     allow_methods=["*"],
     allow_headers=["*"],
 )

@@ -1,0 +1,225 @@
+name: Release (Tauri desktop bundles)
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: read
+
+jobs:
+  desktop:
+    name: Build ${{ matrix.name }}
+    runs-on: ${{ matrix.runner }}
+    defaults:
+      run:
+        shell: bash
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Windows 11 is x64 or ARM64 only. This x86 package is for legacy
+          # 32-bit Windows systems; it keeps proofreading available but omits
+          # the optional native llama.cpp engine.
+          - name: Windows x86 (32-bit legacy)
+            runner: windows-2025
+            platform: windows
+            target: i686-pc-windows-msvc
+            python_arch: x86
+            cmake_args: "-DCMAKE_GENERATOR_PLATFORM=Win32 -DGGML_NATIVE=OFF"
+            include_llama: "false"
+            jre_url: https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.17%2B10/OpenJDK17U-jre_x86-32_windows_hotspot_17.0.17_10.zip
+            jre_archive: jre.zip
+            bundle: nsis
+            extension: exe
+            artifact_name: lexicon-windows-x86
+
+          - name: Windows x64
+            runner: windows-2025
+            platform: windows
+            target: x86_64-pc-windows-msvc
+            python_arch: x64
+            cmake_args: "-DCMAKE_GENERATOR_PLATFORM=x64 -DGGML_NATIVE=OFF"
+            include_llama: "true"
+            jre_url: https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.5%2B11/OpenJDK21U-jre_x64_windows_hotspot_21.0.5_11.zip
+            jre_archive: jre.zip
+            bundle: nsis
+            extension: exe
+            artifact_name: lexicon-windows-x64
+
+          - name: Windows ARM64
+            runner: windows-11-arm
+            platform: windows
+            target: aarch64-pc-windows-msvc
+            python_arch: arm64
+            cmake_args: "-DCMAKE_GENERATOR_PLATFORM=ARM64 -DGGML_NATIVE=OFF"
+            include_llama: "true"
+            jre_url: https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.5%2B11/OpenJDK21U-jre_aarch64_windows_hotspot_21.0.5_11.zip
+            jre_archive: jre.zip
+            bundle: nsis
+            extension: exe
+            artifact_name: lexicon-windows-arm64
+
+          - name: macOS Intel
+            runner: macos-15-intel
+            platform: macos
+            target: x86_64-apple-darwin
+            python_arch: x64
+            cmake_args: "-DGGML_NATIVE=OFF -DCMAKE_OSX_ARCHITECTURES=x86_64"
+            include_llama: "true"
+            jre_url: https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.5%2B11/OpenJDK21U-jre_x64_mac_hotspot_21.0.5_11.tar.gz
+            jre_archive: jre.tar.gz
+            bundle: dmg
+            extension: dmg
+            artifact_name: lexicon-macos-x64
+
+          - name: macOS Apple Silicon
+            runner: macos-15
+            platform: macos
+            target: aarch64-apple-darwin
+            python_arch: arm64
+            cmake_args: "-DGGML_NATIVE=OFF -DCMAKE_OSX_ARCHITECTURES=arm64"
+            include_llama: "true"
+            jre_url: https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.5%2B11/OpenJDK21U-jre_aarch64_mac_hotspot_21.0.5_11.tar.gz
+            jre_archive: jre.tar.gz
+            bundle: dmg
+            extension: dmg
+            artifact_name: lexicon-macos-arm64
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+          architecture: ${{ matrix.python_arch }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Windows build tooling
+        if: matrix.platform == 'windows'
+        run: |
+          if ! command -v cmake >/dev/null 2>&1; then
+            choco install cmake --yes --no-progress
+          fi
+
+      - name: Install macOS build tooling
+        if: matrix.platform == 'macos'
+        run: |
+          if ! brew list cmake >/dev/null 2>&1; then
+            brew install cmake
+          fi
+
+      - name: Freeze backend sidecar (onedir)
+        working-directory: backend
+        env:
+          CMAKE_ARGS: ${{ matrix.cmake_args }}
+          LEXICON_INCLUDE_LLAMA: ${{ matrix.include_llama }}
+        run: |
+          python -m pip install -r requirements.txt pyinstaller huggingface-hub==0.29.3
+          if [[ "${LEXICON_INCLUDE_LLAMA}" == "true" ]]; then
+            python -m pip install llama-cpp-python==0.3.34
+          fi
+          pyinstaller lexicon.spec --noconfirm --clean
+          rm -rf ../frontend/src-tauri/lexicon-backend
+          cp -r dist/lexicon-backend ../frontend/src-tauri/lexicon-backend
+          if [[ "${{ matrix.platform }}" == "macos" ]]; then
+            chmod +x ../frontend/src-tauri/lexicon-backend/lexicon-backend
+          fi
+
+      - name: Bundle Windows JRE
+        if: matrix.platform == 'windows'
+        working-directory: backend
+        run: |
+          curl -L --fail --retry 3 -o "${{ matrix.jre_archive }}" "${{ matrix.jre_url }}"
+          python - <<'PY'
+          import os
+          import shutil
+          import zipfile
+
+          archive = os.environ["JRE_ARCHIVE"]
+          with zipfile.ZipFile(archive) as z:
+              z.extractall(".")
+          top = next(d for d in os.listdir(".") if d.startswith("jdk-17") or d.startswith("jdk-21"))
+          dest = "../frontend/src-tauri/jre"
+          if os.path.isdir(dest):
+              shutil.rmtree(dest)
+          shutil.move(top, dest)
+          os.remove(archive)
+          PY
+        env:
+          JRE_ARCHIVE: ${{ matrix.jre_archive }}
+
+      - name: Bundle macOS JRE
+        if: matrix.platform == 'macos'
+        working-directory: backend
+        run: |
+          curl -L --fail --retry 3 -o "${{ matrix.jre_archive }}" "${{ matrix.jre_url }}"
+          tar -xzf "${{ matrix.jre_archive }}"
+          rm -rf ../frontend/src-tauri/jre
+          mv jdk-21*/ ../frontend/src-tauri/jre
+          rm "${{ matrix.jre_archive }}"
+
+      - name: Frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Tauri build (${{ matrix.bundle }})
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: frontend
+          args: --target ${{ matrix.target }} --bundles ${{ matrix.bundle }}
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: frontend/target/${{ matrix.target }}/release/bundle/${{ matrix.bundle }}/*.${{ matrix.extension }}
+          if-no-files-found: error
+
+  release:
+    needs: [desktop]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: false
+          name: Lexicon ${{ github.ref_name }}
+          body: |
+            ## Lexicon ${{ github.ref_name }}
+
+            Privacy-first grammar and AI writing assistant. Runs locally on
+            your computer; the local model downloads on first use.
+
+            ### Downloads
+            - **Windows x64**: 64-bit Intel/AMD Windows
+            - **Windows ARM64**: Windows on ARM
+            - **Windows x86**: legacy 32-bit Windows; proofreading is supported,
+              but the optional native AI engine is not bundled
+            - **macOS Intel**: Intel Macs
+            - **macOS Apple Silicon**: M-series Macs
+
+            macOS builds are unsigned. On first open, right-click the app and
+            choose Open, or run:
+            `xattr -dr com.apple.quarantine /Applications/Lexicon.app`
+
+            On first launch the app downloads the local AI model (~1.4 GB for
+            the 2B tier). Proofreading works immediately without it.
+          files: |
+            artifacts/lexicon-windows-x86/*.exe
+            artifacts/lexicon-windows-x64/*.exe
+            artifacts/lexicon-windows-arm64/*.exe
+            artifacts/lexicon-macos-x64/*.dmg
+            artifacts/lexicon-macos-arm64/*.dmg

@@ -2,3 +2,4 @@ fastapi
 uvicorn
 requests
 language-tool-python
+huggingface-hub==0.29.3

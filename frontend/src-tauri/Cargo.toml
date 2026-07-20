@@ -1,0 +1,21 @@
+[package]
+name = "lexicon"
+version = "0.5.0"
+description = "Lexicon - privacy-first grammar and AI writing assistant"
+authors = ["Lexicon"]
+edition = "2021"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["protocol-asset"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[profile.release]
+panic = "abort"
+codegen-units = 1
+lto = true
+opt-level = "s"
+strip = true
