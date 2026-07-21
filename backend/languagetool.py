@@ -66,7 +66,7 @@ def _get_tool(language="en-US"):
     return _tool
 
 
-def warm_up():
+def warm_up(language="en-US"):
     """Launch the LanguageTool JVM up front so the first check is fast.
 
     Safe to call repeatedly; only the first successful launch does work. A
@@ -77,7 +77,7 @@ def warm_up():
     if _warm:
         return
     try:
-        _get_tool()
+        _get_tool(language)
         _warm = True
     except Exception:
         _warm = False
