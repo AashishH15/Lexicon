@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="media/lexicon-logo.png" alt="Lexicon logo" width="150" />
+  <img src="media/lexicon-logo-windows.png" alt="Lexicon logo" width="150" />
 </p>
 
 <h1 align="center">Lexicon</h1>
@@ -67,6 +67,13 @@ Linux installers are not packaged yet.
 
 The editor and proofreading tools work without downloading an AI model. The AI
 tools can also use an existing local Ollama server when one is available.
+
+## Updates
+
+Lexicon checks for new releases when it starts and provides **Check for
+updates** in Settings. Updates install over the app while keeping downloaded
+models and other app data in the user profile, so models do not need to be
+downloaded again after an update.
 
 ## What Lexicon includes
 

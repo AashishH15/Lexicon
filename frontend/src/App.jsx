@@ -46,6 +46,12 @@ import {
 } from "@phosphor-icons/react";
 import { checkGrammar, getAiStatus } from "./api.js";
 import {
+  checkForUpdate,
+  installUpdate,
+  updaterIsAvailable,
+} from "./updater.js";
+import UpdateBanner from "./UpdateBanner.jsx";
+import {
   GrammarHighlight,
   buildTextWithMap,
   applyGrammarDecorations,
@@ -88,7 +94,7 @@ const fontSizeKey = "lexicon:fontSize";
 const focusModeKey = "lexicon:focusMode";
 const lineSpacingKey = "lexicon:lineSpacing";
 const dictionaryKey = "lexicon:user_dictionary";
-const APP_VERSION = import.meta.env.VITE_APP_VERSION || "v0.5.5";
+const APP_VERSION = import.meta.env.VITE_APP_VERSION || "v0.5.7";
 const leftPanelKey = "lexicon:leftPanelOpen";
 const rightPanelKey = "lexicon:rightPanelOpen";
 const leftWidthKey = "lexicon:leftPanelWidth";
@@ -184,6 +190,81 @@ export default function App() {
     // First-run AI setup flow: shown once, gated by a localStorage flag.
     return localStorage.getItem("lexicon:aiSetupDone") !== "true";
   });
+  const [updateState, setUpdateState] = useState({
+    status: "idle",
+    update: null,
+    message: "",
+    progress: null,
+    dismissed: false,
+  });
+
+  const runUpdateCheck = useCallback(async ({ silent = false } = {}) => {
+    setUpdateState((current) => ({
+      ...current,
+      status: "checking",
+      message: "",
+      dismissed: false,
+    }));
+    try {
+      const update = await checkForUpdate();
+      if (!update) {
+        setUpdateState({
+          status: updaterIsAvailable() ? "current" : "unavailable",
+          update: null,
+          message: updaterIsAvailable()
+            ? "Lexicon is up to date."
+            : "Updates are checked from an installed Lexicon build.",
+          progress: null,
+          dismissed: false,
+        });
+        return null;
+      }
+      setUpdateState({
+        status: "available",
+        update,
+        message: "",
+        progress: null,
+        dismissed: false,
+      });
+      return update;
+    } catch {
+      setUpdateState((current) => ({
+        ...current,
+        status: silent ? "idle" : "error",
+        message: silent ? "" : "Could not check for updates right now.",
+        progress: null,
+      }));
+      return null;
+    }
+  }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      runUpdateCheck({ silent: true });
+    }, 2500);
+    return () => clearTimeout(timer);
+  }, [runUpdateCheck]);
+
+  const installAvailableUpdate = useCallback(async () => {
+    if (!updateState.update) return;
+    setUpdateState((current) => ({
+      ...current,
+      status: "installing",
+      message: "Downloading the update…",
+      progress: { downloaded: 0, total: 0 },
+    }));
+    try {
+      await installUpdate(updateState.update, (progress) => {
+        setUpdateState((current) => ({ ...current, progress }));
+      });
+    } catch {
+      setUpdateState((current) => ({
+        ...current,
+        status: "error",
+        message: "The update could not be installed. Please try again later.",
+      }));
+    }
+  }, [updateState.update]);
 
   const { status: transformStatus, error: transformError, run: runTransform, abort: abortTransform, isWarming } =
     useTransform();
@@ -1311,9 +1392,17 @@ export default function App() {
       <header className="lex-no-print flex items-center justify-between px-6 h-14 border-b border-hairline">
         <div className="leading-tight">
           <span className="block font-serif text-lg tracking-tight">Lexicon</span>
-          <span className="block font-mono text-[10px] uppercase tracking-[0.08em] text-muted">
-            {APP_VERSION}
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="block font-mono text-[10px] uppercase tracking-[0.08em] text-muted">
+              {APP_VERSION}
+            </span>
+            {updateState.status === "available" && !updateState.dismissed && (
+              <UpdateBanner
+                update={updateState.update}
+                onInstall={installAvailableUpdate}
+              />
+            )}
+          </div>
         </div>
         <div className="flex items-center gap-3">
           <ImportExportMenu editor={editor} />
@@ -1620,6 +1709,8 @@ export default function App() {
         focusMode={focusMode}
         onFocusModeChange={handleFocusModeChange}
         onResetDefaults={handleResetDefaults}
+        onCheckForUpdates={() => runUpdateCheck()}
+        updateState={updateState}
         onClose={() => setSettingsOpen(false)}
       />
 

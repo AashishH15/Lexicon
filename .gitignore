@@ -21,6 +21,7 @@ Cargo.lock
 
 # Environment
 .env
+.tauri/
 
 # Logs
 *.log

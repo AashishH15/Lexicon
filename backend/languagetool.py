@@ -15,6 +15,20 @@ def _get_tool():
     if _tool is None:
         import language_tool_python
 
+        if os.name == "nt":
+            # language_tool_python already redirects the JVM's output, but
+            # explicitly request a hidden Windows window as well. Without
+            # SW_HIDE, java.exe can briefly flash a console during startup.
+            import subprocess
+            import language_tool_python.server as language_tool_server
+
+            startupinfo_cls = getattr(subprocess, "STARTUPINFO", None)
+            if startupinfo_cls is not None:
+                startupinfo = startupinfo_cls()
+                startupinfo.dwFlags |= getattr(subprocess, "STARTF_USESHOWWINDOW", 0)
+                startupinfo.wShowWindow = getattr(subprocess, "SW_HIDE", 0)
+                language_tool_server.startupinfo = startupinfo
+
         _tool = language_tool_python.LanguageTool("en-US")
     return _tool
 

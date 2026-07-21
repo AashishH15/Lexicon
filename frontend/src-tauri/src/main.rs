@@ -13,8 +13,18 @@ use tauri::menu::{MenuBuilder, MenuItemBuilder};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{Manager, RunEvent, WindowEvent};
 
-struct BackendChild(Mutex<Option<Child>>);
+struct BackendState {
+    child: Mutex<Option<Child>>,
+    last_activity: Mutex<Instant>,
+    lifecycle: Mutex<()>,
+}
+
 const BACKEND_PORT: u16 = 18000;
+const BACKEND_IDLE_AFTER: Duration = Duration::from_secs(20 * 60);
+const BACKEND_IDLE_POLL: Duration = Duration::from_secs(30);
+
+#[cfg(target_os = "windows")]
+const CREATE_NO_WINDOW: u32 = 0x08000000;
 
 fn request_backend_shutdown() -> bool {
     let address: SocketAddr = match format!("127.0.0.1:{BACKEND_PORT}").parse() {
@@ -52,9 +62,66 @@ fn terminate_backend_tree(child: &mut Child) {
     let _ = child.wait();
 }
 
+fn start_backend(app_handle: &tauri::AppHandle) -> Result<Child, String> {
+    let resource_dir = app_handle
+        .path()
+        .resource_dir()
+        .map_err(|error| format!("failed to resolve resource dir: {error}"))?;
+
+    // Bundled JRE (resources/jre) so LanguageTool needs no Java install.
+    let jre_dir = resource_dir.join("jre");
+    let java_home = if jre_dir.is_dir() {
+        jre_dir.to_string_lossy().to_string()
+    } else {
+        String::new()
+    };
+
+    // Onedir sidecar: resources/lexicon-backend/lexicon-backend[.exe]
+    // (the `_internal` folder sits beside it and is required at runtime).
+    // PyInstaller adds `.exe` only on Windows; the macOS bundle uses
+    // the extensionless executable name.
+    let sidecar_name = if cfg!(target_os = "windows") {
+        "lexicon-backend.exe"
+    } else {
+        "lexicon-backend"
+    };
+    let sidecar_exe: PathBuf = resource_dir.join("lexicon-backend").join(sidecar_name);
+
+    let mut cmd = Command::new(&sidecar_exe);
+    // Production uses a dedicated port so a running development backend on
+    // 8000 cannot steal the desktop app's requests.
+    cmd.env("LEXICON_PORT", BACKEND_PORT.to_string());
+    cmd.env("LEXICON_HOST", "127.0.0.1");
+    cmd.env("LEXICON_JAVA_HOME", &java_home);
+    if !java_home.is_empty() {
+        cmd.env("JAVA_HOME", &java_home);
+    }
+    cmd.stdin(Stdio::null());
+    cmd.stdout(Stdio::null());
+    cmd.stderr(Stdio::null());
+    #[cfg(target_os = "windows")]
+    {
+        use std::os::windows::process::CommandExt;
+        cmd.creation_flags(CREATE_NO_WINDOW);
+    }
+
+    let mut child = cmd
+        .spawn()
+        .map_err(|error| format!("failed to spawn backend sidecar {:?}: {error}", sidecar_exe))?;
+
+    if let Err(error) = wait_for_backend(&mut child, BACKEND_PORT) {
+        terminate_backend_tree(&mut child);
+        return Err(error);
+    }
+    Ok(child)
+}
+
 fn stop_backend(app_handle: &tauri::AppHandle) {
-    if let Some(state) = app_handle.try_state::<BackendChild>() {
-        if let Ok(mut child) = state.0.lock() {
+    if let Some(state) = app_handle.try_state::<BackendState>() {
+        let Ok(_lifecycle) = state.lifecycle.lock() else {
+            return;
+        };
+        if let Ok(mut child) = state.child.lock() {
             if let Some(mut child) = child.take() {
                 if !request_backend_shutdown() {
                     terminate_backend_tree(&mut child);
@@ -104,57 +171,75 @@ fn wait_for_backend(child: &mut Child, port: u16) -> Result<(), String> {
     ))
 }
 
+#[tauri::command]
+fn ensure_backend(app_handle: tauri::AppHandle) -> Result<(), String> {
+    let state = app_handle.state::<BackendState>();
+    let _lifecycle = state
+        .lifecycle
+        .lock()
+        .map_err(|_| "backend lifecycle lock is unavailable".to_string())?;
+    let mut child = state
+        .child
+        .lock()
+        .map_err(|_| "backend process lock is unavailable".to_string())?;
+
+    let mut needs_start = child.is_none();
+    if let Some(process) = child.as_mut() {
+        match process.try_wait() {
+            Ok(None) => {}
+            Ok(Some(_)) | Err(_) => needs_start = true,
+        }
+    }
+
+    if needs_start {
+        if let Some(mut old_child) = child.take() {
+            terminate_backend_tree(&mut old_child);
+        }
+        *child = Some(start_backend(&app_handle)?);
+    }
+
+    *state
+        .last_activity
+        .lock()
+        .map_err(|_| "backend activity lock is unavailable".to_string())? = Instant::now();
+    Ok(())
+}
+
+fn backend_is_idle(app_handle: &tauri::AppHandle) -> bool {
+    let Some(state) = app_handle.try_state::<BackendState>() else {
+        return false;
+    };
+    let Ok(child) = state.child.lock() else {
+        return false;
+    };
+    let Ok(last_activity) = state.last_activity.lock() else {
+        return false;
+    };
+    child.is_some() && last_activity.elapsed() >= BACKEND_IDLE_AFTER
+}
+
+fn start_idle_monitor(app_handle: tauri::AppHandle) {
+    thread::spawn(move || loop {
+        thread::sleep(BACKEND_IDLE_POLL);
+        if backend_is_idle(&app_handle) {
+            stop_backend(&app_handle);
+        }
+    });
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 fn main() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(|app| {
-            let resource_dir = app
-                .path()
-                .resource_dir()
-                .expect("failed to resolve resource dir");
-
-            // Bundled JRE (resources/jre) so LanguageTool needs no Java install.
-            let jre_dir = resource_dir.join("jre");
-            let java_home = if jre_dir.is_dir() {
-                jre_dir.to_string_lossy().to_string()
-            } else {
-                String::new()
-            };
-
-            // Onedir sidecar: resources/lexicon-backend/lexicon-backend[.exe]
-            // (the `_internal` folder sits beside it and is required at runtime).
-            // PyInstaller adds `.exe` only on Windows; the macOS bundle uses
-            // the extensionless executable name.
-            let sidecar_name = if cfg!(target_os = "windows") {
-                "lexicon-backend.exe"
-            } else {
-                "lexicon-backend"
-            };
-            let sidecar_exe: PathBuf = resource_dir.join("lexicon-backend").join(sidecar_name);
-
-            let mut cmd = Command::new(&sidecar_exe);
-            // Production uses a dedicated port so a running development
-            // backend on 8000 cannot steal the desktop app's requests.
-            // Keep the frontend and sidecar on the same production port.
-            cmd.env("LEXICON_PORT", BACKEND_PORT.to_string());
-            cmd.env("LEXICON_HOST", "127.0.0.1");
-            cmd.env("LEXICON_JAVA_HOME", &java_home);
-            if !java_home.is_empty() {
-                cmd.env("JAVA_HOME", &java_home);
-            }
-            cmd.stdin(Stdio::null());
-            cmd.stdout(Stdio::null());
-            cmd.stderr(Stdio::null());
-
-            let mut child = cmd
-                .spawn()
-                .map_err(|e| format!("failed to spawn backend sidecar {:?}: {e}", sidecar_exe))?;
-
-            if let Err(error) = wait_for_backend(&mut child, BACKEND_PORT) {
-                let _ = child.kill();
-                return Err(error.into());
-            }
-            app.manage(BackendChild(Mutex::new(Some(child))));
+            let child = start_backend(app.handle())?;
+            app.manage(BackendState {
+                child: Mutex::new(Some(child)),
+                last_activity: Mutex::new(Instant::now()),
+                lifecycle: Mutex::new(()),
+            });
+            start_idle_monitor(app.handle().clone());
 
             let open_item = MenuItemBuilder::with_id("open", "Open Lexicon").build(app)?;
             let quit_item = MenuItemBuilder::with_id("quit", "Quit Lexicon").build(app)?;
@@ -198,6 +283,7 @@ fn main() {
 
             Ok(())
         })
+        .invoke_handler(tauri::generate_handler![ensure_backend])
         .build(tauri::generate_context!())
         .expect("error while building Lexicon")
         .run(|app_handle, event| match event {

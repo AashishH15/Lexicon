@@ -171,25 +171,75 @@ jobs:
         working-directory: frontend
         run: npm ci
 
+      - name: Sync release version
+        working-directory: frontend
+        env:
+          RELEASE_VERSION: ${{ github.ref_name }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          import re
+          from pathlib import Path
+
+          version = os.environ["RELEASE_VERSION"].removeprefix("v")
+          config_path = Path("src-tauri/tauri.conf.json")
+          config = json.loads(config_path.read_text(encoding="utf-8"))
+          config["version"] = version
+          config_path.write_text(
+              json.dumps(config, indent=2) + "\n", encoding="utf-8"
+          )
+
+          cargo_path = Path("src-tauri/Cargo.toml")
+          cargo = cargo_path.read_text(encoding="utf-8")
+          cargo, replacements = re.subn(
+              r'(?m)^(version\s*=\s*")[^"]+("\s*)$',
+              rf'\g<1>{version}\g<2>',
+              cargo,
+              count=1,
+          )
+          if replacements != 1:
+              raise SystemExit("Could not update the Tauri package version")
+          cargo_path.write_text(cargo, encoding="utf-8")
+          PY
+
+      - name: Verify updater signing key
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+        run: |
+          if [[ -z "${TAURI_SIGNING_PRIVATE_KEY:-}" ]]; then
+            echo "TAURI_SIGNING_PRIVATE_KEY is not configured in repository secrets."
+            exit 1
+          fi
+
       - name: Tauri build (${{ matrix.bundle }})
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VITE_APP_VERSION: ${{ github.ref_name }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           projectPath: frontend
           args: --target ${{ matrix.target }} --bundles ${{ matrix.bundle }}
 
-      - name: Upload installer artifact
+      - name: Stage installer and updater artifacts
+        run: |
+          set -euo pipefail
+          source_dir="frontend/src-tauri/target/${{ matrix.target }}/release/bundle"
+          output_dir="release-assets/${{ matrix.artifact_name }}"
+          mkdir -p "$output_dir"
+          find "$source_dir" -type f \( \
+            -name "*.exe" -o -name "*.exe.sig" -o \
+            -name "*.dmg" -o -name "*.app.tar.gz" -o -name "*.app.tar.gz.sig" \
+          \) -exec cp {} "$output_dir/" \;
+          test -n "$(find "$output_dir" -type f -print -quit)"
+
+      - name: Upload installer and updater artifacts
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact_name }}
-          # With projectPath: frontend, the crate manifest is at
-          # frontend/src-tauri/Cargo.toml, so bundles land under
-          # frontend/src-tauri/target/<triple>/release/bundle/... (not
-          # frontend/target/...). A find tolerates either layout and any
-          # version-suffixed filename.
-          path: frontend/src-tauri/target/${{ matrix.target }}/release/bundle/${{ matrix.bundle }}/*.${{ matrix.extension }}
+          path: release-assets/${{ matrix.artifact_name }}/*
           if-no-files-found: error
 
   release:
@@ -201,6 +251,54 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           path: artifacts
+
+      - name: Generate updater manifest
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          tag = os.environ["RELEASE_TAG"]
+          version = tag.removeprefix("v")
+          repository = os.environ["REPOSITORY"]
+          root = Path("artifacts")
+          targets = {
+              "windows-x86_64": ("lexicon-windows-x64", "*.exe"),
+              "windows-aarch64": ("lexicon-windows-arm64", "*.exe"),
+              "windows-i686": ("lexicon-windows-x86", "*.exe"),
+              "darwin-x86_64": ("lexicon-macos-x64", "*.app.tar.gz"),
+              "darwin-aarch64": ("lexicon-macos-arm64", "*.app.tar.gz"),
+          }
+          platforms = {}
+          for target, (folder, pattern) in targets.items():
+              candidates = sorted((root / folder).glob(pattern))
+              if len(candidates) != 1:
+                  raise SystemExit(f"Expected one updater artifact for {target}, found: {candidates}")
+              artifact = candidates[0]
+              signature = Path(f"{artifact}.sig")
+              if not signature.is_file():
+                  raise SystemExit(f"Missing updater signature: {signature}")
+              platforms[target] = {
+                  "signature": signature.read_text(encoding="utf-8").strip(),
+                  "url": f"https://github.com/{repository}/releases/download/{tag}/{artifact.name}",
+              }
+
+          manifest = {
+              "version": version,
+              "notes": f"Lexicon {tag} update",
+              "pub_date": datetime.now(timezone.utc).isoformat(),
+              "platforms": platforms,
+          }
+          (root / "latest.json").write_text(
+              json.dumps(manifest, indent=2) + "\n", encoding="utf-8"
+          )
+          print(json.dumps(manifest, indent=2))
+          PY
 
       - name: Publish release
         uses: softprops/action-gh-release@v2
@@ -228,9 +326,13 @@ jobs:
 
             On first launch the app downloads the local AI model (~1.4 GB for
             the 2B tier). Proofreading works immediately without it.
+
+            Lexicon checks for updates in the app. Downloaded models and
+            app data are kept outside the installation directory.
           files: |
-            artifacts/lexicon-windows-x86/*.exe
-            artifacts/lexicon-windows-x64/*.exe
-            artifacts/lexicon-windows-arm64/*.exe
-            artifacts/lexicon-macos-x64/*.dmg
-            artifacts/lexicon-macos-arm64/*.dmg
+            artifacts/lexicon-windows-x86/*
+            artifacts/lexicon-windows-x64/*
+            artifacts/lexicon-windows-arm64/*
+            artifacts/lexicon-macos-x64/*
+            artifacts/lexicon-macos-arm64/*
+            artifacts/latest.json

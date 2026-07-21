@@ -101,6 +101,8 @@ export default function Settings({
   focusMode,
   onFocusModeChange,
   onResetDefaults,
+  onCheckForUpdates,
+  updateState,
   onClose,
 }) {
   if (!open) {
@@ -128,6 +130,13 @@ export default function Settings({
     fontSize === SETTINGS_DEFAULTS.fontSize &&
     focusMode === SETTINGS_DEFAULTS.focusMode &&
     lineSpacing === SETTINGS_DEFAULTS.lineSpacing;
+  const updateBusy = ["checking", "installing"].includes(updateState?.status);
+  const updateButtonLabel =
+    updateState?.status === "checking"
+      ? "Checking…"
+      : updateState?.status === "installing"
+        ? "Installing…"
+        : "Check for updates";
 
   useEffect(() => {
     const el = scrollRef.current;
@@ -354,6 +363,39 @@ export default function Settings({
               <GithubLogo size={16} weight="bold" />
               View source on GitHub
             </a>
+          </div>
+
+          <div className="mt-8 border-t border-hairline pt-6">
+            <p className="font-mono text-[10px] uppercase tracking-widest text-muted">
+              Updates
+            </p>
+            <p className="mt-1 font-sans text-xs text-muted">
+              Lexicon checks for new releases and lets you install them without
+              returning to GitHub.
+            </p>
+            <button
+              type="button"
+              onClick={onCheckForUpdates}
+              disabled={updateBusy}
+              className="mt-3 flex w-full items-center justify-center gap-2 rounded border border-hairline bg-canvas py-2.5 font-sans text-sm font-medium text-ink transition-colors hover:border-muted disabled:cursor-wait disabled:opacity-60 disabled:hover:border-hairline"
+            >
+              <ArrowCounterClockwise
+                size={16}
+                weight="bold"
+                className={updateBusy ? "animate-spin" : ""}
+              />
+              {updateButtonLabel}
+            </button>
+            {updateState?.message && (
+              <p
+                className={
+                  "mt-2 text-center font-sans text-[11px] " +
+                  (updateState.status === "error" ? "text-red-600" : "text-muted")
+                }
+              >
+                {updateState.message}
+              </p>
+            )}
           </div>
         </div>
       </div>
