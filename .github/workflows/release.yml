@@ -66,7 +66,7 @@ jobs:
             artifact_name: lexicon-windows-arm64
 
           - name: macOS Intel
-            runner: macos-15-intel
+            runner: macos-15
             platform: macos
             target: x86_64-apple-darwin
             python_arch: x64
@@ -98,10 +98,13 @@ jobs:
         with:
           python-version: "3.12"
           architecture: ${{ matrix.python_arch }}
+          cache: "pip"
 
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
 
       - name: Install Windows build tooling
         if: matrix.platform == 'windows'
@@ -212,13 +215,17 @@ jobs:
             exit 1
           fi
 
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: frontend/src-tauri
+
       - name: Tauri build (${{ matrix.bundle }})
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VITE_APP_VERSION: ${{ github.ref_name }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           projectPath: frontend
           args: --target ${{ matrix.target }} --bundles ${{ matrix.bundle }}
@@ -294,15 +301,45 @@ jobs:
                   "url": f"https://github.com/{repository}/releases/download/{tag}/{artifact.name}",
               }
 
+          import subprocess
+
+          default_notes = f"""Lexicon {tag}
+
+          Privacy-first grammar and AI writing assistant. Runs locally on your computer; the local model downloads on first use.
+
+          ### Downloads
+          - **Windows x64**: 64-bit Intel/AMD Windows
+          - **Windows ARM64**: Windows on ARM; proofreading is supported, but the optional native AI engine is not bundled
+          - **Windows x86**: legacy 32-bit Windows; proofreading is supported, but the optional native AI engine is not bundled
+          - **macOS Intel**: Intel Macs
+          - **macOS Apple Silicon**: M-series Macs
+
+          macOS builds are unsigned. On first open, right-click the app and choose Open, or run:
+          `xattr -dr com.apple.quarantine /Applications/Lexicon.app`
+
+          On first launch the app downloads the local AI model (~1.4 GB for the 2B tier). Proofreading works immediately without it.
+
+          Lexicon checks for updates in the app. Downloaded models and app data are kept outside the installation directory."""
+
+          try:
+              tag_msg = subprocess.check_output(
+                  ["git", "tag", "-l", "--format=%(contents)", tag], text=True
+              ).strip()
+          except Exception:
+              tag_msg = ""
+
+          notes_body = tag_msg if tag_msg else default_notes
+
           manifest = {
               "version": version,
-              "notes": f"Lexicon {tag} update",
+              "notes": notes_body,
               "pub_date": datetime.now(timezone.utc).isoformat(),
               "platforms": platforms,
           }
           (root / "latest.json").write_text(
               json.dumps(manifest, indent=2) + "\n", encoding="utf-8"
           )
+          (root / "release_notes.txt").write_text(notes_body, encoding="utf-8")
           print(json.dumps(manifest, indent=2))
           PY
 
@@ -311,30 +348,7 @@ jobs:
         with:
           draft: false
           name: Lexicon ${{ github.ref_name }}
-          body: |
-            ## Lexicon ${{ github.ref_name }}
-
-            Privacy-first grammar and AI writing assistant. Runs locally on
-            your computer; the local model downloads on first use.
-
-            ### Downloads
-            - **Windows x64**: 64-bit Intel/AMD Windows
-            - **Windows ARM64**: Windows on ARM; proofreading is supported,
-              but the optional native AI engine is not bundled
-            - **Windows x86**: legacy 32-bit Windows; proofreading is supported,
-              but the optional native AI engine is not bundled
-            - **macOS Intel**: Intel Macs
-            - **macOS Apple Silicon**: M-series Macs
-
-            macOS builds are unsigned. On first open, right-click the app and
-            choose Open, or run:
-            `xattr -dr com.apple.quarantine /Applications/Lexicon.app`
-
-            On first launch the app downloads the local AI model (~1.4 GB for
-            the 2B tier). Proofreading works immediately without it.
-
-            Lexicon checks for updates in the app. Downloaded models and
-            app data are kept outside the installation directory.
+          body_path: artifacts/release_notes.txt
           files: |
             artifacts/lexicon-windows-x86/*
             artifacts/lexicon-windows-x64/*

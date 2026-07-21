@@ -12,8 +12,9 @@ function updateDescription(update) {
   );
 }
 
-export default function UpdateBanner({ status, progress, update, onInstall }) {
+export default function UpdateBanner({ status, progress, update, onClick }) {
   const description = updateDescription(update);
+  const versionTag = displayVersion(update?.version);
 
   if (status === "installing") {
     const total = progress?.total || 0;
@@ -53,13 +54,13 @@ export default function UpdateBanner({ status, progress, update, onInstall }) {
   return (
     <button
       type="button"
-      onClick={onInstall}
-      className="lex-no-print inline-flex items-center gap-1.5 rounded-full border border-pale-blue bg-pale-blue px-2.5 py-1 font-sans text-[11px] font-medium text-pale-blue-text transition-colors hover:bg-pale-blue/80"
+      onClick={onClick}
+      className="lex-no-print inline-flex items-center gap-1.5 rounded-full border border-pale-blue bg-pale-blue px-2.5 py-1 font-sans text-[11px] font-medium text-pale-blue-text transition-colors hover:bg-pale-blue/80 shadow-sm"
       title={description}
       aria-label={`Update Lexicon: ${description}`}
     >
       <ArrowUp size={13} weight="bold" />
-      Update now
+      {versionTag ? `${versionTag} available` : "Update available"}
     </button>
   );
 }

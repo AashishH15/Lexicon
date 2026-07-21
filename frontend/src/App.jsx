@@ -51,6 +51,7 @@ import {
   updaterIsAvailable,
 } from "./updater.js";
 import UpdateBanner from "./UpdateBanner.jsx";
+import UpdateModal from "./UpdateModal.jsx";
 import {
   GrammarHighlight,
   buildTextWithMap,
@@ -197,6 +198,7 @@ export default function App() {
     progress: null,
     dismissed: false,
   });
+  const [updateModalOpen, setUpdateModalOpen] = useState(false);
 
   const runUpdateCheck = useCallback(async ({ silent = false } = {}) => {
     setUpdateState((current) => ({
@@ -1414,7 +1416,7 @@ export default function App() {
                   status={updateState.status}
                   progress={updateState.progress}
                   update={updateState.update}
-                  onInstall={installAvailableUpdate}
+                  onClick={() => setUpdateModalOpen(true)}
                 />
               )}
           </div>
@@ -1743,6 +1745,13 @@ export default function App() {
             await refreshAiConfigured();
             setAiSetupOpen(false);
           }}
+        />
+      )}
+      {updateModalOpen && (
+        <UpdateModal
+          update={updateState.update}
+          onClose={() => setUpdateModalOpen(false)}
+          onInstall={installAvailableUpdate}
         />
       )}
     </div>
