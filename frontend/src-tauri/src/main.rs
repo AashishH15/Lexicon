@@ -230,6 +230,16 @@ fn start_idle_monitor(app_handle: tauri::AppHandle) {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 fn main() {
     tauri::Builder::default()
+        // Keep repeated launches from creating duplicate windows. The plugin
+        // must be registered before the other plugins so the second process
+        // exits before starting the backend or any other app resources.
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.show();
+                let _ = window.unminimize();
+                let _ = window.set_focus();
+            }
+        }))
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(|app| {
