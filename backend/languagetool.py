@@ -17,6 +17,7 @@ def _get_tool():
 
         if os.name == "nt":
             import subprocess
+
             import language_tool_python.server as language_tool_server
 
             create_no_window = getattr(subprocess, "CREATE_NO_WINDOW", 0x08000000)
