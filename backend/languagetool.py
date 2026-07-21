@@ -20,6 +20,7 @@ def _get_tool():
             # explicitly request a hidden Windows window as well. Without
             # SW_HIDE, java.exe can briefly flash a console during startup.
             import subprocess
+
             import language_tool_python.server as language_tool_server
 
             startupinfo_cls = getattr(subprocess, "STARTUPINFO", None)
