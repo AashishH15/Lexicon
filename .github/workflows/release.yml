@@ -233,6 +233,12 @@ jobs:
             -name "*.exe" -o -name "*.exe.sig" -o \
             -name "*.dmg" -o -name "*.app.tar.gz" -o -name "*.app.tar.gz.sig" \
           \) -exec cp {} "$output_dir/" \;
+          if [ -f "$output_dir/Lexicon.app.tar.gz" ]; then
+            mv "$output_dir/Lexicon.app.tar.gz" "$output_dir/${{ matrix.artifact_name }}.app.tar.gz"
+          fi
+          if [ -f "$output_dir/Lexicon.app.tar.gz.sig" ]; then
+            mv "$output_dir/Lexicon.app.tar.gz.sig" "$output_dir/${{ matrix.artifact_name }}.app.tar.gz.sig"
+          fi
           test -n "$(find "$output_dir" -type f -print -quit)"
 
       - name: Upload installer and updater artifacts
