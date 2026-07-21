@@ -1,6 +1,6 @@
 [package]
 name = "lexicon"
-version = "0.5.4"
+version = "0.5.5"
 description = "Lexicon - privacy-first grammar and AI writing assistant"
 authors = ["Lexicon"]
 edition = "2021"

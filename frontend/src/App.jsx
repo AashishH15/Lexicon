@@ -88,6 +88,7 @@ const fontSizeKey = "lexicon:fontSize";
 const focusModeKey = "lexicon:focusMode";
 const lineSpacingKey = "lexicon:lineSpacing";
 const dictionaryKey = "lexicon:user_dictionary";
+const APP_VERSION = import.meta.env.VITE_APP_VERSION || "v0.5.5";
 const leftPanelKey = "lexicon:leftPanelOpen";
 const rightPanelKey = "lexicon:rightPanelOpen";
 const leftWidthKey = "lexicon:leftPanelWidth";
@@ -1311,7 +1312,7 @@ export default function App() {
         <div className="leading-tight">
           <span className="block font-serif text-lg tracking-tight">Lexicon</span>
           <span className="block font-mono text-[10px] uppercase tracking-[0.08em] text-muted">
-            System Toolset V3.0
+            {APP_VERSION}
           </span>
         </div>
         <div className="flex items-center gap-3">

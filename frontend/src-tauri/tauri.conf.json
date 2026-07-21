@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Lexicon",
-  "version": "0.5.0",
+  "version": "0.5.5",
   "identifier": "com.lexicon.desktop",
   "build": {
     "frontendDist": "../dist",

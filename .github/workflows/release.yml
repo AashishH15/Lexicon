@@ -175,6 +175,7 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VITE_APP_VERSION: ${{ github.ref_name }}
         with:
           projectPath: frontend
           args: --target ${{ matrix.target }} --bundles ${{ matrix.bundle }}
