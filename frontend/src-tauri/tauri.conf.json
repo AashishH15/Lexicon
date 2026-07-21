@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Lexicon",
-  "version": "0.5.8",
+  "version": "0.5.11",
   "identifier": "com.lexicon.desktop",
   "build": {
     "frontendDist": "../dist",
@@ -27,7 +27,10 @@
       "csp": "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' asset: https://asset.localhost data:; connect-src 'self' http://localhost:8000 http://127.0.0.1:8000 http://localhost:18000 http://127.0.0.1:18000 http://localhost:11434",
       "assetProtocol": {
         "enable": true,
-        "scope": ["$APPDATA/**", "$RESOURCEDIR/**"]
+        "scope": [
+          "$APPDATA/**",
+          "$RESOURCEDIR/**"
+        ]
       }
     },
     "withGlobalTauri": false
@@ -35,19 +38,28 @@
   "bundle": {
     "active": true,
     "createUpdaterArtifacts": true,
-    "targets": ["nsis", "dmg"],
+    "targets": [
+      "nsis",
+      "dmg"
+    ],
     "icon": [
       "icons/icon.png",
       "icons/icon.ico",
       "icons/icon.icns"
     ],
-    "resources": ["lexicon-backend", "jre", "models"],
+    "resources": [
+      "lexicon-backend",
+      "jre",
+      "models"
+    ],
     "shortDescription": "Privacy-first grammar and AI writing assistant",
     "longDescription": "Lexicon runs fully offline: a local model powers AI rewrites and LanguageTool handles proofreading. No account, no upload.",
     "windows": {
       "nsis": {
         "displayLanguageSelector": false,
-        "languages": ["English"],
+        "languages": [
+          "English"
+        ],
         "installMode": "currentUser"
       }
     },

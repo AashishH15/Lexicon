@@ -250,12 +250,24 @@ export default function App() {
     setUpdateState((current) => ({
       ...current,
       status: "installing",
-      message: "Downloading the update…",
-      progress: { downloaded: 0, total: 0 },
+      message: "Downloading update…",
+      progress: { phase: "downloading", downloaded: 0, total: 0 },
     }));
     try {
       await installUpdate(updateState.update, (progress) => {
-        setUpdateState((current) => ({ ...current, progress }));
+        let message = "Downloading update…";
+        if (progress.phase === "preparing") {
+          message = "Preparing update…";
+        } else if (progress.phase === "installing") {
+          message = "Installing & restarting…";
+        } else if (progress.total > 0) {
+          const percent = Math.min(
+            100,
+            Math.round((progress.downloaded / progress.total) * 100),
+          );
+          message = `Downloading update (${percent}%)…`;
+        }
+        setUpdateState((current) => ({ ...current, message, progress }));
       });
     } catch {
       setUpdateState((current) => ({
@@ -1396,12 +1408,15 @@ export default function App() {
             <span className="block font-mono text-[10px] uppercase tracking-[0.08em] text-muted">
               {APP_VERSION}
             </span>
-            {updateState.status === "available" && !updateState.dismissed && (
-              <UpdateBanner
-                update={updateState.update}
-                onInstall={installAvailableUpdate}
-              />
-            )}
+            {["available", "installing"].includes(updateState.status) &&
+              !updateState.dismissed && (
+                <UpdateBanner
+                  status={updateState.status}
+                  progress={updateState.progress}
+                  update={updateState.update}
+                  onInstall={installAvailableUpdate}
+                />
+              )}
           </div>
         </div>
         <div className="flex items-center gap-3">
