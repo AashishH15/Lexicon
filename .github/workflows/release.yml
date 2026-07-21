@@ -261,6 +261,10 @@ jobs:
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - uses: actions/download-artifact@v4
         with:
           path: artifacts
@@ -273,6 +277,8 @@ jobs:
           python - <<'PY'
           import json
           import os
+          import re
+          import subprocess
           from datetime import datetime, timezone
           from pathlib import Path
 
@@ -301,8 +307,6 @@ jobs:
                   "url": f"https://github.com/{repository}/releases/download/{tag}/{artifact.name}",
               }
 
-          import subprocess
-
           default_notes = f"""Lexicon {tag}
 
           Privacy-first grammar and AI writing assistant. Runs locally on your computer; the local model downloads on first use.
@@ -321,12 +325,27 @@ jobs:
 
           Lexicon checks for updates in the app. Downloaded models and app data are kept outside the installation directory."""
 
+          tag_msg = ""
           try:
               tag_msg = subprocess.check_output(
                   ["git", "tag", "-l", "--format=%(contents)", tag], text=True
               ).strip()
           except Exception:
-              tag_msg = ""
+              pass
+
+          if not tag_msg and Path("CHANGELOG.md").is_file():
+              changelog = Path("CHANGELOG.md").read_text(encoding="utf-8")
+              match = re.search(r'##\s+.*' + re.escape(tag) + r'[\s\S]*?(?=\n##\s+|\Z)', changelog)
+              if match:
+                  tag_msg = match.group(0).strip()
+
+          if not tag_msg:
+              try:
+                  tag_msg = subprocess.check_output(
+                      ["git", "log", "-1", "--pretty=format:%B"], text=True
+                  ).strip()
+              except Exception:
+                  pass
 
           notes_body = tag_msg if tag_msg else default_notes
 
