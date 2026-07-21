@@ -10,7 +10,7 @@ function isTauriRuntime() {
   return typeof window !== "undefined" && Boolean(window.__TAURI_INTERNALS__);
 }
 
-async function ensureBackend() {
+export async function ensureBackend() {
   if (isTauriRuntime()) {
     await invoke("ensure_backend");
   }

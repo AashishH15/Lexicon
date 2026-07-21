@@ -44,7 +44,7 @@ import {
   ArrowSquareRight,
   CircleNotch,
 } from "@phosphor-icons/react";
-import { checkGrammar, getAiStatus } from "./api.js";
+import { checkGrammar, getAiStatus, ensureBackend } from "./api.js";
 import {
   checkForUpdate,
   installUpdate,
@@ -559,7 +559,11 @@ export default function App() {
         return current;
       });
     };
-    const handleFocus = () => setEditorFocused(true);
+    const handleFocus = () => {
+      setEditorFocused(true);
+      // Silent background pre-warming of offloaded backend tiers
+      ensureBackend().catch(() => {});
+    };
     const handleBlur = () => setEditorFocused(false);
     editor.on("selectionUpdate", syncSelection);
     editor.on("selectionUpdate", syncActiveError);
@@ -576,6 +580,15 @@ export default function App() {
       editor.off("blur", handleBlur);
     };
   }, [editor]);
+
+  // Silent pre-warming when app window regains focus
+  useEffect(() => {
+    const onWindowFocus = () => {
+      ensureBackend().catch(() => {});
+    };
+    window.addEventListener("focus", onWindowFocus);
+    return () => window.removeEventListener("focus", onWindowFocus);
+  }, []);
 
   useEffect(() => {
     if (!editor) {

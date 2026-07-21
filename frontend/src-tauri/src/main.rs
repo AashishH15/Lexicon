@@ -117,11 +117,98 @@ fn start_backend(app_handle: &tauri::AppHandle) -> Result<Child, String> {
         .spawn()
         .map_err(|error| format!("failed to spawn backend sidecar {:?}: {error}", sidecar_exe))?;
 
+    #[cfg(target_os = "windows")]
+    {
+        windows_job::assign_child_to_job(&child);
+    }
+
     if let Err(error) = wait_for_backend(&mut child, BACKEND_PORT) {
         terminate_backend_tree(&mut child);
         return Err(error);
     }
     Ok(child)
+}
+
+#[cfg(target_os = "windows")]
+mod windows_job {
+    use std::os::windows::io::AsRawHandle;
+    use std::process::Child;
+    use std::ptr;
+
+    type HANDLE = *mut std::ffi::c_void;
+    type BOOL = i32;
+    type DWORD = u32;
+
+    #[repr(C)]
+    struct JOBOBJECT_BASIC_LIMIT_INFORMATION {
+        per_process_user_time_limit: i64,
+        per_job_user_time_limit: i64,
+        limit_flags: DWORD,
+        minimum_working_set_size: usize,
+        maximum_working_set_size: usize,
+        active_process_limit: DWORD,
+        affinity: usize,
+        priority_class: DWORD,
+        scheduling_class: DWORD,
+    }
+
+    #[repr(C)]
+    struct IO_COUNTERS {
+        read_operation_count: u64,
+        write_operation_count: u64,
+        other_operation_count: u64,
+        read_transfer_count: u64,
+        write_transfer_count: u64,
+        other_transfer_count: u64,
+    }
+
+    #[repr(C)]
+    struct JOBOBJECT_EXTENDED_LIMIT_INFORMATION {
+        basic_limit_information: JOBOBJECT_BASIC_LIMIT_INFORMATION,
+        io_info: IO_COUNTERS,
+        process_memory_limit: usize,
+        job_memory_limit: usize,
+        peak_process_memory_used: usize,
+        peak_job_memory_used: usize,
+    }
+
+    const JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE: DWORD = 0x00002000;
+    const JOBOBJECT_EXTENDED_LIMIT_INFORMATION_CLASS: i32 = 9;
+
+    extern "system" {
+        fn CreateJobObjectW(job_attributes: *mut std::ffi::c_void, name: *const u16) -> HANDLE;
+        fn SetInformationJobObject(
+            h_job: HANDLE,
+            job_object_information_class: i32,
+            lp_job_object_information: *const std::ffi::c_void,
+            cb_job_object_information_length: DWORD,
+        ) -> BOOL;
+        fn AssignProcessToJobObject(h_job: HANDLE, h_process: HANDLE) -> BOOL;
+    }
+
+    pub fn assign_child_to_job(child: &Child) {
+        unsafe {
+            let job = CreateJobObjectW(ptr::null_mut(), ptr::null());
+            if job.is_null() {
+                return;
+            }
+
+            let mut info: JOBOBJECT_EXTENDED_LIMIT_INFORMATION = std::mem::zeroed();
+            info.basic_limit_information.limit_flags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
+
+            let res = SetInformationJobObject(
+                job,
+                JOBOBJECT_EXTENDED_LIMIT_INFORMATION_CLASS,
+                &info as *const _ as *const _,
+                std::mem::size_of::<JOBOBJECT_EXTENDED_LIMIT_INFORMATION>() as DWORD,
+            );
+
+            if res != 0 {
+                let process_handle = child.as_raw_handle() as HANDLE;
+                AssignProcessToJobObject(job, process_handle);
+            }
+        }
+    }
 }
 
 fn stop_backend(app_handle: &tauri::AppHandle) {
