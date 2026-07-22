@@ -64,6 +64,7 @@ import {
   grammarPluginKey,
 } from "./grammarHighlight.js";
 import { DecorationSet } from "@tiptap/pm/view";
+import { globalGrammarCache } from "./grammarCache.js";
 
 // Six-dot grip used for the drag handle
 const DRAG_HANDLE_GRIP_SVG = `
@@ -352,6 +353,7 @@ export default function App() {
   }, []);
 
   const proofreadRef = useRef(() => {});
+  proofreadRef.current = (forceFullScan = true) => runGrammarCheck(false, null, forceFullScan);
   const activeErrorRef = useRef(null);
   const matchesRef = useRef([]);
   const activeToolRef = useRef(activeTool);
@@ -622,15 +624,14 @@ export default function App() {
       dom.removeEventListener("click", handleClick);
     };
   }, [editor]);
-
-  function matchKey(match, text) {
+function matchKey(match, text) {
     const original = text
       ? text.slice(match.offset, match.offset + match.length)
       : match.original;
     return `${match.message}::${match.offset}::${match.length}::${original}`;
   }
 
-  async function runGrammarCheck(silent = false, ignoreOverride = null) {
+  async function runGrammarCheck(silent = false, ignoreOverride = null, forceFullScan = false) {
     if (!editor) {
       return;
     }
@@ -650,12 +651,67 @@ export default function App() {
     try {
       const { text, map } = buildTextWithMap(editor.state.doc);
       const ignore = ignoreOverride ?? userDictionaryRef.current;
-      const rawMatches = await checkGrammar(
-        text,
-        language,
-        ignore,
-        abortController.signal,
-      );
+      let rawMatches = [];
+
+      if (forceFullScan) {
+        globalGrammarCache.clear();
+        rawMatches = await checkGrammar(
+          text,
+          language,
+          ignore,
+          abortController.signal,
+        );
+        let currentOffset = 0;
+        let prevSuffix = "";
+        const paragraphTexts = text.split("\n");
+        for (const pText of paragraphTexts) {
+          const pLen = pText.length;
+          const pKey = globalGrammarCache.computeKey(pText, prevSuffix, language, ignore);
+          const pMatches = rawMatches
+            .filter((m) => m.offset >= currentOffset && m.offset + m.length <= currentOffset + pLen)
+            .map((m) => ({ ...m, offset: m.offset - currentOffset }));
+          globalGrammarCache.set(pKey, pMatches);
+          currentOffset += pLen + 1;
+          prevSuffix = pText.slice(-64);
+        }
+      } else {
+        const paragraphTexts = text.split("\n");
+        let currentOffset = 0;
+        let prevSuffix = "";
+
+        for (const pText of paragraphTexts) {
+          const pLen = pText.length;
+          const pKey = globalGrammarCache.computeKey(pText, prevSuffix, language, ignore);
+          let cached = globalGrammarCache.get(pKey);
+
+          if (!cached) {
+            if (pText.trim()) {
+              const freshMatches = await checkGrammar(
+                pText,
+                language,
+                ignore,
+                abortController.signal,
+              );
+              cached = freshMatches;
+              globalGrammarCache.set(pKey, freshMatches);
+            } else {
+              cached = [];
+              globalGrammarCache.set(pKey, []);
+            }
+          }
+
+          for (const m of cached) {
+            rawMatches.push({
+              ...m,
+              offset: currentOffset + m.offset,
+            });
+          }
+
+          currentOffset += pLen + 1;
+          prevSuffix = pText.slice(-64);
+        }
+      }
+
       if (dismissedKeysRef.current.size > 0) {
         const trimmed = new Set();
         dismissedKeysRef.current.forEach((key) => {
@@ -1070,7 +1126,7 @@ export default function App() {
     setActiveTool(nextTool);
     if (name === "Proofread") {
       if (nextTool === "Proofread") {
-        runGrammarCheck();
+        runGrammarCheck(false, null, true);
       } else if (editor) {
         setGrammarMatches([]);
         setActiveErrorId(null);
