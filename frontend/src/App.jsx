@@ -288,10 +288,10 @@ export default function App() {
   const transformRunningRef = useRef(false);
   const cancelTransformRef = useRef(false);
   const runIdRef = useRef(0);
-  // Budgets must fit n_ctx (8192): input + max_tokens (4096) + overhead.
-  // Keep input per chunk <= 3500 tokens so 3500 + 4096 ~= 7600 < 8192.
-  const TRANSFORM_INPUT_BUDGET = 3500;
-  const TRANSFORM_CHUNK_BUDGET = 3500;
+  // Budgets must fit n_ctx (4096): input + max_tokens (2048) + overhead.
+  // Keep input per chunk <= 1800 tokens so 1800 + 2048 ~= 3848 < 4096.
+  const TRANSFORM_INPUT_BUDGET = 1800;
+  const TRANSFORM_CHUNK_BUDGET = 1800;
 
   const refreshAiConfigured = useCallback(async () => {
     try {
@@ -305,9 +305,11 @@ export default function App() {
       setAiConfigured(false);
     }
   }, []);
+
   useEffect(() => {
     refreshAiConfigured();
   }, [refreshAiConfigured]);
+
   // Settings-panel model changes (delete / re-select) fire this so the
   // toolbar can un-grey without the modal close path.
   useEffect(() => {

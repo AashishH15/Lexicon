@@ -36,13 +36,10 @@ FORCE_BACKEND = os.environ.get("LEXICON_INFERENCE", "").strip().lower()
 PROBE_TIMEOUT = 2.5
 GENERATE_TIMEOUT = 120
 
-# Max tokens the model may generate for a single transform. The previous 512
-# Cap on generated tokens per transform. n_ctx is 8192, so input + max_tokens
-# must stay under it. The frontend chunks input to ~3500 tokens, leaving headroom
-# for ~4096 output. 7000 would overflow (3500 + 7000 > 8192); 4096 is the safe
-# per-call ceiling that still covers long rewrites/summaries. Overridable per-call
-# via opts["max_tokens"].
-TRANSFORM_MAX_TOKENS = 4096
+# Cap on generated tokens per transform. n_ctx is 4096, so input + max_tokens
+# must stay under it. The frontend chunks input to ~1800 tokens, leaving headroom
+# for ~2048 output. Overridable per-call via opts["max_tokens"].
+TRANSFORM_MAX_TOKENS = 2048
 
 # Qwen3.5 is a reasoning-capable model. For short text transforms, chain-of-
 # thought is pure overhead (~10x slower, no quality gain). We disable
@@ -165,7 +162,7 @@ class BundledBackend(InferenceBackend):
 
     name = "bundled"
 
-    def __init__(self, model_key: str = "2b", n_ctx: int = 8192):
+    def __init__(self, model_key: str = "2b", n_ctx: int = 4096):
         self.model_key = model_key
         self.n_ctx = n_ctx
         self._llm = None
@@ -195,6 +192,7 @@ class BundledBackend(InferenceBackend):
         self._llm = Llama(
             model_path=self._path(),
             n_ctx=self.n_ctx,
+            use_mmap=True,
             verbose=False,
         )
 
