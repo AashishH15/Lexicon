@@ -325,36 +325,46 @@ jobs:
 
           Lexicon checks for updates in the app. Downloaded models and app data are kept outside the installation directory."""
 
-          tag_msg = ""
-          try:
-              tag_msg = subprocess.check_output(
-                  ["git", "tag", "-l", "--format=%(contents)", tag], text=True
-              ).strip()
-          except Exception:
-              pass
+          release_notes = ""
 
-          if not tag_msg and Path("RELEASE_NOTES.md").is_file():
-              tag_msg = Path("RELEASE_NOTES.md").read_text(encoding="utf-8").strip()
-
-          if not tag_msg and Path("CHANGELOG.md").is_file():
+          # 1. First priority: CHANGELOG.md section for this version
+          if Path("CHANGELOG.md").is_file():
               changelog = Path("CHANGELOG.md").read_text(encoding="utf-8")
               clean_ver = version.lstrip("v")
               pattern = r'##\s+.*(?:' + re.escape(tag) + r'|' + re.escape(clean_ver) + r')[\s\S]*?(?=\n##\s+|\Z)'
               match = re.search(pattern, changelog, re.IGNORECASE)
-              if match:
-                  tag_msg = match.group(0).strip()
+              if match and len(match.group(0).strip().splitlines()) > 1:
+                  release_notes = match.group(0).strip()
 
-          if not tag_msg:
+          # 2. Second priority: RELEASE_NOTES.md override
+          if not release_notes and Path("RELEASE_NOTES.md").is_file():
+              content = Path("RELEASE_NOTES.md").read_text(encoding="utf-8").strip()
+              if content:
+                  release_notes = content
+
+          # 3. Third priority: Tag annotation message
+          if not release_notes:
+              try:
+                  tag_msg = subprocess.check_output(
+                      ["git", "tag", "-l", "--format=%(contents)", tag], text=True
+                  ).strip()
+                  if tag_msg:
+                      release_notes = tag_msg
+              except Exception:
+                  pass
+
+          # 4. Fourth priority: Detailed commit message
+          if not release_notes:
               try:
                   commit_msg = subprocess.check_output(
                       ["git", "log", "-1", "--pretty=format:%B"], text=True
                   ).strip()
                   if ("\n" in commit_msg or "-" in commit_msg) and len(commit_msg) > 30:
-                      tag_msg = commit_msg
+                      release_notes = commit_msg
               except Exception:
                   pass
 
-          notes_body = tag_msg if tag_msg else default_notes
+          notes_body = release_notes if release_notes else default_notes
 
           manifest = {
               "version": version,

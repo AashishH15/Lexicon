@@ -1,3 +1,20 @@
+import os
+import subprocess
+
+if os.name == "nt":
+    _CREATE_NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0x08000000)
+    _orig_popen = subprocess.Popen
+
+    def _no_window_popen(*args, **kwargs):
+        kwargs["creationflags"] = kwargs.get("creationflags", 0) | _CREATE_NO_WINDOW
+        startupinfo = kwargs.get("startupinfo") or subprocess.STARTUPINFO()
+        startupinfo.dwFlags |= getattr(subprocess, "STARTF_USESHOWWINDOW", 0)
+        startupinfo.wShowWindow = getattr(subprocess, "SW_HIDE", 0)
+        kwargs["startupinfo"] = startupinfo
+        return _orig_popen(*args, **kwargs)
+
+    subprocess.Popen = _no_window_popen
+
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI

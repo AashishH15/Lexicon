@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Lexicon",
-  "version": "0.5.12",
+  "version": "0.5.17",
   "identifier": "com.lexicon.desktop",
   "build": {
     "frontendDist": "../dist",
@@ -20,6 +20,7 @@
         "resizable": true,
         "fullscreen": false,
         "theme": "Light",
+        "backgroundColor": "#f7f7f5",
         "decorations": true
       }
     ],

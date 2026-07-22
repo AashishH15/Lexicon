@@ -94,14 +94,24 @@ def close_tool():
                     import subprocess
 
                     subprocess.run(
-                        f"taskkill /PID {server_proc.pid} /T /F",
-                        shell=True,
+                        ["taskkill", "/PID", str(server_proc.pid), "/T", "/F"],
                         stdout=subprocess.DEVNULL,
                         stderr=subprocess.DEVNULL,
                     )
             _tool.close()
         except Exception:
             pass
+        if os.name == "nt":
+            try:
+                import subprocess
+
+                subprocess.run(
+                    ["taskkill", "/F", "/IM", "java.exe"],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                )
+            except Exception:
+                pass
     _tool = None
     _warm = False
 

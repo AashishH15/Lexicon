@@ -233,6 +233,17 @@ fn stop_backend(app_handle: &tauri::AppHandle) {
             }
         }
     }
+    #[cfg(target_os = "windows")]
+    {
+        // LanguageTool spawns java.exe as a detached process on Windows.
+        // Silently terminate java.exe so no orphan Java instances linger.
+        let _ = Command::new("taskkill")
+            .args(["/F", "/IM", "java.exe"])
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status();
+    }
 }
 
 fn wait_for_backend(child: &mut Child, port: u16) -> Result<(), String> {
@@ -374,24 +385,36 @@ fn main() {
                 let _ = window.show();
                 let _ = window.unminimize();
                 let _ = window.set_focus();
+                let _ = window.eval("window.dispatchEvent(new Event('resize'));");
             }
         }))
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(|app| {
-            let initial_child = match start_backend(app.handle()) {
-                Ok(child) => Some(child),
-                Err(error) => {
-                    eprintln!("Warning: initial backend sidecar start failed: {error}");
-                    None
-                }
-            };
             app.manage(BackendState {
-                child: Mutex::new(initial_child),
+                child: Mutex::new(None),
                 last_activity: Mutex::new(Instant::now()),
                 tier1_offloaded: Mutex::new(false),
                 tier2_offloaded: Mutex::new(false),
                 lifecycle: Mutex::new(()),
+            });
+            let handle_clone = app.handle().clone();
+            thread::spawn(move || {
+                if let Some(state) = handle_clone.try_state::<BackendState>() {
+                    let Ok(_lifecycle) = state.lifecycle.lock() else {
+                        return;
+                    };
+                    if let Ok(mut child_lock) = state.child.lock() {
+                        if child_lock.is_none() {
+                            match start_backend(&handle_clone) {
+                                Ok(child) => *child_lock = Some(child),
+                                Err(error) => {
+                                    eprintln!("Warning: initial backend sidecar start failed: {error}");
+                                }
+                            }
+                        }
+                    }
+                }
             });
             start_idle_monitor(app.handle().clone());
 
@@ -411,16 +434,14 @@ fn main() {
                             let _ = window.show();
                             let _ = window.unminimize();
                             let _ = window.set_focus();
+                            let _ = window.eval("window.dispatchEvent(new Event('resize'));");
                         }
                     }
                     "quit" => {
-                        stop_backend(app);
-                        #[cfg(target_os = "windows")]
-                        {
-                            let _ = Command::new("taskkill")
-                                .args(["/F", "/IM", "lexicon-backend.exe", "/IM", "java.exe"])
-                                .status();
+                        if let Some(window) = app.get_webview_window("main") {
+                            let _ = window.hide();
                         }
+                        stop_backend(app);
                         app.exit(0);
                     }
                     _ => {}
@@ -436,6 +457,7 @@ fn main() {
                             let _ = window.show();
                             let _ = window.unminimize();
                             let _ = window.set_focus();
+                            let _ = window.eval("window.dispatchEvent(new Event('resize'));");
                         }
                     }
                 });
@@ -460,13 +482,10 @@ fn main() {
                 }
             }
             RunEvent::ExitRequested { .. } | RunEvent::Exit => {
-                stop_backend(app_handle);
-                #[cfg(target_os = "windows")]
-                {
-                    let _ = Command::new("taskkill")
-                        .args(["/F", "/IM", "lexicon-backend.exe", "/IM", "java.exe"])
-                        .status();
+                if let Some(window) = app_handle.get_webview_window("main") {
+                    let _ = window.hide();
                 }
+                stop_backend(app_handle);
             }
             _ => {}
         });
