@@ -7,6 +7,38 @@ This changelog tracks what is **live** in each release and what is still
 **stubbed** (shown in the interface but not yet functional). Stubbed features
 are listed so the release reads honestly about what works today.
 
+## v0.6.0 - Major Landmark Release: 4-Step Local Onboarding & Complete App Overview
+
+### Quick Downloads (Most Popular Releases):
+
+- 🪟 **[Windows x64 Setup (Most Popular)](https://github.com/AashishH15/Lexicon/releases/download/v0.6.0/Lexicon_0.6.0_x64-setup.exe)**: Standard installer for modern 64-bit Windows PCs (Intel / AMD).
+- 🍏 **[macOS Apple Silicon DMG (Most Popular)](https://github.com/AashishH15/Lexicon/releases/download/v0.6.0/Lexicon_0.6.0_aarch64.dmg)**: For modern Apple Silicon Macs (M1, M2, M3, M4 chips).
+- 📦 **[View All 15 Platform Assets & Checksums](https://github.com/AashishH15/Lexicon/releases/tag/v0.6.0)**: Complete list of installers including ARM64 Windows, x86 Windows, and Intel macOS.
+
+---
+
+### Welcome to Lexicon v0.6.0!
+
+Lexicon is a private, local-first writing assistant designed for calm, distraction-free drafting. Everything runs directly on your device; no accounts, no cloud subscriptions, no tracking, and zero data leaving your machine.
+
+#### Key Features Included:
+
+- **100% Offline & Private**: Your drafts, notes, and documents stay strictly on your local hardware.
+- **Local Grammar & Spellchecking**: Instant, deterministic proofreading powered by local LanguageTool (zero LLM latency).
+- **Your Local Assistant (Lex)**: Opt-in local AI for rewriting, tone adjustments (Friendly, Professional, Academic, Formal, Casual, Playful, Empathetic, Persuasive, Humorous), and document summaries running entirely on your machine or an optional Ollama server.
+- **Distraction-Free Workspace**: Rich-text editing with headings, lists, blockquotes, typography rules, slash commands, LaTeX math ($E=mc^2$), resizable side panels, and Focus Mode.
+- **Import & Export**: Support for `.md`, `.txt`, `.html` imports and clean PDF / Markdown exports.
+
+---
+
+### What's New in v0.6.0:
+
+- **4-Step Local-First Onboarding Experience**: Interactive wizard (`OnboardingModal.jsx`) guiding new users through Lexicon's privacy philosophy, language dialect preferences (`en-US`, `en-GB`, etc.), Lex AI assistant configuration, and sample draft ingestion.
+- **Interactive Sample Document**: Pre-populated onboarding draft featuring live proofreading squiggles, LaTeX math ($E=mc^2$), and AI rewrite prompts.
+- **UI Icon & Aesthetics Refinement**: Phosphor SVG icons (`ShieldCheck`, `PencilLine`, `Robot`, `Confetti`), branded logo visuals, and clean slate paper aesthetic.
+- **Process & Type Safety Patches**: Subprocess creation window suppression with `__class_getitem__` type hint safety for Windows sidecar execution.
+- **Shared System Prompt Parity Across Inference Backends**: Unified `SYSTEM_PROMPT` constant across bundled GGUF models and external Ollama servers (`v0.5.19`).
+
 ## v0.5.19 - Shared System Prompt Parity Across Inference Backends
 
 ### Changes Made:

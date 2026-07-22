@@ -253,7 +253,7 @@ export default function ModelManager({
               <p className="mt-1 font-sans text-xs leading-relaxed text-muted">
                 Lexicon can rewrite, tighten, and retune your writing with a
                 small local model. Nothing leaves your computer — no account,
-                no cloud. The model downloads once and lives in your app-data
+                no cloud, no datacenter, no water. The model downloads once and lives in your app-data
                 folder.
               </p>
             </div>

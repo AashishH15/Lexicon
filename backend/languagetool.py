@@ -52,6 +52,8 @@ def _get_tool(language="en-US"):
 
             return orig_popen(*args, **kwargs)
 
+        tuned_popen.__class_getitem__ = classmethod(lambda cls, item: orig_popen)
+
         if hasattr(language_tool_server, "subprocess"):
             language_tool_server.subprocess.Popen = tuned_popen
 

@@ -96,7 +96,19 @@ const fontSizeKey = "lexicon:fontSize";
 const focusModeKey = "lexicon:focusMode";
 const lineSpacingKey = "lexicon:lineSpacing";
 const dictionaryKey = "lexicon:user_dictionary";
-const APP_VERSION = import.meta.env.VITE_APP_VERSION || "v0.5.8";
+const APP_VERSION = import.meta.env.VITE_APP_VERSION || "v0.6.0";
+
+const SAMPLE_DOC_HTML = `
+<h1>Welcome to Lexicon</h1>
+<p>Lexicon is a local-first writing assistant designed for calm drafting. Every documents and notes stays on your machine—your drafts are never uploaded to any cloud server.</p>
+<h2>Inline Proofreading & Grammar</h2>
+<p>They is going to love how fast Lexicon proofreads your text. There are many error in this draft, and the color and colour of the text looks great. She receive the document yesterday. Try clicking on any flagged red text to view suggestions in the Review panel on the right.</p>
+<h2>Mathematical Expressions</h2>
+<p>Lexicon support inline and block LaTeX math rendering. For example, Einstein's mass-energy equivalence is $E = mc^2$, and the quadratic formula is:</p>
+<p>$$x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}$$</p>
+<h2>AI Writing Assistant (Lex)</h2>
+<p>Highlight any sentence or paragraph to rewrites it, adjust tone, or makes it concise using Lex, your local AI writing companion.</p>
+`;
 const leftPanelKey = "lexicon:leftPanelOpen";
 const rightPanelKey = "lexicon:rightPanelOpen";
 const leftWidthKey = "lexicon:leftPanelWidth";
@@ -1815,6 +1827,17 @@ function matchKey(match, text) {
           onClose={async () => {
             await refreshAiConfigured();
             setAiSetupOpen(false);
+          }}
+          onFinish={async ({ loadSample = false } = {}) => {
+            localStorage.setItem("lexicon:aiSetupDone", "true");
+            await refreshAiConfigured();
+            setAiSetupOpen(false);
+            if (loadSample && editor) {
+              editor.commands.setContent(SAMPLE_DOC_HTML);
+              setTimeout(() => {
+                runGrammarCheck(editor.getText(), { forceFullScan: true });
+              }, 150);
+            }
           }}
         />
       )}
