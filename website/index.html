@@ -39,9 +39,15 @@
   <!-- Typography: Geist, Newsreader & JetBrains Mono -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <!-- Preload critical font to avoid render-blocking -->
+  <link rel="preload" as="style"
+    href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap" />
   <link
     href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap"
-    rel="stylesheet" />
+    rel="stylesheet" media="print" onload="this.media='all'" />
+  <noscript><link
+    href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap"
+    rel="stylesheet" /></noscript>
 
   <link rel="stylesheet" href="styles.css" />
 
@@ -117,7 +123,7 @@
   <nav class="navbar" id="navbar">
     <div class="container nav-container">
       <a href="#" class="brand">
-        <img src="assets/lexicon-logo.png" alt="Lexicon logo" />
+        <img src="assets/lexicon-logo.png" alt="Lexicon logo" width="28" height="28" />
         <span>Lexicon</span>
       </a>
 
@@ -151,6 +157,8 @@
       </div>
     </div>
   </nav>
+
+  <main id="main-content">
 
   <!-- Hero Section -->
   <header class="hero">
@@ -187,7 +195,7 @@
         <div class="download-meta">
           <span id="release-version">Checking latest release...</span>
           <span>&bull;</span>
-          <span id="download-count-badge" style="display: none;">
+          <span id="download-count-badge" style="visibility: hidden; display: inline-flex; align-items: center; gap: 8px;">
             <span id="download-count-text">0 downloads</span>
             <span>&bull;</span>
           </span>
@@ -235,7 +243,7 @@
             <span class="window-title">Lexicon Workspace</span>
           </div>
           <a href="https://www.youtube.com/watch?v=LGL-8wP_CAY" target="_blank" rel="noopener" class="faux-window-body">
-            <img src="assets/Lexicon.gif" alt="Lexicon application preview" loading="eager" />
+            <img src="assets/Lexicon.gif" alt="Lexicon application preview" loading="lazy" width="1030" height="579" />
           </a>
         </div>
         <p class="demo-caption">Click the preview above or <a href="https://www.youtube.com/watch?v=LGL-8wP_CAY"
@@ -723,6 +731,8 @@
       </div>
     </div>
   </section>
+
+  </main>
 
   <!-- Footer -->
   <footer class="footer">

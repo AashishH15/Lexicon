@@ -159,9 +159,7 @@
       const roundedDownloads = Math.floor(totalDownloads / 5) * 5;
       if (downloadCountBadge && downloadCountText && roundedDownloads > 0) {
         downloadCountText.textContent = `${roundedDownloads}+ downloads`;
-        downloadCountBadge.style.display = 'inline-flex';
-        downloadCountBadge.style.alignItems = 'center';
-        downloadCountBadge.style.gap = '8px';
+        downloadCountBadge.style.visibility = 'visible';
       }
 
       // Find direct download link for primary detected OS from the latest release

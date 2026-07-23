@@ -10,8 +10,8 @@
 
   /* Text Colors */
   --text-primary: #111111;
-  --text-secondary: #787774;
-  --text-muted: #9A9996;
+  --text-secondary: #636360;
+  --text-muted: #6E6E6B;
 
   /* Semantic Pastels */
   --pale-blue-bg: #E1F3FE;
@@ -44,6 +44,12 @@
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+}
+
+/* Prevent layout shift from images without explicit dimensions */
+img {
+  max-width: 100%;
+  height: auto;
 }
 
 html {
@@ -218,13 +224,15 @@ kbd {
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--text-secondary);
+  color: var(--text-primary);
+  opacity: 0.6;
   text-decoration: none;
   transition: var(--transition);
 }
 
 .nav-links a:hover {
   color: var(--text-primary);
+  opacity: 1;
 }
 
 .btn-nav-github {
