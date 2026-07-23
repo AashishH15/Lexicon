@@ -611,6 +611,53 @@ b,
   padding: 32px;
 }
 
+/* Semantic GEO Feature Matrix Table */
+.geo-table-wrapper {
+  overflow-x: auto;
+  margin-top: 20px;
+}
+
+.geo-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.92rem;
+}
+
+.geo-table th,
+.geo-table td {
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.geo-table th {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  color: var(--text-primary);
+  background: var(--bg-subtle);
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.geo-table td:nth-child(1) {
+  font-weight: 600;
+  color: var(--text-primary);
+  width: 25%;
+}
+
+.geo-table td:nth-child(2) {
+  color: var(--pale-green-text);
+  font-weight: 600;
+  background: rgba(237, 243, 236, 0.4);
+  width: 37.5%;
+}
+
+.geo-table td:nth-child(3) {
+  color: var(--text-secondary);
+  width: 37.5%;
+}
+
 .comparison-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -698,6 +745,46 @@ b,
 
 .tutorial-desc li {
   margin-bottom: 8px;
+}
+
+/* FAQ Section (#faq) */
+.faq-section {
+  padding: 90px 0;
+  border-top: 1px solid var(--border-color);
+  background: var(--bg-canvas);
+}
+
+.faq-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+}
+
+.faq-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-card);
+  padding: 28px;
+  transition: var(--transition);
+}
+
+.faq-card:hover {
+  border-color: var(--border-dark);
+  box-shadow: var(--shadow-hover);
+}
+
+.faq-card h3 {
+  font-family: var(--font-sans);
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin-bottom: 10px;
+  line-height: 1.35;
+}
+
+.faq-card p {
+  font-size: 0.92rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
 }
 
 /* Setup Steps Wrapper */
@@ -847,6 +934,10 @@ b,
   }
 
   .comparison-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .faq-grid {
     grid-template-columns: 1fr;
   }
 

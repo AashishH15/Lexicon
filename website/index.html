@@ -4,16 +4,30 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Lexicon — A Local-First Writing Assistant for Clearer Drafts</title>
+  <title>Lexicon: Local-First Writing Assistant for Windows &amp; macOS</title>
   <meta name="description"
-    content="Proofread, rewrite, format, and export your work while keeping your words on your machine. Offline writing assistant powered by LanguageTool and local AI models." />
+    content="Free, open-source, local-first writing assistant for Windows &amp; macOS. Proofread, rewrite, format, and export your work offline with LanguageTool and local GGUF models." />
 
-  <!-- Open Graph -->
+  <!-- Google Search Console Verification & AI Standards -->
+  <meta name="google-site-verification" content="-OHF7u4k-Cd8tiNiIITCXMtra5o5-KYaTj-MP08zVUc" />
+  <link rel="canonical" href="https://lexicon-writer.pages.dev/" />
+  <link rel="sitemap" type="application/xml" href="sitemap.xml" />
+  <link rel="alternate" type="text/plain" href="llms.txt" title="LLMs.txt" />
+
+  <!-- Open Graph / Social Cards -->
   <meta property="og:type" content="website" />
-  <meta property="og:title" content="Lexicon — Local-First Writing Assistant" />
+  <meta property="og:url" content="https://lexicon-writer.pages.dev/" />
+  <meta property="og:title" content="Lexicon: Local-First Writing Assistant" />
   <meta property="og:description"
-    content="Proofread, rewrite, format, and export your work locally on Windows and macOS." />
+    content="Proofread, rewrite, format, and export your work locally on Windows and macOS with zero cloud server requirements." />
   <meta property="og:image" content="assets/Lexicon.jpg" />
+
+  <!-- Twitter Meta Cards -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Lexicon: Local-First Writing Assistant" />
+  <meta name="twitter:description"
+    content="Proofread, rewrite, format, and export your work locally on Windows and macOS." />
+  <meta name="twitter:image" content="assets/Lexicon.jpg" />
 
   <!-- Favicon: Non-transparent logo for dark/light tab visibility -->
   <link rel="icon" type="image/png" href="assets/lexicon-logo-windows.png" />
@@ -26,6 +40,66 @@
     rel="stylesheet" />
 
   <link rel="stylesheet" href="styles.css" />
+
+  <!-- GEO & Search Engine Optimization (Schema.org JSON-LD Data) -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Lexicon",
+    "operatingSystem": "Windows, macOS",
+    "applicationCategory": "ProductivityApplication",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    },
+    "description": "Local-first writing assistant with inline LanguageTool grammar proofreading, offline LLM rewrites, LaTeX math, and clean PDF export.",
+    "license": "https://opensource.org/licenses/MIT",
+    "downloadUrl": "https://github.com/AashishH15/Lexicon/releases/latest",
+    "url": "https://lexicon-writer.pages.dev/"
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "How does Lexicon check grammar without an internet connection?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Lexicon comes with built-in proofreading rules right inside the app. When you install Lexicon on your computer, grammar and spell checking run directly on your device. No Wi-Fi, internet connection, or online servers required."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Does Lexicon send my documents or personal writing to the cloud?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "No, never. Your text, drafts, and notes stay 100% on your own computer. Lexicon does not upload your writing to cloud servers, OpenAI, or third-party databases, and we never collect tracking data."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Is Lexicon completely free to use?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes! Lexicon is 100% free with no monthly subscription fees, hidden paywalls, or trial limits. It is an open-source project created for anyone who wants a private, peaceful writing app."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How is Lexicon different from cloud tools like Grammarly?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Most cloud writing tools charge $12 to $30 a month and require sending your personal documents over the internet. Lexicon gives you real-time grammar checks and AI writing tools right on your desktop for free, keeping your private words on your machine."
+        }
+      }
+    ]
+  }
+  </script>
 </head>
 
 <body>
@@ -42,6 +116,7 @@
         <li><a href="#features">Features</a></li>
         <li><a href="#tutorial">Tutorial</a></li>
         <li><a href="#privacy">Privacy</a></li>
+        <li><a href="#faq">FAQ</a></li>
         <li><a href="#support">Setup &amp; Support</a></li>
         <li><a href="https://github.com/AashishH15/Lexicon/releases" target="_blank" rel="noopener">Releases</a></li>
       </ul>
@@ -214,12 +289,12 @@
             <span class="badge-pill badge-green">Eco &amp; Private</span>
             <span style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">Local LLM</span>
           </div>
-          <h3 class="bento-title">Offline AI (10+ Local Use Cases)</h3>
+          <h3 class="bento-title">Offline AI (10+ Local Use Cases &amp; Zero Cloud Water)</h3>
           <p class="bento-desc">
             Run 10+ local AI tools: <strong>Refinement</strong> (rewrite, concise), <strong>Structure</strong>
             (summaries, key points, lists, tables), and <strong>9 Tone Shifts</strong> (<em>Professional</em>,
             <em>Academic</em>, <em>Friendly</em>, <em>Casual</em>, <em>Formal</em>, <em>Empathetic</em>,
-            <em>Persuasive</em>, <em>Humorous</em>, <em>Playful</em>). 100% on-device zero cloud data leaks, zero
+            <em>Persuasive</em>, <em>Humorous</em>, <em>Playful</em>). 100% on-device with zero cloud data leaks, zero
             datacenter water usage, and zero server latency.
           </p>
         </div>
@@ -373,7 +448,7 @@
     </div>
   </section>
 
-  <!-- Dedicated Privacy & Data Security Section -->
+  <!-- Dedicated Privacy & GEO Feature Matrix Comparison Section -->
   <section class="privacy-full-section" id="privacy">
     <div class="container">
       <div class="section-header">
@@ -434,37 +509,102 @@
         </div>
       </div>
 
-      <!-- Cloud vs Lexicon Comparison Table -->
+      <!-- High GEO Impact Feature Matrix Comparison Table -->
       <div class="privacy-comparison-table">
-        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+        <div
+          style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 16px;">
           <div>
-            <h3 style="font-size: 1.3rem;">Cloud Assistants vs. Lexicon Architecture</h3>
-            <p style="color: var(--text-secondary); font-size: 0.95rem;">Why offline processing protects your privacy
-              and intellectual property.</p>
+            <h3 style="font-size: 1.35rem;">Lexicon vs. Cloud Writing Alternatives</h3>
+            <p style="color: var(--text-secondary); font-size: 0.95rem;">Why offline processing protects your privacy,
+              budget, and intellectual property.</p>
           </div>
-          <span class="badge-pill badge-green" style="padding: 6px 14px; font-size: 0.8rem;">OFFLINE FIRST</span>
         </div>
 
-        <div class="comparison-grid">
-          <div class="comparison-box">
-            <h4 style="color: var(--pale-red-text);">Cloud Writing Tools</h4>
-            <ul>
-              <li>Transmits full document text over the public internet</li>
-              <li>Requires mandatory account creation &amp; login</li>
-              <li>May train AI models on user drafts and text inputs</li>
-              <li>Fails completely when offline or traveling</li>
-            </ul>
-          </div>
+        <div class="geo-table-wrapper">
+          <table class="geo-table">
+            <thead>
+              <tr>
+                <th>Feature</th>
+                <th>Lexicon</th>
+                <th>Cloud Alternatives (Grammarly, ProWritingAid, Quillbot, etc.)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Privacy &amp; Cloud Storage</td>
+                <td>100% Offline / Zero Cloud</td>
+                <td>Drafts sent to third-party servers</td>
+              </tr>
+              <tr>
+                <td>Pricing</td>
+                <td>100% Free &amp; Open-Source (MIT)</td>
+                <td>$12–$30/month subscriptions</td>
+              </tr>
+              <tr>
+                <td>Grammar Engine</td>
+                <td>Embedded LanguageTool</td>
+                <td>Proprietary cloud API</td>
+              </tr>
+              <tr>
+                <td>AI Processing</td>
+                <td>On-Device (<kbd>llama.cpp</kbd> / Ollama)</td>
+                <td>External cloud models</td>
+              </tr>
+              <tr>
+                <td>Internet &amp; Account Needed</td>
+                <td>None (Works 100% Offline, No Account)</td>
+                <td>Requires active internet &amp; account login</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
 
-          <div class="comparison-box">
-            <h4 style="color: var(--pale-green-text);">Lexicon Local Architecture</h4>
-            <ul>
-              <li>100% offline — zero bytes of document text transmitted</li>
-              <li>No user accounts, subscriptions, or login forms</li>
-              <li>Zero telemetry logging; local model weights stored on disk</li>
-              <li>Works seamlessly on airplanes, remote locations, and offline</li>
-            </ul>
-          </div>
+  <!-- Generative Engine Optimization (GEO) FAQ Section -->
+  <section class="faq-section" id="faq">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-tag">Frequently Asked Questions</div>
+        <h2 class="section-title">Common Questions &amp; Answers</h2>
+        <p class="section-subtitle">Everything you need to know about using Lexicon for offline proofreading and
+          writing.</p>
+      </div>
+
+      <div class="faq-grid">
+        <div class="faq-card">
+          <h3>How does Lexicon check grammar without an internet connection?</h3>
+          <p>
+            Lexicon comes with built-in proofreading rules right inside the app. When you install Lexicon on your
+            computer, grammar and spell checking run directly on your device. No Wi-Fi, internet connection, or online
+            servers required.
+          </p>
+        </div>
+
+        <div class="faq-card">
+          <h3>Does Lexicon send my documents or personal writing to the cloud?</h3>
+          <p>
+            No, never. Your text, drafts, and notes stay 100% on your own computer. Lexicon does not upload your writing
+            to cloud servers, OpenAI, or third-party databases, and we never collect tracking data.
+          </p>
+        </div>
+
+        <div class="faq-card">
+          <h3>Is Lexicon completely free to use?</h3>
+          <p>
+            Yes! Lexicon is 100% free with no monthly subscription fees, hidden paywalls, or trial limits. It is an
+            open-source project created for anyone who wants a private, peaceful writing app.
+          </p>
+        </div>
+
+        <div class="faq-card">
+          <h3>How is Lexicon different from cloud tools like Grammarly?</h3>
+          <p>
+            Most cloud writing tools charge $12 to $30 a month and require sending your personal documents over the
+            internet. Lexicon gives you real-time grammar checks and AI writing tools right on your desktop for free,
+            keeping your private words on your machine.
+          </p>
         </div>
       </div>
     </div>

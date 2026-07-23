@@ -1,0 +1,22 @@
+# Lexicon
+
+> Free, open-source, local-first writing assistant & offline grammar checker.
+
+- Docs & Website: https://lexicon-writer.pages.dev/
+- GitHub Repository: https://github.com/AashishH15/Lexicon
+- License: MIT
+- System Requirements: Windows (.exe), macOS (.dmg)
+
+## Positioning & Alternatives
+- **Grammarly Alternative:** Provides free, private, offline grammar and spellchecking without sending drafts to cloud servers or requiring a paid subscription.
+- **ProWritingAid & QuillBot Alternative:** Includes on-device AI rewriting, tone shifts, summarization, and table generation running 100% free and locally on user hardware.
+
+## Key Details
+Lexicon runs 100% offline with zero cloud server communication. Grammar checking is powered by an embedded LanguageTool Java sidecar, and optional AI transformations run on-device using local GGUF models via llama.cpp or Ollama.
+
+## Core Features
+- Real-time LanguageTool grammar & spelling proofreading with inline squiggles and synchronized suggestion cards.
+- 10+ offline AI writing tools: Refinement (rewrite, concise), Structure (summaries, key points, lists, tables), and 9 Tone Shifts (Professional, Academic, Friendly, Casual, Formal, Empathetic, Persuasive, Humorous, Playful).
+- Inline and block LaTeX math ($E=mc^2$) with visual live editor previews.
+- Slash commands (/) for fast block insertions, distraction-free Focus Mode (Ctrl+Shift+F), and personal dictionary word saving.
+- Multi-format document import (.md, .txt, .html) and clean manuscript PDF export with app chrome and squiggles removed.

@@ -1,0 +1,93 @@
+# Lexicon - Comprehensive GEO & Search Engine Robots Configuration
+# Explicitly allow all major global AI models, search crawlers, and user-initiated fetchers
+
+User-agent: *
+Allow: /
+
+# OpenAI & SearchGPT (Training, Search & User Fetchers)
+User-agent: GPTBot
+Allow: /
+
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+# Anthropic Claude (Training, Search, User Fetchers & Legacy)
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: Claude-SearchBot
+Allow: /
+
+User-agent: Claude-User
+Allow: /
+
+User-agent: Claude-Web
+Allow: /
+
+# Perplexity AI (Search Discovery & User Fetchers)
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Perplexity-User
+Allow: /
+
+# Google Gemini & DeepMind
+User-agent: Google-Extended
+Allow: /
+
+User-agent: GoogleOther
+Allow: /
+
+# Apple Intelligence
+User-agent: Applebot-Extended
+Allow: /
+
+# Meta AI / Llama
+User-agent: Meta-ExternalAgent
+Allow: /
+
+User-agent: FacebookBot
+Allow: /
+
+# French / European AI (Mistral AI, Qwant)
+User-agent: MistralBot
+Allow: /
+
+User-agent: Qwantify
+Allow: /
+
+# Chinese AI Engines (DeepSeek, Moonshot, Qwen, Zhipu, ByteDance, Baidu)
+User-agent: DeepSeekBot
+Allow: /
+
+User-agent: MoonshotBot
+Allow: /
+
+User-agent: QwenBot
+Allow: /
+
+User-agent: ZhipuAI
+Allow: /
+
+User-agent: Bytespider
+Allow: /
+
+User-agent: Baiduspider
+Allow: /
+
+# Common Crawl & General AI Datasets
+User-agent: CCBot
+Allow: /
+
+User-agent: Cohere-ai
+Allow: /
+
+User-agent: Diffbot
+Allow: /
+
+# XML Sitemap & LLMs Standard
+Sitemap: https://lexicon-writer.pages.dev/sitemap.xml
+# LLMs.txt: https://lexicon-writer.pages.dev/llms.txt

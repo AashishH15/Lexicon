@@ -10,7 +10,9 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/AashishH15/Lexicon/releases/latest">Download the latest release</a>
+  <a href="https://lexicon-writer.pages.dev/">Website</a>
+  &nbsp;&middot;&nbsp;
+  <a href="https://github.com/AashishH15/Lexicon/releases/latest">Download release</a>
   &nbsp;&middot;&nbsp;
   <a href="https://github.com/AashishH15/Lexicon/issues">Report an issue</a>
 </p>
@@ -126,7 +128,7 @@ optional alternative for users who already run it on their machine.
 Lexicon is local-first:
 
 - Your writing is not sent to any servers.
-- Nothing leaves your computer — no account, no cloud, no datacenter, no water.
+- Nothing leaves your computer: no account, no cloud, no datacenter, no water.
 - Documents are auto-saved locally in the app's browser storage.
 - Your Local Assistant (Lex) runs entirely on your device for opt-in rewriting, tone adjustments, and summaries.
 - Downloaded models remain in your platform's Lexicon app-data directory.
