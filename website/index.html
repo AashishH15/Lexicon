@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lexicon — A Local-First Writing Assistant for Clearer Drafts</title>
+  <meta name="description"
+    content="Proofread, rewrite, format, and export your work while keeping your words on your machine. Offline writing assistant powered by LanguageTool and local AI models." />
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Lexicon — Local-First Writing Assistant" />
+  <meta property="og:description"
+    content="Proofread, rewrite, format, and export your work locally on Windows and macOS." />
+  <meta property="og:image" content="assets/Lexicon.jpg" />
+
+  <!-- Favicon: Non-transparent logo for dark/light tab visibility -->
+  <link rel="icon" type="image/png" href="assets/lexicon-logo-windows.png" />
+
+  <!-- Typography: Geist, Newsreader & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap"
+    rel="stylesheet" />
+
+  <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body>
+
+  <!-- Navigation Bar -->
+  <nav class="navbar" id="navbar">
+    <div class="container nav-container">
+      <a href="#" class="brand">
+        <img src="assets/lexicon-logo.png" alt="Lexicon logo" />
+        <span>Lexicon</span>
+      </a>
+
+      <ul class="nav-links">
+        <li><a href="#features">Features</a></li>
+        <li><a href="#tutorial">Tutorial</a></li>
+        <li><a href="#privacy">Privacy</a></li>
+        <li><a href="#support">Setup &amp; Support</a></li>
+        <li><a href="https://github.com/AashishH15/Lexicon/releases" target="_blank" rel="noopener">Releases</a></li>
+      </ul>
+
+      <div class="nav-actions">
+        <a href="https://github.com/AashishH15/Lexicon" target="_blank" rel="noopener" class="btn-nav-github">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <path
+              d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4">
+            </path>
+            <path d="M9 18c-4.51 2-5-2-7-2"></path>
+          </svg>
+          <span>GitHub</span>
+        </a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Hero Section -->
+  <header class="hero">
+    <div class="container">
+      <div class="hero-badge-wrapper">
+        <span class="badge-pill badge-blue">
+          <span>Local-First &bull; Offline AI</span>
+        </span>
+      </div>
+
+      <h1 class="hero-title">
+        A local-first writing assistant for clearer drafts.
+      </h1>
+
+      <p class="hero-subtitle">
+        Proofread, rewrite, format, and export your prose while keeping your text entirely on your device.
+        Lexicon combines inline LanguageTool grammar rules with optional local AI models without requiring cloud
+        accounts or subscriptions.
+      </p>
+
+      <!-- Dynamic Download Box -->
+      <div class="download-wrapper">
+        <a id="primary-download-btn" href="https://github.com/AashishH15/Lexicon/releases/latest"
+          class="btn-primary-cta">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+          </svg>
+          <span id="primary-download-text">Download for Desktop</span>
+        </a>
+
+        <div class="download-meta">
+          <span id="release-version">Checking latest release...</span>
+          <span>&bull;</span>
+          <span id="download-count-badge" style="display: none;">
+            <span id="download-count-text">0 downloads</span>
+            <span>&bull;</span>
+          </span>
+          <div class="platform-selector">
+            <button class="platform-toggle-btn" id="platform-toggle" type="button">
+              <span>All builds &amp; architectures</span>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="m6 9 6 6 6-6" />
+              </svg>
+            </button>
+            <div class="platform-menu" id="platform-menu">
+              <div class="platform-group-title">Windows</div>
+              <a id="dl-win-x64" href="https://github.com/AashishH15/Lexicon/releases/latest" class="platform-item">
+                <span>Windows x64 (.exe)</span>
+                <span class="platform-size">x64</span>
+              </a>
+              <a id="dl-win-arm64" href="https://github.com/AashishH15/Lexicon/releases/latest" class="platform-item">
+                <span>Windows ARM64 (.exe)</span>
+                <span class="platform-size">ARM64</span>
+              </a>
+              <a id="dl-win-x86" href="https://github.com/AashishH15/Lexicon/releases/latest" class="platform-item">
+                <span>Windows x86 (.exe)</span>
+                <span class="platform-size">32-bit</span>
+              </a>
+              <div class="platform-group-title">macOS</div>
+              <a id="dl-mac-arm64" href="https://github.com/AashishH15/Lexicon/releases/latest" class="platform-item">
+                <span>macOS Apple Silicon (.dmg)</span>
+                <span class="platform-size">M-Series</span>
+              </a>
+              <a id="dl-mac-x64" href="https://github.com/AashishH15/Lexicon/releases/latest" class="platform-item">
+                <span>macOS Intel (.dmg)</span>
+                <span class="platform-size">x64</span>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Faux OS Window Chrome Demo with YouTube Video Link Overlay -->
+      <div class="demo-showcase">
+        <div class="faux-window">
+          <div class="faux-window-header">
+            <span class="window-dot"></span>
+            <span class="window-dot"></span>
+            <span class="window-title">Lexicon Workspace</span>
+          </div>
+          <a href="https://www.youtube.com/watch?v=LGL-8wP_CAY" target="_blank" rel="noopener" class="faux-window-body">
+            <img src="assets/Lexicon.gif" alt="Lexicon application preview" loading="eager" />
+          </a>
+        </div>
+        <p class="demo-caption">Click the preview above or <a href="https://www.youtube.com/watch?v=LGL-8wP_CAY"
+            target="_blank" rel="noopener">watch the full product launch video on YouTube</a> (with audio)</p>
+      </div>
+    </div>
+  </header>
+
+  <!-- Complete Features Bento Box Grid (3-Column Balanced Layout) -->
+  <section class="features-section" id="features">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-tag">Complete Feature Set</div>
+        <h2 class="section-title">Designed for quiet, focused writing</h2>
+        <p class="section-subtitle">
+          An editorial workspace organizing proofreading rules, local AI transformations, LaTeX math, and clean
+          manuscript exports into simple, un-cluttered modules.
+        </p>
+      </div>
+
+      <div class="bento-grid">
+        <!-- Row 1: Card 1 (Span 2) -->
+        <div class="bento-card bento-card-large">
+          <div class="bento-card-header">
+            <span class="badge-pill badge-green">LanguageTool Engine</span>
+            <span style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">Clarity
+              Score</span>
+          </div>
+          <h3 class="bento-title">Real-time Grammar, Spelling &amp; Readability Score</h3>
+          <p class="bento-desc">
+            Spot mechanics, grammar, and spelling issues as you type. Flagged items feature clear inline marks like
+            <mark class="mark-error">misspelled words</mark> and <mark class="mark-suggestion">suggested
+              revisions</mark>
+            with synchronized suggestion cards, 1-click Apply/Dismiss, and real-time Clarity &amp; Readability scores.
+          </p>
+        </div>
+
+        <!-- Row 1: Card 2 (Span 1) -->
+        <div class="bento-card">
+          <div class="bento-card-header">
+            <span class="badge-pill badge-blue">Keyboard Driven</span>
+            <span style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted);">Efficiency</span>
+          </div>
+          <h3 class="bento-title">Slash Commands &amp; Instant Block Insertion</h3>
+          <p class="bento-desc">
+            Execute operations without leaving your keyboard. Type <kbd>/</kbd> on any new line to trigger insertion
+            menus for Headings (H1-H6), Code Blocks, Tables, Task lists, and LaTeX equations.
+          </p>
+        </div>
+
+        <!-- Row 2: Card 3 (Span 1) -->
+        <div class="bento-card">
+          <div class="bento-card-header">
+            <span class="badge-pill badge-blue">Math &amp; Code</span>
+          </div>
+          <h3 class="bento-title">LaTeX Math, Syntax &amp; Formatting</h3>
+          <p class="bento-desc">
+            Insert inline math <kbd>$E=mc^2$</kbd> or block LaTeX <kbd>$$\int_{0}^{\infty} e^{-x^2} dx$$</kbd> with live
+            editor preview, syntax-highlighted code blocks, inline code <kbd>const lex = new Lexicon()</kbd>, task
+            lists, and font/line spacing controls.
+          </p>
+        </div>
+
+        <!-- Row 2: Card 4 (Span 2 Large) -->
+        <div class="bento-card bento-card-large">
+          <div class="bento-card-header">
+            <span class="badge-pill badge-green">Eco &amp; Private</span>
+            <span style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">Local LLM</span>
+          </div>
+          <h3 class="bento-title">Offline AI (10+ Local Use Cases)</h3>
+          <p class="bento-desc">
+            Run 10+ local AI tools: <strong>Refinement</strong> (rewrite, concise), <strong>Structure</strong>
+            (summaries, key points, lists, tables), and <strong>9 Tone Shifts</strong> (<em>Professional</em>,
+            <em>Academic</em>, <em>Friendly</em>, <em>Casual</em>, <em>Formal</em>, <em>Empathetic</em>,
+            <em>Persuasive</em>, <em>Humorous</em>, <em>Playful</em>). 100% on-device zero cloud data leaks, zero
+            datacenter water usage, and zero server latency.
+          </p>
+        </div>
+
+        <!-- Row 3: Card 5 (Span 1) -->
+        <div class="bento-card">
+          <div class="bento-card-header">
+            <span class="badge-pill badge-blue">Focus Mode</span>
+          </div>
+          <h3 class="bento-title">Distraction-Free Canvas</h3>
+          <p class="bento-desc">
+            Collapse sidebars and UI panels with a single keystroke (<kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>F</kbd>)
+            to write on a clean, calm, editorial canvas.
+          </p>
+        </div>
+
+        <!-- Row 3: Card 6 (Span 1) -->
+        <div class="bento-card">
+          <div class="bento-card-header">
+            <span class="badge-pill badge-blue">Custom Dictionary</span>
+          </div>
+          <h3 class="bento-title">Personal Vocabulary</h3>
+          <p class="bento-desc">
+            Save custom brand names, domain terminology, and unique jargon to your personal dictionary so LanguageTool
+            never flags them as spelling errors.
+          </p>
+        </div>
+
+        <!-- Row 3: Card 7 (Span 1) -->
+        <div class="bento-card">
+          <div class="bento-card-header">
+            <span class="badge-pill badge-green">Import &amp; Export</span>
+          </div>
+          <h3 class="bento-title">Clean PDF &amp; Multi-Format Export</h3>
+          <p class="bento-desc">
+            Import `.md`, `.txt`, and `.html` drafts. Export to clean manuscript PDFs (with app UI chrome and squiggles
+            removed), raw Markdown, Plain Text, or HTML.
+          </p>
+        </div>
+
+        <!-- Row 4: Card 8 (Span 3 Banner) -->
+        <div class="bento-card bento-card-full">
+          <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
+            <div>
+              <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+                <span class="badge-pill badge-blue">Local Storage</span>
+                <span style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">Data
+                  Protection</span>
+              </div>
+              <h3 class="bento-title" style="margin-bottom: 6px;">Local Profile Storage &amp; Model-Preserving Updates
+              </h3>
+              <p class="bento-desc" style="max-width: 760px;">
+                Local auto-save prevents lost work. Application updates install seamlessly over the app while preserving
+                your downloaded AI models, custom settings, and personal dictionary intact in your local profile data.
+              </p>
+            </div>
+            <div>
+              <span class="badge-pill badge-green" style="padding: 8px 16px; font-size: 0.85rem;">100% Private</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Interactive Tutorial & User Guide Section -->
+  <section class="tutorial-section" id="tutorial">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-tag">User Guide &amp; Walkthrough</div>
+        <h2 class="section-title">How to Use Lexicon</h2>
+        <p class="section-subtitle">A complete tutorial walking through proofreading, local AI rewrites, slash commands,
+          and shortcuts.</p>
+      </div>
+
+      <div class="tutorial-grid">
+        <!-- Step 1 Card -->
+        <div class="tutorial-card">
+          <div class="tutorial-card-header">
+            <span class="step-number">STEP 01</span>
+            <h3>Onboarding &amp; Setup</h3>
+          </div>
+          <div class="tutorial-desc">
+            <p>Complete the 4-step onboarding wizard on first launch:</p>
+            <ol>
+              <li>Set your English dialect preference (e.g. <strong>English (US)</strong> or <strong>English
+                  (UK)</strong>).</li>
+              <li>Choose your opt-in local AI model: <strong>Light</strong> (0.8 GB) or <strong>Standard</strong> (1.4
+                GB), or connect Ollama.</li>
+              <li>Note: Proofreading and editing work immediately without downloading an AI model!</li>
+            </ol>
+          </div>
+        </div>
+
+        <!-- Step 2 Card -->
+        <div class="tutorial-card">
+          <div class="tutorial-card-header">
+            <span class="step-number">STEP 02</span>
+            <h3>Proofreading &amp; Grammar Review</h3>
+          </div>
+          <div class="tutorial-desc">
+            <p>Inline grammar and spell checking run automatically as you type:</p>
+            <ul>
+              <li>Click <strong>Proofread</strong> in the top bar to run a full document pass.</li>
+              <li>Hover over flagged squiggles or review suggestion cards in the right <strong>Review Panel</strong>.
+              </li>
+              <li>Click <strong>Apply</strong> to accept a fix, <strong>Dismiss</strong> to ignore, or add unknown words
+                to your <strong>Personal Dictionary</strong>.</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Step 3 Card -->
+        <div class="tutorial-card">
+          <div class="tutorial-card-header">
+            <span class="step-number">STEP 03</span>
+            <h3>Local AI Rewrites &amp; Tone Shifts</h3>
+          </div>
+          <div class="tutorial-desc">
+            <p>Transform your text with offline AI models:</p>
+            <ul>
+              <li>Highlight any paragraph or sentence in your document.</li>
+              <li>Open the left <strong>Actions</strong> panel and select a transform tool: <em>Rewrite</em>, <em>Make
+                  Concise</em>, <em>Summary</em>, or <em>Key Points</em>.</li>
+              <li>Select a tone shift: <strong>Professional</strong>, <strong>Academic</strong>,
+                <strong>Friendly</strong>, <strong>Casual</strong>, <strong>Formal</strong>,
+                <strong>Empathetic</strong>, <strong>Persuasive</strong>, <strong>Humorous</strong>, or
+                <strong>Playful</strong>.</li>
+              <li>Review the diff output in the right panel and click <strong>Apply</strong>.</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Step 4 Card -->
+        <div class="tutorial-card">
+          <div class="tutorial-card-header">
+            <span class="step-number">STEP 04</span>
+            <h3>Slash Commands, Math &amp; Shortcuts</h3>
+          </div>
+          <div class="tutorial-desc">
+            <p>Speed up drafting without leaving the keyboard:</p>
+            <ul>
+              <li>Type <kbd>/</kbd> on a new line to open the slash menu for Headings, Code Blocks, Tables, and Tasks.
+              </li>
+              <li>Type <kbd>$E=mc^2$</kbd> for inline LaTeX math or insert block equations with live previews.</li>
+              <li>Toggle <strong>Focus Mode</strong> to hide sidebars for an uncluttered writing view.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Dedicated Privacy & Data Security Section -->
+  <section class="privacy-full-section" id="privacy">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-tag">Privacy by Design</div>
+        <h2 class="section-title">100% Local-First &amp; Private</h2>
+        <p class="section-subtitle">
+          Lexicon is built from the ground up to ensure your words, documents, and writing habits remain strictly on
+          your local hardware.
+        </p>
+      </div>
+
+      <div class="privacy-grid">
+        <div class="privacy-card">
+          <div class="privacy-card-header">
+            <h3>Local Profile Storage</h3>
+            <span class="badge-pill badge-green">100% PRIVATE</span>
+          </div>
+          <p>
+            Your drafts, personal dictionaries, custom settings, and writing analytics are stored in your local user
+            profile. No cloud sync, mandatory account creation, or background telemetry.
+          </p>
+        </div>
+
+        <div class="privacy-card">
+          <div class="privacy-card-header">
+            <h3>Embedded LanguageTool Engine</h3>
+            <p style="margin: 0; font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted);">ZERO
+              LATENCY</p>
+          </div>
+          <p>
+            Grammar, spelling, and style rule passes run deterministically on your local CPU via an embedded runtime.
+            Your prose is never uploaded to remote cloud APIs for proofreading.
+          </p>
+        </div>
+
+        <div class="privacy-card">
+          <div class="privacy-card-header">
+            <h3>Offline LLM Inference</h3>
+            <span class="badge-pill badge-blue">LOCAL AI</span>
+          </div>
+          <p>
+            Lexicon's AI writing assistant executes GGUF models (<strong>Light</strong> 0.8 GB or
+            <strong>Standard</strong> 1.4 GB) directly on your device via native sidecar processes or your existing
+            Ollama server.
+          </p>
+        </div>
+
+        <div class="privacy-card">
+          <div class="privacy-card-header">
+            <h3>Complete Data Ownership</h3>
+            <p style="margin: 0; font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted);">OPEN
+              STANDARDS</p>
+          </div>
+          <p>
+            Import and export documents seamlessly in `.md`, `.txt`, `.html`, or `.pdf`. Delete downloaded AI models or
+            clear local data at any time with a single click.
+          </p>
+        </div>
+      </div>
+
+      <!-- Cloud vs Lexicon Comparison Table -->
+      <div class="privacy-comparison-table">
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+          <div>
+            <h3 style="font-size: 1.3rem;">Cloud Assistants vs. Lexicon Architecture</h3>
+            <p style="color: var(--text-secondary); font-size: 0.95rem;">Why offline processing protects your privacy
+              and intellectual property.</p>
+          </div>
+          <span class="badge-pill badge-green" style="padding: 6px 14px; font-size: 0.8rem;">OFFLINE FIRST</span>
+        </div>
+
+        <div class="comparison-grid">
+          <div class="comparison-box">
+            <h4 style="color: var(--pale-red-text);">Cloud Writing Tools</h4>
+            <ul>
+              <li>Transmits full document text over the public internet</li>
+              <li>Requires mandatory account creation &amp; login</li>
+              <li>May train AI models on user drafts and text inputs</li>
+              <li>Fails completely when offline or traveling</li>
+            </ul>
+          </div>
+
+          <div class="comparison-box">
+            <h4 style="color: var(--pale-green-text);">Lexicon Local Architecture</h4>
+            <ul>
+              <li>100% offline — zero bytes of document text transmitted</li>
+              <li>No user accounts, subscriptions, or login forms</li>
+              <li>Zero telemetry logging; local model weights stored on disk</li>
+              <li>Works seamlessly on airplanes, remote locations, and offline</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Support, Setup & Security Verification Section -->
+  <section class="support-section" id="support">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-tag">Setup Walkthrough &amp; Assistance</div>
+        <h2 class="section-title">Setup &amp; Support</h2>
+        <p class="section-subtitle">Step-by-step installation guide, OS launch verification, and issue tracking.</p>
+      </div>
+
+      <!-- 3-Step Setup Walkthrough -->
+      <div class="setup-steps-wrapper" style="margin-top: 0; margin-bottom: 40px;">
+        <div>
+          <h3 style="font-size: 1.4rem;">3-Step Setup Walkthrough</h3>
+          <p style="color: var(--text-secondary); font-size: 0.95rem;">From download to your first draft in under 2
+            minutes.</p>
+        </div>
+
+        <div class="setup-steps-grid">
+          <div class="setup-step-box">
+            <span class="step-number">1. DOWNLOAD</span>
+            <h4>Get the Installer</h4>
+            <p>Click <strong>Download for Desktop</strong> at the top of this page to get the installer for your OS
+              (Windows `.exe` or macOS `.dmg`).</p>
+          </div>
+          <div class="setup-step-box">
+            <span class="step-number">2. VERIFY</span>
+            <h4>First Launch Pass</h4>
+            <p>Run the installer. If your OS displays a SmartScreen or Gatekeeper warning, follow the quick 1-click
+              override steps below.</p>
+          </div>
+          <div class="setup-step-box">
+            <span class="step-number">3. START WRITING</span>
+            <h4>Begin Drafting</h4>
+            <p>Open Lexicon, choose your optional model, and start typing. Grammar fixes and suggestion cards appear
+              automatically!</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="support-grid">
+        <!-- Windows SmartScreen Setup Card -->
+        <div class="support-card">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+            <h3>Windows (SmartScreen)</h3>
+            <span class="badge-pill badge-blue">Windows</span>
+          </div>
+          <p>
+            If Windows SmartScreen shows <em>"Windows protected your PC"</em> during initial installation:
+          </p>
+          <ol>
+            <li>Click <strong>More info</strong> under the warning prompt.</li>
+            <li>Click <strong>Run anyway</strong> to complete installation.</li>
+          </ol>
+        </div>
+
+        <!-- macOS Gatekeeper Setup Card -->
+        <div class="support-card">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+            <h3>macOS (Gatekeeper)</h3>
+            <span class="badge-pill badge-blue">macOS</span>
+          </div>
+          <p>
+            If macOS shows <em>"Lexicon cannot be opened because it is from an unidentified developer"</em>:
+          </p>
+          <ul style="padding-left: 20px; list-style: none;">
+            <li style="margin-bottom: 8px;"><strong>Option 1 (GUI):</strong> Control-click (right-click)
+              <strong>Lexicon.app</strong> &rarr; select <strong>Open</strong> &rarr; click <strong>Open</strong>.</li>
+            <li style="margin-bottom: 8px;"><strong>Option 2 (System Settings):</strong> Open <strong>System Settings
+                &gt; Privacy &amp; Security</strong> &rarr; scroll down and click <strong>Open Anyway</strong>.</li>
+            <li style="margin-bottom: 8px;"><strong>Option 3 (Terminal):</strong> Run <kbd>xattr -cr
+                /Applications/Lexicon.app</kbd> in Terminal.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Feedback & Support Bar -->
+      <div
+        style="margin-top: 24px; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-card); padding: 28px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 20px;">
+        <div>
+          <h3 style="font-size: 1.2rem; margin-bottom: 4px;">Found an issue or have a suggestion?</h3>
+          <p>Submit bug reports and feature proposals directly on GitHub.</p>
+        </div>
+        <div class="support-actions" style="margin-top: 0;">
+          <a href="https://github.com/AashishH15/Lexicon/issues/new?template=bug_report.md" target="_blank"
+            rel="noopener" class="btn-secondary">
+            <span>Report a Bug</span>
+          </a>
+          <a href="https://github.com/AashishH15/Lexicon/issues/new?template=feature_request.md" target="_blank"
+            rel="noopener" class="btn-secondary">
+            <span>Request a Feature</span>
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container footer-container">
+      <div>
+        <span>Lexicon &bull; Local-First Writing Assistant</span>
+      </div>
+      <div class="footer-links">
+        <a href="https://github.com/AashishH15/Lexicon" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://github.com/AashishH15/Lexicon/blob/master/LICENSE" target="_blank" rel="noopener">LICENSE</a>
+        <a href="https://www.youtube.com/watch?v=LGL-8wP_CAY" target="_blank" rel="noopener">Launch Video</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+
+</html>
