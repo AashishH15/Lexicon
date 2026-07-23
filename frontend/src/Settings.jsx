@@ -4,6 +4,7 @@ import { X, CaretDown, ArrowCounterClockwise, IconBase } from "@phosphor-icons/r
 import LanguageDropdown from "./LanguageDropdown.jsx";
 import Toggle from "./Toggle.jsx";
 import ModelManager from "./ModelManager.jsx";
+import CustomToolsSettings from "./CustomToolsSettings.jsx";
 import { setAiPreference } from "./api.js";
 
 // GitHub mark (official Phosphor `github-logo` artwork). It isn't bundled in
@@ -299,6 +300,8 @@ export default function Settings({
               />
             </div>
           </div>
+
+          <CustomToolsSettings />
 
           <div className="mt-6">
             <button

@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import {
   CheckCircle,
   PencilSimple,
@@ -18,9 +19,12 @@ import {
   LockSimple,
   CircleNotch,
   X,
+  Sparkle,
 } from "@phosphor-icons/react";
+import { getCustomTools } from "./prompts.js";
+import { CUSTOM_ICON_MAP } from "./CustomToolsSettings.jsx";
 
-const groups = [
+const builtinGroups = [
   { label: "Analysis", tools: [{ name: "Proofread", icon: CheckCircle }] },
   {
     label: "Refinement",
@@ -55,6 +59,27 @@ const groups = [
 ];
 
 export default function Toolbar({ editor, activeTool, onToolClick, onAiSetup, aiConfigured, panelWidth, isMac, isWarming, transformStatus, transformRunning }) {
+  const [customTools, setCustomTools] = useState(getCustomTools);
+
+  useEffect(() => {
+    function refresh() {
+      setCustomTools(getCustomTools());
+    }
+    window.addEventListener("lexicon:tools-changed", refresh);
+    return () => window.removeEventListener("lexicon:tools-changed", refresh);
+  }, []);
+
+  const groups = [...builtinGroups];
+  if (customTools.length > 0) {
+    groups.push({
+      label: "Custom",
+      tools: customTools.map((t) => ({
+        name: t.name,
+        icon: CUSTOM_ICON_MAP[t.icon] || Sparkle,
+      })),
+    });
+  }
+
   // Below this panel width the Proofread shortcut hint can't fit alongside
   // the label, so we drop it to keep the row from wrapping/cramping.
   const showProofreadHint = (panelWidth ?? 256) >= 220;
