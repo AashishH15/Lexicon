@@ -155,8 +155,9 @@
         totalDownloads = latestAssets.reduce((sum, asset) => sum + (asset.download_count || 0), 0);
       }
 
-      if (downloadCountBadge && downloadCountText && totalDownloads > 0) {
-        downloadCountText.textContent = `${totalDownloads}+ downloads`;
+      const roundedDownloads = Math.floor(totalDownloads / 5) * 5;
+      if (downloadCountBadge && downloadCountText && roundedDownloads > 0) {
+        downloadCountText.textContent = `${roundedDownloads}+ downloads`;
         downloadCountBadge.style.display = 'inline-flex';
         downloadCountBadge.style.alignItems = 'center';
         downloadCountBadge.style.gap = '8px';
