@@ -343,7 +343,7 @@ export default function CustomToolsSettings() {
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g. British English"
+                  placeholder="e.g. Minimal Polish"
                   value={toolName}
                   onChange={(e) => setToolName(e.target.value)}
                   className="mt-1 w-full rounded border border-hairline bg-canvas px-2.5 py-1.5 font-sans text-xs text-ink focus:border-ink focus:outline-none"
@@ -384,7 +384,7 @@ export default function CustomToolsSettings() {
                 </label>
                 <textarea
                   rows={3}
-                  placeholder="e.g. Rewrite the text below to use British English spelling and formatting conventions."
+                  placeholder="e.g. Fix awkward phrasing and grammar only. Do not change vocabulary or sentence structure unless necessary."
                   value={toolPrompt}
                   onChange={(e) => setToolPrompt(e.target.value)}
                   className="mt-1 w-full rounded border border-hairline bg-canvas p-2 font-sans text-xs text-ink focus:border-ink focus:outline-none"
