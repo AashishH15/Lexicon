@@ -23,7 +23,11 @@
 </p>
 
 <p align="center">
-  <img src="media/Lexicon.gif" alt="Lexicon editor tour" />
+  <a href="https://www.youtube.com/watch?v=LGL-8wP_CAY" target="_blank">
+    <img src="media/Lexicon.gif" alt="Lexicon editor tour" />
+  </a>
+  <br />
+  <sub>🍿 <em>Click the GIF above or <a href="https://www.youtube.com/watch?v=LGL-8wP_CAY">watch the full project launch video on YouTube</a> (with audio)</em></sub>
 </p>
 
 Lexicon is a distraction-free rich-text editor with inline proofreading,
