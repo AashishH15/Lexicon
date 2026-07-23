@@ -1,0 +1,5 @@
+# Lexicon Security Policy
+Contact: mailto:aashish0415@gmail.com
+Expires: 2027-07-23T07:30:00.000Z
+Preferred-Languages: en
+Canonical: https://lexicon-writer.pages.dev/.well-known/security.txt
