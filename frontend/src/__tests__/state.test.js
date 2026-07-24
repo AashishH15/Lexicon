@@ -1,19 +1,17 @@
-import { describe, it, expect, beforeAll } from "vitest";
+import { describe, it, expect } from "vitest";
 import { SETTINGS_DEFAULTS } from "../Settings.jsx";
 import { getCategoryClass } from "../grammarHighlight.js";
 
-// Minimal localStorage shim for node environment.
-beforeAll(() => {
+// Lightweight localStorage shim used only by the reset test below.
+function mockLocalStorage() {
   const store = {};
-  global.localStorage = {
+  return {
     getItem: (key) => (key in store ? store[key] : null),
     setItem: (key, value) => { store[key] = String(value); },
     removeItem: (key) => { delete store[key]; },
     clear: () => { Object.keys(store).forEach((k) => delete store[k]); },
-    get length() { return Object.keys(store).length; },
-    key: (i) => Object.keys(store)[i] ?? null,
   };
-});
+}
 
 function matchKey(match, text) {
   const original = text
@@ -337,22 +335,23 @@ describe("Settings smart defaults & reset", () => {
   });
 
   it("reset clears specific localStorage keys without touching dictionary", () => {
-    localStorage.setItem("lexicon:language", "en-GB");
-    localStorage.setItem("lexicon:fontSize", "18");
-    localStorage.setItem("lexicon:focusMode", "true");
-    localStorage.setItem("lexicon:lineSpacing", "1.8");
-    localStorage.setItem("lexicon:user_dictionary", '["lexicon"]');
+    const ls = mockLocalStorage();
+    ls.setItem("lexicon:language", "en-GB");
+    ls.setItem("lexicon:fontSize", "18");
+    ls.setItem("lexicon:focusMode", "true");
+    ls.setItem("lexicon:lineSpacing", "1.8");
+    ls.setItem("lexicon:user_dictionary", '["lexicon"]');
 
-    localStorage.removeItem("lexicon:language");
-    localStorage.removeItem("lexicon:fontSize");
-    localStorage.removeItem("lexicon:focusMode");
-    localStorage.removeItem("lexicon:lineSpacing");
+    ls.removeItem("lexicon:language");
+    ls.removeItem("lexicon:fontSize");
+    ls.removeItem("lexicon:focusMode");
+    ls.removeItem("lexicon:lineSpacing");
 
-    expect(localStorage.getItem("lexicon:language")).toBeNull();
-    expect(localStorage.getItem("lexicon:fontSize")).toBeNull();
-    expect(localStorage.getItem("lexicon:focusMode")).toBeNull();
-    expect(localStorage.getItem("lexicon:lineSpacing")).toBeNull();
-    expect(localStorage.getItem("lexicon:user_dictionary")).toBe('["lexicon"]');
+    expect(ls.getItem("lexicon:language")).toBeNull();
+    expect(ls.getItem("lexicon:fontSize")).toBeNull();
+    expect(ls.getItem("lexicon:focusMode")).toBeNull();
+    expect(ls.getItem("lexicon:lineSpacing")).toBeNull();
+    expect(ls.getItem("lexicon:user_dictionary")).toBe('["lexicon"]');
   });
 });
 
