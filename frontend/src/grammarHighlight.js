@@ -32,7 +32,7 @@ export function buildTextWithMap(doc) {
   return { text, map };
 }
 
-function getCategoryClass(category) {
+export function getCategoryClass(category) {
   const cat = (category || "").toString().toLowerCase();
   if (cat.includes("spell") || cat.includes("typo")) {
     return "lex-error-spelling";
