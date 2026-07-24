@@ -263,16 +263,43 @@
   }
 
   .ProseMirror .lex-error {
-    background-color: #fdebec;
-    color: #9f2f2d;
     border-radius: 2px;
     padding: 0 1px;
     cursor: pointer;
   }
 
+  .ProseMirror .lex-error-spelling {
+    background-color: #fdebec;
+    color: #9f2f2d;
+    --lex-pulse: rgba(159, 47, 45, 0.15);
+  }
+
+  .ProseMirror .lex-error-grammar {
+    background-color: #fbf3db;
+    color: #956400;
+    --lex-pulse: rgba(149, 100, 0, 0.15);
+  }
+
+  .ProseMirror .lex-error-style {
+    background-color: #e1f3fe;
+    color: #1f6c9f;
+    --lex-pulse: rgba(31, 108, 159, 0.15);
+  }
+
   .ProseMirror .lex-error-active {
+    box-shadow: 0 0 0 1px currentColor;
+  }
+
+  .ProseMirror .lex-error-spelling.lex-error-active {
     background-color: #f8c9c8;
-    box-shadow: 0 0 0 1px #9f2f2d;
+  }
+
+  .ProseMirror .lex-error-grammar.lex-error-active {
+    background-color: #f8d86b;
+  }
+
+  .ProseMirror .lex-error-style.lex-error-active {
+    background-color: #bfe3fb;
   }
 
   /* Block-level image node (Image extension, sandboxed) */
@@ -406,26 +433,30 @@
     padding: 0 1px;
   }
 
-  .ProseMirror .lex-error-flash {
-    border-radius: 2px;
-    animation: lex-error-pulse 1200ms ease-in-out;
+  .ProseMirror .lex-error-flash.lex-error-spelling {
+    animation: lex-error-pulse-spelling 1200ms ease-in-out;
+  }
+  .ProseMirror .lex-error-flash.lex-error-grammar {
+    animation: lex-error-pulse-grammar 1200ms ease-in-out;
+  }
+  .ProseMirror .lex-error-flash.lex-error-style {
+    animation: lex-error-pulse-style 1200ms ease-in-out;
   }
 
-  @keyframes lex-error-pulse {
-    0%,
-    100% {
-      background-color: #fdebec;
-      box-shadow: 0 0 0 0 rgba(159, 47, 45, 0);
-    }
-    25%,
-    75% {
-      background-color: #f6b8ba;
-      box-shadow: 0 0 0 4px rgba(159, 47, 45, 0.25);
-    }
-    50% {
-      background-color: #ef9b9e;
-      box-shadow: 0 0 0 4px rgba(159, 47, 45, 0.35);
-    }
+  @keyframes lex-error-pulse-spelling {
+    0%, 100% { background-color: #fdebec; box-shadow: 0 0 0 0 rgba(159, 47, 45, 0); }
+    25%, 75% { background-color: #f6b8ba; box-shadow: 0 0 0 4px rgba(159, 47, 45, 0.25); }
+    50% { background-color: #ef9b9e; box-shadow: 0 0 0 4px rgba(159, 47, 45, 0.35); }
+  }
+  @keyframes lex-error-pulse-grammar {
+    0%, 100% { background-color: #fbf3db; box-shadow: 0 0 0 0 rgba(149, 100, 0, 0); }
+    25%, 75% { background-color: #f5d97a; box-shadow: 0 0 0 4px rgba(149, 100, 0, 0.25); }
+    50% { background-color: #f0cc5e; box-shadow: 0 0 0 4px rgba(149, 100, 0, 0.35); }
+  }
+  @keyframes lex-error-pulse-style {
+    0%, 100% { background-color: #e1f3fe; box-shadow: 0 0 0 0 rgba(31, 108, 159, 0); }
+    25%, 75% { background-color: #a8d8f8; box-shadow: 0 0 0 4px rgba(31, 108, 159, 0.25); }
+    50% { background-color: #7fc5f3; box-shadow: 0 0 0 4px rgba(31, 108, 159, 0.35); }
   }
 
   /* One-shot pulse when a squiggle decoration first appears */
@@ -435,13 +466,13 @@
 
   @keyframes lex-squiggle-pulse {
     0% {
-      box-shadow: 0 0 0 0 rgba(159, 47, 45, 0);
+      box-shadow: 0 0 0 0 transparent;
     }
     40% {
-      box-shadow: 0 0 0 2px rgba(159, 47, 45, 0.15);
+      box-shadow: 0 0 0 2px var(--lex-pulse, rgba(159, 47, 45, 0.15));
     }
     100% {
-      box-shadow: 0 0 0 0 rgba(159, 47, 45, 0);
+      box-shadow: 0 0 0 0 transparent;
     }
   }
 

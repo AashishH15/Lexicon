@@ -32,6 +32,17 @@ export function buildTextWithMap(doc) {
   return { text, map };
 }
 
+function getCategoryClass(category) {
+  const cat = (category || "").toString().toLowerCase();
+  if (cat.includes("spell") || cat.includes("typo")) {
+    return "lex-error-spelling";
+  }
+  if (cat.includes("gramm") || cat.includes("punct")) {
+    return "lex-error-grammar";
+  }
+  return "lex-error-style";
+}
+
 function decorationsFromMatches(doc, matches, map, activeId) {
   const decorations = [];
   for (const match of matches) {
@@ -42,12 +53,15 @@ function decorationsFromMatches(doc, matches, map, activeId) {
     }
     const to = (lastCharPos ?? from) + 1;
     const isActive = activeId != null && match.id === activeId;
+    const catClass = getCategoryClass(match.category);
     decorations.push(
       Decoration.inline(
         from,
         to,
         {
-          class: isActive ? "lex-error lex-error-active lex-squiggle-enter" : "lex-error lex-squiggle-enter",
+          class: isActive
+            ? `lex-error ${catClass} lex-error-active lex-squiggle-enter`
+            : `lex-error ${catClass} lex-squiggle-enter`,
           "data-error-id": String(match.id),
         },
         { id: match.id },
