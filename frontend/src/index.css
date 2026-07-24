@@ -476,13 +476,28 @@
     }
   }
 
+  @keyframes lexicon-shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  .lex-shimmer {
+    background: linear-gradient(
+      90deg,
+      #f7f6f3 0%,
+      #eaeaea 20%,
+      #f7f6f3 40%,
+      #f7f6f3 100%
+    );
+    background-size: 200% 100%;
+    animation: lexicon-shimmer 1.5s linear infinite;
+    border-radius: 4px;
+    color: transparent;
+  }
+
   @keyframes lex-ellipsis-typing {
-    0% {
-      clip-path: inset(0 100% 0 0);
-    }
-    100% {
-      clip-path: inset(0 -10% 0 0);
-    }
+    0% { clip-path: inset(0 100% 0 0); }
+    100% { clip-path: inset(0 -10% 0 0); }
   }
 
   .lex-ellipsis {

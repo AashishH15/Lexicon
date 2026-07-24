@@ -1398,13 +1398,21 @@ function matchKey(match, text) {
       if (!sourceText.trim()) {
         return;
       }
+      transformRunningRef.current = true;
+      setTransformRunning(true);
+      setTransformResults([]);
+      setTransformProgress(null);
       const result = await runTransform({ prompt, text: sourceText });
       if (result == null) {
+        transformRunningRef.current = false;
+        setTransformRunning(false);
         return;
       }
       setTransformResults([
         { tool: name, text: result, from, to, part: 1, total: 1 },
       ]);
+      transformRunningRef.current = false;
+      setTransformRunning(false);
       setTransformHistory((prev) => {
         const entry = {
           id: Date.now(),

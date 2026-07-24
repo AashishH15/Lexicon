@@ -284,7 +284,7 @@ export default function Settings({
               (survives restart) and drives which backend the editor uses. */}
           <div className="mt-8 border-t border-hairline pt-6">
             <p className="font-mono text-[10px] uppercase tracking-widest text-muted">
-              AI Model
+              Lex's Model
             </p>
             <p className="mt-1 font-sans text-xs text-muted">
               Runs entirely on your device. Download a local model or use your

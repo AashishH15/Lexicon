@@ -129,7 +129,7 @@ export default function CustomToolsSettings() {
       <div className="flex items-center justify-between">
         <div>
           <p className="font-mono text-[10px] uppercase tracking-widest text-muted">
-            AI Prompts & Custom Tools
+            Lex's Prompts & Custom Tools
           </p>
           <p className="mt-1 font-sans text-xs text-muted">
             Customize built-in AI instructions or create custom shortcuts.

@@ -1,7 +1,7 @@
 import SuggestionCard from "./SuggestionCard.jsx";
 import DocStats from "./DocStats.jsx";
 import { useEffect, useRef, useState } from "react";
-import { ArrowLineRight, CheckCircle, CircleNotch, Info, Warning, Lightbulb } from "@phosphor-icons/react";
+import { ArrowLineRight, CheckCircle, Info, Warning, Lightbulb } from "@phosphor-icons/react";
 
 const BLOOM_MESSAGES = [
   "No issues detected. Your draft is clear.",
@@ -106,9 +106,15 @@ export default function ReviewPanel({
           </>
         ) : activeTool === "Proofread" ? (
           checking ? (
-            <p className="font-mono text-xs lowercase tracking-[0.04em] text-muted">
-              status :: initializing engine<span className="lex-ellipsis">...</span>
-            </p>
+            <div className="rounded-xl border border-hairline bg-white p-6 pb-4 lex-card-enter">
+              <div className="h-3 w-full rounded lex-shimmer" />
+              <div className="mt-3 h-3 w-[90%] rounded lex-shimmer" />
+              <div className="mt-3 h-3 w-[75%] rounded lex-shimmer" />
+              <div className="mt-3 h-3 w-[40%] rounded lex-shimmer" />
+              <p className="mt-4 font-mono text-[10px] lowercase tracking-[0.04em] text-muted">
+                status :: scanning draft...
+              </p>
+            </div>
           ) : count === 0 ? (
             showBloom ? (
               <div className="lex-bloom flex w-full items-center gap-2 rounded-xl bg-[#EDF3EC] px-4 py-3 text-[#346538] border border-[#D3E2D0]">
@@ -219,9 +225,10 @@ export default function ReviewPanel({
 }
 
 function TransformView({ tool, status, error, results, progress, running, onApply, onDismiss }) {
-  if (running && progress) {
-    const showBar = progress.total > 1; // a single chunk needs no progress bar
-    const pct = progress.total > 0 ? Math.round((progress.current / progress.total) * 100) : 0;
+  if (running) {
+    const showProgress = progress && progress.total > 1;
+    const pct = progress && progress.total > 0 ? Math.round((progress.current / progress.total) * 100) : 0;
+    const statusText = status === "warming" ? "warming up Lex..." : "generating draft...";
     return (
       <>
         {results && results.length > 0 && (
@@ -232,19 +239,15 @@ function TransformView({ tool, status, error, results, progress, running, onAppl
           </ul>
         )}
         <div className="mt-3 rounded-xl border border-hairline bg-white p-6 pb-4 lex-card-enter">
-          <div className="flex items-start gap-2.5">
-            <CircleNotch size={16} weight="bold" className="mt-0.5 animate-spin text-muted" />
-            <div>
-              <p className="font-sans text-sm text-ink">
-                {status === "warming" ? "Warming up the local model…" : "Working…"}
-              </p>
-              <p className="font-mono text-xs lowercase tracking-[0.04em] text-muted mt-1">
-                status :: transforming part {progress.current} of {progress.total}
-                <span className="lex-ellipsis">...</span>
-              </p>
-            </div>
+          <div className="h-3 w-full rounded lex-shimmer" />
+          <div className="mt-3 h-3 w-[90%] rounded lex-shimmer" />
+          <div className="mt-3 h-3 w-[75%] rounded lex-shimmer" />
+          <div className="mt-3 h-3 w-[40%] rounded lex-shimmer" />
+          <div className="mt-4 flex items-center gap-3">
+            <div className="h-9 flex-1 rounded-md lex-shimmer" />
+            <div className="h-9 flex-1 rounded-md lex-shimmer" />
           </div>
-          {showBar && (
+          {showProgress && (
             <div className="mt-4 h-1.5 w-full overflow-hidden rounded-full bg-[#EAEAEA]">
               <div
                 className="h-full bg-ink transition-all duration-300 ease-out"
@@ -252,13 +255,13 @@ function TransformView({ tool, status, error, results, progress, running, onAppl
               />
             </div>
           )}
-          {progress.total > 1 && (
+          {showProgress && (
             <p className="mt-3 font-sans text-xs leading-relaxed text-muted">
               This is a large section — generating it in {progress.total} parts may take a minute or two.
             </p>
           )}
-          <p className="mt-3 font-mono text-[10px] lowercase tracking-[0.04em] text-muted">
-            status :: click the tool again in Actions to cancel
+          <p className="mt-4 font-mono text-[10px] lowercase tracking-[0.04em] text-muted">
+            status :: {statusText}
           </p>
         </div>
       </>
