@@ -35,6 +35,7 @@ export default function ReviewPanel({
 }) {
   const count = grammarMatches.length;
   const [showBloom, setShowBloom] = useState(false);
+  const [folding, setFolding] = useState(false);
   const bloomMessageRef = useRef("");
   const prevCheckingRef = useRef(checking);
 
@@ -124,14 +125,22 @@ export default function ReviewPanel({
               <div className="mb-3 flex items-center gap-3">
                 <button
                   type="button"
-                  onClick={onAcceptAll}
+                  onClick={() => {
+                    if (folding) return;
+                    setFolding(true);
+                    setTimeout(() => { setFolding(false); onAcceptAll(); }, count * 45 + 350);
+                  }}
                   className="rounded-full bg-pale-green px-2.5 py-px font-mono text-[10px] uppercase tracking-widest text-pale-green-text transition-colors hover:bg-pale-green/70"
                 >
                   Accept all {count} {count === 1 ? "Suggestion" : "Suggestions"}
                 </button>
                 <button
                   type="button"
-                  onClick={onDismissAll}
+                  onClick={() => {
+                    if (folding) return;
+                    setFolding(true);
+                    setTimeout(() => { setFolding(false); onDismissAll(); }, count * 45 + 350);
+                  }}
                   className="rounded-full px-2.5 py-px font-mono text-[10px] uppercase tracking-widest text-muted transition-colors hover:bg-pale-red hover:text-pale-red-text"
                 >
                   Dismiss All
@@ -179,6 +188,8 @@ export default function ReviewPanel({
                     match={match}
                     index={i}
                     active={activeErrorId === match.id}
+                    folding={folding}
+                    foldDelay={i * 45}
                     onApply={onApply}
                     onDismiss={onDismiss}
                     onAddToDictionary={onAddToDictionary}

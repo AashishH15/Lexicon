@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { BookBookmark } from "@phosphor-icons/react";
 
 function getCategoryBadgeStyle(category = "") {
@@ -16,6 +16,8 @@ export default function SuggestionCard({
   match,
   index,
   active,
+  folding,
+  foldDelay,
   onApply,
   onDismiss,
   onAddToDictionary,
@@ -23,35 +25,39 @@ export default function SuggestionCard({
 }) {
   const replacement = match.replacements[0];
   const badgeStyle = getCategoryBadgeStyle(match.category);
+  const [exiting, setExiting] = useState(false);
+  const [entered, setEntered] = useState(false);
   const cardRef = useRef(null);
-  useEffect(() => {
-    if (!active || !cardRef.current) {
-      return;
+  useEffect(() => { setEntered(true); }, []);
+
+  const handleClick = () => {
+    onLocate(match);
+    if (cardRef.current) {
+      const el = cardRef.current;
+      const container = el.closest(".lex-scroll");
+      if (container) {
+        const delta = el.getBoundingClientRect().top - container.getBoundingClientRect().top;
+        container.scrollTo({
+          top: container.scrollTop + delta - 8,
+          behavior: "smooth",
+        });
+      }
     }
-    const el = cardRef.current;
-    const container = el.closest(".lex-scroll");
-    if (container) {
-      const delta = el.getBoundingClientRect().top - container.getBoundingClientRect().top;
-      container.scrollTo({
-        top: container.scrollTop + delta - 8,
-        behavior: "smooth",
-      });
-    } else {
-      el.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
-  }, [active]);
+  };
 
   return (
     <li
       ref={cardRef}
-      onClick={() => onLocate(match)}
+      onClick={handleClick}
       className={
-        "cursor-pointer rounded-xl border bg-white p-6 pb-4 transition-colors duration-200 lex-card-enter " +
+        "cursor-pointer rounded-xl border bg-white p-6 pb-4 transition-colors duration-200 " +
+        (exiting ? "lex-card-slide-out" : folding ? "lex-card-fold overflow-hidden" : entered ? "" : "lex-card-enter") +
+        " " +
         (active
           ? "border-ink ring-1 ring-ink/10 bg-canvas"
           : "border-hairline hover:border-muted")
       }
-      style={{ animationDelay: `${index * 80}ms` }}
+      style={{ animationDelay: exiting ? "0ms" : folding ? `${foldDelay}ms` : `${index * 80}ms` }}
     >
       <span
         className={`inline-block rounded border px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.08em] ${badgeStyle}`}
@@ -83,7 +89,8 @@ export default function SuggestionCard({
             type="button"
             onClick={(event) => {
               event.stopPropagation();
-              onApply(match, replacement);
+              setExiting(true);
+              setTimeout(() => onApply(match, replacement), 280);
             }}
             className="flex-1 rounded bg-ink py-2 font-sans text-sm font-medium text-white transition-transform duration-150 active:scale-[0.98]"
           >
@@ -94,7 +101,8 @@ export default function SuggestionCard({
           type="button"
           onClick={(event) => {
             event.stopPropagation();
-            onDismiss(match);
+            setExiting(true);
+            setTimeout(() => onDismiss(match), 280);
           }}
           className="flex-1 rounded border border-hairline bg-transparent py-2 font-sans text-sm font-medium text-ink transition-transform duration-150 active:scale-[0.98]"
         >

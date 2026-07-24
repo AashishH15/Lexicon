@@ -462,6 +462,7 @@
   .lex-scroll {
     scrollbar-width: thin;
     scrollbar-color: rgba(0, 0, 0, 0.12) transparent;
+    overflow-anchor: none;
   }
 
   .lex-scroll::-webkit-scrollbar {
@@ -546,6 +547,62 @@
     to {
       opacity: 1;
       transform: translateY(0);
+    }
+  }
+
+  /* Slide-out exit: single card slides right, then collapses space */
+  .lex-card-slide-out {
+    animation: lex-card-slide-out 280ms ease-in 1 both;
+    overflow: hidden;
+    pointer-events: none;
+    overflow-anchor: none;
+  }
+
+  @keyframes lex-card-slide-out {
+    0% {
+      opacity: 1;
+      transform: translateX(0);
+      max-height: 400px;
+      margin-bottom: 0.75rem;
+    }
+    50% {
+      opacity: 0;
+      transform: translateX(30px);
+      max-height: 400px;
+      margin-bottom: 0.75rem;
+    }
+    100% {
+      opacity: 0;
+      transform: translateX(30px);
+      max-height: 0;
+      margin-bottom: 0;
+      padding-top: 0;
+      padding-bottom: 0;
+      border-width: 0;
+    }
+  }
+
+  /* Fold-up exit: card shrinks, fades, and collapses cleanly */
+  .lex-card-fold {
+    animation: lex-card-fold-out 280ms ease-in-out 1 both;
+    overflow: hidden;
+    pointer-events: none;
+  }
+
+  @keyframes lex-card-fold-out {
+    from {
+      max-height: 500px;
+      opacity: 1;
+      transform: scale(1);
+    }
+    to {
+      max-height: 0;
+      opacity: 0;
+      transform: scale(0.96);
+      padding-top: 0;
+      padding-bottom: 0;
+      margin-bottom: 0;
+      border: none;
     }
   }
 
