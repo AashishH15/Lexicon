@@ -135,7 +135,7 @@
 
       const releases = await response.json();
       const latestRelease = Array.isArray(releases) && releases.length > 0 ? releases[0] : releases;
-      const tagName = latestRelease.tag_name || 'v0.6.0';
+      const tagName = latestRelease.tag_name || 'v0.7.0';
       const latestAssets = latestRelease.assets || [];
 
       if (releaseVersionText) {

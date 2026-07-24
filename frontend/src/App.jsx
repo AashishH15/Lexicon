@@ -102,7 +102,7 @@ const dictionaryKey = "lexicon:user_dictionary";
 const documentHistoryKey = "lexicon:document_history";
 const transformHistoryKey = "lexicon:transform_history";
 const MAX_HISTORY_ITEMS = 20;
-const APP_VERSION = import.meta.env.VITE_APP_VERSION || "v0.6.0";
+const APP_VERSION = import.meta.env.VITE_APP_VERSION || "v0.7.0";
 
 const PLACEHOLDER_PROMPTS = [
   "Write a rough first draft. Lex will help clean it up later.",

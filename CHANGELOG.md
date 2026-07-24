@@ -7,6 +7,69 @@ This changelog tracks what is **live** in each release and what is still
 **stubbed** (shown in the interface but not yet functional). Stubbed features
 are listed so the release reads honestly about what works today.
 
+## v0.7.0 — Polished Writing Experience & Privacy Identity
+
+### Quick Downloads:
+
+- 🪟 **[Windows x64 Setup](https://github.com/AashishH15/Lexicon/releases/download/v0.7.0/Lexicon_0.7.0_x64-setup.exe)**: Standard installer for modern 64-bit Windows PCs (Intel / AMD).
+- 🍏 **[macOS Apple Silicon DMG](https://github.com/AashishH15/Lexicon/releases/download/v0.7.0/Lexicon_0.7.0_aarch64.dmg)**: For modern Apple Silicon Macs (M1, M2, M3, M4 chips).
+- 📦 **[View All Assets & Checksums](https://github.com/AashishH15/Lexicon/releases/tag/v0.7.0)**: Complete list of installers including ARM64 Windows, x86 Windows, and Intel macOS.
+
+---
+
+### Welcome to Lexicon v0.7.0!
+
+Lexicon is a private, local-first writing assistant designed for calm, distraction-free drafting. Everything runs directly on your device; no accounts, no cloud subscriptions, no tracking, and zero data leaving your machine.
+
+#### Key Features Included:
+
+- **100% Offline & Private**: Your drafts, notes, and documents stay strictly on your local hardware.
+- **Local Grammar & Spellchecking**: Instant, deterministic proofreading powered by local LanguageTool (zero LLM latency).
+- **Your Local Assistant (Lex)**: Opt-in local AI for rewriting, tone adjustments (Friendly, Professional, Academic, Formal, Casual, Playful, Empathetic, Persuasive, Humorous), and document summaries running entirely on your machine or an optional Ollama server.
+- **Distraction-Free Workspace**: Rich-text editing with headings, lists, blockquotes, typography rules, slash commands, LaTeX math ($E=mc^2$), resizable side panels, and Focus Mode.
+- **Import & Export**: Support for `.md`, `.txt`, `.html` imports and clean PDF / Markdown exports.
+
+---
+
+### What's New in v0.7.0:
+
+- **History & Recents Panel**: A dedicated panel that automatically saves drafts as you write (3s debounced) and captures snapshots before each proofread. Features auto/manual draft toggles, per-item lock/unlock, copy with visual feedback, per-tab Clear actions, and smart history cap that preserves locked items.
+- **Custom AI Prompts & User Tools**: Settings UI for defining custom AI tool shortcuts and prompt overrides, giving you control over how Lex transforms your text. You can create up to 5 new AI prompts or edit how exisiting AI Actions behave. You can save distinct tone profiles that steer Lex.
+- **Empty-Editor Placeholder Rotator**: When the document is empty, rotating one-liner appears in the editor.
+- **Zero-Issue Checkmark Bloom**: When a proofread pass completes with zero issues, a calm `CheckCircle` icon with understated copy ("No issues detected. Your draft is clear.") appears in the Review panel.
+- **"Draft Saved" Privacy Signature**: A subtle confirmation appears next to the History button whenever autosave or manual snapshot writes to local storage. Uses a `LockKey` icon with privacy-affirming copy ("saved locally", "draft secured on device"). Collapses to icon-only on narrow sidebar widths.
+- **Per-Category Squiggle Legend**: A hover-triggered popover in both the Proofread and AI Results panels explaining each squiggle color — red for Spelling, yellow for Grammar & Punctuation, blue for Style & AI Tone.
+- **"Caught It" Pulse**: When a grammar squiggle first appears, a subtle one-shot ring pulse acknowledges the catch.
+- **Accept-All / Dismiss-All Fold Animation**: Batch actions no longer snap cards out of existence. Each card folds upward in staggered sequence (45ms per index), shrinking and fading over 280ms. Single-card Accept slides the card right, then collapses the space.
+- **Settings Signature**: A quiet identity statement in the Settings modal
+
+### Refinements
+
+- **Category Color System Realigned**: Suggestion card badges and the legend now share a unified color mapping — red for Spelling, yellow for Grammar & Punctuation, blue for Style & AI Tone. Badge matching is case-insensitive and supports substrings.
+- **Scroll Jitter Eliminated**: Auto-scroll on card activation now only happens on explicit clicks, not on side-effect re-renders after item deletion. The scroll container uses `overflow-anchor: none` to prevent browser layout anchoring during height collapses.
+- **Entrance Animations Disabled on Re-Render**: Remaining cards no longer replay their slide-in animation when a sibling is removed from the list.
+
+### Live in v0.7.0 (from v0.6.0)
+
+- **Editor** — TipTap rich-text canvas with inline grammar squiggles and a slash-command menu.
+  - Formatting: bold, italic, underline, strikethrough, highlight, superscript/subscript, inline code, links (inline URL popover).
+  - Structure: headings (H1–H6), bullet / numbered / task lists, blockquotes, text alignment, resizable tables, code blocks with syntax highlighting, images, drag handles, empty-draft placeholder.
+  - Math: inline (`$...$`) and block (`$$$...$$$`) LaTeX rendered with KaTeX and a live-preview editor.
+  - Smart typography: automatic em-dashes, ellipses, and smart quotes.
+  - Content auto-saved to `localStorage`.
+- **Proofread** — rule-based grammar, spelling, and punctuation checking via LanguageTool (runs locally; no server or Docker needed).
+  - Inline squiggles, hover tooltip with an apply action.
+  - Review Panel suggestion cards: apply / dismiss individual fixes, Add to Dictionary, Accept all / Dismiss all.
+  - Dismissed suggestions stay dismissed across re-runs.
+  - Click a squiggle to jump to its card (and vice versa).
+- **User dictionary** — add and remove words; ignored words stop being flagged and reappear if removed.
+- **Tone read & clarity score** — summary of the draft's tone and a 0–100 clarity score in the Review Panel.
+- **Settings** — language picker, font size, line spacing, Focus Mode, custom AI tools, with smart defaults and a one-click Reset to Default. Keyboard-shortcut cheat sheet.
+- **Layout** — three-column workspace (Tool Matrix · Editor · Review Panel) with collapsible, resizable side panels and Focus Mode.
+- **Import / Export** — import `.txt`, `.md`/`.markdown`, `.html`; export as HTML, Plain Text, Markdown, or PDF (clean "final manuscript" print output).
+- **Keyboard shortcuts** — `Ctrl`/`Cmd` + `Enter` to Proofread, accept/dismiss shortcuts, `Esc` / `Mod-,` for settings, and the full formatting shortcut set.
+- **Onboarding** — 4-step local-first onboarding wizard covering privacy philosophy, language dialect, Lex AI setup, and sample draft ingestion.
+
 ## v0.6.0 - Major Landmark Release: 4-Step Local Onboarding & Complete App Overview
 
 ### Quick Downloads (Most Popular Releases):
