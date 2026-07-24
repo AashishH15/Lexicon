@@ -1,11 +1,16 @@
 import { useEffect, useRef } from "react";
 import { BookBookmark } from "@phosphor-icons/react";
 
-const categoryStyles = {
-  Grammar: "bg-pale-blue text-pale-blue-text",
-  Spelling: "bg-pale-yellow text-pale-yellow-text",
-  Punctuation: "bg-pale-yellow text-pale-yellow-text",
-};
+function getCategoryBadgeStyle(category = "") {
+  const cat = category.toLowerCase();
+  if (cat.includes("spell") || cat.includes("typo")) {
+    return "bg-[#FDEBEC] text-[#9F2F2D] border-[#F8C9C8]";
+  }
+  if (cat.includes("gramm") || cat.includes("punct")) {
+    return "bg-[#FBF3DB] text-[#956400] border-[#F8D86B]";
+  }
+  return "bg-[#E1F3FE] text-[#1F6C9F] border-[#BFE3FB]";
+}
 
 export default function SuggestionCard({
   match,
@@ -17,7 +22,7 @@ export default function SuggestionCard({
   onLocate,
 }) {
   const replacement = match.replacements[0];
-  const tag = categoryStyles[match.category] || categoryStyles.Grammar;
+  const badgeStyle = getCategoryBadgeStyle(match.category);
   const cardRef = useRef(null);
   useEffect(() => {
     if (!active || !cardRef.current) {
@@ -49,7 +54,7 @@ export default function SuggestionCard({
       style={{ animationDelay: `${index * 80}ms` }}
     >
       <span
-        className={`inline-block rounded px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.08em] ${tag}`}
+        className={`inline-block rounded border px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.08em] ${badgeStyle}`}
       >
         {match.category} Suggestion
       </span>

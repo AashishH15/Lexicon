@@ -1,7 +1,7 @@
 import SuggestionCard from "./SuggestionCard.jsx";
 import DocStats from "./DocStats.jsx";
 import { useEffect, useRef, useState } from "react";
-import { ArrowLineRight, CheckCircle, CircleNotch, Warning, Lightbulb } from "@phosphor-icons/react";
+import { ArrowLineRight, CheckCircle, CircleNotch, Info, Warning, Lightbulb } from "@phosphor-icons/react";
 
 const BLOOM_MESSAGES = [
   "No issues detected. Your draft is clear.",
@@ -144,6 +144,34 @@ export default function ReviewPanel({
                   Clear
                 </button>
               </div>
+              <div className="relative group inline-block my-2">
+                <button
+                  type="button"
+                  className="flex items-center gap-1 font-mono text-[10px] uppercase tracking-[0.08em] text-muted transition-colors hover:text-ink"
+                >
+                  <Info size={12} weight="bold" />
+                  <span>Legend</span>
+                </button>
+                <div className="pointer-events-none absolute left-0 top-full mt-1.5 z-30 w-52 rounded-xl border border-hairline bg-white p-2.5 shadow-lg opacity-0 transition-opacity duration-150 group-hover:pointer-events-auto group-hover:opacity-100">
+                  <div className="flex flex-col gap-1.5 font-sans text-xs">
+                    <div className="flex items-center gap-2">
+                      <span className="h-2 w-2 rounded-full bg-[#9F2F2D]" />
+                      <span className="font-medium text-ink">Spelling</span>
+                      <span className="ml-auto text-[10px] text-muted font-mono uppercase tracking-[0.08em]">RED</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="h-2 w-2 rounded-full bg-[#956400]" />
+                      <span className="font-medium text-ink">Grammar & Punctuation</span>
+                      <span className="ml-auto text-[10px] text-muted font-mono uppercase tracking-[0.08em]">YELLOW</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="h-2 w-2 rounded-full bg-[#1F6C9F]" />
+                      <span className="font-medium text-ink">Style & AI Tone</span>
+                      <span className="ml-auto text-[10px] text-muted font-mono uppercase tracking-[0.08em]">BLUE</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
               <ul className="flex flex-col gap-3">
                 {grammarMatches.map((match, i) => (
                   <SuggestionCard
@@ -253,11 +281,41 @@ function TransformView({ tool, status, error, results, progress, running, onAppl
   // One card per chunk (or a single entry for selection/small-doc runs).
   if (results && results.length > 0) {
     return (
-      <ul className="flex flex-col gap-3">
-        {results.map((card, i) => (
-          <TransformCard key={`${card.part}-${i}`} card={card} index={i} onApply={onApply} onDismiss={onDismiss} />
-        ))}
-      </ul>
+      <>
+        <div className="relative group inline-block mb-3">
+          <button
+            type="button"
+            className="flex items-center gap-1 font-mono text-[10px] uppercase tracking-[0.08em] text-muted transition-colors hover:text-ink"
+          >
+            <Info size={12} weight="bold" />
+            <span>Legend</span>
+          </button>
+          <div className="pointer-events-none absolute left-0 top-full mt-1.5 z-30 w-52 rounded-xl border border-hairline bg-white p-2.5 shadow-lg opacity-0 transition-opacity duration-150 group-hover:pointer-events-auto group-hover:opacity-100">
+            <div className="flex flex-col gap-1.5 font-sans text-xs">
+              <div className="flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-[#9F2F2D]" />
+                <span className="font-medium text-ink">Spelling</span>
+                <span className="ml-auto text-[10px] text-muted font-mono uppercase tracking-[0.08em]">RED</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-[#956400]" />
+                <span className="font-medium text-ink">Grammar & Punctuation</span>
+                <span className="ml-auto text-[10px] text-muted font-mono uppercase tracking-[0.08em]">YELLOW</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-[#1F6C9F]" />
+                <span className="font-medium text-ink">Style & AI Tone</span>
+                <span className="ml-auto text-[10px] text-muted font-mono uppercase tracking-[0.08em]">BLUE</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <ul className="flex flex-col gap-3">
+          {results.map((card, i) => (
+            <TransformCard key={`${card.part}-${i}`} card={card} index={i} onApply={onApply} onDismiss={onDismiss} />
+          ))}
+        </ul>
+      </>
     );
   }
 
