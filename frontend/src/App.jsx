@@ -45,6 +45,7 @@ import {
   ArrowSquareLeft,
   ArrowSquareRight,
   CircleNotch,
+  LockKey,
 } from "@phosphor-icons/react";
 import { checkGrammar, getAiStatus, ensureBackend } from "./api.js";
 import {
@@ -353,6 +354,9 @@ export default function App() {
     PLACEHOLDER_PROMPTS[Math.floor(Math.random() * PLACEHOLDER_PROMPTS.length)]
   );
   const wasNotEmptyRef = useRef(false);
+  const [savedVisible, setSavedVisible] = useState(false);
+  const savedTimerRef = useRef(null);
+  const [savedMessage, setSavedMessage] = useState("");
   // Budgets must fit n_ctx (4096): input + max_tokens (2048) + overhead.
   // Keep input per chunk <= 1800 tokens so 1800 + 2048 ~= 3848 < 4096.
   const TRANSFORM_INPUT_BUDGET = 1800;
@@ -634,6 +638,7 @@ export default function App() {
               wordCount: words,
               charCount: currentText.length,
             };
+            showSavedBadge();
             return capHistory(prev, entry, MAX_HISTORY_ITEMS);
           });
         }, 3000);
@@ -669,6 +674,9 @@ export default function App() {
     return () => {
       if (historyTimerRef.current) {
         clearTimeout(historyTimerRef.current);
+      }
+      if (savedTimerRef.current) {
+        clearTimeout(savedTimerRef.current);
       }
     };
   }, []);
@@ -1479,9 +1487,10 @@ function matchKey(match, text) {
           to: loopCards[loopCards.length - 1].to,
           timestamp: Date.now(),
         };
-        return capHistory(prev, entry, MAX_HISTORY_ITEMS);
-      });
-    }
+      showSavedBadge();
+      return capHistory(prev, entry, MAX_HISTORY_ITEMS);
+    });
+  }
     if (aborted && runIdRef.current === runId) {
       // Cancel or error: clear the panel (per design — no partial cards kept).
       // Guarded by runId so a stale loop waking after a newer run started can
@@ -1570,6 +1579,7 @@ function matchKey(match, text) {
             wordCount: words,
             charCount: text.length,
           };
+          showSavedBadge();
           return capHistory(prev, entry, MAX_HISTORY_ITEMS);
         });
       }
@@ -1703,6 +1713,15 @@ function matchKey(match, text) {
       .focus()
       .insertContentAt({ from: entry.from, to: entry.to }, html)
       .run();
+  }
+
+  const SAVED_MESSAGES = ["saved", "secured"];
+
+  function showSavedBadge() {
+    if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
+    setSavedMessage(SAVED_MESSAGES[Math.floor(Math.random() * SAVED_MESSAGES.length)]);
+    setSavedVisible(true);
+    savedTimerRef.current = setTimeout(() => setSavedVisible(false), 2500);
   }
 
   function handleManualSave() {
@@ -1878,15 +1897,34 @@ function matchKey(match, text) {
               <button
                 type="button"
                 onClick={() => setHistoryOpen(true)}
-                className="group flex items-center gap-2.5 rounded px-2 py-1.5 text-left text-sm text-muted transition-colors hover:bg-hairline/60 hover:text-ink"
+                className="group flex w-full items-center justify-between gap-2 rounded px-2 py-1.5 text-left text-sm text-muted transition-colors hover:bg-hairline/60 hover:text-ink"
                 aria-label="Open history"
               >
-                <ClockCounterClockwise
-                  size={16}
-                  weight="bold"
-                  className="transition-transform duration-200 group-hover:scale-110"
-                />
-                <span>History / Recents</span>
+                <div className="flex items-center gap-2.5 min-w-0 overflow-hidden">
+                  <ClockCounterClockwise
+                    size={16}
+                    weight="bold"
+                    className="shrink-0 transition-transform duration-200 group-hover:scale-110"
+                  />
+                  <span className="whitespace-nowrap truncate">
+                    History
+                  </span>
+                </div>
+                <div
+                  className={
+                    "shrink-0 transition-opacity duration-500 ease-in-out " +
+                    (savedVisible ? "opacity-100" : "opacity-0 pointer-events-none")
+                  }
+                >
+                  <div className="flex items-center gap-1 rounded-full bg-[#EDF3EC] px-2 py-0.5 text-[#346538] border border-[#D3E2D0]">
+                    <LockKey size={10} weight="bold" />
+                    {leftWidth >= 220 && (
+                      <span className="font-sans text-[10px] font-medium whitespace-nowrap">
+                        {savedMessage}
+                      </span>
+                    )}
+                  </div>
+                </div>
               </button>
               <button
                 type="button"
