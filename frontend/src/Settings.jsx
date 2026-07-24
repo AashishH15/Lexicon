@@ -1,6 +1,6 @@
 import { forwardRef } from "react";
 import { useEffect, useRef, useState } from "react";
-import { X, CaretDown, ArrowCounterClockwise, IconBase } from "@phosphor-icons/react";
+import { X, CaretDown, ArrowCounterClockwise, IconBase, ShieldCheck } from "@phosphor-icons/react";
 import LanguageDropdown from "./LanguageDropdown.jsx";
 import Toggle from "./Toggle.jsx";
 import ModelManager from "./ModelManager.jsx";
@@ -294,7 +294,7 @@ export default function Settings({
               <ModelManager
                 mode="settings"
                 onPreferenceChange={(pref) => {
-                  setAiPreference(pref.backend, pref.model_key).catch(() => {});
+                  setAiPreference(pref.backend, pref.model_key).catch(() => { });
                 }}
                 onConfigured={() => window.dispatchEvent(new CustomEvent("lexicon:ai-configured"))}
               />
@@ -399,6 +399,13 @@ export default function Settings({
                 {updateState.message}
               </p>
             )}
+          </div>
+
+          <div className="mt-6 flex items-start gap-2 border-t border-hairline pt-5">
+            <ShieldCheck size={14} weight="bold" className="mt-0.5 shrink-0 text-muted/60" />
+            <p className="font-sans text-xs leading-relaxed text-muted">
+              Offline by design. Your words stay entirely on this machine.
+            </p>
           </div>
         </div>
       </div>
