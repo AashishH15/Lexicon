@@ -362,6 +362,12 @@ export default function Editor({
     return () => window.removeEventListener("lex:edit-math", handler);
   }, [editor]);
 
+  // Lazy-load KaTeX CSS when math popover is first opened
+  useEffect(() => {
+    if (!mathEdit) return;
+    import("katex/dist/katex.min.css");
+  }, [mathEdit]);
+
   // Click-away close for the math popover (removes a pending box if any).
   useEffect(() => {
     if (!mathEdit) {

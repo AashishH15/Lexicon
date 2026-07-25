@@ -1,4 +1,4 @@
-import { useState, useEffect, useLayoutEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useLayoutEffect, useRef, useCallback, lazy, Suspense } from "react";
 import { useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
@@ -17,9 +17,8 @@ import Typography from "@tiptap/extension-typography";
 import DragHandle from "@tiptap/extension-drag-handle";
 import { TableKit } from "@tiptap/extension-table";
 import { Mathematics } from "@tiptap/extension-mathematics";
-import "katex/dist/katex.min.css";
 import SlashCommand from "./slashCommand.js";
-import { createLowlight, common } from "lowlight";
+import { createLowlight } from "lowlight";
 import { ProofreadShortcut } from "./proofreadShortcut.js";
 import { detectTone } from "./toneScore.js";
 import Toolbar from "./Toolbar.jsx";
@@ -27,10 +26,11 @@ import Editor from "./Editor.jsx";
 import ImportExportMenu from "./ImportExportMenu.jsx";
 import ReviewPanel from "./ReviewPanel.jsx";
 import GrammarTooltip from "./GrammarTooltip.jsx";
-import Settings, { SETTINGS_DEFAULTS } from "./Settings.jsx";
-import DictionaryPanel from "./DictionaryPanel.jsx";
-import AiSetupModal from "./AiSetupModal.jsx";
-import HistoryPanel from "./HistoryPanel.jsx";
+import { SETTINGS_DEFAULTS } from "./Settings.jsx";
+const Settings = lazy(() => import("./Settings.jsx"));
+const DictionaryPanel = lazy(() => import("./DictionaryPanel.jsx"));
+const AiSetupModal = lazy(() => import("./AiSetupModal.jsx"));
+const HistoryPanel = lazy(() => import("./HistoryPanel.jsx"));
 import useTransform from "./useTransform.js";
 import { isAiTool, promptForTool } from "./prompts.js";
 import { marked } from "marked";
@@ -41,7 +41,6 @@ import {
   ArrowsOut,
   ArrowsIn,
   ArrowLineLeft,
-  ArrowLineRight,
   ArrowSquareLeft,
   ArrowSquareRight,
   ChatTeardropText,
@@ -436,7 +435,21 @@ export default function App() {
   userDictionaryRef.current = userDictionary;
   dismissedKeysRef.current = dismissedKeys;
 
-  const lowlight = createLowlight(common);
+  const lowlightRef = useRef(createLowlight());
+  const [lowlightReady, setLowlightReady] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    import("lowlight").then(({ common }) => {
+      if (cancelled) return;
+      const low = lowlightRef.current;
+      for (const [name, lang] of Object.entries(common)) {
+        low.register(name, lang);
+      }
+      setLowlightReady(true);
+    });
+    return () => { cancelled = true; };
+  }, []);
 
   const editor = useEditor({
     extensions: [
@@ -465,7 +478,7 @@ export default function App() {
       TableKit.configure({
         table: { resizable: true },
       }),
-      CodeBlockLowlight.configure({ lowlight }),
+      CodeBlockLowlight.configure({ lowlight: lowlightRef.current }),
       // Mathematics: inline ($...$) and block ($$$...$$$) LaTeX rendered via
       // KaTeX. Errors render inline (throwOnError:false) instead of crashing.
       Mathematics.configure({
@@ -649,6 +662,13 @@ export default function App() {
       }
     },
   });
+
+  // Force re-highlight code blocks once lowlight languages are registered
+  useEffect(() => {
+    if (lowlightReady && editor) {
+      editor.view.dispatch(editor.state.tr);
+    }
+  }, [lowlightReady, editor]);
 
   // Save an initial snapshot once the editor has content.
   useEffect(() => {
@@ -2136,65 +2156,73 @@ export default function App() {
         />
       )}
 
-      <Settings
-        open={settingsOpen}
-        language={language}
-        onLanguageChange={handleLanguageChange}
-        fontSize={fontSize}
-        onFontSizeChange={handleFontSizeChange}
-        lineSpacing={lineSpacing}
-        onLineSpacingChange={handleLineSpacingChange}
-        focusMode={focusMode}
-        onFocusModeChange={handleFocusModeChange}
-        onResetDefaults={handleResetDefaults}
-        onCheckForUpdates={() => runUpdateCheck()}
-        updateState={updateState}
-        onClose={() => setSettingsOpen(false)}
-      />
-
-      <DictionaryPanel
-        open={dictionaryOpen}
-        userDictionary={userDictionary}
-        onAddWord={handleAddWordToDictionary}
-        onRemoveWord={handleRemoveFromDictionary}
-        onClose={() => setDictionaryOpen(false)}
-      />
-
-      <HistoryPanel
-        open={historyOpen}
-        documentHistory={documentHistory}
-        transformHistory={transformHistory}
-        autoDraftMode={autoDraftMode}
-        onAutoDraftModeChange={setAutoDraftMode}
-        onManualSave={handleManualSave}
-        onRestoreDraft={handleRestoreDraft}
-        onReapplyTransform={handleReapplyTransform}
-        onToggleDraftLock={handleToggleDraftLock}
-        onToggleTransformLock={handleToggleTransformLock}
-        onClearDrafts={handleClearDrafts}
-        onClearTransforms={handleClearTransforms}
-        onClose={() => setHistoryOpen(false)}
-      />
-      {aiSetupOpen && (
-        <AiSetupModal
-          onConfigured={refreshAiConfigured}
-          onClose={async () => {
-            await refreshAiConfigured();
-            setAiSetupOpen(false);
-          }}
-          onFinish={async ({ loadSample = false } = {}) => {
-            localStorage.setItem("lexicon:aiSetupDone", "true");
-            await refreshAiConfigured();
-            setAiSetupOpen(false);
-            if (loadSample && editor) {
-              editor.commands.setContent(SAMPLE_DOC_HTML);
-              setTimeout(() => {
-                runGrammarCheck(editor.getText(), { forceFullScan: true });
-              }, 150);
-            }
-          }}
+      <Suspense fallback={null}>
+        <Settings
+          open={settingsOpen}
+          language={language}
+          onLanguageChange={handleLanguageChange}
+          fontSize={fontSize}
+          onFontSizeChange={handleFontSizeChange}
+          lineSpacing={lineSpacing}
+          onLineSpacingChange={handleLineSpacingChange}
+          focusMode={focusMode}
+          onFocusModeChange={handleFocusModeChange}
+          onResetDefaults={handleResetDefaults}
+          onCheckForUpdates={() => runUpdateCheck()}
+          updateState={updateState}
+          onClose={() => setSettingsOpen(false)}
         />
-      )}
+      </Suspense>
+
+      <Suspense fallback={null}>
+        <DictionaryPanel
+          open={dictionaryOpen}
+          userDictionary={userDictionary}
+          onAddWord={handleAddWordToDictionary}
+          onRemoveWord={handleRemoveFromDictionary}
+          onClose={() => setDictionaryOpen(false)}
+        />
+      </Suspense>
+
+      <Suspense fallback={null}>
+        <HistoryPanel
+          open={historyOpen}
+          documentHistory={documentHistory}
+          transformHistory={transformHistory}
+          autoDraftMode={autoDraftMode}
+          onAutoDraftModeChange={setAutoDraftMode}
+          onManualSave={handleManualSave}
+          onRestoreDraft={handleRestoreDraft}
+          onReapplyTransform={handleReapplyTransform}
+          onToggleDraftLock={handleToggleDraftLock}
+          onToggleTransformLock={handleToggleTransformLock}
+          onClearDrafts={handleClearDrafts}
+          onClearTransforms={handleClearTransforms}
+          onClose={() => setHistoryOpen(false)}
+        />
+      </Suspense>
+      <Suspense fallback={null}>
+        {aiSetupOpen && (
+          <AiSetupModal
+            onConfigured={refreshAiConfigured}
+            onClose={async () => {
+              await refreshAiConfigured();
+              setAiSetupOpen(false);
+            }}
+            onFinish={async ({ loadSample = false } = {}) => {
+              localStorage.setItem("lexicon:aiSetupDone", "true");
+              await refreshAiConfigured();
+              setAiSetupOpen(false);
+              if (loadSample && editor) {
+                editor.commands.setContent(SAMPLE_DOC_HTML);
+                setTimeout(() => {
+                  runGrammarCheck(editor.getText(), { forceFullScan: true });
+                }, 150);
+              }
+            }}
+          />
+        )}
+      </Suspense>
       {updateModalOpen && (
         <UpdateModal
           update={updateState.update}
