@@ -124,7 +124,7 @@ function HeadingMenu({ editor }) {
         aria-expanded={open}
         onClick={() => setOpen((current) => !current)}
         className={
-          "group flex h-8 items-center gap-0.5 rounded border px-2 text-ink " +
+          "group flex h-8 items-center gap-0.5 rounded border px-2 text-ink focus-visible:ring-1 focus-visible:ring-ink " +
           (isActive || open
             ? "border-ink bg-ink text-white"
             : "border-transparent hover:bg-hairline/60")
@@ -147,7 +147,7 @@ function HeadingMenu({ editor }) {
                 onClick={() => selectLevel(level)}
                 aria-pressed={activeLevel === level}
                 className={
-                  "flex w-full items-center gap-2.5 px-3 py-1.5 text-left text-sm transition-colors " +
+                  "flex w-full items-center gap-2.5 px-3 py-1.5 text-left text-sm transition-colors focus-visible:ring-1 focus-visible:ring-ink " +
                   (activeLevel === level
                     ? "bg-pale-blue text-pale-blue-text"
                     : "text-ink hover:bg-pale-blue hover:text-pale-blue-text")
@@ -167,7 +167,7 @@ function HeadingMenu({ editor }) {
                 setOpen(false);
               }}
               className={
-                "flex w-full items-center gap-2.5 px-3 py-1.5 text-left text-sm transition-colors " +
+                "flex w-full items-center gap-2.5 px-3 py-1.5 text-left text-sm transition-colors focus-visible:ring-1 focus-visible:ring-ink " +
                 (activeLevel === 0
                   ? "bg-pale-blue text-pale-blue-text"
                   : "text-ink hover:bg-pale-blue hover:text-pale-blue-text")
@@ -230,7 +230,7 @@ function AlignMenu({ editor }) {
         aria-expanded={open}
         onClick={() => setOpen((current) => !current)}
         className={
-          "group flex h-8 items-center gap-0.5 rounded border px-2 text-ink " +
+          "group flex h-8 items-center gap-0.5 rounded border px-2 text-ink focus-visible:ring-1 focus-visible:ring-ink " +
           (open
             ? "border-ink bg-ink text-white"
             : "border-transparent hover:bg-hairline/60")
@@ -253,7 +253,7 @@ function AlignMenu({ editor }) {
                 onClick={() => selectAlign(value)}
                 aria-pressed={activeAlign === value}
                 className={
-                  "flex w-full items-center gap-2.5 px-3 py-1.5 text-left text-sm transition-colors " +
+                  "flex w-full items-center gap-2.5 px-3 py-1.5 text-left text-sm transition-colors focus-visible:ring-1 focus-visible:ring-ink " +
                   (activeAlign === value
                     ? "bg-pale-blue text-pale-blue-text"
                     : "text-ink hover:bg-pale-blue hover:text-pale-blue-text")
@@ -323,7 +323,7 @@ function ListMenu({ editor }) {
         aria-expanded={open}
         onClick={() => setOpen((current) => !current)}
         className={
-          "group flex h-8 items-center gap-0.5 rounded border px-2 text-ink " +
+          "group flex h-8 items-center gap-0.5 rounded border px-2 text-ink focus-visible:ring-1 focus-visible:ring-ink " +
           (open
             ? "border-ink bg-ink text-white"
             : "border-transparent hover:bg-hairline/60")
@@ -346,7 +346,7 @@ function ListMenu({ editor }) {
                 onClick={() => selectList(LIST_OPTIONS.find((o) => o.value === value))}
                 aria-pressed={activeList === value}
                 className={
-                  "flex w-full items-center gap-2.5 px-3 py-1.5 text-left text-sm transition-colors " +
+                  "flex w-full items-center gap-2.5 px-3 py-1.5 text-left text-sm transition-colors focus-visible:ring-1 focus-visible:ring-ink " +
                   (activeList === value
                     ? "bg-pale-blue text-pale-blue-text"
                     : "text-ink hover:bg-pale-blue hover:text-pale-blue-text")
@@ -412,7 +412,7 @@ function TableMenu({ editor }) {
         aria-expanded={open}
         onClick={() => setOpen((current) => !current)}
         className={
-          "group flex h-8 w-8 items-center justify-center rounded border text-ink transition-colors " +
+          "group flex h-8 w-8 items-center justify-center rounded border text-ink transition-colors focus-visible:ring-1 focus-visible:ring-ink " +
           (open || insideTable
             ? "border-ink bg-ink text-white"
             : "border-transparent hover:bg-hairline/60")
@@ -447,7 +447,7 @@ function TableMenu({ editor }) {
                       onMouseEnter={() => setHover({ rows: r, cols: c })}
                       onClick={() => insertTable(r, c)}
                       className={
-                        "aspect-square rounded-sm border transition-colors " +
+                        "aspect-square rounded-sm border transition-colors focus-visible:ring-1 focus-visible:ring-ink " +
                         (filled
                           ? "border-ink bg-ink"
                           : "border-hairline bg-canvas hover:border-muted")
@@ -485,7 +485,7 @@ function TableActionButton({ icon: Icon, label, onClick, danger }) {
       type="button"
       onClick={onClick}
       className={
-        "flex w-full items-center gap-2.5 rounded px-2 py-1.5 text-left text-sm transition-colors " +
+        "flex w-full items-center gap-2.5 rounded px-2 py-1.5 text-left text-sm transition-colors focus-visible:ring-1 focus-visible:ring-ink " +
         (danger
           ? "text-red-600 hover:bg-red-50"
           : "text-ink hover:bg-pale-blue hover:text-pale-blue-text")
@@ -559,7 +559,7 @@ function MathMenu({ editor, onRequestMath }) {
         aria-expanded={open}
         onClick={() => setOpen((current) => !current)}
         className={
-          "group flex h-8 w-8 items-center justify-center rounded border text-ink transition-colors " +
+          "group flex h-8 w-8 items-center justify-center rounded border text-ink transition-colors focus-visible:ring-1 focus-visible:ring-ink " +
           (open || activeMath
             ? "border-ink bg-ink text-white"
             : "border-transparent hover:bg-hairline/60")
@@ -577,7 +577,7 @@ function MathMenu({ editor, onRequestMath }) {
                 onClick={() => selectMath(MATH_OPTIONS.find((o) => o.value === value))}
                 aria-pressed={activeMath === value}
                 className={
-                  "flex w-full items-center gap-2.5 px-3 py-1.5 text-left text-sm transition-colors " +
+                  "flex w-full items-center gap-2.5 px-3 py-1.5 text-left text-sm transition-colors focus-visible:ring-1 focus-visible:ring-ink " +
                   (activeMath === value
                     ? "bg-pale-blue text-pale-blue-text"
                     : "text-ink hover:bg-pale-blue hover:text-pale-blue-text")
@@ -638,7 +638,7 @@ function ImageButton({ editor }) {
         aria-expanded={open}
         onClick={toggle}
         className={
-          "group flex h-8 w-8 items-center justify-center rounded border text-ink transition-colors " +
+          "group flex h-8 w-8 items-center justify-center rounded border text-ink transition-colors focus-visible:ring-1 focus-visible:ring-ink " +
           (active || open
             ? "border-ink bg-ink text-white"
             : "border-transparent hover:bg-hairline/60")
@@ -717,7 +717,7 @@ const ImagePopover = forwardRef(function ImagePopover(
             onInsert(url);
           }
         }}
-        className="flex h-8 w-8 shrink-0 items-center justify-center rounded text-muted transition-colors hover:bg-hairline/60 hover:text-ink"
+        className="flex h-8 w-8 shrink-0 items-center justify-center rounded text-muted transition-colors hover:bg-hairline/60 hover:text-ink focus-visible:ring-1 focus-visible:ring-ink"
       >
         <ImageIcon size={16} weight="bold" />
       </button>
@@ -739,7 +739,7 @@ function LinkButton({ editor, onRequestLink }) {
       aria-pressed={active}
       onClick={() => onRequestLink(editor)}
       className={
-        "group flex h-8 w-8 items-center justify-center rounded border text-ink transition-colors " +
+        "group flex h-8 w-8 items-center justify-center rounded border text-ink transition-colors focus-visible:ring-1 focus-visible:ring-ink " +
         (active
           ? "border-ink bg-ink text-white"
           : "border-transparent hover:bg-hairline/60")
@@ -767,7 +767,7 @@ export default function FormatToolbar({ editor, onRequestLink, onRequestMath }) 
   }
 
   return (
-    <div className="lex-no-print flex flex-wrap items-center gap-1 border-b border-hairline pb-2 mb-3">
+    <div role="toolbar" aria-label="Formatting toolbar" className="lex-no-print flex flex-wrap items-center gap-1 border-b border-hairline pb-2 mb-3">
       {buttons.map(({ icon: Icon, label, action }, i) => (
         <button
           key={label}
@@ -778,7 +778,7 @@ export default function FormatToolbar({ editor, onRequestLink, onRequestMath }) 
           disabled={!state[i].enabled}
           onClick={() => action(editor)}
           className={
-            "group flex h-8 w-8 items-center justify-center rounded border text-ink transition-colors " +
+            "group flex h-8 w-8 items-center justify-center rounded border text-ink transition-colors focus-visible:ring-1 focus-visible:ring-ink " +
             (state[i].active
               ? "border-ink bg-ink text-white"
               : state[i].enabled

@@ -111,7 +111,7 @@ describe("Editor hydration", () => {
 describe("Proofread pass & decoration attachment", () => {
   it("attaches lex-error classes via applyGrammarDecorations", () => {
     editor.commands.setContent("<p>teh</p>");
-    const { text, map } = buildTextWithMap(editor.state.doc);
+    const { map } = buildTextWithMap(editor.state.doc);
     const matches = [
       {
         offset: 0,
@@ -129,7 +129,7 @@ describe("Proofread pass & decoration attachment", () => {
 
   it("attaches decorations at the correct positions", () => {
     editor.commands.setContent("<p>teh wer happpy</p>");
-    const { text, map } = buildTextWithMap(editor.state.doc);
+    const { map } = buildTextWithMap(editor.state.doc);
     const matches = [
       {
         offset: 0, length: 3, message: "Spelling: teh",
@@ -151,7 +151,7 @@ describe("Proofread pass & decoration attachment", () => {
 
   it("clearGrammarDecorations removes all decorations", () => {
     editor.commands.setContent("<p>test</p>");
-    const { text, map } = buildTextWithMap(editor.state.doc);
+    const { map } = buildTextWithMap(editor.state.doc);
     applyGrammarDecorations(editor, [{ offset: 0, length: 4, message: "Test", replacements: ["tested"], rule: { id: "TEST", description: "Grammar" } }], map, null);
     clearGrammarDecorations(editor);
     expect(editor.getText()).toBe("test");
@@ -162,7 +162,7 @@ describe("Proofread pass & decoration attachment", () => {
 describe("Suggestion accept & dismiss", () => {
   it("applies a suggestion replacement via applySuggestion", () => {
     editor.commands.setContent("<p>teh</p>");
-    const { text, map } = buildTextWithMap(editor.state.doc);
+    const { map } = buildTextWithMap(editor.state.doc);
     const matches = [
       {
         id: 0, offset: 0, length: 3, message: "Spelling", replacements: ["the"],
@@ -176,7 +176,7 @@ describe("Suggestion accept & dismiss", () => {
 
   it("dismissError removes only the targeted decoration", () => {
     editor.commands.setContent("<p>teh wer</p>");
-    const { text, map } = buildTextWithMap(editor.state.doc);
+    const { map } = buildTextWithMap(editor.state.doc);
     const matches = [
       {
         id: 0, offset: 0, length: 3, message: "Spelling: teh", replacements: ["the"],

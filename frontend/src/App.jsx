@@ -531,6 +531,9 @@ export default function App() {
     ],
     editorProps: {
       attributes: {
+        role: "textbox",
+        "aria-multiline": "true",
+        "aria-label": "Source Document Editor",
         spellcheck: "false",
       },
       // Accept images dropped/pasted from the local clipboard.

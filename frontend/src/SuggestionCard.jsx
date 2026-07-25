@@ -87,35 +87,38 @@ export default function SuggestionCard({
         {replacement && (
           <button
             type="button"
+            aria-label="Accept replacement"
             onClick={(event) => {
               event.stopPropagation();
               setExiting(true);
               setTimeout(() => onApply(match, replacement), 280);
             }}
-            className="flex-1 rounded bg-ink py-2 font-sans text-sm font-medium text-white transition-transform duration-150 active:scale-[0.98]"
+            className="flex-1 rounded bg-ink py-2 font-sans text-sm font-medium text-white transition-transform duration-150 focus-visible:ring-1 focus-visible:ring-ink active:scale-[0.98]"
           >
             Accept
           </button>
         )}
         <button
           type="button"
+          aria-label="Dismiss suggestion"
           onClick={(event) => {
             event.stopPropagation();
             setExiting(true);
             setTimeout(() => onDismiss(match), 280);
           }}
-          className="flex-1 rounded border border-hairline bg-transparent py-2 font-sans text-sm font-medium text-ink transition-transform duration-150 active:scale-[0.98]"
+          className="flex-1 rounded border border-hairline bg-transparent py-2 font-sans text-sm font-medium text-ink transition-transform duration-150 focus-visible:ring-1 focus-visible:ring-ink active:scale-[0.98]"
         >
           Dismiss
         </button>
         <button
           type="button"
+          aria-label="Add to dictionary"
           title="Add to Dictionary"
           onClick={(event) => {
             event.stopPropagation();
             onAddToDictionary(match);
           }}
-          className="shrink-0 p-2 rounded-md text-[#787774] transition-colors hover:text-[#111111] active:scale-95"
+          className="shrink-0 p-2 rounded-md text-[#787774] transition-colors hover:text-[#111111] focus-visible:ring-1 focus-visible:ring-ink active:scale-95"
         >
           <BookBookmark size={18} weight="bold" />
         </button>

@@ -35,6 +35,7 @@ export default function ReviewPanel({
 }) {
   const count = grammarMatches.length;
   const [showBloom, setShowBloom] = useState(false);
+  const announceRef = useRef(null);
   const [folding, setFolding] = useState(false);
   const bloomMessageRef = useRef("");
   const prevCheckingRef = useRef(checking);
@@ -129,32 +130,38 @@ export default function ReviewPanel({
           ) : (
             <>
               <div className="mb-3 flex items-center gap-3">
+                <div ref={announceRef} aria-live="polite" aria-atomic="true" className="sr-only">
+                  {checking ? "Proofreading in progress" : `${count} ${count === 1 ? "issue" : "issues"} found`}
+                </div>
                 <button
                   type="button"
+                  aria-label="Accept all suggestions"
                   onClick={() => {
                     if (folding) return;
                     setFolding(true);
                     setTimeout(() => { setFolding(false); onAcceptAll(); }, count * 45 + 350);
                   }}
-                  className="rounded-full bg-pale-green px-2.5 py-px font-mono text-[10px] uppercase tracking-widest text-pale-green-text transition-colors hover:bg-pale-green/70"
+                  className="rounded-full bg-pale-green px-2.5 py-px font-mono text-[10px] uppercase tracking-widest text-pale-green-text transition-colors hover:bg-pale-green/70 focus-visible:ring-1 focus-visible:ring-ink"
                 >
                   Accept all {count} {count === 1 ? "Suggestion" : "Suggestions"}
                 </button>
                 <button
                   type="button"
+                  aria-label="Dismiss all suggestions"
                   onClick={() => {
                     if (folding) return;
                     setFolding(true);
                     setTimeout(() => { setFolding(false); onDismissAll(); }, count * 45 + 350);
                   }}
-                  className="rounded-full px-2.5 py-px font-mono text-[10px] uppercase tracking-widest text-muted transition-colors hover:bg-pale-red hover:text-pale-red-text"
+                  className="rounded-full px-2.5 py-px font-mono text-[10px] uppercase tracking-widest text-muted transition-colors hover:bg-pale-red hover:text-pale-red-text focus-visible:ring-1 focus-visible:ring-ink"
                 >
                   Dismiss All
                 </button>
                 <button
                   type="button"
+                  aria-label="Clear review"
                   onClick={onClear}
-                  className="font-mono text-[10px] uppercase tracking-[0.08em] text-muted transition-colors hover:text-ink"
+                  className="font-mono text-[10px] uppercase tracking-[0.08em] text-muted transition-colors hover:text-ink focus-visible:ring-1 focus-visible:ring-ink"
                 >
                   Clear
                 </button>
@@ -162,7 +169,8 @@ export default function ReviewPanel({
               <div className="relative group inline-block my-2">
                 <button
                   type="button"
-                  className="flex items-center gap-1 font-mono text-[10px] uppercase tracking-[0.08em] text-muted transition-colors hover:text-ink"
+                  aria-label="Toggle legend"
+                  className="flex items-center gap-1 font-mono text-[10px] uppercase tracking-[0.08em] text-muted transition-colors hover:text-ink focus-visible:ring-1 focus-visible:ring-ink"
                 >
                   <Info size={12} weight="bold" />
                   <span>Legend</span>
@@ -299,7 +307,8 @@ function TransformView({ tool, status, error, results, progress, running, onAppl
         <div className="relative group inline-block mb-3">
           <button
             type="button"
-            className="flex items-center gap-1 font-mono text-[10px] uppercase tracking-[0.08em] text-muted transition-colors hover:text-ink"
+            aria-label="Toggle legend"
+            className="flex items-center gap-1 font-mono text-[10px] uppercase tracking-[0.08em] text-muted transition-colors hover:text-ink focus-visible:ring-1 focus-visible:ring-ink"
           >
             <Info size={12} weight="bold" />
             <span>Legend</span>
@@ -357,15 +366,17 @@ function TransformCard({ card, index, onApply, onDismiss }) {
       <div className="mt-4 flex items-center gap-3">
         <button
           type="button"
+          aria-label="Apply transform result"
           onClick={() => onApply(card)}
-          className="flex-1 rounded bg-ink py-2 font-sans text-sm font-medium text-white transition-transform duration-150 active:scale-[0.98]"
+          className="flex-1 rounded bg-ink py-2 font-sans text-sm font-medium text-white transition-transform duration-150 focus-visible:ring-1 focus-visible:ring-ink active:scale-[0.98]"
         >
           Apply
         </button>
         <button
           type="button"
+          aria-label="Dismiss transform result"
           onClick={onDismiss}
-          className="flex-1 rounded border border-hairline bg-transparent py-2 font-sans text-sm font-medium text-ink transition-transform duration-150 active:scale-[0.98]"
+          className="flex-1 rounded border border-hairline bg-transparent py-2 font-sans text-sm font-medium text-ink transition-transform duration-150 focus-visible:ring-1 focus-visible:ring-ink active:scale-[0.98]"
         >
           Dismiss
         </button>

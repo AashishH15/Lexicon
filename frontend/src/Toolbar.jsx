@@ -88,7 +88,7 @@ export default function Toolbar({ editor, activeTool, onToolClick, onAiSetup, ai
   const warmingTool = isWarming && activeTool && activeTool !== "Proofread";
   const runningTool = transformRunning && activeTool && activeTool !== "Proofread";
   return (
-    <nav className="flex flex-col gap-6">
+    <nav aria-label="Tool actions" className="flex flex-col gap-6">
       {groups.map((group) => (
         <div key={group.label}>
           <p className="font-mono text-[10px] uppercase tracking-[0.08em] text-muted mb-2">
@@ -110,7 +110,7 @@ export default function Toolbar({ editor, activeTool, onToolClick, onAiSetup, ai
                     aria-busy={isWarmingThis || isRunningThis}
                     title={locked ? "Set up Lexicon AI to use this tool" : isRunningThis ? "Click to cancel" : undefined}
                     className={
-                      "group flex w-full items-center gap-2.5 rounded px-2 py-1.5 text-left text-sm transition-colors " +
+                      "group flex w-full items-center gap-2.5 rounded px-2 py-1.5 text-left text-sm transition-colors focus-visible:ring-1 focus-visible:ring-ink " +
                       (locked
                         ? "cursor-not-allowed text-muted opacity-45"
                         : activeTool === name

@@ -55,7 +55,7 @@ const CommandList = forwardRef(function CommandList({ items, command }, ref) {
 
   if (items.length === 0) {
     return (
-      <div className="lex-pop w-64 rounded-lg border border-hairline bg-white p-3 font-sans text-xs text-muted shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
+      <div role="listbox" aria-label="No matching commands" className="lex-pop w-64 rounded-lg border border-hairline bg-white p-3 font-sans text-xs text-muted shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
         No matching commands
       </div>
     );
@@ -64,6 +64,8 @@ const CommandList = forwardRef(function CommandList({ items, command }, ref) {
   return (
     <div
       ref={listRef}
+      role="listbox"
+      aria-label="Slash commands"
       className="lex-pop scrollbar-none max-h-72 w-72 overflow-y-auto rounded-lg border border-hairline bg-white py-1 shadow-[0_2px_8px_rgba(0,0,0,0.04)]"
     >
       {items.map((item, index) => {
@@ -73,11 +75,13 @@ const CommandList = forwardRef(function CommandList({ items, command }, ref) {
           <button
             key={item.id}
             type="button"
+            role="option"
+            aria-selected={isSelected}
             ref={(el) => (itemRefs.current[index] = el)}
             onMouseEnter={() => setSelectedIndex(index)}
             onClick={() => select(index)}
             className={
-              "flex w-full items-center gap-2.5 px-3 py-1.5 text-left text-sm transition-colors " +
+              "flex w-full items-center gap-2.5 px-3 py-1.5 text-left text-sm transition-colors focus-visible:ring-1 focus-visible:ring-ink " +
               (isSelected
                 ? "bg-pale-blue text-pale-blue-text"
                 : "text-ink hover:bg-hairline/60")
