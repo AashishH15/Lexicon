@@ -44,10 +44,11 @@ import {
   ArrowLineRight,
   ArrowSquareLeft,
   ArrowSquareRight,
+  ChatTeardropText,
   CircleNotch,
   LockKey,
 } from "@phosphor-icons/react";
-import { checkGrammar, getAiStatus, ensureBackend } from "./api.js";
+import { checkGrammar, getAiStatus, ensureBackend, openExternalUrl } from "./api.js";
 import {
   checkForUpdate,
   installUpdate,
@@ -420,12 +421,12 @@ export default function App() {
     rightCloseTimer.current = setTimeout(() => setRightPeek(false), 180);
   }, []);
 
-  const proofreadRef = useRef(() => {});
+  const proofreadRef = useRef(() => { });
   proofreadRef.current = (forceFullScan = true) => runGrammarCheck(false, null, forceFullScan);
   const activeErrorRef = useRef(null);
   const matchesRef = useRef([]);
   const activeToolRef = useRef(activeTool);
-  const scheduleCheckRef = useRef(() => {});
+  const scheduleCheckRef = useRef(() => { });
   const checkTimer = useRef(null);
   const checkAbortRef = useRef(null);
   const checkingRef = useRef(false);
@@ -706,7 +707,7 @@ export default function App() {
     const handleFocus = () => {
       setEditorFocused(true);
       // Silent background pre-warming of offloaded backend tiers
-      ensureBackend().catch(() => {});
+      ensureBackend().catch(() => { });
     };
     const handleBlur = () => setEditorFocused(false);
     editor.on("selectionUpdate", syncSelection);
@@ -728,7 +729,7 @@ export default function App() {
   // Silent pre-warming when app window regains focus
   useEffect(() => {
     const onWindowFocus = () => {
-      ensureBackend().catch(() => {});
+      ensureBackend().catch(() => { });
     };
     window.addEventListener("focus", onWindowFocus);
     return () => window.removeEventListener("focus", onWindowFocus);
@@ -764,7 +765,7 @@ export default function App() {
       dom.removeEventListener("click", handleClick);
     };
   }, [editor]);
-function matchKey(match, text) {
+  function matchKey(match, text) {
     const original = text
       ? text.slice(match.offset, match.offset + match.length)
       : match.original;
@@ -1498,10 +1499,10 @@ function matchKey(match, text) {
           to: loopCards[loopCards.length - 1].to,
           timestamp: Date.now(),
         };
-      showSavedBadge();
-      return capHistory(prev, entry, MAX_HISTORY_ITEMS);
-    });
-  }
+        showSavedBadge();
+        return capHistory(prev, entry, MAX_HISTORY_ITEMS);
+      });
+    }
     if (aborted && runIdRef.current === runId) {
       // Cancel or error: clear the panel (per design — no partial cards kept).
       // Guarded by runId so a stale loop waking after a newer run started can
@@ -1840,21 +1841,21 @@ function matchKey(match, text) {
           onMouseLeave={() => focusMode && scheduleCloseLeft()}
         >
           <aside className="flex h-full w-full flex-col">
-          {!focusMode && leftPanelOpen && (
-            <div
-              onPointerDown={startResize("left")}
-              className={
-                "absolute right-0 top-0 z-20 h-full w-1.5 cursor-ew-resize transition-all " +
-                (aboutToCollapse === "left"
-                  ? "w-2.0 bg-amber-500/70 animate-pulse"
-                  : resizing === "left"
-                    ? "bg-accent/60"
-                    : "bg-transparent hover:bg-accent/30")
-              }
-              title="Drag to resize"
-              aria-label="Resize left panel"
-            />
-          )}
+            {!focusMode && leftPanelOpen && (
+              <div
+                onPointerDown={startResize("left")}
+                className={
+                  "absolute right-0 top-0 z-20 h-full w-1.5 cursor-ew-resize transition-all " +
+                  (aboutToCollapse === "left"
+                    ? "w-2.0 bg-amber-500/70 animate-pulse"
+                    : resizing === "left"
+                      ? "bg-accent/60"
+                      : "bg-transparent hover:bg-accent/30")
+                }
+                title="Drag to resize"
+                aria-label="Resize left panel"
+              />
+            )}
             <div className="flex items-center justify-between px-4 pt-4">
               <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.08em] text-muted">
                 Actions
@@ -1952,6 +1953,19 @@ function matchKey(match, text) {
               </button>
               <button
                 type="button"
+                onClick={() => openExternalUrl("https://tally.so/r/LZq8vy")}
+                className="group flex items-center gap-2.5 rounded px-2 py-1.5 text-left text-sm text-muted transition-colors hover:bg-hairline/60 hover:text-ink"
+                aria-label="Share feedback"
+              >
+                <ChatTeardropText
+                  size={16}
+                  weight="bold"
+                  className="transition-transform duration-200 group-hover:scale-110"
+                />
+                <span>Share Feedback</span>
+              </button>
+              <button
+                type="button"
                 onClick={() => setSettingsOpen(true)}
                 className="group flex items-center gap-2.5 rounded px-2 py-1.5 text-left text-sm text-muted transition-colors hover:bg-hairline/60 hover:text-ink"
                 aria-label="Open settings"
@@ -2034,21 +2048,21 @@ function matchKey(match, text) {
           onMouseLeave={() => focusMode && scheduleCloseRight()}
         >
           <aside className="flex h-full w-full flex-col">
-          {!focusMode && rightPanelOpen && (
-            <div
-              onPointerDown={startResize("right")}
-              className={
-                "absolute left-0 top-0 z-20 h-full w-1.5 cursor-ew-resize transition-all " +
-                (aboutToCollapse === "right"
-                  ? "w-2.0 bg-amber-500/70 animate-pulse"
-                  : resizing === "right"
-                    ? "bg-accent/60"
-                    : "bg-transparent hover:bg-accent/30")
-              }
-              title="Drag to resize"
-              aria-label="Resize right panel"
-            />
-          )}
+            {!focusMode && rightPanelOpen && (
+              <div
+                onPointerDown={startResize("right")}
+                className={
+                  "absolute left-0 top-0 z-20 h-full w-1.5 cursor-ew-resize transition-all " +
+                  (aboutToCollapse === "right"
+                    ? "w-2.0 bg-amber-500/70 animate-pulse"
+                    : resizing === "right"
+                      ? "bg-accent/60"
+                      : "bg-transparent hover:bg-accent/30")
+                }
+                title="Drag to resize"
+                aria-label="Resize right panel"
+              />
+            )}
             <ReviewPanel
               editor={editor}
               selectedText={selectedText}

@@ -3,5 +3,5 @@
   "identifier": "main-capability",
   "description": "Permissions for the Lexicon desktop window.",
   "windows": ["main"],
-  "permissions": ["core:default", "process:default", "updater:default"]
+  "permissions": ["core:default", "process:default", "updater:default", "opener:default"]
 }

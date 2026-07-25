@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { openUrl } from "@tauri-apps/plugin-opener";
 
 const API_URL =
   import.meta.env.VITE_API_URL ||
@@ -126,6 +127,19 @@ export async function deleteModel(modelKey = "2b") {
     throw new Error(data.error || `Model delete failed: ${response.status}`);
   }
   return response.json();
+}
+
+// Open a URL in the default OS browser (Tauri) or a new tab (web fallback).
+export async function openExternalUrl(url) {
+  if (typeof window !== "undefined" && window.__TAURI_INTERNALS__) {
+    try {
+      await openUrl(url);
+      return;
+    } catch {
+      // plugin-opener not registered in Rust — fall through to web fallback
+    }
+  }
+  window.open(url, "_blank", "noopener,noreferrer");
 }
 
 // Run an AI transform (Rewrite, Tone, Summary, …) via the backend.

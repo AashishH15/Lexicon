@@ -5,7 +5,7 @@ import LanguageDropdown from "./LanguageDropdown.jsx";
 import Toggle from "./Toggle.jsx";
 import ModelManager from "./ModelManager.jsx";
 import CustomToolsSettings from "./CustomToolsSettings.jsx";
-import { setAiPreference } from "./api.js";
+import { setAiPreference, openExternalUrl } from "./api.js";
 
 // GitHub mark (official Phosphor `github-logo` artwork). It isn't bundled in
 // @phosphor-icons/react@2.1.10, so we register it locally via Phosphor's
@@ -366,6 +366,13 @@ export default function Settings({
               <GithubLogo size={16} weight="bold" />
               View source on GitHub
             </a>
+            <button
+              type="button"
+              onClick={() => openExternalUrl("https://tally.so/r/LZq8vy")}
+              className="mt-2 flex w-full items-center justify-center gap-2 rounded border border-transparent py-2 font-sans text-xs text-muted transition-colors hover:text-ink focus-visible:ring-1 focus-visible:ring-ink"
+            >
+              Send feedback or report an issue
+            </button>
           </div>
 
           <div className="mt-8 border-t border-hairline pt-6">
