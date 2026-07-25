@@ -7,6 +7,30 @@ This changelog tracks what is **live** in each release and what is still
 **stubbed** (shown in the interface but not yet functional). Stubbed features
 are listed so the release reads honestly about what works today.
 
+## v0.7.5 — Skeleton Loading, Accessibility, Feedback & Faster Startup
+
+### Skeleton Loading
+- While the app is checking your document for grammar issues or applying changes, the Review Panel now shows a gentle animated placeholder instead of sitting blank — so you know something is happening
+
+### Test Suite
+- Added automated tests (56 in total) that check the editor, grammar highlights, import/export, and all the behind-the-scenes logic every time a change is made — this means fewer regressions and a more reliable app
+
+### Accessibility
+- **Keyboard navigation:** Every button in the toolbar and formatting bar now has a visible focus ring when tabbed to, making it easy to see where you are on the page
+- **Screen readers:** The slash menu (the popup that appears when you type "/") now correctly labels itself and its options. The grammar suggestion cards and review panel announce their contents and actions. The editor itself is labeled as a textbox for screen reader users
+- **Blind-accessible actions:** Accept, Dismiss, and Add-to-Dictionary buttons on suggestion cards all have descriptive labels. The Accept All, Dismiss All, and Clear buttons in the Review Panel are labeled too
+
+### Share Your Feedback
+- A new **"Share Feedback"** button in the sidebar (bottom section, looks like a chat bubble) lets you send us suggestions or report issues — it opens a simple form where you can tell us what you think
+- The same link also appears in **Settings**, just below the GitHub link, labeled "Send feedback or report an issue"
+
+### Faster Startup & Loading
+- The app now should load significantly faster on startup by splitting itself into smaller pieces that are fetched only when needed
+- Settings, Dictionary, History, and AI Setup panels now load only when you open them — not all at once when the app starts
+- Syntax highlighting for code blocks loads language definitions on demand instead of downloading all 37 languages upfront
+- Math equation rendering styles kick in only when you actually open the math editor
+- Overall the main app bundle was reduced from about 1.7 MB to roughly 160 kB — so the app feels snappier to open and navigate
+
 ## v0.7.0 — Polished Writing Experience & Privacy Identity
 
 ### Quick Downloads:
