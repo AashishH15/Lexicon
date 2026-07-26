@@ -32,7 +32,7 @@ const DictionaryPanel = lazy(() => import("./DictionaryPanel.jsx"));
 const AiSetupModal = lazy(() => import("./AiSetupModal.jsx"));
 const HistoryPanel = lazy(() => import("./HistoryPanel.jsx"));
 import useTransform from "./useTransform.js";
-import { isAiTool, promptForTool } from "./prompts.js";
+import { isAiTool, promptForTool, ACTIVE_VOICE_PROMPT } from "./prompts.js";
 import { marked } from "marked";
 import {
   Gear,
@@ -47,7 +47,7 @@ import {
   CircleNotch,
   LockKey,
 } from "@phosphor-icons/react";
-import { checkGrammar, getAiStatus, ensureBackend, openExternalUrl } from "./api.js";
+import { checkGrammar, getAiStatus, ensureBackend, openExternalUrl, transformText } from "./api.js";
 import {
   checkForUpdate,
   installUpdate,
@@ -66,6 +66,7 @@ import {
   findErrorAt,
   grammarPluginKey,
 } from "./grammarHighlight.js";
+import { checkProseQuality, extractSentenceContext } from "./proseQualityEngine.js";
 import { DecorationSet } from "@tiptap/pm/view";
 import { globalGrammarCache } from "./grammarCache.js";
 
@@ -98,6 +99,7 @@ const languageKey = "lexicon:language";
 const fontSizeKey = "lexicon:fontSize";
 const focusModeKey = "lexicon:focusMode";
 const lineSpacingKey = "lexicon:lineSpacing";
+const proseScanKey = "lexicon:proseScanEnabled";
 const dictionaryKey = "lexicon:user_dictionary";
 const documentHistoryKey = "lexicon:document_history";
 const transformHistoryKey = "lexicon:transform_history";
@@ -240,6 +242,10 @@ export default function App() {
   const [autoDraftMode, setAutoDraftMode] = useState(() => {
     const saved = localStorage.getItem("lexicon:auto_draft_mode");
     return saved !== null ? saved === "true" : true;
+  });
+  const [proseScanEnabled, setProseScanEnabled] = useState(() => {
+    const saved = localStorage.getItem(proseScanKey);
+    return saved !== null ? saved === "true" : SETTINGS_DEFAULTS.proseScanEnabled;
   });
   const [docText, setDocText] = useState("");
   const [toneResult, setToneResult] = useState(null);
@@ -886,13 +892,23 @@ export default function App() {
           dismissedKeysRef.current = trimmed;
         }
       }
-      const matches = rawMatches
+      const proseMatches = proseScanEnabled ? checkProseQuality(text) : [];
+      for (const pm of proseMatches) {
+        if (pm.message.toLowerCase().includes("passive voice")) {
+          const ctx = extractSentenceContext(text, pm.offset);
+          pm.sentence = ctx.text;
+          pm.sentenceOffset = ctx.offset;
+          pm.sentenceLength = ctx.length;
+        }
+      }
+      const allRaw = [...rawMatches, ...proseMatches];
+      const matches = allRaw
         .filter((match) => !dismissedKeysRef.current.has(matchKey(match, text)))
         .map((match, i) => ({
           ...match,
           id: i,
           original: text.slice(match.offset, match.offset + match.length),
-          category: categoryLabel(match),
+          category: match.category || categoryLabel(match),
         }));
       setGrammarMatches(matches);
       applyGrammarDecorations(editor, matches, map, activeErrorId);
@@ -915,7 +931,26 @@ export default function App() {
     if (!editor) {
       return;
     }
-    applySuggestion(editor, match.id, replacement);
+    if (match.sentenceOffset != null && match.sentenceLength != null) {
+      const { map } = buildTextWithMap(editor.state.doc);
+      const from = map[match.sentenceOffset];
+      const last = map[match.sentenceOffset + match.sentenceLength - 1];
+      if (from != null && last != null) {
+        editor
+          .chain()
+          .focus()
+          .insertContentAt({ from, to: last + 1 }, replacement)
+          .command(({ tr, dispatch }) => {
+            if (dispatch) tr.setMeta(grammarPluginKey, { removeId: match.id });
+            return true;
+          })
+          .run();
+      } else {
+        applySuggestion(editor, match.id, replacement);
+      }
+    } else {
+      applySuggestion(editor, match.id, replacement);
+    }
     setGrammarMatches((current) => {
       const next = current.filter((m) => m.id !== match.id);
       if (next.length === 0) {
@@ -1036,6 +1071,21 @@ export default function App() {
     runGrammarCheck();
   }
 
+  async function handleAiRewrite(sentence) {
+    if (!aiConfigured) return null;
+    try {
+      const res = await transformText({
+        prompt: ACTIVE_VOICE_PROMPT,
+        text: sentence,
+        modelKey: null,
+        backend: null,
+      });
+      return (res && res.text) || null;
+    } catch {
+      return null;
+    }
+  }
+
   function handleAddWordToDictionary(rawWord) {
     const word = (rawWord || "").trim();
     if (!word) {
@@ -1113,6 +1163,11 @@ export default function App() {
       setLeftPeek(false);
       setRightPeek(false);
     }
+  }
+
+  function handleProseScanChange(next) {
+    setProseScanEnabled(next);
+    localStorage.setItem(proseScanKey, String(next));
   }
 
   function handleToggleLeftPanel() {
@@ -1243,10 +1298,12 @@ export default function App() {
     setFontSize(SETTINGS_DEFAULTS.fontSize);
     setFocusMode(SETTINGS_DEFAULTS.focusMode);
     setLineSpacing(SETTINGS_DEFAULTS.lineSpacing);
+    setProseScanEnabled(SETTINGS_DEFAULTS.proseScanEnabled);
     localStorage.removeItem(languageKey);
     localStorage.removeItem(fontSizeKey);
     localStorage.removeItem(focusModeKey);
     localStorage.removeItem(lineSpacingKey);
+    localStorage.removeItem(proseScanKey);
   }
 
   useEffect(() => {
@@ -1643,7 +1700,8 @@ export default function App() {
 
   const emptyDoc = docText.trim().length === 0;
   const totalWords = emptyDoc ? 0 : docText.trim().split(/\s+/).length;
-  const errorRatio = totalWords > 0 ? grammarMatches.length / totalWords : 0;
+  const errorMatches = grammarMatches.filter((m) => m.category !== "Prose Style");
+  const errorRatio = totalWords > 0 ? errorMatches.length / totalWords : 0;
   const clarityScore = emptyDoc
     ? null
     : Math.max(0, Math.min(100, Math.round(100 - errorRatio * 100 * 12)));
@@ -2099,6 +2157,7 @@ export default function App() {
               onAddToDictionary={handleAddToDictionary}
               onLocate={handleLocate}
               onCollapse={handleCollapseRight}
+              onAiRewrite={aiConfigured ? handleAiRewrite : null}
               onClear={() => {
                 setActiveTool("");
                 setGrammarMatches([]);
@@ -2167,6 +2226,8 @@ export default function App() {
           onLineSpacingChange={handleLineSpacingChange}
           focusMode={focusMode}
           onFocusModeChange={handleFocusModeChange}
+          proseScanEnabled={proseScanEnabled}
+          onProseScanChange={handleProseScanChange}
           onResetDefaults={handleResetDefaults}
           onCheckForUpdates={() => runUpdateCheck()}
           updateState={updateState}

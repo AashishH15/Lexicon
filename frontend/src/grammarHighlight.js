@@ -40,6 +40,9 @@ export function getCategoryClass(category) {
   if (cat.includes("gramm") || cat.includes("punct")) {
     return "lex-error-grammar";
   }
+  if (cat.includes("prose")) {
+    return "lex-prose-error";
+  }
   return "lex-error-style";
 }
 

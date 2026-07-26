@@ -25,6 +25,7 @@ export default function ReviewPanel({
   onLocate,
   onCollapse,
   onClear,
+  onAiRewrite,
   transformResults,
   transformProgress,
   transformRunning,
@@ -192,6 +193,11 @@ export default function ReviewPanel({
                       <span className="font-medium text-ink">Style & AI Tone</span>
                       <span className="ml-auto text-[10px] text-muted font-mono uppercase tracking-[0.08em]">BLUE</span>
                     </div>
+                    <div className="flex items-center gap-2">
+                      <span className="h-2 w-2 rounded-full bg-[#6B21A8]" />
+                      <span className="font-medium text-ink">Prose Style</span>
+                      <span className="ml-auto text-[10px] text-muted font-mono uppercase tracking-[0.08em]">LAVENDER</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -208,6 +214,7 @@ export default function ReviewPanel({
                     onDismiss={onDismiss}
                     onAddToDictionary={onAddToDictionary}
                     onLocate={onLocate}
+                    onAiRewrite={onAiRewrite}
                   />
                 ))}
               </ul>

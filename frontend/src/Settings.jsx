@@ -56,6 +56,7 @@ export const SETTINGS_DEFAULTS = {
   fontSize: 16,
   focusMode: false,
   lineSpacing: 1.6,
+  proseScanEnabled: true,
 };
 
 const isMac =
@@ -101,6 +102,8 @@ export default function Settings({
   onLineSpacingChange,
   focusMode,
   onFocusModeChange,
+  proseScanEnabled,
+  onProseScanChange,
   onResetDefaults,
   onCheckForUpdates,
   updateState,
@@ -130,7 +133,8 @@ export default function Settings({
     language === SETTINGS_DEFAULTS.language &&
     fontSize === SETTINGS_DEFAULTS.fontSize &&
     focusMode === SETTINGS_DEFAULTS.focusMode &&
-    lineSpacing === SETTINGS_DEFAULTS.lineSpacing;
+    lineSpacing === SETTINGS_DEFAULTS.lineSpacing &&
+    proseScanEnabled === SETTINGS_DEFAULTS.proseScanEnabled;
   const updateBusy = ["checking", "installing"].includes(updateState?.status);
   const updateButtonLabel =
     updateState?.status === "checking"
@@ -207,6 +211,25 @@ export default function Settings({
                 checked={focusMode}
                 onChange={onFocusModeChange}
                 label="Toggle focus mode"
+              />
+            </div>
+          </div>
+
+          <div className="mt-6 flex items-start justify-between gap-4">
+            <div>
+              <p className="font-mono text-[10px] uppercase tracking-widest text-muted">
+                Scan Prose &amp; Style
+              </p>
+              <p className="mt-1 font-sans text-xs text-muted">
+                Detects passive voice, wordy phrases, and repetitive sentence
+                openers. Turn off to avoid subjective style flags in clean copy.
+              </p>
+            </div>
+            <div className="pt-0.5">
+              <Toggle
+                checked={proseScanEnabled}
+                onChange={onProseScanChange}
+                label="Toggle prose and style scanning"
               />
             </div>
           </div>

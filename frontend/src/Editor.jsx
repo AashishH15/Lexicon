@@ -492,6 +492,12 @@ export default function Editor({
                       {grammarMatches.filter((m) => m.category === "Punctuation").length}
                     </span>
                   </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span>Prose Style</span>
+                    <span className="font-medium text-[#111111]">
+                      {grammarMatches.filter((m) => m.category === "Prose Style").length}
+                    </span>
+                  </div>
                   <div className="my-1 border-t border-hairline" />
                   <div className="flex items-center justify-between gap-2 font-medium text-[#111111]">
                     <span>TOTAL DETECTED</span>

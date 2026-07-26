@@ -286,6 +286,7 @@ describe("Settings smart defaults & reset", () => {
       fontSize: 16,
       focusMode: false,
       lineSpacing: 1.6,
+      proseScanEnabled: true,
     });
   });
 
@@ -294,7 +295,8 @@ describe("Settings smart defaults & reset", () => {
       SETTINGS_DEFAULTS.language === "en-US" &&
       SETTINGS_DEFAULTS.fontSize === 16 &&
       SETTINGS_DEFAULTS.focusMode === false &&
-      SETTINGS_DEFAULTS.lineSpacing === 1.6;
+      SETTINGS_DEFAULTS.lineSpacing === 1.6 &&
+      SETTINGS_DEFAULTS.proseScanEnabled === true;
     expect(isDefault).toBe(true);
   });
 

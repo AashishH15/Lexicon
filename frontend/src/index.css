@@ -94,13 +94,13 @@
     margin: 0.25em 0;
   }
 
-  .ProseMirror ul[data-type="taskList"] li > label {
+  .ProseMirror ul[data-type="taskList"] li>label {
     flex: 0 0 auto;
     margin-top: 0.35em;
     user-select: none;
   }
 
-  .ProseMirror ul[data-type="taskList"] li > div {
+  .ProseMirror ul[data-type="taskList"] li>div {
     flex: 1 1 auto;
     min-width: 0;
   }
@@ -136,7 +136,7 @@
     transform: rotate(45deg);
   }
 
-  .ProseMirror ul[data-type="taskList"] li[data-checked="true"] > div {
+  .ProseMirror ul[data-type="taskList"] li[data-checked="true"]>div {
     color: #787774;
     text-decoration: line-through;
   }
@@ -286,6 +286,12 @@
     --lex-pulse: rgba(31, 108, 159, 0.15);
   }
 
+  .ProseMirror .lex-prose-error {
+    background-color: #F3E8FF;
+    color: #6B21A8;
+    --lex-pulse: rgba(243, 232, 255, 0.4);
+  }
+
   .ProseMirror .lex-error-active {
     box-shadow: 0 0 0 1px currentColor;
   }
@@ -300,6 +306,10 @@
 
   .ProseMirror .lex-error-style.lex-error-active {
     background-color: #bfe3fb;
+  }
+
+  .ProseMirror .lex-prose-error.lex-error-active {
+    background-color: #E9D5FF;
   }
 
   /* Block-level image node (Image extension, sandboxed) */
@@ -436,27 +446,73 @@
   .ProseMirror .lex-error-flash.lex-error-spelling {
     animation: lex-error-pulse-spelling 1200ms ease-in-out;
   }
+
   .ProseMirror .lex-error-flash.lex-error-grammar {
     animation: lex-error-pulse-grammar 1200ms ease-in-out;
   }
+
   .ProseMirror .lex-error-flash.lex-error-style {
     animation: lex-error-pulse-style 1200ms ease-in-out;
   }
 
   @keyframes lex-error-pulse-spelling {
-    0%, 100% { background-color: #fdebec; box-shadow: 0 0 0 0 rgba(159, 47, 45, 0); }
-    25%, 75% { background-color: #f6b8ba; box-shadow: 0 0 0 4px rgba(159, 47, 45, 0.25); }
-    50% { background-color: #ef9b9e; box-shadow: 0 0 0 4px rgba(159, 47, 45, 0.35); }
+
+    0%,
+    100% {
+      background-color: #fdebec;
+      box-shadow: 0 0 0 0 rgba(159, 47, 45, 0);
+    }
+
+    25%,
+    75% {
+      background-color: #f6b8ba;
+      box-shadow: 0 0 0 4px rgba(159, 47, 45, 0.25);
+    }
+
+    50% {
+      background-color: #ef9b9e;
+      box-shadow: 0 0 0 4px rgba(159, 47, 45, 0.35);
+    }
   }
+
   @keyframes lex-error-pulse-grammar {
-    0%, 100% { background-color: #fbf3db; box-shadow: 0 0 0 0 rgba(149, 100, 0, 0); }
-    25%, 75% { background-color: #f5d97a; box-shadow: 0 0 0 4px rgba(149, 100, 0, 0.25); }
-    50% { background-color: #f0cc5e; box-shadow: 0 0 0 4px rgba(149, 100, 0, 0.35); }
+
+    0%,
+    100% {
+      background-color: #fbf3db;
+      box-shadow: 0 0 0 0 rgba(149, 100, 0, 0);
+    }
+
+    25%,
+    75% {
+      background-color: #f5d97a;
+      box-shadow: 0 0 0 4px rgba(149, 100, 0, 0.25);
+    }
+
+    50% {
+      background-color: #f0cc5e;
+      box-shadow: 0 0 0 4px rgba(149, 100, 0, 0.35);
+    }
   }
+
   @keyframes lex-error-pulse-style {
-    0%, 100% { background-color: #e1f3fe; box-shadow: 0 0 0 0 rgba(31, 108, 159, 0); }
-    25%, 75% { background-color: #a8d8f8; box-shadow: 0 0 0 4px rgba(31, 108, 159, 0.25); }
-    50% { background-color: #7fc5f3; box-shadow: 0 0 0 4px rgba(31, 108, 159, 0.35); }
+
+    0%,
+    100% {
+      background-color: #e1f3fe;
+      box-shadow: 0 0 0 0 rgba(31, 108, 159, 0);
+    }
+
+    25%,
+    75% {
+      background-color: #a8d8f8;
+      box-shadow: 0 0 0 4px rgba(31, 108, 159, 0.25);
+    }
+
+    50% {
+      background-color: #7fc5f3;
+      box-shadow: 0 0 0 4px rgba(31, 108, 159, 0.35);
+    }
   }
 
   /* One-shot pulse when a squiggle decoration first appears */
@@ -468,27 +524,32 @@
     0% {
       box-shadow: 0 0 0 0 transparent;
     }
+
     40% {
       box-shadow: 0 0 0 2px var(--lex-pulse, rgba(159, 47, 45, 0.15));
     }
+
     100% {
       box-shadow: 0 0 0 0 transparent;
     }
   }
 
   @keyframes lexicon-shimmer {
-    0% { background-position: 200% 0; }
-    100% { background-position: -200% 0; }
+    0% {
+      background-position: 200% 0;
+    }
+
+    100% {
+      background-position: -200% 0;
+    }
   }
 
   .lex-shimmer {
-    background: linear-gradient(
-      90deg,
-      #f7f6f3 0%,
-      #eaeaea 20%,
-      #f7f6f3 40%,
-      #f7f6f3 100%
-    );
+    background: linear-gradient(90deg,
+        #f7f6f3 0%,
+        #eaeaea 20%,
+        #f7f6f3 40%,
+        #f7f6f3 100%);
     background-size: 200% 100%;
     animation: lexicon-shimmer 1.5s linear infinite;
     border-radius: 4px;
@@ -496,8 +557,13 @@
   }
 
   @keyframes lex-ellipsis-typing {
-    0% { clip-path: inset(0 100% 0 0); }
-    100% { clip-path: inset(0 -10% 0 0); }
+    0% {
+      clip-path: inset(0 100% 0 0);
+    }
+
+    100% {
+      clip-path: inset(0 -10% 0 0);
+    }
   }
 
   .lex-ellipsis {
@@ -550,26 +616,23 @@
   }
 
   .lex-fade-scroll {
-    -webkit-mask-image: linear-gradient(
-      to bottom,
-      transparent 0,
-      #000 16px,
-      #000 calc(100% - 16px),
-      transparent 100%
-    );
-    mask-image: linear-gradient(
-      to bottom,
-      transparent 0,
-      #000 16px,
-      #000 calc(100% - 16px),
-      transparent 100%
-    );
+    -webkit-mask-image: linear-gradient(to bottom,
+        transparent 0,
+        #000 16px,
+        #000 calc(100% - 16px),
+        transparent 100%);
+    mask-image: linear-gradient(to bottom,
+        transparent 0,
+        #000 16px,
+        #000 calc(100% - 16px),
+        transparent 100%);
   }
 
   .scrollbar-none {
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
+
   .scrollbar-none::-webkit-scrollbar {
     display: none;
   }
@@ -579,6 +642,7 @@
       opacity: 0;
       transform: translateY(4px);
     }
+
     to {
       opacity: 1;
       transform: translateY(0);
@@ -590,6 +654,7 @@
       opacity: 0;
       transform: translateY(12px);
     }
+
     to {
       opacity: 1;
       transform: translateY(0);
@@ -611,12 +676,14 @@
       max-height: 400px;
       margin-bottom: 0.75rem;
     }
+
     50% {
       opacity: 0;
       transform: translateX(30px);
       max-height: 400px;
       margin-bottom: 0.75rem;
     }
+
     100% {
       opacity: 0;
       transform: translateX(30px);
@@ -641,6 +708,7 @@
       opacity: 1;
       transform: scale(1);
     }
+
     to {
       max-height: 0;
       opacity: 0;
@@ -663,6 +731,7 @@
       transform: scale(0.92);
       box-shadow: 0 0 0 1px rgba(52, 101, 56, 0.25);
     }
+
     to {
       opacity: 1;
       transform: scale(1);
@@ -734,6 +803,7 @@
 }
 
 @media print {
+
   html,
   body,
   .lex-app-shell,
@@ -770,6 +840,7 @@
   * {
     scrollbar-width: none !important;
   }
+
   *::-webkit-scrollbar {
     display: none !important;
     width: 0 !important;

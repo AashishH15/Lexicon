@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { BookBookmark } from "@phosphor-icons/react";
+import { BookBookmark, CircleNotch, Sparkle } from "@phosphor-icons/react";
 
 function getCategoryBadgeStyle(category = "") {
   const cat = category.toLowerCase();
@@ -8,6 +8,9 @@ function getCategoryBadgeStyle(category = "") {
   }
   if (cat.includes("gramm") || cat.includes("punct")) {
     return "bg-[#FBF3DB] text-[#956400] border-[#F8D86B]";
+  }
+  if (cat.includes("prose")) {
+    return "bg-[#F3E8FF] text-[#6B21A8] border-[#E9D5FF]";
   }
   return "bg-[#E1F3FE] text-[#1F6C9F] border-[#BFE3FB]";
 }
@@ -22,13 +25,29 @@ export default function SuggestionCard({
   onDismiss,
   onAddToDictionary,
   onLocate,
+  onAiRewrite,
 }) {
   const replacement = match.replacements[0];
   const badgeStyle = getCategoryBadgeStyle(match.category);
   const [exiting, setExiting] = useState(false);
   const [entered, setEntered] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiResult, setAiResult] = useState(null);
   const cardRef = useRef(null);
   useEffect(() => { setEntered(true); }, []);
+
+  const isPassive =
+    match.category === "Prose Style" &&
+    match.message?.toLowerCase().includes("passive") &&
+    match.sentence &&
+    onAiRewrite;
+
+  async function handleAiRewrite() {
+    setAiLoading(true);
+    const result = await onAiRewrite(match.sentence);
+    setAiLoading(false);
+    if (result) setAiResult(result);
+  }
 
   const handleClick = () => {
     onLocate(match);
@@ -62,7 +81,7 @@ export default function SuggestionCard({
       <span
         className={`inline-block rounded border px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.08em] ${badgeStyle}`}
       >
-        {match.category} Suggestion
+        {match.category === "Prose Style" ? "Prose Style" : `${match.category} Suggestion`}
       </span>
 
       <p className="mt-3 font-sans text-sm italic text-muted">{match.message}</p>
@@ -72,7 +91,15 @@ export default function SuggestionCard({
           <span className="rounded bg-pale-red px-1 text-pale-red-text line-through">
             {match.original}
           </span>
-          {replacement && (
+          {aiResult && (
+            <>
+              <span className="mx-1 text-muted">&rarr;</span>
+              <span className="rounded bg-pale-green px-1 text-pale-green-text">
+                {aiResult}
+              </span>
+            </>
+          )}
+          {!aiResult && replacement && (
             <>
               <span className="mx-1 text-muted">&rarr;</span>
               <span className="rounded bg-pale-green px-1 text-pale-green-text">
@@ -84,7 +111,20 @@ export default function SuggestionCard({
       </div>
 
       <div className="mt-4 flex items-center gap-3">
-        {replacement && (
+        {aiResult ? (
+          <button
+            type="button"
+            aria-label="Accept AI rewrite"
+            onClick={(event) => {
+              event.stopPropagation();
+              setExiting(true);
+              setTimeout(() => onApply(match, aiResult), 280);
+            }}
+            className="flex-1 rounded bg-ink py-2 font-sans text-sm font-medium text-white transition-transform duration-150 focus-visible:ring-1 focus-visible:ring-ink active:scale-[0.98]"
+          >
+            Accept
+          </button>
+        ) : replacement && !isPassive ? (
           <button
             type="button"
             aria-label="Accept replacement"
@@ -96,6 +136,30 @@ export default function SuggestionCard({
             className="flex-1 rounded bg-ink py-2 font-sans text-sm font-medium text-white transition-transform duration-150 focus-visible:ring-1 focus-visible:ring-ink active:scale-[0.98]"
           >
             Accept
+          </button>
+        ) : null}
+        {isPassive && !aiResult && (
+          <button
+            type="button"
+            aria-label="Rewrite in active voice with AI"
+            disabled={aiLoading}
+            onClick={(event) => {
+              event.stopPropagation();
+              handleAiRewrite();
+            }}
+            className="flex-1 rounded border border-hairline bg-canvas py-2 font-sans text-xs font-medium text-ink transition-colors hover:bg-hairline/60 active:scale-[0.98] disabled:opacity-50"
+          >
+            {aiLoading ? (
+              <span className="inline-flex items-center justify-center gap-1.5 text-muted">
+                <CircleNotch size={13} weight="bold" className="animate-spin text-ink" />
+                Rewriting&hellip;
+              </span>
+            ) : (
+              <span className="inline-flex items-center justify-center gap-1.5">
+                <Sparkle size={13} weight="bold" className="text-muted" />
+                Active Voice
+              </span>
+            )}
           </button>
         )}
         <button
@@ -110,18 +174,20 @@ export default function SuggestionCard({
         >
           Dismiss
         </button>
-        <button
-          type="button"
-          aria-label="Add to dictionary"
-          title="Add to Dictionary"
-          onClick={(event) => {
-            event.stopPropagation();
-            onAddToDictionary(match);
-          }}
-          className="shrink-0 p-2 rounded-md text-[#787774] transition-colors hover:text-[#111111] focus-visible:ring-1 focus-visible:ring-ink active:scale-95"
-        >
-          <BookBookmark size={18} weight="bold" />
-        </button>
+        {!match.category?.toLowerCase().includes("prose") && (
+          <button
+            type="button"
+            aria-label="Add to dictionary"
+            title="Add to Dictionary"
+            onClick={(event) => {
+              event.stopPropagation();
+              onAddToDictionary(match);
+            }}
+            className="shrink-0 p-2 rounded-md text-[#787774] transition-colors hover:text-[#111111] focus-visible:ring-1 focus-visible:ring-ink active:scale-95"
+          >
+            <BookBookmark size={18} weight="bold" />
+          </button>
+        )}
       </div>
     </li>
   );

@@ -186,6 +186,10 @@ export function isAiTool(name) {
 
 // Returns the instruction prompt for a tool (built-in or custom), or null if
 // the tool isn't an AI transform (e.g. Proofread).
+export const ACTIVE_VOICE_PROMPT =
+  "Rewrite the following sentence in the active voice. Make the subject perform the action directly. " +
+  "Output only the rewritten sentence and nothing else. No preamble, no quotation marks.";
+
 export function promptForTool(name) {
   // Check custom tools first
   const customTools = getCustomTools();

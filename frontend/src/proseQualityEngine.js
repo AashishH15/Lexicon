@@ -144,3 +144,21 @@ export function checkProseQuality(text) {
     ...detectRepetitiveOpeners(text),
   ];
 }
+
+export function extractSentenceContext(text, offset) {
+  const before = text.slice(0, offset);
+  const after = text.slice(offset);
+  const sentStart = Math.max(
+    before.lastIndexOf(". "),
+    before.lastIndexOf("! "),
+    before.lastIndexOf("? "),
+    before.lastIndexOf("\n"),
+  ) + 1;
+  let sentEnd = after.search(/[.!?](?:\s|$)/);
+  if (sentEnd === -1) sentEnd = after.length;
+  else sentEnd += 1;
+  const raw = text.slice(sentStart, offset + sentEnd);
+  const trimmed = raw.trim();
+  const leadingWS = raw.indexOf(trimmed[0]);
+  return { text: trimmed, offset: sentStart + leadingWS, length: trimmed.length };
+}
