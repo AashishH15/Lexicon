@@ -20,8 +20,8 @@ export default function DocStats({ editor }) {
   });
 
   const [selectedStats, setSelectedStats] = useState(() => {
-    const s1 = localStorage.getItem("lexicon:statSlot1") || "words";
-    const s2 = localStorage.getItem("lexicon:statSlot2") || "chars";
+    const s1 = localStorage.getItem("lexicon:statSlot1");
+    const s2 = localStorage.getItem("lexicon:statSlot2");
     const arr = [];
     if (s1) arr.push(s1);
     if (s2 && s2 !== s1) arr.push(s2);
@@ -42,9 +42,13 @@ export default function DocStats({ editor }) {
   useEffect(() => {
     if (selectedStats.length >= 1) {
       localStorage.setItem("lexicon:statSlot1", selectedStats[0]);
+    } else {
+      localStorage.removeItem("lexicon:statSlot1");
     }
     if (selectedStats.length >= 2) {
       localStorage.setItem("lexicon:statSlot2", selectedStats[1]);
+    } else {
+      localStorage.removeItem("lexicon:statSlot2");
     }
   }, [selectedStats]);
 
@@ -65,6 +69,7 @@ export default function DocStats({ editor }) {
   function toggleStat(id) {
     setSelectedStats((prev) => {
       if (prev.includes(id)) {
+        if (prev.length === 1) return prev;
         return prev.filter((s) => s !== id);
       }
       if (prev.length >= 2) {
@@ -79,14 +84,18 @@ export default function DocStats({ editor }) {
     <div className="relative mt-4 border-t border-hairline pt-3 font-mono text-[10px] text-muted">
       <div className="flex items-center justify-between px-1">
         <div className="flex flex-col gap-1">
-          <div>
-            <span className="uppercase">{opt1.label}:</span>{" "}
-            <span className="font-medium text-ink">{opt1.getValue(stats)}</span>
-          </div>
-          <div>
-            <span className="uppercase">{opt2.label}:</span>{" "}
-            <span className="font-medium text-ink">{opt2.getValue(stats)}</span>
-          </div>
+          {selectedStats.length >= 1 && (
+            <div>
+              <span className="uppercase">{opt1.label}:</span>{" "}
+              <span className="font-medium text-ink">{opt1.getValue(stats)}</span>
+            </div>
+          )}
+          {selectedStats.length >= 2 && (
+            <div>
+              <span className="uppercase">{opt2.label}:</span>{" "}
+              <span className="font-medium text-ink">{opt2.getValue(stats)}</span>
+            </div>
+          )}
         </div>
 
         <button
