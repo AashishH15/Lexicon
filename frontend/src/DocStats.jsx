@@ -3,11 +3,11 @@ import { computeReadability } from "./readability.js";
 import { Sliders, Check } from "@phosphor-icons/react";
 
 const STAT_OPTIONS = [
-  { id: "words", label: "Words", getValue: (s) => s.wordCount },
-  { id: "readingTime", label: "Reading Time", getValue: (s) => s.readingTime },
-  { id: "speakingTime", label: "Speaking Time", getValue: (s) => s.speakingTime },
-  { id: "chars", label: "Characters", getValue: (s) => s.charCount },
-  { id: "grade", label: "Flesch-Kincaid", getValue: (s) => s.gradeLabel },
+  { id: "words", label: "Words", desc: "Total word count", getValue: (s) => s.wordCount },
+  { id: "readingTime", label: "Reading Time", desc: "Based on 250 WPM", getValue: (s) => s.readingTime },
+  { id: "speakingTime", label: "Speaking Time", desc: "Based on 130 WPM", getValue: (s) => s.speakingTime },
+  { id: "chars", label: "Characters", desc: "Total character count", getValue: (s) => s.charCount },
+  { id: "grade", label: "Flesch-Kincaid", desc: "Readability grade level", getValue: (s) => s.gradeLabel },
 ];
 
 export default function DocStats({ editor }) {
@@ -21,7 +21,7 @@ export default function DocStats({ editor }) {
 
   const [selectedStats, setSelectedStats] = useState(() => {
     const s1 = localStorage.getItem("lexicon:statSlot1") || "words";
-    const s2 = localStorage.getItem("lexicon:statSlot2") || "readingTime";
+    const s2 = localStorage.getItem("lexicon:statSlot2") || "chars";
     const arr = [];
     if (s1) arr.push(s1);
     if (s2 && s2 !== s1) arr.push(s2);
@@ -60,7 +60,7 @@ export default function DocStats({ editor }) {
   }, [showPopover]);
 
   const opt1 = STAT_OPTIONS.find((o) => o.id === selectedStats[0]) || STAT_OPTIONS[0];
-  const opt2 = STAT_OPTIONS.find((o) => o.id === selectedStats[1]) || STAT_OPTIONS[1];
+  const opt2 = STAT_OPTIONS.find((o) => o.id === selectedStats[1]) || STAT_OPTIONS.find((o) => o.id === "chars");
 
   function toggleStat(id) {
     setSelectedStats((prev) => {
@@ -135,7 +135,10 @@ export default function DocStats({ editor }) {
                     >
                       {checked && <Check size={10} weight="bold" />}
                     </div>
-                    <span>{opt.label}</span>
+                    <div className="flex flex-col">
+                      <span>{opt.label}</span>
+                      <span className="text-[9px] text-muted">{opt.desc}</span>
+                    </div>
                   </div>
                   {checked && (
                     <span className="font-mono text-[9px] uppercase text-muted">
