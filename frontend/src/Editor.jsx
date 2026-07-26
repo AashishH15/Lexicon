@@ -20,6 +20,7 @@ import {
   Trash,
 } from "@phosphor-icons/react";
 import FormatToolbar from "./FormatToolbar.jsx";
+import ToneChart from "./ToneChart.jsx";
 
 // Quick-format actions shown in the selection bubble menu. Each mirrors the
 // toggle commands so a second click removes the format from the selection.
@@ -428,11 +429,11 @@ export default function Editor({
         </div>
       ) : (
         <div
-          className="lex-no-print mt-4 grid grid-cols-2 gap-4 mb-6"
+          className="lex-no-print mt-4 grid grid-cols-2 items-start gap-4 mb-6"
           onMouseEnter={() => setShowBreakdown(true)}
           onMouseLeave={() => setShowBreakdown(false)}
         >
-          <div className="lex-card-enter flex flex-col justify-between rounded border border-hairline bg-white p-6">
+          <div className="lex-card-enter flex h-full flex-col justify-between rounded border border-hairline bg-white p-6">
             <div className="flex flex-col">
               <div className="mb-4 flex items-center gap-1.5">
                 <span className="font-mono text-xs uppercase leading-none tracking-widest text-[#787774]">
@@ -506,7 +507,7 @@ export default function Editor({
               />
             </div>
           </div>
-          <div className="lex-card-enter flex flex-col rounded border border-hairline bg-white p-6">
+          <div className="lex-card-enter flex h-full flex-col justify-between rounded border border-hairline bg-white p-6">
             <div className="flex flex-col">
               <div className="mb-2 flex items-center gap-1.5">
                 <span className="font-mono text-xs uppercase leading-none tracking-widest text-[#787774]">
@@ -537,7 +538,7 @@ export default function Editor({
                     className={
                       "overflow-hidden transition-all duration-200 ease-out " +
                       (detailed
-                        ? "mt-3 max-h-60 opacity-100"
+                        ? "mt-3 max-h-96 opacity-100"
                         : "max-h-0 opacity-0")
                     }
                   >
@@ -579,6 +580,7 @@ export default function Editor({
                         </span>
                       </div>
                     </div>
+                    <ToneChart editor={editor} />
                   </div>
                 </div>
               ) : (
