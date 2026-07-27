@@ -43,7 +43,7 @@ import {
   ArrowLineLeft,
   ArrowSquareLeft,
   ArrowSquareRight,
-  ChatTeardropText,
+  PaperPlaneTilt,
   CircleNotch,
   LockKey,
 } from "@phosphor-icons/react";
@@ -2040,7 +2040,7 @@ export default function App() {
                 className="group flex items-center gap-2.5 rounded px-2 py-1.5 text-left text-sm text-muted transition-colors hover:bg-hairline/60 hover:text-ink"
                 aria-label="Share feedback"
               >
-                <ChatTeardropText
+                <PaperPlaneTilt
                   size={16}
                   weight="bold"
                   className="transition-transform duration-200 group-hover:scale-110"

@@ -3,7 +3,7 @@ import {
   CheckCircle,
   PencilSimple,
   TextT,
-  ChatCircleText,
+  HandWaving,
   Briefcase,
   Article,
   ListChecks,
@@ -36,7 +36,7 @@ const builtinGroups = [
   {
     label: "Tone",
     tools: [
-      { name: "Friendly", icon: ChatCircleText },
+      { name: "Friendly", icon: HandWaving },
       { name: "Professional", icon: Briefcase },
       { name: "Academic", icon: GraduationCap },
       { name: "Formal", icon: Suitcase },

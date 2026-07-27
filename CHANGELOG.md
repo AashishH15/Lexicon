@@ -42,6 +42,7 @@ Lexicon v0.8.0 introduces high-speed rule-based prose style checking, integrated
 - **Color Conflict Resolution**: Shifted Prose Style highlights from amber (`#FFECB3`) to soft lavender (`#F3E8FF`) to eliminate visual overlap with standard grammar yellow (`#FBF3DB`).
 - **Reset to Default Support**: Restoring default settings in the Settings modal resets `proseScanEnabled` back to `false`.
 - **Document-mapping bug fixed**: LanguageTool saw two adjacent blocks touch without punctuation or a newline, i.e. "Lexicon{new line}Lexicon" as a repeated word typo. No longer an issue.
+- **Icon update**: Friendly Tone and Share Feedback shared the same icon both have been changed. Friendly -> hand-waving, Share Feedback -> paper-plane.
 
 ## v0.7.5 — Skeleton Loading, Accessibility, Feedback & Faster Startup
 
