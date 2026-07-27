@@ -879,6 +879,14 @@ export default function App() {
         }
       }
 
+      // Discard matches whose text spans a newline — these are artifacts
+      // from block-boundary concatenation (e.g. "Lexicon\nLexicon" flagged
+      // as a repeated word when the two instances sit in different blocks).
+      rawMatches = rawMatches.filter((m) => {
+        const matchedText = text.slice(m.offset, m.offset + m.length);
+        return !matchedText.includes("\n");
+      });
+
       if (dismissedKeysRef.current.size > 0) {
         const trimmed = new Set();
         dismissedKeysRef.current.forEach((key) => {
