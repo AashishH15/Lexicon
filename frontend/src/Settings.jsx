@@ -70,6 +70,8 @@ const SHORTCUTS = [
   { action: "Dismiss Suggestion", keys: ["Ctrl", "Alt", "D"] },
   { action: "Toggle Settings", keys: [mod, ","] },
   { action: "Close Settings", keys: ["Esc"] },
+  { action: "Inline math", keys: ["type $your latex$"] },
+  { action: "Block math", keys: ["type $$$your latex$$$"] },
   { action: "Bold", keys: [mod, "B"] },
   { action: "Italic", keys: [mod, "I"] },
   { action: "Underline", keys: [mod, "U"] },

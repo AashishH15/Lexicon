@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, forwardRef } from "react";
+import { useState, useEffect, useLayoutEffect, useRef, forwardRef } from "react";
 import { EditorContent } from "@tiptap/react";
 import { BubbleMenu } from "@tiptap/react/menus";
 import { getMarkRange } from "@tiptap/core";
@@ -272,15 +272,14 @@ export default function Editor({
       return;
     }
     if (isNew) {
-      // Replace the pending placeholder with the typed formula: delete the
-      // placeholder at its position, then insert the new node there.
+      // Replace the pending placeholder's latex attribute in-place.
+      // Using delete+insert causes DOM duplication because the position
+      // shifts after deletion; update* avoids the problem entirely.
       const target = resolveMathPos(pos, type);
       if (kind === "block") {
-        editor.chain().focus().deleteBlockMath({ pos: target }).run();
-        editor.chain().focus().insertBlockMath({ latex: trimmed, pos: target }).run();
+        editor.chain().focus().updateBlockMath({ latex: trimmed, pos: target }).run();
       } else {
-        editor.chain().focus().deleteInlineMath({ pos: target }).run();
-        editor.chain().focus().insertInlineMath({ latex: trimmed, pos: target }).run();
+        editor.chain().focus().updateInlineMath({ latex: trimmed, pos: target }).run();
       }
     } else {
       // Update the existing node in place.
@@ -360,7 +359,16 @@ export default function Editor({
       openMathEditor({ kind, pos, latex, isNew: false });
     };
     window.addEventListener("lex:edit-math", handler);
-    return () => window.removeEventListener("lex:edit-math", handler);
+    const openHandler = (event) => {
+      const { kind, pos, latex } = event.detail || {};
+      if (kind !== "inline" && kind !== "block") return;
+      openMathEditor({ kind, pos, latex, isNew: true });
+    };
+    window.addEventListener("lex:open-math", openHandler);
+    return () => {
+      window.removeEventListener("lex:edit-math", handler);
+      window.removeEventListener("lex:open-math", openHandler);
+    };
   }, [editor]);
 
   // Lazy-load KaTeX CSS when math popover is first opened
@@ -722,8 +730,34 @@ const LinkPopover = forwardRef(function LinkPopover(
 // Live LaTeX editor for inline/block math
 const MathPopover = forwardRef(function MathPopover({ data, onApply, onClose, onDelete }, ref) {
   const [value, setValue] = useState(data.latex || "");
+  const [popoverStyle, setPopoverStyle] = useState({ opacity: 0, position: "fixed", zIndex: 50 });
   const inputRef = useRef(null);
   const previewRef = useRef(null);
+
+  useLayoutEffect(() => {
+    if (!data?.rect) return;
+    const popoverWidth = 320;
+    const popoverHeight = 160;
+
+    let top = data.rect.bottom + 6;
+    let left = data.rect.left;
+
+    if (top + popoverHeight > window.innerHeight - 16) {
+      top = Math.max(16, data.rect.top - popoverHeight - 6);
+    }
+
+    if (left + popoverWidth > window.innerWidth - 16) {
+      left = Math.max(16, window.innerWidth - popoverWidth - 16);
+    }
+
+    setPopoverStyle({
+      position: "fixed",
+      top: `${top}px`,
+      left: `${left}px`,
+      zIndex: 50,
+      opacity: 1,
+    });
+  }, [data]);
 
   useEffect(() => {
     let raf2;
@@ -765,17 +799,10 @@ const MathPopover = forwardRef(function MathPopover({ data, onApply, onClose, on
     }
   }, [value, data.kind]);
 
-  const style = {
-    position: "fixed",
-    top: data.rect.bottom + 6,
-    left: data.rect.left,
-    zIndex: 50,
-  };
-
   return (
     <div
       ref={ref}
-      style={style}
+      style={popoverStyle}
       className="lex-pop w-80 rounded-lg border border-hairline bg-white p-2 shadow-[0_2px_8px_rgba(0,0,0,0.04)]"
     >
       <input

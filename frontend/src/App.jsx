@@ -16,7 +16,7 @@ import Placeholder from "@tiptap/extension-placeholder";
 import Typography from "@tiptap/extension-typography";
 import DragHandle from "@tiptap/extension-drag-handle";
 import { TableKit } from "@tiptap/extension-table";
-import { Mathematics } from "@tiptap/extension-mathematics";
+import { InlineMathWithDollar, BlockMath } from "./mathematicsWithInputRules";
 import SlashCommand from "./slashCommand.js";
 import { createLowlight } from "lowlight";
 import { ProofreadShortcut } from "./proofreadShortcut.js";
@@ -488,14 +488,16 @@ export default function App() {
       CodeBlockLowlight.configure({ lowlight: lowlightRef.current }),
       // Mathematics: inline ($...$) and block ($$$...$$$) LaTeX rendered via
       // KaTeX. Errors render inline (throwOnError:false) instead of crashing.
-      Mathematics.configure({
+      // The custom InlineMathWithDollar adds a $...$ auto-convert input rule
+      // on top of the default $$...$$ rule. Block math nodes are inserted via
+      // toolbar or slash command to avoid input-rule chaining issues.
+      InlineMathWithDollar.configure({
         katexOptions: { throwOnError: false, errorColor: "#9f2f2d" },
-        inlineOptions: {
-          onClick: (node, pos) => requestMathEdit("inline", node, pos),
-        },
-        blockOptions: {
-          onClick: (node, pos) => requestMathEdit("block", node, pos),
-        },
+        onClick: (node, pos) => requestMathEdit("inline", node, pos),
+      }),
+      BlockMath.configure({
+        katexOptions: { throwOnError: false, errorColor: "#9f2f2d" },
+        onClick: (node, pos) => requestMathEdit("block", node, pos),
       }),
       Image.configure({
         inline: false,
