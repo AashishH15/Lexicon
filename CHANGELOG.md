@@ -43,6 +43,7 @@ Lexicon v0.8.0 introduces high-speed rule-based prose style checking, integrated
 - **Reset to Default Support**: Restoring default settings in the Settings modal resets `proseScanEnabled` back to `false`.
 - **Document-mapping bug fixed**: LanguageTool saw two adjacent blocks touch without punctuation or a newline, i.e. "Lexicon{new line}Lexicon" as a repeated word typo. No longer an issue.
 - **Icon update**: Friendly Tone and Share Feedback shared the same icon both have been changed. Friendly -> hand-waving, Share Feedback -> paper-plane.
+- **Updated min/max width for sidebars**: Left sidebar can now be resized between 175px and 275px (max) with 100px as collapse. Right sidebar can be resized between 300px and 450px (max) with 100px as collapse. Defaults at min size panels.
 
 ## v0.7.5 — Skeleton Loading, Accessibility, Feedback & Faster Startup
 

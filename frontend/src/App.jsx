@@ -141,11 +141,12 @@ const leftPanelKey = "lexicon:leftPanelOpen";
 const rightPanelKey = "lexicon:rightPanelOpen";
 const leftWidthKey = "lexicon:leftPanelWidth";
 const rightWidthKey = "lexicon:rightPanelWidth";
-const MIN_PANEL_WIDTH = 175;
-const MAX_PANEL_WIDTH = 575;
-// How far past the hard-stop (MIN_PANEL_WIDTH) the user must keep pulling
-// before releasing collapses the panel. Gives a felt "stop" before close.
-const COLLAPSE_PAST = 100;
+const LEFT_MIN = 175;
+const LEFT_MAX = 275;
+const LEFT_COLLAPSE = 100;
+const RIGHT_MIN = 300;
+const RIGHT_MAX = 450;
+const RIGHT_COLLAPSE = 100;
 
 function loadContent() {
   const saved = localStorage.getItem(storageKey);
@@ -193,10 +194,10 @@ function loadHistory(key) {
 
 }
 
-function loadPanelWidth(key, fallback) {
+function loadPanelWidth(key, fallback, min, max) {
   const v = parseInt(localStorage.getItem(key), 10);
   if (Number.isNaN(v)) return fallback;
-  return Math.max(MIN_PANEL_WIDTH, Math.min(MAX_PANEL_WIDTH, v));
+  return Math.max(min, Math.min(max, v));
 }
 
 // Platform hint used for shortcut labels (⌘ on macOS, Ctrl elsewhere).
@@ -399,10 +400,10 @@ export default function App() {
     loadPanelOpen(rightPanelKey),
   );
   const [leftWidth, setLeftWidth] = useState(() =>
-    loadPanelWidth(leftWidthKey, 256),
+    loadPanelWidth(leftWidthKey, 175, LEFT_MIN, LEFT_MAX),
   );
   const [rightWidth, setRightWidth] = useState(() =>
-    loadPanelWidth(rightWidthKey, 320),
+    loadPanelWidth(rightWidthKey, 300, RIGHT_MIN, RIGHT_MAX),
   );
   const [leftPeek, setLeftPeek] = useState(false);
   const [rightPeek, setRightPeek] = useState(false);
@@ -1205,23 +1206,27 @@ export default function App() {
       let latest = startWidth;
       let overshoot = 0;
       setResizing(side);
+      const minW = side === "left" ? LEFT_MIN : RIGHT_MIN;
+      const maxW = side === "left" ? LEFT_MAX : RIGHT_MAX;
+      const collapsePast = side === "left" ? LEFT_COLLAPSE : RIGHT_COLLAPSE;
+
       const onMove = (ev) => {
         const delta = ev.clientX - startX;
         // Left panel grows when dragged right; right panel grows when dragged left.
         let raw = side === "left" ? startWidth + delta : startWidth - delta;
-        raw = Math.min(MAX_PANEL_WIDTH, raw);
-        if (raw <= MIN_PANEL_WIDTH) {
+        raw = Math.min(maxW, raw);
+        if (raw <= minW) {
           // Hard stop: clamp at the minimum and remember how far past it the
           // pointer kept travelling, so a deliberate pull-past can close it.
-          latest = MIN_PANEL_WIDTH;
-          overshoot = MIN_PANEL_WIDTH - raw;
+          latest = minW;
+          overshoot = minW - raw;
         } else {
           latest = raw;
           overshoot = 0;
         }
         // Once the user has pulled past the collapse threshold, flag the panel
         // so the UI can show a "release to collapse" indicator.
-        setAboutToCollapse(overshoot >= COLLAPSE_PAST ? side : null);
+        setAboutToCollapse(overshoot >= collapsePast ? side : null);
         if (rafId == null) {
           rafId = requestAnimationFrame(() => {
             rafId = null;
@@ -1238,7 +1243,7 @@ export default function App() {
         document.body.style.cursor = "";
         setResizing(null);
         setAboutToCollapse(null);
-        if (overshoot >= COLLAPSE_PAST) {
+        if (overshoot >= (side === "left" ? LEFT_COLLAPSE : RIGHT_COLLAPSE)) {
           const reset = side === "left"
             ? Math.max(startWidth, 256)
             : Math.max(startWidth, 320);
