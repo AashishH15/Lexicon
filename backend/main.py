@@ -143,12 +143,9 @@ def ai_status():
     preference. Drives the first-run setup flow and the settings
     surface."""
     prefs = load_prefs()
-    # Only probe Ollama when it could actually be the active backend. Probing
-    # unconditionally forced a ~2.5s network timeout on every call even for
-    # users who chose the bundled model (Ollama not running) — making the
-    # frontend show "Checking AI status…" for seconds on every load.
-    probe_ollama = prefs.get("backend") in ("ollama", "auto")
-    ollama_available = OllamaBackend().available() if probe_ollama else False
+    # Always probe Ollama — even if the user chose "bundled" — so the frontend
+    # can detect a running server and show available models.
+    ollama_available = OllamaBackend().available()
     active = get_backend()
     return {
         "ollama_available": ollama_available,
@@ -168,13 +165,14 @@ def ai_preference_get():
 class AiPreferenceRequest(BaseModel):
     backend: str  # "auto" | "ollama" | "bundled"
     model_key: str = "2b"  # "2b" | "0.8b"
+    ollama_model: str = ""  # selected Ollama model name, e.g. "granite4.1:3b"
 
 
 @app.post("/ai/preference")
 def ai_preference_set(request: AiPreferenceRequest):
     """Persist the user's backend choice so it survives restarts and drives
     get_backend(). The editor's AI tools read this via get_backend()."""
-    prefs = save_prefs(request.backend, request.model_key)
+    prefs = save_prefs(request.backend, request.model_key, request.ollama_model)
     # Force the cached backend to re-resolve against the new preference.
     get_backend(force_refresh=True)
     return prefs

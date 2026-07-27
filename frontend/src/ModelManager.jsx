@@ -15,6 +15,23 @@ const MODEL_TIERS = [
   { key: "0.8b", label: "Light", detail: "Smallest and fastest, near-lossless quality. ~0.8 GB." },
 ];
 
+const OLLAMA_URL = "http://localhost:11434";
+const _EMBED_ONLY = ["nomic-embed-text", "mxbai-embed-large", "all-minilm"];
+
+async function probeOllamaDirect() {
+  try {
+    const resp = await fetch(`${OLLAMA_URL}/api/tags`, { signal: AbortSignal.timeout(3000) });
+    if (!resp.ok) return { available: false, models: [] };
+    const data = await resp.json();
+    const models = (data.models || [])
+      .map((m) => m.name)
+      .filter((n) => !_EMBED_ONLY.some((e) => n.includes(e)));
+    return { available: true, models };
+  } catch {
+    return { available: false, models: [] };
+  }
+}
+
 // Advisory only: bias toward the lighter model on weak hardware. The user's
 // choice is the source of truth, never forced.
 function adviseModelKey() {
@@ -24,12 +41,13 @@ function adviseModelKey() {
 }
 
 function describeActive(status) {
-  const pref = status.preference || { backend: "auto", model_key: "2b" };
+  const pref = status.preference || { backend: "auto", model_key: "2b", ollama_model: "" };
   if (pref.backend === "ollama") {
+    const modelLabel = pref.ollama_model || "auto-detected";
     return {
       tone: "ollama",
       text: status.ollama_available
-        ? "Using your Ollama server"
+        ? `Using Ollama · ${modelLabel}`
         : "Using your Ollama server (not detected — will fall back)",
     };
   }
@@ -89,8 +107,13 @@ export default function ModelManager({
     preference: { backend: "auto", model_key: "2b" },
   });
   const [probeDone, setProbeDone] = useState(false);
-  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(
+    () => localStorage.getItem("lexicon:advanced-open") === "true"
+  );
   const [wantBundle, setWantBundle] = useState(mode === "settings");
+  const [ollamaModels, setOllamaModels] = useState([]);
+  const [ollamaProbing, setOllamaProbing] = useState(true);
+  const [selectedOllamaModel, setSelectedOllamaModel] = useState("");
   const [modelKey, setModelKey] = useState(adviseModelKey());
   const [phase, setPhase] = useState("choose"); // choose | downloading | done | error
   const [progress, setProgress] = useState(null);
@@ -106,6 +129,7 @@ export default function ModelManager({
         if (cancelled) return;
         setStatus(s);
         if (!userPickedRef.current && s.model_key) setModelKey(s.model_key);
+        if (s.preference?.ollama_model) setSelectedOllamaModel(s.preference.ollama_model);
       })
       .catch(() => {
         if (!cancelled)
@@ -120,6 +144,20 @@ export default function ModelManager({
       .finally(() => {
         if (!cancelled) setProbeDone(true);
       });
+
+    probeOllamaDirect().then((result) => {
+      if (cancelled) return;
+      setOllamaModels(result.models);
+      setOllamaProbing(false);
+      if (result.available) {
+        setStatus((prev) => ({ ...prev, ollama_available: true }));
+        // Auto-select first model if none chosen yet
+        if (!selectedOllamaModel && result.models.length > 0) {
+          setSelectedOllamaModel(result.models[0]);
+        }
+      }
+    });
+
     return () => {
       cancelled = true;
     };
@@ -227,15 +265,20 @@ export default function ModelManager({
   async function commitOllama(on) {
     if (on) {
       setWantBundle(false);
-      if (onPreferenceChange) await onPreferenceChange({ backend: "ollama", model_key: modelKey });
-      refreshStatus();
-    } else if (onPreferenceChange) {
-      await onPreferenceChange({ backend: "bundled", model_key: modelKey });
-      refreshStatus();
+      // Optimistically update local state so the checkbox reflects the
+      // click immediately, before the backend round-trip completes.
+      setStatus((s) => ({
+        ...s,
+        preference: { ...s.preference, backend: "ollama", ollama_model: selectedOllamaModel },
+      }));
+      if (onPreferenceChange) await onPreferenceChange({ backend: "ollama", model_key: modelKey, ollama_model: selectedOllamaModel });
+    } else {
+      setStatus((s) => ({ ...s, preference: { ...s.preference, backend: "bundled", ollama_model: "" } }));
+      if (onPreferenceChange) await onPreferenceChange({ backend: "bundled", model_key: modelKey, ollama_model: "" });
     }
   }
 
-  const ollamaAvailable = status.ollama_available;
+  const ollamaAvailable = status.ollama_available || ollamaModels.length > 0;
 
   return (
     <div>
@@ -296,7 +339,7 @@ export default function ModelManager({
       )}
 
       {(wantBundle || mode === "settings") && (
-        <div className={mode === "settings" ? "grid grid-cols-2 gap-2" : "mt-3 grid grid-cols-2 gap-2"}>
+        <div className="mt-3 grid grid-cols-2 gap-2">
           {MODEL_TIERS.map((tier) => {
             const selected = modelKey === tier.key;
             const ready = status.models_ready?.[tier.key];
@@ -450,7 +493,12 @@ export default function ModelManager({
       <div className="mt-6 border-t border-hairline pt-4">
         <button
           type="button"
-          onClick={() => setShowAdvanced((v) => !v)}
+          onClick={() => {
+            setShowAdvanced((v) => {
+              localStorage.setItem("lexicon:advanced-open", String(!v));
+              return !v;
+            });
+          }}
           aria-expanded={showAdvanced}
           className="font-mono text-[10px] uppercase tracking-widest text-muted transition-colors hover:text-ink"
         >
@@ -477,10 +525,41 @@ export default function ModelManager({
                     Use my Ollama server
                   </span>
                   <span className="mt-0.5 block font-sans text-xs text-muted">
-                    {ollamaAvailable
-                      ? "Detected and ready. AI tools will use your existing Ollama models."
-                      : "No Ollama server was detected on this machine."}
+                    {ollamaProbing
+                      ? "Checking for Ollama…"
+                      : ollamaAvailable
+                        ? "Detected and ready. AI tools will use your existing Ollama models."
+                        : "No Ollama server was detected on this machine."}
                   </span>
+                  {ollamaAvailable && ollamaModels.length > 0 && (
+                    <span className="mt-2 flex flex-wrap gap-1.5">
+                      {ollamaModels.map((name) => (
+                        <button
+                          key={name}
+                          type="button"
+                          onClick={() => {
+                            setSelectedOllamaModel(name);
+                            // Update local status so the banner reflects the pick immediately
+                            setStatus((s) => ({
+                              ...s,
+                              preference: { ...s.preference, ollama_model: name },
+                            }));
+                            // Persist to backend if Ollama is already active
+                            if (status.preference?.backend === "ollama" && onPreferenceChange) {
+                              onPreferenceChange({ backend: "ollama", model_key: modelKey, ollama_model: name });
+                            }
+                          }}
+                          className={`inline-flex items-center rounded-md border px-2 py-0.5 font-mono text-[11px] transition-colors ${
+                            selectedOllamaModel === name
+                              ? "border-pale-blue-text bg-pale-blue/20 text-ink"
+                              : "border-hairline bg-white text-muted hover:border-muted hover:text-ink"
+                          }`}
+                        >
+                          {name}
+                        </button>
+                      ))}
+                    </span>
+                  )}
                 </span>
               </label>
             </div>

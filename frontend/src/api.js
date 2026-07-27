@@ -70,11 +70,11 @@ export async function getAiPreference() {
 }
 
 // Persist the user's backend choice (survives restart, drives get_backend).
-export async function setAiPreference(backend, modelKey = "2b") {
+export async function setAiPreference(backend, modelKey = "2b", ollamaModel = "") {
   const response = await request("/ai/preference", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ backend, model_key: modelKey }),
+    body: JSON.stringify({ backend, model_key: modelKey, ollama_model: ollamaModel }),
   });
   if (!response.ok) {
     const data = await response.json().catch(() => ({}));

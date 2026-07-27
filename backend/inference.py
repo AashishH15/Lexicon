@@ -31,9 +31,9 @@ FORCE_BACKEND = os.environ.get("LEXICON_INFERENCE", "").strip().lower()
 
 # Probe timeout: a warm local Ollama answers near-instantly, but a cold server
 # can take a beat on its first request, so 1s risks misclassifying a real
-# Ollama as absent. 2.5s tolerates a cold first hit without meaningfully
+# Ollama as absent. 3s tolerates a cold first hit without meaningfully
 # stalling startup (and startup swallows failures and re-probes lazily anyway).
-PROBE_TIMEOUT = 2.5
+PROBE_TIMEOUT = 3.0
 GENERATE_TIMEOUT = 120
 
 # Cap on generated tokens per transform. n_ctx is 4096, so input + max_tokens
@@ -271,9 +271,10 @@ def get_backend(force_refresh: bool = False) -> InferenceBackend:
     prefs = load_prefs()
     choice = prefs["backend"]
     key = prefs["model_key"]
+    ollama_model = prefs.get("ollama_model", "")
 
     if choice == "ollama":
-        ollama = OllamaBackend()
+        ollama = OllamaBackend(model=ollama_model or None)
         if ollama.available():
             _backend = ollama
             return _backend

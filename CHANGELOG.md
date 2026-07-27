@@ -45,6 +45,9 @@ Lexicon v0.8.0 introduces high-speed rule-based prose style checking, integrated
 - **Icon update**: Friendly Tone and Share Feedback shared the same icon both have been changed. Friendly -> hand-waving, Share Feedback -> paper-plane.
 - **Updated min/max width for sidebars**: Left sidebar can now be resized between 175px and 275px (max) with 100px as collapse. Right sidebar can be resized between 300px and 450px (max) with 100px as collapse. Defaults at min size panels.
 - **Math keyboard fix**: Before $...$ wasn't creating the inline math now it does. $...$ for inline, $$$...$$$ for block math.
+- **Reworked Settings Menu**: Now the bottom left area is now just a settings button which opens up to an expanded settings menu where multiple subsection settings now live including previous + "Your Dictionary", "History & Draft", and "Feedback" (within About & Feedback). 
+- **Ollama detection**: Wasn't properly working or detecting Ollama Server, now it does and also lets you pick which model you would like to use.
+- **Search Setting**: Added a way to search in setting menu.
 
 ## v0.7.5 — Skeleton Loading, Accessibility, Feedback & Faster Startup
 

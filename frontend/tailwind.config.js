@@ -16,6 +16,7 @@ export default {
         "pale-green-text": "#346538",
         "pale-yellow": "#FBF3DB",
         "pale-yellow-text": "#956400",
+        accent: "#1F6C9F",
       },
       fontFamily: {
         serif: ['"Newsreader"', "Georgia", "serif"],

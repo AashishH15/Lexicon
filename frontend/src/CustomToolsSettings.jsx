@@ -44,8 +44,24 @@ export const CUSTOM_ICON_MAP = {
 
 export const AVAILABLE_ICON_NAMES = Object.keys(CUSTOM_ICON_MAP);
 
+const LAST_SUBTAB_KEY = "lexicon_custom_actions_subtab";
+
 export default function CustomToolsSettings() {
-  const [activeTab, setActiveTab] = useState("custom"); // "custom" | "builtin"
+  const [activeTab, setActiveTabState] = useState(() => {
+    try {
+      return localStorage.getItem(LAST_SUBTAB_KEY) || "custom";
+    } catch {
+      return "custom";
+    }
+  });
+
+  const handleTabChange = (tab) => {
+    setActiveTabState(tab);
+    try {
+      localStorage.setItem(LAST_SUBTAB_KEY, tab);
+    } catch {}
+  };
+
   const [overrides, setOverrides] = useState(getPromptOverrides);
   const [customTools, setCustomTools] = useState(getCustomTools);
   const [editingBuiltin, setEditingBuiltin] = useState(null); // tool name string
@@ -125,49 +141,54 @@ export default function CustomToolsSettings() {
   }
 
   return (
-    <div className="mt-8 border-t border-hairline pt-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="font-mono text-[10px] uppercase tracking-widest text-muted">
-            Lex's Prompts & Custom Tools
-          </p>
-          <p className="mt-1 font-sans text-xs text-muted">
-            Customize built-in AI instructions or create custom shortcuts.
-          </p>
+    <div className="flex min-h-0 flex-1 flex-col">
+      {/* Header area */}
+      <div className="shrink-0">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="font-mono text-[10px] uppercase tracking-widest text-muted">
+              Lex's Prompts & Custom Tools
+            </p>
+            <p className="mt-1 font-sans text-xs text-muted">
+              Customize built-in AI instructions or create custom shortcuts.
+            </p>
+          </div>
+        </div>
+
+        {/* Segmented Tab Bar */}
+        <div className="mt-3 flex overflow-hidden rounded border border-hairline bg-canvas">
+          <button
+            type="button"
+            onClick={() => handleTabChange("custom")}
+            className={
+              "flex-1 py-1.5 font-mono text-[11px] uppercase tracking-wider transition-colors " +
+              (activeTab === "custom"
+                ? "bg-white text-ink font-semibold shadow-xs"
+                : "text-muted hover:text-ink")
+            }
+          >
+            Custom Tools ({customTools.length}/{MAX_CUSTOM_TOOLS})
+          </button>
+          <button
+            type="button"
+            onClick={() => handleTabChange("builtin")}
+            className={
+              "flex-1 py-1.5 font-mono text-[11px] uppercase tracking-wider transition-colors border-l border-hairline " +
+              (activeTab === "builtin"
+                ? "bg-white text-ink font-semibold shadow-xs"
+                : "text-muted hover:text-ink")
+            }
+          >
+            Built-in Prompts
+          </button>
         </div>
       </div>
 
-      {/* Segmented Tab Bar */}
-      <div className="mt-3 flex overflow-hidden rounded border border-hairline bg-canvas">
-        <button
-          type="button"
-          onClick={() => setActiveTab("custom")}
-          className={
-            "flex-1 py-1.5 font-mono text-[11px] uppercase tracking-wider transition-colors " +
-            (activeTab === "custom"
-              ? "bg-white text-ink font-semibold shadow-xs"
-              : "text-muted hover:text-ink")
-          }
-        >
-          Custom Tools ({customTools.length}/{MAX_CUSTOM_TOOLS})
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveTab("builtin")}
-          className={
-            "flex-1 py-1.5 font-mono text-[11px] uppercase tracking-wider transition-colors border-l border-hairline " +
-            (activeTab === "builtin"
-              ? "bg-white text-ink font-semibold shadow-xs"
-              : "text-muted hover:text-ink")
-          }
-        >
-          Built-in Prompts ({Object.keys(overrides).length} modified)
-        </button>
-      </div>
-
-      {/* Tab 1: Custom Tools */}
-      {activeTab === "custom" && (
-        <div className="mt-4 space-y-3">
+      {/* Content scroll area */}
+      <div className="lex-scroll min-h-0 flex-1 overflow-y-auto mt-4 pr-1">
+        {/* Tab 1: Custom Tools */}
+        {activeTab === "custom" && (
+          <div className="space-y-3">
           {customTools.length === 0 ? (
             <p className="font-sans text-xs text-muted italic py-2">
               No custom tools created yet. Add one to tailor AI outputs to your workflow.
@@ -233,7 +254,7 @@ export default function CustomToolsSettings() {
 
       {/* Tab 2: Built-in Prompts */}
       {activeTab === "builtin" && (
-        <div className="mt-4 space-y-2 max-h-[260px] overflow-y-auto pr-1 lex-scroll">
+        <div className="mt-4 space-y-2">
           {AI_TOOL_NAMES.map((name) => {
             const isModified = Boolean(overrides[name]);
             const isEditing = editingBuiltin === name;
@@ -413,6 +434,7 @@ export default function CustomToolsSettings() {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }
