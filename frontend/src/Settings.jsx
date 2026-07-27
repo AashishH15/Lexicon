@@ -56,7 +56,7 @@ export const SETTINGS_DEFAULTS = {
   fontSize: 16,
   focusMode: false,
   lineSpacing: 1.6,
-  proseScanEnabled: true,
+  proseScanEnabled: false,
 };
 
 const isMac =
