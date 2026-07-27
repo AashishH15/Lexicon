@@ -26,6 +26,7 @@ import Editor from "./Editor.jsx";
 import ImportExportMenu from "./ImportExportMenu.jsx";
 import ReviewPanel from "./ReviewPanel.jsx";
 import GrammarTooltip from "./GrammarTooltip.jsx";
+import ConfirmModal from "./ConfirmModal.jsx";
 import { SETTINGS_DEFAULTS } from "./Settings.jsx";
 const Settings = lazy(() => import("./Settings.jsx"));
 const AiSetupModal = lazy(() => import("./AiSetupModal.jsx"));
@@ -245,6 +246,7 @@ export default function App() {
   const [toneResult, setToneResult] = useState(null);
   const [editorFocused, setEditorFocused] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [confirmConfig, setConfirmConfig] = useState(null);
   const [aiConfigured, setAiConfigured] = useState(false);
   const [aiSetupOpen, setAiSetupOpen] = useState(() => {
     // First-run AI setup flow: shown once, gated by a localStorage flag.
@@ -1775,16 +1777,17 @@ export default function App() {
 
   function handleRestoreDraft(draft) {
     if (!editor || !draft) return;
-    if (
-      !window.confirm(
-        "Restoring this draft will replace your current document. Continue?"
-      )
-    ) {
-      return;
-    }
-    editor.commands.setContent(draft.html);
-    localStorage.setItem(storageKey, draft.html);
-    setDocText(draft.text);
+    setConfirmConfig({
+      title: "Restore Draft Snapshot?",
+      message: "Restoring this draft snapshot will replace your current document text. Do you want to continue?",
+      confirmLabel: "Restore Draft",
+      variant: "warning",
+      onConfirm: () => {
+        editor.commands.setContent(draft.html);
+        localStorage.setItem(storageKey, draft.html);
+        setDocText(draft.text);
+      },
+    });
   }
 
   function handleReapplyTransform(entry) {
@@ -1862,7 +1865,7 @@ export default function App() {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <ImportExportMenu editor={editor} />
+          <ImportExportMenu editor={editor} onRequestConfirm={setConfirmConfig} />
           <button
             type="button"
             onClick={() => handleFocusModeChange(!focusMode)}
@@ -2207,6 +2210,16 @@ export default function App() {
           onInstall={installAvailableUpdate}
         />
       )}
+      <ConfirmModal
+        isOpen={Boolean(confirmConfig)}
+        title={confirmConfig?.title}
+        message={confirmConfig?.message}
+        confirmLabel={confirmConfig?.confirmLabel}
+        cancelLabel={confirmConfig?.cancelLabel}
+        variant={confirmConfig?.variant}
+        onConfirm={confirmConfig?.onConfirm}
+        onClose={() => setConfirmConfig(null)}
+      />
     </div>
   );
 }

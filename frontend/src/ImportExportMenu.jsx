@@ -40,7 +40,7 @@ function downloadBlob(content, filename, mime) {
   URL.revokeObjectURL(url);
 }
 
-export default function ImportExportMenu({ editor }) {
+export default function ImportExportMenu({ editor, onRequestConfirm }) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -82,26 +82,37 @@ export default function ImportExportMenu({ editor }) {
     const file = event.target.files?.[0];
     event.target.value = "";
     if (!file || !editor) return;
-    const proceed = window.confirm(
-      "Importing a new file will permanently overwrite your auto-saved document. Continue?",
-    );
-    if (!proceed) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const text = String(reader.result || "");
-      const lower = file.name.toLowerCase();
-      let html;
-      if (lower.endsWith(".txt")) {
-        html = plainTextToHtml(text);
-      } else if (lower.endsWith(".md") || lower.endsWith(".markdown")) {
-        html = marked.parse(text);
-      } else {
-        // .html / .htm / fallback: assume HTML
-        html = text;
-      }
-      editor.commands.setContent(html);
+
+    const processImport = () => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const text = String(reader.result || "");
+        const lower = file.name.toLowerCase();
+        let html;
+        if (lower.endsWith(".txt")) {
+          html = plainTextToHtml(text);
+        } else if (lower.endsWith(".md") || lower.endsWith(".markdown")) {
+          html = marked.parse(text);
+        } else {
+          // .html / .htm / fallback: assume HTML
+          html = text;
+        }
+        editor.commands.setContent(html);
+      };
+      reader.readAsText(file);
     };
-    reader.readAsText(file);
+
+    if (onRequestConfirm) {
+      onRequestConfirm({
+        title: "Overwrite Document?",
+        message: "Importing a new file will permanently overwrite your current document. Do you want to continue?",
+        confirmLabel: "Import File",
+        variant: "warning",
+        onConfirm: processImport,
+      });
+    } else {
+      processImport();
+    }
   }
 
   const itemClass =
