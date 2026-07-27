@@ -1116,7 +1116,7 @@ export default function App() {
     }
     setActiveErrorId(match.id);
     activeErrorRef.current = match.id;
-    focusError(editor, match.id);
+    focusError(editor, match.id, match.category);
   }
 
   // Persist history to localStorage whenever it changes.

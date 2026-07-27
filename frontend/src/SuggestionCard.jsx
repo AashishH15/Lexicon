@@ -68,6 +68,7 @@ export default function SuggestionCard({
     <li
       ref={cardRef}
       onClick={handleClick}
+      data-match-id={match.id}
       className={
         "cursor-pointer rounded-xl border bg-white p-6 pb-4 transition-colors duration-200 " +
         (exiting ? "lex-card-slide-out" : folding ? "lex-card-fold overflow-hidden" : entered ? "" : "lex-card-enter") +

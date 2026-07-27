@@ -132,7 +132,7 @@ export function dismissError(editor, id) {
 // see where in the document the suggestion applies. The flash is applied as a
 // ProseMirror decoration rather than a raw DOM class, because ProseMirror owns
 // the decoration spans and would otherwise repaint over a manual class.
-export function focusError(editor, id) {
+export function focusError(editor, id, category) {
   const range = findErrorRange(editor, id);
   if (!range) {
     return;
@@ -143,8 +143,9 @@ export function focusError(editor, id) {
   if (errorEl) {
     errorEl.scrollIntoView({ behavior: "smooth", block: "center" });
   }
+  const cls = category ? "lex-error-flash " + getCategoryClass(category) : "lex-error-flash";
   editor.view.dispatch(
-    editor.state.tr.setMeta(grammarPluginKey, { flash: range }),
+    editor.state.tr.setMeta(grammarPluginKey, { flash: { ...range, class: cls } }),
   );
   setTimeout(() => {
     editor.view.dispatch(
@@ -195,10 +196,11 @@ export const GrammarHighlight = Extension.create({
               set = set.remove(gone);
             }
             if (meta && meta.flash) {
+              const flashClass = meta.flash.class || "lex-error-flash";
               const flash = Decoration.inline(
                 meta.flash.from,
                 meta.flash.to,
-                { class: "lex-error-flash" },
+                { class: flashClass },
                 { flash: true },
               );
               set = set.add(tr.doc, [flash]);

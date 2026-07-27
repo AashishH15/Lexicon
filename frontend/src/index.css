@@ -455,6 +455,30 @@
     animation: lex-error-pulse-style 1200ms ease-in-out;
   }
 
+  .ProseMirror .lex-error-flash.lex-prose-error {
+    animation: lex-error-pulse-prose 1200ms ease-in-out;
+  }
+
+  @keyframes lex-error-pulse-prose {
+
+    0%,
+    100% {
+      background-color: #F3E8FF;
+      box-shadow: 0 0 0 0 rgba(107, 33, 168, 0);
+    }
+
+    25%,
+    75% {
+      background-color: #E9D5FF;
+      box-shadow: 0 0 0 4px rgba(107, 33, 168, 0.2);
+    }
+
+    50% {
+      background-color: #D8B4FE;
+      box-shadow: 0 0 0 4px rgba(107, 33, 168, 0.3);
+    }
+  }
+
   @keyframes lex-error-pulse-spelling {
 
     0%,

@@ -72,6 +72,23 @@ export default function ReviewPanel({
     }
   }, [count]);
 
+  // Auto-scroll review panel to the active card when an error is clicked
+  // in the editor, matching the card→editor scroll behavior.
+  useEffect(() => {
+    if (activeErrorId == null) return;
+    const card = document.querySelector(`[data-match-id="${activeErrorId}"]`);
+    if (card) {
+      const container = card.closest(".lex-scroll");
+      if (container) {
+        const delta = card.getBoundingClientRect().top - container.getBoundingClientRect().top;
+        container.scrollTo({
+          top: container.scrollTop + delta - 8,
+          behavior: "smooth",
+        });
+      }
+    }
+  }, [activeErrorId]);
+
   return (
     <div className="flex h-full flex-col px-4 pb-6 pt-4">
       <div className="flex items-center justify-between gap-3">
