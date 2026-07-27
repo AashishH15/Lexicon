@@ -7,6 +7,41 @@ This changelog tracks what is **live** in each release and what is still
 **stubbed** (shown in the interface but not yet functional). Stubbed features
 are listed so the release reads honestly about what works today.
 
+## v0.8.0 — Rule-Based Prose Engine, Readability Metrics & AI Active Voice Rewrites
+
+### Quick Downloads:
+
+- 🪟 **[Windows x64 Setup](https://github.com/AashishH15/Lexicon/releases/download/v0.8.0/Lexicon_0.8.0_x64-setup.exe)**: Standard installer for modern 64-bit Windows PCs (Intel / AMD).
+- 🍏 **[macOS Apple Silicon DMG](https://github.com/AashishH15/Lexicon/releases/download/v0.8.0/Lexicon_0.8.0_aarch64.dmg)**: For modern Apple Silicon Macs (M1, M2, M3, M4 chips).
+- 📦 **[View All Assets & Checksums](https://github.com/AashishH15/Lexicon/releases/tag/v0.8.0)**: Complete list of installers including ARM64 Windows, x86 Windows, and Intel macOS.
+
+---
+
+### Welcome to Lexicon v0.8.0!
+
+Lexicon v0.8.0 introduces high-speed rule-based prose style checking, integrated readability scoring, non-punitive clarity calculations, and full-sentence AI active voice rewrites.
+
+---
+
+### What's New in v0.8.0:
+
+- **Deterministic Prose & Style Engine**: Real-time rule-based scanning that catches passive voice constructions, over 30 common wordy clichés (e.g., *"due to the fact that"* $\rightarrow$ *"because"*, *"in order to"* $\rightarrow$ *"to"*), and repetitive 3+ sentence opener streaks.
+- **AI Active Voice Rewrites (Lex Integration)**: Passive voice suggestion cards feature a subtle `✦ Active Voice` button powered by your local LLM. Slices full sentence context and computes exact document offsets (`sentenceOffset` to `sentenceLength`) to cleanly replace the full sentence without leaving duplicate word fragments in the editor.
+- **Visual Tone Distribution Line (`ToneChart.jsx`)**: The expanded metrics card in the header now features a clean, horizontal stacked bar chart visualizing your document's composite tone breakdown across detected tone signals.
+- **Customizable Document Stats Footer (`DocStats.jsx`)**: Re-architected the document statistics bar into a flexible 2-slot display with real-time Flesch-Kincaid Grade Level, Reading Ease, estimated reading time, speaking time, word count, and character count.
+- **Soft Lavender Editor Highlights**: Prose Style suggestions use a subtle inline lavender background (`#F3E8FF` / `#6B21A8`) without wavy underlines, keeping style suggestions visual distinct from grammar yellow and spelling red.
+- **Non-Punitive Clarity Scoring**: Re-architected the Clarity Score error ratio calculation to filter out "Prose Style" suggestions. Mechanical errors (spelling, grammar, punctuation) determine the score, ensuring deliberate stylistic choices don't penalize clean copy.
+- **Scan Prose & Style Toggle**: New setting under **Settings** $\rightarrow$ **Scan Prose & Style** (persisted to `localStorage` as `lexicon:proseScanEnabled`) allowing writers to turn off style rules for zero-distraction drafting.
+- **Unified Card Interaction**: Standardized primary card actions across all suggestions to a clean, single-line **`Accept`** label.
+- **Updated Legend**: Review Panel hover legend updated to display `#6B21A8` for Prose Style labeled as `LAVENDER`.
+- **Unit Test Suite (`proseQuality.test.js`)**: Added 34 Vitest unit tests covering passive voice detection, cliché matching, repetitive opener streaks, `extractSentenceContext` bounds across punctuation (`.`, `!`, `?`), newlines, readability formulas, and input hygiene (`null`, `undefined`, whitespace).
+
+### Refinements
+
+- **Visual Palette Parity**: Removed wavy underlines from prose decorations so all suggestion types share a clean, unified highlight block pattern.
+- **Color Conflict Resolution**: Shifted Prose Style highlights from amber (`#FFECB3`) to soft lavender (`#F3E8FF`) to eliminate visual overlap with standard grammar yellow (`#FBF3DB`).
+- **Reset to Default Support**: Restoring default settings in the Settings modal resets `proseScanEnabled` back to `false`.
+
 ## v0.7.5 — Skeleton Loading, Accessibility, Feedback & Faster Startup
 
 ### Skeleton Loading
