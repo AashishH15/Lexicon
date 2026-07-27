@@ -1310,10 +1310,7 @@ export default function App() {
     if (activeTool === "Proofread") {
       runGrammarCheck();
     }
-    // Re-run the proofread pass whenever the language changes so the results
-    // reflect the newly selected variant.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [language]);
+  }, [language, proseScanEnabled]);
 
   // Keep a live ref of the current matches and active id so the global
   // keydown handler always reads fresh values instead of a stale closure.
