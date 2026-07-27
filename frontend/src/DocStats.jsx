@@ -22,10 +22,8 @@ export default function DocStats({ editor }) {
   const [selectedStats, setSelectedStats] = useState(() => {
     const s1 = localStorage.getItem("lexicon:statSlot1");
     const s2 = localStorage.getItem("lexicon:statSlot2");
-    const arr = [];
-    if (s1) arr.push(s1);
-    if (s2 && s2 !== s1) arr.push(s2);
-    return arr;
+    if (s1 && s2 && s1 !== s2) return [s1, s2];
+    return ["words", "chars"];
   });
 
   const [showPopover, setShowPopover] = useState(false);
