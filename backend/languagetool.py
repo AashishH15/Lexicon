@@ -103,17 +103,6 @@ def close_tool():
             _tool.close()
         except Exception:
             pass
-        if os.name == "nt":
-            try:
-                import subprocess
-
-                subprocess.run(
-                    ["taskkill", "/F", "/IM", "java.exe"],
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL,
-                )
-            except Exception:
-                pass
     _tool = None
     _warm = False
 

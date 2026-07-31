@@ -233,17 +233,6 @@ fn stop_backend(app_handle: &tauri::AppHandle) {
             }
         }
     }
-    #[cfg(target_os = "windows")]
-    {
-        // LanguageTool spawns java.exe as a detached process on Windows.
-        // Silently terminate java.exe so no orphan Java instances linger.
-        let _ = Command::new("taskkill")
-            .args(["/F", "/IM", "java.exe"])
-            .stdin(Stdio::null())
-            .stdout(Stdio::null())
-            .stderr(Stdio::null())
-            .status();
-    }
 }
 
 fn wait_for_backend(child: &mut Child, port: u16) -> Result<(), String> {
