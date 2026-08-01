@@ -183,6 +183,8 @@ export default function Editor({
       href: editorInstance.getAttributes("link").href || "",
       rect: { top: rect.top, left: rect.left, bottom: rect.bottom },
       addMode: true,
+      from,
+      to,
     });
   }
 
