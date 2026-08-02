@@ -104,23 +104,9 @@ export default function Editor({
     });
   }
 
-  // Hover handling on links inside the editor:
-  //  - Hovering a link shows the inline edit/delete popover.
-  //  - Clicking the link itself uses the browser's native behavior
-  //    (opens in the same tab; Ctrl/Cmd+Click opens in a new tab), so we
-  //    don't fight the browser over navigation.
-  //  - Moving away from the link (with a short grace period) closes it.
-  const closeTimer = useRef(null);
-
-  function scheduleClose() {
-    clearTimeout(closeTimer.current);
-    closeTimer.current = setTimeout(() => setLinkPopover(null), 160);
-  }
-
-  function cancelClose() {
-    clearTimeout(closeTimer.current);
-  }
-
+  // Link handling inside the editor:
+  //  - Hovering a link opens the inline edit/delete popover.
+  //  - The popover remains visible until clicked outside (click-away) or explicitly closed.
   useEffect(() => {
     if (!editor) {
       return;
@@ -129,10 +115,8 @@ export default function Editor({
     const handleOver = (event) => {
       const anchor = event.target.closest("a");
       if (!anchor || !anchor.href) {
-        scheduleClose();
         return;
       }
-      cancelClose();
       const rect = anchor.getBoundingClientRect();
       // Resolve the link's exact document range so edits/removals target
       // this link even when the editor caret is elsewhere.
@@ -149,7 +133,6 @@ export default function Editor({
     dom.addEventListener("mouseover", handleOver);
     return () => {
       dom.removeEventListener("mouseover", handleOver);
-      clearTimeout(closeTimer.current);
     };
   }, [editor]);
 
@@ -631,8 +614,6 @@ export default function Editor({
           }
           onApply={applyLink}
           onRemove={removeLink}
-          onMouseEnter={cancelClose}
-          onMouseLeave={scheduleClose}
           onClose={() => setLinkPopover(null)}
         />
       )}
@@ -651,7 +632,7 @@ export default function Editor({
 }
 
 const LinkPopover = forwardRef(function LinkPopover(
-  { data, onOpen, onApply, onRemove, onMouseEnter, onMouseLeave, onClose },
+  { data, onOpen, onApply, onRemove, onClose },
   ref,
 ) {
   const [value, setValue] = useState(data.href || "");
@@ -675,8 +656,6 @@ const LinkPopover = forwardRef(function LinkPopover(
     <div
       ref={ref}
       style={style}
-      onMouseEnter={onMouseEnter}
-      onMouseLeave={onMouseLeave}
       className="lex-pop flex w-72 items-center gap-2 rounded-lg border border-hairline bg-white p-2 shadow-[0_2px_8px_rgba(0,0,0,0.04)]"
     >
       <input
