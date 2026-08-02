@@ -2196,7 +2196,7 @@ export default function App() {
               if (loadSample && editor) {
                 editor.commands.setContent(SAMPLE_DOC_HTML);
                 setTimeout(() => {
-                  runGrammarCheck(editor.getText(), { forceFullScan: true });
+                  runGrammarCheck(false, null, true);
                 }, 150);
               }
             }}
