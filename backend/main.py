@@ -208,6 +208,8 @@ def model_download(request: ModelDownloadRequest):
     except ValueError as exc:
         return JSONResponse(status_code=400, content={"error": str(exc)})
     except RuntimeError as exc:
+        if "cancelled" in str(exc).lower():
+            return {"state": "cancelled", "error": None}
         return JSONResponse(status_code=500, content={"error": str(exc)})
     if status.get("state") == "ready":
         save_prefs("bundled", request.model_key)

@@ -217,17 +217,32 @@ export default function ModelManager({
     setProgress({ bytes_done: 0, bytes_total: 0 });
     startPolling();
     try {
-      await downloadModel(modelKey);
+      const res = await downloadModel(modelKey);
+      if (res && res.state === "cancelled") {
+        stopPolling();
+        setPhase("choose");
+        return;
+      }
       const st = await getModelStatus(modelKey);
       setProgress({ bytes_done: st.bytes_done, bytes_total: st.bytes_total });
       stopPolling();
       refreshStatus();
-      setPhase(st.state === "ready" ? "done" : "error");
-      if (st.state !== "ready") setError(st.error || "Download did not complete.");
+      if (st.state === "ready") {
+        setPhase("done");
+      } else if (st.state === "cancelled") {
+        setPhase("choose");
+      } else {
+        setPhase("error");
+        setError(st.error || "Download did not complete.");
+      }
     } catch (exc) {
       stopPolling();
-      setPhase("error");
-      setError(exc.message || "Download failed.");
+      if (exc.message && exc.message.toLowerCase().includes("cancelled")) {
+        setPhase("choose");
+      } else {
+        setPhase("error");
+        setError(exc.message || "Download failed.");
+      }
     }
   }
 

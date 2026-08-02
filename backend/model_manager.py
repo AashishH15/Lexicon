@@ -16,6 +16,7 @@ Pinned artifacts:
 import os
 import shutil
 import sys
+import time
 
 import requests
 from huggingface_hub import hf_hub_url
@@ -145,7 +146,16 @@ def delete_model(model_key: str) -> None:
         raise ValueError(f"Unknown model key {model_key!r}. Known: {sorted(MODELS)}")
     path = model_path(model_key)
     if os.path.exists(path):
-        os.remove(path)
+        try:
+            os.remove(path)
+        except OSError:
+            # On Windows, if the download stream thread is still releasing the file handle,
+            # wait briefly and retry once.
+            time.sleep(0.15)
+            try:
+                os.remove(path)
+            except OSError:
+                pass
     MODEL_STATUS[model_key] = {
         "state": "idle",
         "bytes_done": 0,
@@ -158,25 +168,10 @@ def download_model(model_key: str = DEFAULT_MODEL_KEY) -> dict:
     """Download the pinned GGUF for `model_key` into the app-data dir."""
     global _DOWNLOAD_CANCELLED
     if model_key not in MODELS:
-        raise ValueError(
-            f"Unknown model key {model_key!r}. Known: {sorted(MODELS)}"
-        )
+        raise ValueError(f"Unknown model key {model_key!r}. Known: {sorted(MODELS)}")
 
-    # Reset this key's status (leave other keys untouched).
-    MODEL_STATUS[model_key] = {
-        "state": "idle",
-        "bytes_done": 0,
-        "bytes_total": MODELS[model_key]["size"],
-        "error": None,
-    }
-    _DOWNLOAD_CANCELLED = False
-
-    if _already_installed(model_key):
-        MODEL_STATUS[model_key]["state"] = "ready"
-        MODEL_STATUS[model_key]["bytes_done"] = MODELS[model_key]["size"]
-        return dict(MODEL_STATUS[model_key])
-
-    needed = MODELS[model_key]["size"] + SPACE_MARGIN_BYTES
+    spec = MODELS[model_key]
+    needed = int(spec["size"] * 1.05)
     if _free_space(models_dir()) < needed:
         MODEL_STATUS[model_key]["state"] = "error"
         MODEL_STATUS[model_key]["error"] = "Not enough free disk space to download the model."
@@ -189,6 +184,10 @@ def download_model(model_key: str = DEFAULT_MODEL_KEY) -> dict:
         MODEL_STATUS[model_key]["bytes_done"] = os.path.getsize(path)
         MODEL_STATUS[model_key]["state"] = "ready"
     except Exception as exc:  # noqa: BLE001 - surface any download failure clearly
+        if MODEL_STATUS[model_key].get("state") == "cancelled" or _DOWNLOAD_CANCELLED:
+            MODEL_STATUS[model_key]["state"] = "cancelled"
+            MODEL_STATUS[model_key]["error"] = None
+            return dict(MODEL_STATUS[model_key])
         MODEL_STATUS[model_key]["state"] = "error"
         MODEL_STATUS[model_key]["error"] = str(exc)
         raise RuntimeError(f"Model download failed: {exc}") from exc
