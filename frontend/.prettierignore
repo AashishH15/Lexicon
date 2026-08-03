@@ -1,0 +1,8 @@
+dist/
+node_modules/
+src-tauri/target/
+src-tauri/gen/
+src-tauri/lexicon-backend/
+src-tauri/jre/
+src-tauri/models/
+src-tauri/binaries/
