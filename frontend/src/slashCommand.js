@@ -286,12 +286,7 @@ const COMMANDS = [
     icon: ImageIcon,
     keywords: ["image", "img", "picture", "photo"],
     isActive: () => false,
-    set: (e) => {
-      const url = window.prompt("Image URL");
-      if (url && url.trim()) {
-        e.chain().focus().setImage({ src: url.trim() }).run();
-      }
-    },
+    set: () => window.dispatchEvent(new CustomEvent("lex:open-image")),
     unset: () => {},
   },
   {

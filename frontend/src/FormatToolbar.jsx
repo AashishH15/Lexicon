@@ -41,6 +41,7 @@ import {
   ArrowsMerge,
   ArrowsSplit,
   Wrench,
+  UploadSimple,
 } from "@phosphor-icons/react";
 
 
@@ -617,15 +618,29 @@ function ImageButton({ editor }) {
     return () => document.removeEventListener("mousedown", handleClick);
   }, [open]);
 
+  function openAtSelection() {
+    const { from } = editor.state.selection;
+    const coords = editor.view.coordsAtPos(from);
+    setRect(coords);
+    setOpen(true);
+  }
+
+  useEffect(() => {
+    const handleSlashImage = () => {
+      if (editor) {
+        openAtSelection();
+      }
+    };
+    window.addEventListener("lex:open-image", handleSlashImage);
+    return () => window.removeEventListener("lex:open-image", handleSlashImage);
+  }, [editor]);
+
   function toggle() {
     if (open) {
       setOpen(false);
-      return;
+    } else {
+      openAtSelection();
     }
-    const { from } = editor.state.selection;
-    const coords = editor.view.coordsAtPos(from);
-    setRect({ top: coords.bottom, left: coords.left });
-    setOpen(true);
   }
 
   return (
@@ -636,6 +651,7 @@ function ImageButton({ editor }) {
         aria-label="Insert image"
         aria-pressed={active || open}
         aria-expanded={open}
+        onMouseDown={(event) => event.preventDefault()}
         onClick={toggle}
         className={
           "group flex h-8 w-8 items-center justify-center rounded border text-ink transition-colors focus-visible:ring-1 focus-visible:ring-ink " +
@@ -666,6 +682,7 @@ const ImagePopover = forwardRef(function ImagePopover(
 ) {
   const [value, setValue] = useState("");
   const inputRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     if (inputRef.current) {
@@ -674,10 +691,29 @@ const ImagePopover = forwardRef(function ImagePopover(
     }
   }, []);
 
+  const handleFileChange = (event) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (reader.result) {
+          onInsert(reader.result);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const style = {
     position: "fixed",
-    top: rect.bottom + 6,
-    left: rect.left,
+    top: Math.max(8, Math.min(
+      (rect?.bottom ?? 0) + 6,
+      window.innerHeight - 64,
+    )),
+    left: Math.max(8, Math.min(
+      rect?.left ?? 0,
+      window.innerWidth - 328,
+    )),
     zIndex: 50,
   };
 
@@ -685,8 +721,15 @@ const ImagePopover = forwardRef(function ImagePopover(
     <div
       ref={ref}
       style={style}
-      className="lex-pop flex w-72 items-center gap-2 rounded-lg border border-hairline bg-white p-2 shadow-[0_2px_8px_rgba(0,0,0,0.04)]"
+      className="lex-pop flex w-80 items-center gap-2 rounded-lg border border-hairline bg-white p-2 shadow-[0_2px_8px_rgba(0,0,0,0.04)]"
     >
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleFileChange}
+        className="hidden"
+      />
       <input
         ref={inputRef}
         type="text"
@@ -709,8 +752,17 @@ const ImagePopover = forwardRef(function ImagePopover(
       />
       <button
         type="button"
-        title="Insert image"
-        aria-label="Insert image"
+        title="Upload local image"
+        aria-label="Upload local image"
+        onClick={() => fileInputRef.current?.click()}
+        className="flex h-8 w-8 shrink-0 items-center justify-center rounded text-muted transition-colors hover:bg-hairline/60 hover:text-ink focus-visible:ring-1 focus-visible:ring-ink"
+      >
+        <UploadSimple size={16} weight="bold" />
+      </button>
+      <button
+        type="button"
+        title="Insert image URL"
+        aria-label="Insert image URL"
         onClick={() => {
           const url = value.trim();
           if (url) {

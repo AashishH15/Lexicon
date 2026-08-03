@@ -1,5 +1,7 @@
 import { useState, useEffect, useLayoutEffect, useRef, useCallback, lazy, Suspense } from "react";
 import { useEditor } from "@tiptap/react";
+import { convertFileSrc } from "@tauri-apps/api/core";
+import { getCurrentWebview } from "@tauri-apps/api/webview";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
 import Strike from "@tiptap/extension-strike";
@@ -76,6 +78,35 @@ const DRAG_HANDLE_GRIP_SVG = `
     <circle cx="10" cy="11" r="1.3" fill="#787774" />
   </svg>
 `;
+
+const IMAGE_FILE_RE = /\.(png|jpe?g|gif|webp|avif|bmp|svg|tiff?)$/i;
+
+function isTauriRuntime() {
+  return typeof window !== "undefined" && Boolean(window.__TAURI_INTERNALS__);
+}
+
+function isImageFilePath(path) {
+  return typeof path === "string" && IMAGE_FILE_RE.test(path);
+}
+
+function insertImageSourcesAtPos(view, sources, pos) {
+  const { schema, doc } = view.state;
+  const targetPos = Math.max(0, Math.min(pos, doc.content.size));
+  const $pos = doc.resolve(targetPos);
+  const blockPos = $pos.depth > 0 ? $pos.after(1) : targetPos;
+  let insertPos = blockPos;
+  const tr = view.state.tr;
+
+  sources.forEach((src) => {
+    const node = schema.nodes.image.create({ src });
+    tr.insert(insertPos, node);
+    insertPos += node.nodeSize;
+  });
+
+  if (tr.docChanged) {
+    view.dispatch(tr);
+  }
+}
 
 function categoryLabel(match) {
   const id = (match.rule?.id || "").toUpperCase();
@@ -628,35 +659,111 @@ export default function App() {
         if (view.dragging) {
           return false;
         }
-        const files = Array.from(event.dataTransfer?.files || []);
-        const images = files.filter((file) => file.type.startsWith("image/"));
-        if (images.length === 0) {
+        const dataTransfer = event.dataTransfer;
+        if (!dataTransfer) {
           return false;
         }
-        event.preventDefault();
-        const { schema } = view.state;
+
+        const files = Array.from(dataTransfer.files || []);
+        if (files.length === 0 && dataTransfer.items) {
+          Array.from(dataTransfer.items).forEach((item) => {
+            if (item.kind === "file") {
+              const file = item.getAsFile();
+              if (file) files.push(file);
+            }
+          });
+        }
+
+        const imageFiles = files.filter(
+          (file) =>
+            (file.type && file.type.startsWith("image/")) ||
+            (file.name && isImageFilePath(file.name))
+        );
         const coords = view.posAtCoords({
           left: event.clientX,
           top: event.clientY,
         });
         const dropPos = coords ? coords.pos : view.state.selection.from;
-        images.forEach((file) => {
-          const reader = new FileReader();
-          reader.onload = () => {
-            const src = reader.result;
-            const node = schema.nodes.image.create({ src });
-            view.dispatch(view.state.tr.insert(dropPos, node));
-          };
-          reader.readAsDataURL(file);
-        });
-        return true;
+
+        if (imageFiles.length > 0) {
+          event.preventDefault();
+          Promise.all(
+            imageFiles.map(
+              (file) =>
+                new Promise((resolve, reject) => {
+                  const reader = new FileReader();
+                  reader.onload = () => resolve(reader.result);
+                  reader.onerror = () => reject(reader.error);
+                  reader.readAsDataURL(file);
+                }),
+            ),
+          )
+            .then((sources) =>
+              insertImageSourcesAtPos(view, sources.filter(Boolean), dropPos),
+            )
+            .catch(() => {});
+          return true;
+        }
+
+        const html = dataTransfer.getData("text/html");
+        let htmlImageSrc = "";
+        if (html) {
+          const image = new DOMParser()
+            .parseFromString(html, "text/html")
+            .querySelector("img[src]");
+          htmlImageSrc = image?.getAttribute("src")?.trim() || "";
+        }
+        if (htmlImageSrc) {
+          event.preventDefault();
+          insertImageSourcesAtPos(view, [htmlImageSrc], dropPos);
+          return true;
+        }
+
+        const rawUri =
+          dataTransfer.getData("text/uri-list") ||
+          dataTransfer.getData("text/plain");
+        const uri = rawUri
+          ?.split(/\r?\n/)
+          .map((line) => line.trim())
+          .find((line) => line && !line.startsWith("#"));
+        if (
+          uri &&
+          (/^data:image\//i.test(uri) ||
+            /\.(png|jpe?g|gif|webp|avif|bmp|svg)(\?|#|$)/i.test(uri))
+        ) {
+          event.preventDefault();
+          insertImageSourcesAtPos(view, [uri], dropPos);
+          return true;
+        }
+
+        return false;
+      },
+      handleDOMEvents: {
+        dragenter: (_view, event) => {
+          event.preventDefault();
+          if (event.dataTransfer) {
+            event.dataTransfer.dropEffect = "copy";
+          }
+          return true;
+        },
+        dragover: (_view, event) => {
+          event.preventDefault();
+          if (event.dataTransfer) {
+            event.dataTransfer.dropEffect = "copy";
+          }
+          return true;
+        },
       },
     },
     content: loadContent(),
     onUpdate: ({ editor }) => {
       const text = editor.getText();
       const html = editor.getHTML();
-      localStorage.setItem(storageKey, html);
+      try {
+        localStorage.setItem(storageKey, html);
+      } catch (err) {
+        console.warn("Could not save document draft to localStorage (quota exceeded):", err);
+      }
       setDocText(text);
       setToneResult(detectTone(text));
       // Smart trigger: once a word or sentence is clearly finished
@@ -697,6 +804,61 @@ export default function App() {
       }
     },
   });
+
+  // Windows WebView2 handles OS file drops natively in Tauri, so those drops
+  // never reach the browser's DataTransfer-based handleDrop above. Subscribe
+  // to Tauri's native event and convert dropped image paths to asset URLs.
+  useEffect(() => {
+    if (!editor || !isTauriRuntime()) {
+      return undefined;
+    }
+
+    let disposed = false;
+    let unlisten;
+
+    async function listenForNativeImageDrops() {
+      try {
+        unlisten = await getCurrentWebview().onDragDropEvent((event) => {
+          if (event.payload.type !== "drop") {
+            return;
+          }
+
+          const paths = event.payload.paths.filter(isImageFilePath);
+          if (paths.length === 0) {
+            return;
+          }
+
+          const logicalPosition = event.payload.position.toLogical(
+            window.devicePixelRatio || 1,
+          );
+          const coords = editor.view.posAtCoords({
+            left: logicalPosition.x,
+            top: logicalPosition.y,
+          });
+          const dropPos = coords
+            ? coords.pos
+            : editor.state.selection.from;
+          insertImageSourcesAtPos(
+            editor.view,
+            paths.map((path) => convertFileSrc(path)),
+            dropPos,
+          );
+        });
+
+        if (disposed) {
+          unlisten?.();
+        }
+      } catch (error) {
+        console.warn("Could not enable native image drag-and-drop:", error);
+      }
+    }
+
+    listenForNativeImageDrops();
+    return () => {
+      disposed = true;
+      unlisten?.();
+    };
+  }, [editor]);
 
   // Force re-highlight code blocks once lowlight languages are registered
   useEffect(() => {
