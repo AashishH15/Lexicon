@@ -27,15 +27,41 @@ const PASSIVE_REGEX = new RegExp(
   "gi"
 );
 
+const STATIVE_PREPOSITIONS = /^\s+(about|in|with|at|of|for|to)\b/i;
+
 function detectPassiveVoice(text) {
-  const matches = findMatches(PASSIVE_REGEX, text);
-  return matches.map((m) => ({
-    offset: m.offset,
-    length: m.length,
-    message: "Passive voice: consider using active voice for clearer, more direct writing.",
-    replacements: [],
-    category: "Prose Style",
-  }));
+  const rawMatches = findMatches(PASSIVE_REGEX, text);
+  const results = [];
+
+  for (const m of rawMatches) {
+    const afterText = text.slice(m.offset + m.length);
+    const beforeText = text.slice(Math.max(0, m.offset - 15), m.offset);
+
+    // 1. Compound passive auxiliary (e.g. "is being reviewed", "has been built")
+    const isCompoundPassive = /\b(being|been)\s+$/i.test(beforeText);
+
+    // 2. Explicit agent passive (e.g. "was written by her")
+    const isAgentPassive = /^\s+by\s+[a-z]+/i.test(afterText);
+
+    // 3. Stative prepositional complement (e.g. "is excited about", "was interested in")
+    const isStativePreposition = STATIVE_PREPOSITIONS.test(afterText);
+
+    // Filter out stative predicate adjectives (e.g. "excited about", "interested in")
+    // unless explicitly formed with a compound passive or "by <agent>" phrase.
+    if (isStativePreposition && !isCompoundPassive && !isAgentPassive) {
+      continue;
+    }
+
+    results.push({
+      offset: m.offset,
+      length: m.length,
+      message: "Passive voice: consider using active voice for clearer, more direct writing.",
+      replacements: [],
+      category: "Prose Style",
+    });
+  }
+
+  return results;
 }
 
 const CLICHE_PHRASES = [

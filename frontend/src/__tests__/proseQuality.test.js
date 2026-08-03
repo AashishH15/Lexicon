@@ -42,6 +42,14 @@ describe("checkProseQuality / Passive Voice", () => {
     expect(hits.length).toBeGreaterThanOrEqual(2);
   });
 
+  it("does not flag stative adjective constructions like 'was excited about' or 'is interested in'", () => {
+    const result = checkProseQuality("She was excited about the project and he was interested in music.");
+    const hits = result.filter(
+      (m) => m.category === "Prose Style" && m.message?.toLowerCase().includes("passive voice")
+    );
+    expect(hits).toHaveLength(0);
+  });
+
   it("does not flag active voice sentences", () => {
     const result = checkProseQuality("The committee made the decision yesterday.");
     const hits = result.filter(
