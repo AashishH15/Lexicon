@@ -24,6 +24,7 @@ are listed so the release reads honestly about what works today.
 - **Offline Backend UI Status Banner**: Added a `backendOffline` state in `App.jsx` and `ReviewPanel.jsx`. When the backend is offline or unreachable, the Review panel displays an amber warning card (*"Grammar engine unreachable. Reconnecting..."*) and the Clarity Score displays `-` instead of misleadingly claiming `100` or *"Every sentence reads cleanly"* during an offline state.
 - **Sentence Context Dismissed-Keys & Persistence**: Replaced numeric character offset keying with sentence-and-content signature keying in `App.jsx`. Dismissed suggestions now remain permanently dismissed when typing text above them, never shift onto adjacent words, and persist across application restarts via `localStorage`.
 - **Java-Specific Subprocess Popen Isolation**: Replaced broad `.endswith(".exe")` matching in `languagetool.py` with strict `_is_java_executable()` basename verification. Prevents JVM memory flags from being erroneously prepended to non-Java Windows executables (such as `cmd.exe`, `git.exe`, or `ollama.exe`).
+- **Production Remote Image CSP Support**: Added `https:` to the `img-src` directive in `tauri.conf.json`. Ensures pasted remote web images and `/image` URLs render cleanly in compiled production builds without being blocked by Tauri's WebView security policy.
 
 ---
 
