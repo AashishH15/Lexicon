@@ -2,7 +2,7 @@ import { fnv1a64 } from "./hashUtils.js";
 
 /**
  * LRU Grammar Cache with Context-Aware Predecessor Keys.
- * Key formula: XXH64(prev_suffix_64 + "::" + paragraph_text + "::" + locale + "::" + dict_str)
+ * Key formula: FNV1A64(prev_suffix_64 + "::" + paragraph_text + "::" + locale + "::" + dict_str)
  */
 export class GrammarCache {
   constructor(maxSize = 250) {
