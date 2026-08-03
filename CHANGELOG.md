@@ -33,6 +33,7 @@ are listed so the release reads honestly about what works today.
 - **Stale JVM Log Cleanup & Ignore Patterns**: Removed untracked JVM crash dumps (`hs_err_pid*.log`, `replay_pid*.log`) and dev logs from `backend/` and `frontend/`, and updated root `.gitignore` to prevent JVM crash logs from cluttering local workspaces.
 - **Grammar Cache Hash Docblock Correction**: Updated the key formula docblock in `grammarCache.js` to accurately state `FNV1A64` instead of `XXH64`, resolving a documentation mismatch with `hashUtils.js`.
 - **Zero-Dependency 27x Hash Performance Optimization**: Replaced `BigInt` character loop allocations in `hashUtils.js` with Dual 32-bit bitwise `Math.imul()` calculations. Achieves a measured 27.6x speedup (time for 10,000 LRU computeKey ops dropped from 691ms to 25ms) while executing in V8 hardware registers with 0 heap object allocations.
+- **Thread-Safe Per-Key Model Download Cancellation**: Replaced single global `_DOWNLOAD_CANCELLED` boolean in `model_manager.py` with a thread-safe `_CANCELLED_KEYS` set and `_CANCEL_LOCK`. Model cancellations now operate strictly per-key (`2b` vs `0.8b`), preventing cross-cancellation and race conditions between concurrent download tasks.
 
 ---
 

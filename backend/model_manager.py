@@ -16,6 +16,7 @@ Pinned artifacts:
 import os
 import shutil
 import sys
+import threading
 import time
 
 import requests
@@ -84,8 +85,14 @@ MODEL_STATUS = {
     for key in MODELS
 }
 
-# Set by POST /model/cancel; _stream_download checks it each chunk and aborts.
-_DOWNLOAD_CANCELLED = False
+# Thread-safe set of cancelled model keys (_stream_download checks chunk-by-chunk)
+_CANCELLED_KEYS: set[str] = set()
+_CANCEL_LOCK = threading.Lock()
+
+
+def _is_cancelled(model_key: str) -> bool:
+    with _CANCEL_LOCK:
+        return model_key in _CANCELLED_KEYS
 
 
 def model_state(model_key: str | None = None) -> dict:
@@ -134,10 +141,13 @@ def _already_installed(model_key: str) -> bool:
     return os.path.getsize(path) >= spec["size"] * 0.95
 
 
-def cancel_download() -> None:
-    """Signal an in-flight download to abort at the next chunk."""
-    global _DOWNLOAD_CANCELLED
-    _DOWNLOAD_CANCELLED = True
+def cancel_download(model_key: str | None = None) -> None:
+    """Signal in-flight download(s) to abort at the next chunk."""
+    with _CANCEL_LOCK:
+        if model_key:
+            _CANCELLED_KEYS.add(model_key)
+        else:
+            _CANCELLED_KEYS.update(MODELS.keys())
 
 
 def delete_model(model_key: str) -> None:
@@ -166,11 +176,11 @@ def delete_model(model_key: str) -> None:
 
 def download_model(model_key: str = DEFAULT_MODEL_KEY) -> dict:
     """Download the pinned GGUF for `model_key` into the app-data dir."""
-    global _DOWNLOAD_CANCELLED
     if model_key not in MODELS:
         raise ValueError(f"Unknown model key {model_key!r}. Known: {sorted(MODELS)}")
 
-    _DOWNLOAD_CANCELLED = False
+    with _CANCEL_LOCK:
+        _CANCELLED_KEYS.discard(model_key)
 
     # Reset this key's status (leave other keys untouched).
     MODEL_STATUS[model_key] = {
@@ -198,7 +208,9 @@ def download_model(model_key: str = DEFAULT_MODEL_KEY) -> dict:
         MODEL_STATUS[model_key]["bytes_done"] = os.path.getsize(path)
         MODEL_STATUS[model_key]["state"] = "ready"
     except Exception as exc:  # noqa: BLE001 - surface any download failure clearly
-        if MODEL_STATUS[model_key].get("state") == "cancelled" or _DOWNLOAD_CANCELLED:
+        if MODEL_STATUS[model_key].get("state") == "cancelled" or _is_cancelled(model_key):
+            with _CANCEL_LOCK:
+                _CANCELLED_KEYS.discard(model_key)
             MODEL_STATUS[model_key]["state"] = "cancelled"
             MODEL_STATUS[model_key]["error"] = None
             return dict(MODEL_STATUS[model_key])
@@ -217,7 +229,6 @@ def _stream_download(model_key: str) -> str:
     with an HTTP Range request, and verifies the final size. Aborts cleanly
     if cancel_download() is called.
     """
-    global _DOWNLOAD_CANCELLED
     spec = MODELS[model_key]
     dest = model_path(model_key)
     url = hf_hub_url(repo_id=spec["repo_id"], filename=spec["filename"])
@@ -242,11 +253,13 @@ def _stream_download(model_key: str) -> str:
         _update_progress(model_key, resume_pos, total)
         with open(dest, mode) as fh:
             for chunk in resp.iter_content(chunk_size=1 << 20):  # 1 MiB
-                if _DOWNLOAD_CANCELLED:
+                if _is_cancelled(model_key):
+                    with _CANCEL_LOCK:
+                        _CANCELLED_KEYS.discard(model_key)
                     # Leave the partial file; a later download resumes it.
                     MODEL_STATUS[model_key]["state"] = "cancelled"
                     MODEL_STATUS[model_key]["error"] = None
-                    raise RuntimeError("Download cancelled by user.")
+                    raise RuntimeError(f"Download of {model_key} cancelled by user.")
                 if not chunk:
                     continue
                 fh.write(chunk)

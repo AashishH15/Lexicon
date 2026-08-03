@@ -179,10 +179,11 @@ def ai_preference_set(request: AiPreferenceRequest):
 
 
 @app.post("/model/cancel")
-def model_cancel():
+def model_cancel(request: ModelDownloadRequest | None = None):
     """Signal an in-flight download to abort at the next chunk."""
-    cancel_download()
-    return {"cancelled": True}
+    model_key = request.model_key if request else None
+    cancel_download(model_key)
+    return {"cancelled": True, "model_key": model_key}
 
 
 @app.post("/model/delete")
