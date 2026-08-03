@@ -21,6 +21,7 @@ import {
 } from "@phosphor-icons/react";
 import FormatToolbar from "./FormatToolbar.jsx";
 import ToneChart from "./ToneChart.jsx";
+import { openExternalUrl } from "./api.js";
 
 // Quick-format actions shown in the selection bubble menu. Each mirrors the
 // toggle commands so a second click removes the format from the selection.
@@ -609,8 +610,7 @@ export default function Editor({
           ref={linkPopoverRef}
           data={linkPopover}
           onOpen={() =>
-            linkPopover.href &&
-            window.open(linkPopover.href, "_blank", "noopener,noreferrer")
+            linkPopover.href && openExternalUrl(linkPopover.href)
           }
           onApply={applyLink}
           onRemove={removeLink}
