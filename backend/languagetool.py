@@ -30,11 +30,17 @@ def _get_tool(language="en-US"):
 
         orig_popen = subprocess.Popen
 
+        def _is_java_executable(cmd0):
+            if not cmd0:
+                return False
+            name = os.path.basename(str(cmd0)).lower()
+            return "java" in name or name in ("java.exe", "javaw.exe")
+
         def tuned_popen(*args, **kwargs):
             cmd = list(args[0]) if args else kwargs.get("args", [])
             if cmd and isinstance(cmd, (list, tuple)) and len(cmd) > 0:
-                first_arg = str(cmd[0]).lower()
-                if "java" in first_arg or first_arg.endswith(".exe"):
+                first_arg = str(cmd[0])
+                if _is_java_executable(first_arg):
                     if "-Xmx384M" not in cmd:
                         cmd = [cmd[0]] + JVM_MEMORY_FLAGS + list(cmd[1:])
                         if args:
