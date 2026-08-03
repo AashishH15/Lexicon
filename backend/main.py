@@ -18,7 +18,7 @@ if os.name == "nt":
 
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
@@ -100,8 +100,11 @@ def health():
 
 
 @app.post("/shutdown")
-def shutdown():
+def shutdown(request: Request):
     """Gracefully stop the sidecar and its LanguageTool JVM."""
+    client_host = request.client.host if request.client else None
+    if client_host not in ("127.0.0.1", "::1"):
+        raise HTTPException(status_code=403, detail="Forbidden")
     close_tool()
     server = getattr(app.state, "server", None)
     if server is not None:
