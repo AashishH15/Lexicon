@@ -17,6 +17,7 @@ are listed so the release reads honestly about what works today.
 - **AI Setup Proofread Request Fix**: Resolved an issue in `App.jsx` where loading sample content after AI setup passed invalid parameters to `runGrammarCheck`, fixing an HTTP 422 Unprocessable Entity validation error.
 - **Clean Model Download Cancellation**: Re-architected model download cancellation in `model_manager.py`, `main.py`, and `ModelManager.jsx`. Cancelling a download now preserves `state: "cancelled"`, returns HTTP 200 OK, and gracefully handles Windows file lock retries during partial file cleanup without raising HTTP 500 errors or displaying red error banners in the UI.
 - **Partial-Download Resume Validation**: Added HTTP status verification (`206 Partial Content`) to `_stream_download` in `model_manager.py`. If a proxy or CDN ignores the `Range` header and returns `200 OK`, the engine resets the resume position to 0 and overwrites cleanly (`mode="wb"`), preventing model file corruption caused by appending duplicate bytes.
+- **React Rules of Hooks Compliance**: Hoisted all `useState`, `useRef`, and `useEffect` hook calls in `Settings.jsx` above the `if (!open) return null;` guard. Hooks now execute unconditionally on every render cycle, eliminating React `renderWithHooks` warnings and hook mismatch errors when opening or closing Settings.
 
 ---
 

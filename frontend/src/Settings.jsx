@@ -217,10 +217,6 @@ export default function Settings({
   onClearDrafts,
   onClearTransforms,
 }) {
-  if (!open) {
-    return null;
-  }
-
   const [activeTab, setActiveTab] = useState("general");
   const [searchQuery, setSearchQuery] = useState("");
   const [searchFocused, setSearchFocused] = useState(false);
@@ -430,6 +426,10 @@ export default function Settings({
         ? "bg-[rgba(31,108,159,0.22)] ring-2 ring-[rgba(31,108,159,0.5)] shadow-sm"
         : "bg-transparent ring-0 ring-transparent")
     );
+  }
+
+  if (!open) {
+    return null;
   }
 
   return (
