@@ -29,6 +29,7 @@ are listed so the release reads honestly about what works today.
 - **Local Image File Upload Picker**: Added `UploadSimple` to `@phosphor-icons/react` imports and embedded a local file upload button (`<input type="file" accept="image/*">`) inside the image toolbar popover in `FormatToolbar.jsx`. Allows users to browse and insert local image files directly from disk.
 - **Block-Level Image Drag-and-Drop**: Updated `handleDrop` in `App.jsx` to resolve `$pos.depth > 0 ? $pos.after(1) : dropPos` and dispatch top-level block transactions directly via `view.dispatch(tr)`. Ensures dragged image files land at valid block positions instead of being rejected inside inline paragraph nodes. Fixed `NaN` CSS top position warning in `FormatToolbar.jsx`.
 - **Native Drag-and-Drop Image Support (Windows)**: Added Tauri native event listeners in `App.jsx` to capture OS-level file drag-and-drop events in the Windows WebView2. Added `isImageFilePath` helper and `convertFileSrc` integration to enable native dropping of local image files (e.g., from Explorer) onto the editor.
+- **Development Version Alignment**: Synchronized project version strings across `tauri.conf.json`, `Cargo.toml`, and `package.json` to `0.8.5`, matching `CHANGELOG.md` and eliminating version drift in local dev builds (`v0.7.0` / `0.0.0`).
 
 ---
 
