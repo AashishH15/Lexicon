@@ -25,6 +25,8 @@ Cargo.lock
 
 # Logs
 *.log
+hs_err_pid*.log
+replay_pid*.log
 
 # OS
 .DS_Store
