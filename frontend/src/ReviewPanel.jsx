@@ -14,6 +14,7 @@ export default function ReviewPanel({
   activeTool,
   grammarMatches,
   checking,
+  backendOffline,
   userResolvedAll,
   activeErrorId,
   aboutToCollapse,
@@ -124,7 +125,14 @@ export default function ReviewPanel({
             </p>
           </>
         ) : activeTool === "Proofread" ? (
-          checking ? (
+          backendOffline ? (
+            <div className="flex w-full items-center gap-2 rounded-xl bg-pale-yellow-bg px-4 py-3 text-amber-900 border border-pale-yellow">
+              <Warning size={18} weight="fill" className="shrink-0 text-amber-600" />
+              <span className="font-sans text-sm font-medium">
+                Grammar engine unreachable. Reconnecting...
+              </span>
+            </div>
+          ) : checking ? (
             <div className="rounded-xl border border-hairline bg-white p-6 pb-4 lex-card-enter">
               <div className="h-3 w-full rounded lex-shimmer" />
               <div className="mt-3 h-3 w-[90%] rounded lex-shimmer" />

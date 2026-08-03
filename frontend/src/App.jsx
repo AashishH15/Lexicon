@@ -435,6 +435,7 @@ export default function App() {
 
   const lowlightRef = useRef(createLowlight());
   const [lowlightReady, setLowlightReady] = useState(false);
+  const [backendOffline, setBackendOffline] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -910,9 +911,11 @@ export default function App() {
         }));
       setGrammarMatches(matches);
       applyGrammarDecorations(editor, matches, map, activeErrorId);
+      setBackendOffline(false);
     } catch (error) {
       if (error?.name !== "AbortError") {
-        throw error;
+        setBackendOffline(true);
+        console.warn("Grammar check unavailable:", error);
       }
     } finally {
       if (checkAbortRef.current === abortController) {
@@ -1699,7 +1702,7 @@ export default function App() {
   const totalWords = emptyDoc ? 0 : docText.trim().split(/\s+/).length;
   const errorMatches = grammarMatches.filter((m) => m.category !== "Prose Style");
   const errorRatio = totalWords > 0 ? errorMatches.length / totalWords : 0;
-  const clarityScore = emptyDoc
+  const clarityScore = (emptyDoc || backendOffline)
     ? null
     : Math.max(0, Math.min(100, Math.round(100 - errorRatio * 100 * 12)));
 
@@ -2078,6 +2081,7 @@ export default function App() {
               activeTool={activeTool}
               grammarMatches={grammarMatches}
               checking={checking}
+              backendOffline={backendOffline}
               userResolvedAll={userResolvedAll}
               activeErrorId={activeErrorId}
               aboutToCollapse={aboutToCollapse === "right"}
