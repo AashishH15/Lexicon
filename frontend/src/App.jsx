@@ -214,12 +214,31 @@ function requestMathEdit(kind, node, pos) {
   );
 }
 
+const DISMISSED_KEYS_STORAGE_KEY = "lexicon:dismissed_keys";
+
+function loadDismissedKeys() {
+  try {
+    const saved = localStorage.getItem(DISMISSED_KEYS_STORAGE_KEY);
+    if (saved) {
+      const arr = JSON.parse(saved);
+      if (Array.isArray(arr)) return new Set(arr);
+    }
+  } catch {}
+  return new Set();
+}
+
+function saveDismissedKeys(set) {
+  try {
+    localStorage.setItem(DISMISSED_KEYS_STORAGE_KEY, JSON.stringify(Array.from(set)));
+  } catch {}
+}
+
 export default function App() {
   const [selectedText, setSelectedText] = useState("");
   const [activeTool, setActiveTool] = useState("");
   const [grammarMatches, setGrammarMatches] = useState([]);
   const [userResolvedAll, setUserResolvedAll] = useState(false);
-  const [dismissedKeys, setDismissedKeys] = useState(() => new Set());
+  const [dismissedKeys, setDismissedKeys] = useState(loadDismissedKeys);
   const [checking, setChecking] = useState(false);
   const [hoveredError, setHoveredError] = useState(null);
   const [activeErrorId, setActiveErrorId] = useState(null);
@@ -449,6 +468,22 @@ export default function App() {
     });
     return () => { cancelled = true; };
   }, []);
+
+  // Auto-reconnect polling loop when backend is offline
+  useEffect(() => {
+    if (!backendOffline) return;
+    const interval = setInterval(async () => {
+      try {
+        const ok = await ensureBackend();
+        if (ok && proofreadRef.current) {
+          proofreadRef.current(true);
+        }
+      } catch {
+        // Backend still offline
+      }
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [backendOffline]);
 
   const editor = useEditor({
     extensions: [
@@ -783,10 +818,16 @@ export default function App() {
     };
   }, [editor]);
   function matchKey(match, text) {
-    const original = text
-      ? text.slice(match.offset, match.offset + match.length)
-      : match.original;
-    return `${match.message}::${match.offset}::${match.length}::${original}`;
+    const original = (
+      text && match.offset != null && match.length != null
+        ? text.slice(match.offset, match.offset + match.length)
+        : match.original
+    ) || "";
+    let sentence = match.sentence || "";
+    if (!sentence && text && match.offset != null) {
+      sentence = extractSentenceContext(text, match.offset).text;
+    }
+    return `${match.message}::${original}::${sentence}`;
   }
 
   async function runGrammarCheck(silent = false, ignoreOverride = null, forceFullScan = false) {
@@ -878,19 +919,6 @@ export default function App() {
         return !matchedText.includes("\n");
       });
 
-      if (dismissedKeysRef.current.size > 0) {
-        const trimmed = new Set();
-        dismissedKeysRef.current.forEach((key) => {
-          const offset = Number(key.split("::")[1]);
-          if (!Number.isNaN(offset) && offset <= text.length) {
-            trimmed.add(key);
-          }
-        });
-        if (trimmed.size !== dismissedKeysRef.current.size) {
-          setDismissedKeys(trimmed);
-          dismissedKeysRef.current = trimmed;
-        }
-      }
       const proseMatches = proseScanEnabled ? checkProseQuality(text) : [];
       for (const pm of proseMatches) {
         if (pm.message.toLowerCase().includes("passive voice")) {
@@ -964,14 +992,16 @@ export default function App() {
     runGrammarCheck();
   }
 
-  function rememberDismissed(match) {
+  function rememberDismissed(match, text = null) {
+    const key = matchKey(match, text);
     setDismissedKeys((current) => {
-      const key = matchKey(match, null);
       if (current.has(key)) {
         return current;
       }
       const next = new Set(current);
       next.add(key);
+      saveDismissedKeys(next);
+      dismissedKeysRef.current = next;
       return next;
     });
   }
@@ -980,7 +1010,8 @@ export default function App() {
     if (!editor) {
       return;
     }
-    rememberDismissed(match);
+    const { text } = buildTextWithMap(editor.state.doc);
+    rememberDismissed(match, text);
     dismissError(editor, match.id);
     setGrammarMatches((current) => {
       const next = current.filter((m) => m.id !== match.id);
@@ -1060,7 +1091,8 @@ export default function App() {
   }
 
   function handleDismissAll() {
-    grammarMatches.forEach((match) => rememberDismissed(match));
+    const text = editor ? buildTextWithMap(editor.state.doc).text : null;
+    grammarMatches.forEach((match) => rememberDismissed(match, text));
     if (editor) {
       clearGrammarDecorations(editor);
     }

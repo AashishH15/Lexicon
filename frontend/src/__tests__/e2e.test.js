@@ -34,11 +34,19 @@ function plainTextToHtml(text) {
   return paragraphs || "<p></p>";
 }
 
+import { extractSentenceContext } from "../proseQualityEngine.js";
+
 function matchKey(match, text) {
-  const original = text
-    ? text.slice(match.offset, match.offset + match.length)
-    : match.original;
-  return `${match.message}::${match.offset}::${match.length}::${original}`;
+  const original = (
+    text && match.offset != null && match.length != null
+      ? text.slice(match.offset, match.offset + match.length)
+      : match.original
+  ) || "";
+  let sentence = match.sentence || "";
+  if (!sentence && text && match.offset != null) {
+    sentence = extractSentenceContext(text, match.offset).text;
+  }
+  return `${match.message}::${original}::${sentence}`;
 }
 
 const turndown = new TurndownService({
@@ -196,25 +204,25 @@ describe("Suggestion accept & dismiss", () => {
   it("matchKey produces stable signature for dismissed-key tracking", () => {
     const match = { offset: 0, length: 3, message: "Spelling error", original: "teh" };
     const key = matchKey(match, null);
-    expect(key).toBe("Spelling error::0::3::teh");
+    expect(key).toBe("Spelling error::teh::");
   });
 
-  it("matchKey reads original from text when available", () => {
+  it("matchKey reads original and sentence context from text when available", () => {
     const match = { offset: 4, length: 3, message: "Spelling error" };
-    const key = matchKey(match, "fix teh");
-    expect(key).toBe("Spelling error::4::3::teh");
+    const key = matchKey(match, "fix teh.");
+    expect(key).toBe("Spelling error::teh::fix teh.");
   });
 
   it("dismissed-keys filter removes matching errors from results", () => {
-    const text = "teh wer";
+    const text = "teh cat. wer dog.";
     const matches = [
       { offset: 0, length: 3, message: "Spelling" },
-      { offset: 4, length: 3, message: "Spelling" },
+      { offset: 9, length: 3, message: "Spelling" },
     ];
     const dismissed = new Set([matchKey(matches[0], text)]);
     const filtered = matches.filter((m) => !dismissed.has(matchKey(m, text)));
     expect(filtered).toHaveLength(1);
-    expect(filtered[0].offset).toBe(4);
+    expect(filtered[0].offset).toBe(9);
   });
 });
 

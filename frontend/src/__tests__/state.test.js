@@ -13,11 +13,19 @@ function mockLocalStorage() {
   };
 }
 
+import { extractSentenceContext } from "../proseQualityEngine.js";
+
 function matchKey(match, text) {
-  const original = text
-    ? text.slice(match.offset, match.offset + match.length)
-    : match.original;
-  return `${match.message}::${match.offset}::${match.length}::${original}`;
+  const original = (
+    text && match.offset != null && match.length != null
+      ? text.slice(match.offset, match.offset + match.length)
+      : match.original
+  ) || "";
+  let sentence = match.sentence || "";
+  if (!sentence && text && match.offset != null) {
+    sentence = extractSentenceContext(text, match.offset).text;
+  }
+  return `${match.message}::${original}::${sentence}`;
 }
 
 function applyEditsRightToLeft(text, edits) {
@@ -125,47 +133,47 @@ describe("Accept-All offset math", () => {
 });
 
 describe("Dismissed keys & persistence", () => {
-  it("creates a stable signature key from match metadata", () => {
+  it("creates a stable signature key from match metadata and sentence context", () => {
     const match = { message: "Test message", offset: 10, length: 5, original: "hello" };
     const text = "this is a hello world";
     const key = matchKey(match, text);
-    expect(key).toBe("Test message::10::5::hello");
+    expect(key).toBe("Test message::hello::this is a hello world");
   });
 
-  it("falls back to match.original when text is not provided", () => {
+  it("falls back to match.original and empty sentence when text is not provided", () => {
     const match = { message: "Msg", offset: 0, length: 3, original: "teh" };
     const key = matchKey(match, null);
-    expect(key).toBe("Msg::0::3::teh");
+    expect(key).toBe("Msg::teh::");
   });
 
-  it("produces distinct keys for different offsets of the same message", () => {
-    const match = { message: "Spelling error", offset: 10, length: 3 };
-    const textA = "teh cat";
-    const textB = "teh dog";
+  it("produces distinct keys for different sentence contexts of the same message", () => {
+    const match = { message: "Spelling error", offset: 0, length: 3, original: "teh" };
+    const textA = "teh cat.";
+    const textB = "teh dog.";
     const keyA = matchKey(match, textA);
-    const keyB = matchKey({ ...match, offset: 5 }, textB);
+    const keyB = matchKey(match, textB);
     expect(keyA).not.toBe(keyB);
   });
 
   it("filters out dismissed matches from re-check payload", () => {
-    const text = "teh and teh";
+    const text = "teh cat. teh dog.";
     const matches = [
       { offset: 0, length: 3, message: "Spelling" },
-      { offset: 8, length: 3, message: "Spelling" },
+      { offset: 9, length: 3, message: "Spelling" },
     ];
     const dismissed = new Set([
       matchKey(matches[0], text),
     ]);
     const filtered = matches.filter((m) => !dismissed.has(matchKey(m, text)));
     expect(filtered).toHaveLength(1);
-    expect(filtered[0].offset).toBe(8);
+    expect(filtered[0].offset).toBe(9);
   });
 
   it("removes all matches when all are dismissed", () => {
-    const text = "teh and teh";
+    const text = "teh cat. teh dog.";
     const matches = [
       { offset: 0, length: 3, message: "Spelling" },
-      { offset: 8, length: 3, message: "Spelling" },
+      { offset: 9, length: 3, message: "Spelling" },
     ];
     const dismissed = new Set(matches.map((m) => matchKey(m, text)));
     const filtered = matches.filter((m) => !dismissed.has(matchKey(m, text)));
