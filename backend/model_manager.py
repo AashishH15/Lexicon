@@ -170,8 +170,22 @@ def download_model(model_key: str = DEFAULT_MODEL_KEY) -> dict:
     if model_key not in MODELS:
         raise ValueError(f"Unknown model key {model_key!r}. Known: {sorted(MODELS)}")
 
-    spec = MODELS[model_key]
-    needed = int(spec["size"] * 1.05)
+    _DOWNLOAD_CANCELLED = False
+
+    # Reset this key's status (leave other keys untouched).
+    MODEL_STATUS[model_key] = {
+        "state": "idle",
+        "bytes_done": 0,
+        "bytes_total": MODELS[model_key]["size"],
+        "error": None,
+    }
+
+    if _already_installed(model_key):
+        MODEL_STATUS[model_key]["state"] = "ready"
+        MODEL_STATUS[model_key]["bytes_done"] = MODELS[model_key]["size"]
+        return dict(MODEL_STATUS[model_key])
+
+    needed = int(MODELS[model_key]["size"] * 1.05)
     if _free_space(models_dir()) < needed:
         MODEL_STATUS[model_key]["state"] = "error"
         MODEL_STATUS[model_key]["error"] = "Not enough free disk space to download the model."
@@ -211,15 +225,20 @@ def _stream_download(model_key: str) -> str:
     # Resume if a partial download exists.
     resume_pos = os.path.getsize(dest) if os.path.exists(dest) else 0
     headers = {"Range": f"bytes={resume_pos}-"} if resume_pos else {}
-    mode = "ab" if resume_pos else "wb"
 
     with requests.get(url, headers=headers, stream=True, timeout=30) as resp:
         resp.raise_for_status()
-        # Prefer the known expected size (authoritative) over the HTTP
-        # Content-Length, which HF's CDN often omits — without it the progress
-        # bar has no denominator. Add the resume offset so the bar starts where
-        # a partial download left off.
-        total = spec["size"] + resume_pos
+        # Verify server honored partial content (206). If 200 OK is returned instead,
+        # the server/CDN ignored the Range header and sent full content from byte 0,
+        # so overwrite cleanly instead of appending duplicate bytes.
+        if resume_pos > 0 and resp.status_code != 206:
+            resume_pos = 0
+            mode = "wb"
+        else:
+            mode = "ab" if resume_pos else "wb"
+
+        # The authoritative target file size on disk is spec["size"].
+        total = spec["size"]
         _update_progress(model_key, resume_pos, total)
         with open(dest, mode) as fh:
             for chunk in resp.iter_content(chunk_size=1 << 20):  # 1 MiB

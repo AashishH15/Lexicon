@@ -7,6 +7,19 @@ This changelog tracks what is **live** in each release and what is still
 **stubbed** (shown in the interface but not yet functional). Stubbed features
 are listed so the release reads honestly about what works today.
 
+## v0.8.5 — Bug Fixes & Stability Improvements
+
+### What's New in v0.8.5:
+
+- **Targeted Process Isolation**: Removed global `taskkill /F /IM java.exe` commands from backend process cleanup (`languagetool.py` and `main.rs`). Sidecar shutdown now targets only the specific LanguageTool child process PID and process tree, allowing other Java applications (such as IDEs, Minecraft, or build services) to run concurrently without interference.
+- **Link Selection & Range Preservation**: Added explicit text selection range parameters (`from` and `to`) to the link popover state in `Editor.jsx`. Submitting or removing a link now preserves the exact selection range for Tiptap execution.
+- **Click-Away Link Popover Dismissal**: Removed automatic hover-off auto-close timeouts from the editor link popover in `Editor.jsx`. The popover remains open while editing or typing and only closes when clicking outside the popover card (click-away) or pressing `Escape`.
+- **AI Setup Proofread Request Fix**: Resolved an issue in `App.jsx` where loading sample content after AI setup passed invalid parameters to `runGrammarCheck`, fixing an HTTP 422 Unprocessable Entity validation error.
+- **Clean Model Download Cancellation**: Re-architected model download cancellation in `model_manager.py`, `main.py`, and `ModelManager.jsx`. Cancelling a download now preserves `state: "cancelled"`, returns HTTP 200 OK, and gracefully handles Windows file lock retries during partial file cleanup without raising HTTP 500 errors or displaying red error banners in the UI.
+- **Partial-Download Resume Validation**: Added HTTP status verification (`206 Partial Content`) to `_stream_download` in `model_manager.py`. If a proxy or CDN ignores the `Range` header and returns `200 OK`, the engine resets the resume position to 0 and overwrites cleanly (`mode="wb"`), preventing model file corruption caused by appending duplicate bytes.
+
+---
+
 ## v0.8.0 — Rule-Based Prose Engine, Readability Metrics & AI Active Voice Rewrites
 
 ### Quick Downloads:

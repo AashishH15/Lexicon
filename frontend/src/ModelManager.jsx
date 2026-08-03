@@ -250,7 +250,6 @@ export default function ModelManager({
     stopPolling();
     try {
       await cancelModelDownload();
-      await deleteModel(modelKey);
     } catch {
       /* best-effort */
     }
