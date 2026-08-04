@@ -34,6 +34,13 @@ are listed so the release reads honestly about what works today.
   - **Clean Vector PDF Export:** Automatically hides background app interface buttons, removes clutter like browser URLs (`localhost:5173`) and dates, and includes an in-app tip guiding users to save clean, 100% highlightable text PDFs.
   - **Export as Styled HTML:** Export self-contained, beautifully styled `.html` files that preserve your selected design theme when opened in any web browser.
 
+- **Client-Side EPUB Export (eBook Generator)**: Turn any document into a standard ebook with one click:
+  - **Standard EPUB 3 Archive:** Generates fully spec-compliant `.epub` files client-side (uncompressed `mimetype` entry first, `container.xml`, content package with manifest/spine, and navigation document) — verified clean with the official W3C EPUBCheck 5.3.0 validator (0 errors / 0 warnings).
+  - **Clean XHTML Conversion:** Editor content is converted into well-formed XHTML chapters with self-closing void tags, escaped text, and embedded styling, so headings, quotes, tables, code blocks, and images render beautifully in any ebook reader (Apple Books, Kobo, Calibre).
+  - **LaTeX Math Preservation:** Math formulas keep their full LaTeX source (`\(E = mc^2\)`) inside the ebook so no content is lost, even in readers that cannot render KaTeX.
+  - **Book Metadata Dialog:** Set Book Title, Author Name, Language (default `en-US`), and Publisher before generating, with a safe slug-based filename derived from the title.
+  - **Zero-Impact Bundle Size:** The ZIP packaging engine is lazy-loaded only when you generate a file, keeping the app's main bundle lean.
+
 ## v0.8.5 — Bug Fixes & Stability Improvements
 
 ### What's New in v0.8.5:
