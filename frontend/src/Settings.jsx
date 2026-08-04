@@ -31,15 +31,33 @@ import CustomToolsSettings from "./CustomToolsSettings.jsx";
 import { setAiPreference, openExternalUrl } from "./api.js";
 
 const githubWeights = new Map([
-  ["thin", <path d="M208.31,75.68A59.78,59.78,0,0,0,202.93,28,8,8,0,0,0,196,24a59.75,59.75,0,0,0-48,24H124A59.75,59.75,0,0,0,76,24a8,8,0,0,0-6.93,4,59.78,59.78,0,0,0-5.38,47.68A58.14,58.14,0,0,0,56,104v8a56.06,56.06,0,0,0,48.44,55.47A39.8,39.8,0,0,0,96,192v8H72a24,24,0,0,1-24-24A40,40,0,0,0,8,136a8,8,0,0,0,0,16,24,24,0,0,1,24,24,40,40,0,0,0,40,40H96v16a8,8,0,0,0,16,0V192a24,24,0,0,1,48,0v40a8,8,0,0,0,16,0V192a39.8,39.8,0,0,0-8.44-24.53A56.06,56.06,0,0,0,216,112v-8A58.14,58.14,0,0,0,208.31,75.68ZM200,112a40,40,0,0,1-40,40H112a40,40,0,0,1-40-40v-8a41.74,41.74,0,0,1,6.9-22.48A8,8,0,0,0,80,73.83a43.81,43.81,0,0,1,.79-33.58,43.88,43.88,0,0,1,32.32,20.06A8,8,0,0,0,119.82,64h32.35a8,8,0,0,0,6.74-3.69,43.87,43.87,0,0,1,32.32-20.06A43.81,43.81,0,0,1,192,73.83a8.09,8.09,0,0,0,1,7.65A41.72,41.72,0,0,1,200,104Z" />],
-  ["light", <path d="M208.31,75.68A59.78,59.78,0,0,0,202.93,28,8,8,0,0,0,196,24a59.75,59.75,0,0,0-48,24H124A59.75,59.75,0,0,0,76,24a8,8,0,0,0-6.93,4,59.78,59.78,0,0,0-5.38,47.68A58.14,58.14,0,0,0,56,104v8a56.06,56.06,0,0,0,48.44,55.47A39.8,39.8,0,0,0,96,192v8H72a24,24,0,0,1-24-24A40,40,0,0,0,8,136a8,8,0,0,0,0,16,24,24,0,0,1,24,24,40,40,0,0,0,40,40H96v16a8,8,0,0,0,16,0V192a24,24,0,0,1,48,0v40a8,8,0,0,0,16,0V192a39.8,39.8,0,0,0-8.44-24.53A56.06,56.06,0,0,0,216,112v-8A58.14,58.14,0,0,0,208.31,75.68ZM200,112a40,40,0,0,1-40,40H112a40,40,0,0,1-40-40v-8a41.74,41.74,0,0,1,6.9-22.48A8,8,0,0,0,80,73.83a43.81,43.81,0,0,1,.79-33.58,43.88,43.88,0,0,1,32.32,20.06A8,8,0,0,0,119.82,64h32.35a8,8,0,0,0,6.74-3.69,43.87,43.87,0,0,1,32.32-20.06A43.81,43.81,0,0,1,192,73.83a8.09,8.09,0,0,0,1,7.65A41.72,41.72,0,0,1,200,104Z" />],
-  ["regular", <path d="M208.31,75.68A59.78,59.78,0,0,0,202.93,28,8,8,0,0,0,196,24a59.75,59.75,0,0,0-48,24H124A59.75,59.75,0,0,0,76,24a8,8,0,0,0-6.93,4,59.78,59.78,0,0,0-5.38,47.68A58.14,58.14,0,0,0,56,104v8a56.06,56.06,0,0,0,48.44,55.47A39.8,39.8,0,0,0,96,192v8H72a24,24,0,0,1-24-24A40,40,0,0,0,8,136a8,8,0,0,0,0,16,24,24,0,0,1,24,24,40,40,0,0,0,40,40H96v16a8,8,0,0,0,16,0V192a24,24,0,0,1,48,0v40a8,8,0,0,0,16,0V192a39.8,39.8,0,0,0-8.44-24.53A56.06,56.06,0,0,0,216,112v-8A58.14,58.14,0,0,0,208.31,75.68ZM200,112a40,40,0,0,1-40,40H112a40,40,0,0,1-40-40v-8a41.74,41.74,0,0,1,6.9-22.48A8,8,0,0,0,80,73.83a43.81,43.81,0,0,1,.79-33.58,43.88,43.88,0,0,1,32.32,20.06A8,8,0,0,0,119.82,64h32.35a8,8,0,0,0,6.74-3.69,43.87,43.87,0,0,1,32.32-20.06A43.81,43.81,0,0,1,192,73.83a8.09,8.09,0,0,0,1,7.65A41.72,41.72,0,0,1,200,104Z" />],
-  ["bold", <path d="M208.31,75.68A59.78,59.78,0,0,0,202.93,28,8,8,0,0,0,196,24a59.75,59.75,0,0,0-48,24H124A59.75,59.75,0,0,0,76,24a8,8,0,0,0-6.93,4,59.78,59.78,0,0,0-5.38,47.68A58.14,58.14,0,0,0,56,104v8a56.06,56.06,0,0,0,48.44,55.47A39.8,39.8,0,0,0,96,192v8H72a24,24,0,0,1-24-24A40,40,0,0,0,8,136a8,8,0,0,0,0,16,24,24,0,0,1,24,24,40,40,0,0,0,40,40H96v16a8,8,0,0,0,16,0V192a24,24,0,0,1,48,0v40a8,8,0,0,0,16,0V192a39.8,39.8,0,0,0-8.44-24.53A56.06,56.06,0,0,0,216,112v-8A58.14,58.14,0,0,0,208.31,75.68ZM200,112a40,40,0,0,1-40,40H112a40,40,0,0,1-40-40v-8a41.74,41.74,0,0,1,6.9-22.48A8,8,0,0,0,80,73.83a43.81,43.81,0,0,1,.79-33.58,43.88,43.88,0,0,1,32.32,20.06A8,8,0,0,0,119.82,64h32.35a8,8,0,0,0,6.74-3.69,43.87,43.87,0,0,1,32.32-20.06A43.81,43.81,0,0,1,192,73.83a8.09,8.09,0,0,0,1,7.65A41.72,41.72,0,0,1,200,104Z" />],
-  ["fill", <path d="M208.31,75.68A59.78,59.78,0,0,0,202.93,28,8,8,0,0,0,196,24a59.75,59.75,0,0,0-48,24H124A59.75,59.75,0,0,0,76,24a8,8,0,0,0-6.93,4,59.78,59.78,0,0,0-5.38,47.68A58.14,58.14,0,0,0,56,104v8a56.06,56.06,0,0,0,48.44,55.47A39.8,39.8,0,0,0,96,192v8H72a24,24,0,0,1-24-24A40,40,0,0,0,8,136a8,8,0,0,0,0,16,24,24,0,0,1,24,24,40,40,0,0,0,40,40H96v16a8,8,0,0,0,16,0V192a24,24,0,0,1,48,0v40a8,8,0,0,0,16,0V192a39.8,39.8,0,0,0-8.44-24.53A56.06,56.06,0,0,0,216,112v-8A58.14,58.14,0,0,0,208.31,75.68ZM200,112a40,40,0,0,1-40,40H112a40,40,0,0,1-40-40v-8a41.74,41.74,0,0,1,6.9-22.48A8,8,0,0,0,80,73.83a43.81,43.81,0,0,1,.79-33.58,43.88,43.88,0,0,1,32.32,20.06A8,8,0,0,0,119.82,64h32.35a8,8,0,0,0,6.74-3.69,43.87,43.87,0,0,1,32.32-20.06A43.81,43.81,0,0,1,192,73.83a8.09,8.09,0,0,0,1,7.65A41.72,41.72,0,0,1,200,104Z" />],
+  [
+    "thin",
+    <path d="M208.31,75.68A59.78,59.78,0,0,0,202.93,28,8,8,0,0,0,196,24a59.75,59.75,0,0,0-48,24H124A59.75,59.75,0,0,0,76,24a8,8,0,0,0-6.93,4,59.78,59.78,0,0,0-5.38,47.68A58.14,58.14,0,0,0,56,104v8a56.06,56.06,0,0,0,48.44,55.47A39.8,39.8,0,0,0,96,192v8H72a24,24,0,0,1-24-24A40,40,0,0,0,8,136a8,8,0,0,0,0,16,24,24,0,0,1,24,24,40,40,0,0,0,40,40H96v16a8,8,0,0,0,16,0V192a24,24,0,0,1,48,0v40a8,8,0,0,0,16,0V192a39.8,39.8,0,0,0-8.44-24.53A56.06,56.06,0,0,0,216,112v-8A58.14,58.14,0,0,0,208.31,75.68ZM200,112a40,40,0,0,1-40,40H112a40,40,0,0,1-40-40v-8a41.74,41.74,0,0,1,6.9-22.48A8,8,0,0,0,80,73.83a43.81,43.81,0,0,1,.79-33.58,43.88,43.88,0,0,1,32.32,20.06A8,8,0,0,0,119.82,64h32.35a8,8,0,0,0,6.74-3.69,43.87,43.87,0,0,1,32.32-20.06A43.81,43.81,0,0,1,192,73.83a8.09,8.09,0,0,0,1,7.65A41.72,41.72,0,0,1,200,104Z" />,
+  ],
+  [
+    "light",
+    <path d="M208.31,75.68A59.78,59.78,0,0,0,202.93,28,8,8,0,0,0,196,24a59.75,59.75,0,0,0-48,24H124A59.75,59.75,0,0,0,76,24a8,8,0,0,0-6.93,4,59.78,59.78,0,0,0-5.38,47.68A58.14,58.14,0,0,0,56,104v8a56.06,56.06,0,0,0,48.44,55.47A39.8,39.8,0,0,0,96,192v8H72a24,24,0,0,1-24-24A40,40,0,0,0,8,136a8,8,0,0,0,0,16,24,24,0,0,1,24,24,40,40,0,0,0,40,40H96v16a8,8,0,0,0,16,0V192a24,24,0,0,1,48,0v40a8,8,0,0,0,16,0V192a39.8,39.8,0,0,0-8.44-24.53A56.06,56.06,0,0,0,216,112v-8A58.14,58.14,0,0,0,208.31,75.68ZM200,112a40,40,0,0,1-40,40H112a40,40,0,0,1-40-40v-8a41.74,41.74,0,0,1,6.9-22.48A8,8,0,0,0,80,73.83a43.81,43.81,0,0,1,.79-33.58,43.88,43.88,0,0,1,32.32,20.06A8,8,0,0,0,119.82,64h32.35a8,8,0,0,0,6.74-3.69,43.87,43.87,0,0,1,32.32-20.06A43.81,43.81,0,0,1,192,73.83a8.09,8.09,0,0,0,1,7.65A41.72,41.72,0,0,1,200,104Z" />,
+  ],
+  [
+    "regular",
+    <path d="M208.31,75.68A59.78,59.78,0,0,0,202.93,28,8,8,0,0,0,196,24a59.75,59.75,0,0,0-48,24H124A59.75,59.75,0,0,0,76,24a8,8,0,0,0-6.93,4,59.78,59.78,0,0,0-5.38,47.68A58.14,58.14,0,0,0,56,104v8a56.06,56.06,0,0,0,48.44,55.47A39.8,39.8,0,0,0,96,192v8H72a24,24,0,0,1-24-24A40,40,0,0,0,8,136a8,8,0,0,0,0,16,24,24,0,0,1,24,24,40,40,0,0,0,40,40H96v16a8,8,0,0,0,16,0V192a24,24,0,0,1,48,0v40a8,8,0,0,0,16,0V192a39.8,39.8,0,0,0-8.44-24.53A56.06,56.06,0,0,0,216,112v-8A58.14,58.14,0,0,0,208.31,75.68ZM200,112a40,40,0,0,1-40,40H112a40,40,0,0,1-40-40v-8a41.74,41.74,0,0,1,6.9-22.48A8,8,0,0,0,80,73.83a43.81,43.81,0,0,1,.79-33.58,43.88,43.88,0,0,1,32.32,20.06A8,8,0,0,0,119.82,64h32.35a8,8,0,0,0,6.74-3.69,43.87,43.87,0,0,1,32.32-20.06A43.81,43.81,0,0,1,192,73.83a8.09,8.09,0,0,0,1,7.65A41.72,41.72,0,0,1,200,104Z" />,
+  ],
+  [
+    "bold",
+    <path d="M208.31,75.68A59.78,59.78,0,0,0,202.93,28,8,8,0,0,0,196,24a59.75,59.75,0,0,0-48,24H124A59.75,59.75,0,0,0,76,24a8,8,0,0,0-6.93,4,59.78,59.78,0,0,0-5.38,47.68A58.14,58.14,0,0,0,56,104v8a56.06,56.06,0,0,0,48.44,55.47A39.8,39.8,0,0,0,96,192v8H72a24,24,0,0,1-24-24A40,40,0,0,0,8,136a8,8,0,0,0,0,16,24,24,0,0,1,24,24,40,40,0,0,0,40,40H96v16a8,8,0,0,0,16,0V192a24,24,0,0,1,48,0v40a8,8,0,0,0,16,0V192a39.8,39.8,0,0,0-8.44-24.53A56.06,56.06,0,0,0,216,112v-8A58.14,58.14,0,0,0,208.31,75.68ZM200,112a40,40,0,0,1-40,40H112a40,40,0,0,1-40-40v-8a41.74,41.74,0,0,1,6.9-22.48A8,8,0,0,0,80,73.83a43.81,43.81,0,0,1,.79-33.58,43.88,43.88,0,0,1,32.32,20.06A8,8,0,0,0,119.82,64h32.35a8,8,0,0,0,6.74-3.69,43.87,43.87,0,0,1,32.32-20.06A43.81,43.81,0,0,1,192,73.83a8.09,8.09,0,0,0,1,7.65A41.72,41.72,0,0,1,200,104Z" />,
+  ],
+  [
+    "fill",
+    <path d="M208.31,75.68A59.78,59.78,0,0,0,202.93,28,8,8,0,0,0,196,24a59.75,59.75,0,0,0-48,24H124A59.75,59.75,0,0,0,76,24a8,8,0,0,0-6.93,4,59.78,59.78,0,0,0-5.38,47.68A58.14,58.14,0,0,0,56,104v8a56.06,56.06,0,0,0,48.44,55.47A39.8,39.8,0,0,0,96,192v8H72a24,24,0,0,1-24-24A40,40,0,0,0,8,136a8,8,0,0,0,0,16,24,24,0,0,1,24,24,40,40,0,0,0,40,40H96v16a8,8,0,0,0,16,0V192a24,24,0,0,1,48,0v40a8,8,0,0,0,16,0V192a39.8,39.8,0,0,0-8.44-24.53A56.06,56.06,0,0,0,216,112v-8A58.14,58.14,0,0,0,208.31,75.68ZM200,112a40,40,0,0,1-40,40H112a40,40,0,0,1-40-40v-8a41.74,41.74,0,0,1,6.9-22.48A8,8,0,0,0,80,73.83a43.81,43.81,0,0,1,.79-33.58,43.88,43.88,0,0,1,32.32,20.06A8,8,0,0,0,119.82,64h32.35a8,8,0,0,0,6.74-3.69,43.87,43.87,0,0,1,32.32-20.06A43.81,43.81,0,0,1,192,73.83a8.09,8.09,0,0,0,1,7.65A41.72,41.72,0,0,1,200,104Z" />,
+  ],
   [
     "duotone",
     <>
-      <path d="M208.31,75.68A59.78,59.78,0,0,0,202.93,28,8,8,0,0,0,196,24a59.75,59.75,0,0,0-48,24H124A59.75,59.75,0,0,0,76,24a8,8,0,0,0-6.93,4,59.78,59.78,0,0,0-5.38,47.68A58.14,58.14,0,0,0,56,104v8a56.06,56.06,0,0,0,48.44,55.47A39.8,39.8,0,0,0,96,192v8H72a24,24,0,0,1-24-24A40,40,0,0,0,8,136a8,8,0,0,0,0,16,24,24,0,0,1,24,24,40,40,0,0,0,40,40H96v16a8,8,0,0,0,16,0V192a24,24,0,0,1,48,0v40a8,8,0,0,0,16,0V192a39.8,39.8,0,0,0-8.44-24.53A56.06,56.06,0,0,0,216,112v-8A58.14,58.14,0,0,0,208.31,75.68ZM200,112a40,40,0,0,1-40,40H112a40,40,0,0,1-40-40v-8a41.74,41.74,0,0,1,6.9-22.48A8,8,0,0,0,80,73.83a43.81,43.81,0,0,1,.79-33.58,43.88,43.88,0,0,1,32.32,20.06A8,8,0,0,0,119.82,64h32.35a8,8,0,0,0,6.74-3.69,43.87,43.87,0,0,1,32.32-20.06A43.81,43.81,0,0,1,192,73.83a8.09,8.09,0,0,0,1,7.65A41.72,41.72,0,0,1,200,104Z" opacity="0.2" />
+      <path
+        d="M208.31,75.68A59.78,59.78,0,0,0,202.93,28,8,8,0,0,0,196,24a59.75,59.75,0,0,0-48,24H124A59.75,59.75,0,0,0,76,24a8,8,0,0,0-6.93,4,59.78,59.78,0,0,0-5.38,47.68A58.14,58.14,0,0,0,56,104v8a56.06,56.06,0,0,0,48.44,55.47A39.8,39.8,0,0,0,96,192v8H72a24,24,0,0,1-24-24A40,40,0,0,0,8,136a8,8,0,0,0,0,16,24,24,0,0,1,24,24,40,40,0,0,0,40,40H96v16a8,8,0,0,0,16,0V192a24,24,0,0,1,48,0v40a8,8,0,0,0,16,0V192a39.8,39.8,0,0,0-8.44-24.53A56.06,56.06,0,0,0,216,112v-8A58.14,58.14,0,0,0,208.31,75.68ZM200,112a40,40,0,0,1-40,40H112a40,40,0,0,1-40-40v-8a41.74,41.74,0,0,1,6.9-22.48A8,8,0,0,0,80,73.83a43.81,43.81,0,0,1,.79-33.58,43.88,43.88,0,0,1,32.32,20.06A8,8,0,0,0,119.82,64h32.35a8,8,0,0,0,6.74-3.69,43.87,43.87,0,0,1,32.32-20.06A43.81,43.81,0,0,1,192,73.83a8.09,8.09,0,0,0,1,7.65A41.72,41.72,0,0,1,200,104Z"
+        opacity="0.2"
+      />
       <path d="M208.31,75.68A59.78,59.78,0,0,0,202.93,28,8,8,0,0,0,196,24a59.75,59.75,0,0,0-48,24H124A59.75,59.75,0,0,0,76,24a8,8,0,0,0-6.93,4,59.78,59.78,0,0,0-5.38,47.68A58.14,58.14,0,0,0,56,104v8a56.06,56.06,0,0,0,48.44,55.47A39.8,39.8,0,0,0,96,192v8H72a24,24,0,0,1-24-24A40,40,0,0,0,8,136a8,8,0,0,0,0,16,24,24,0,0,1,24,24,40,40,0,0,0,40,40H96v16a8,8,0,0,0,16,0V192a24,24,0,0,1,48,0v40a8,8,0,0,0,16,0V192a39.8,39.8,0,0,0-8.44-24.53A56.06,56.06,0,0,0,216,112v-8A58.14,58.14,0,0,0,208.31,75.68ZM200,112a40,40,0,0,1-40,40H112a40,40,0,0,1-40-40v-8a41.74,41.74,0,0,1,6.9-22.48A8,8,0,0,0,80,73.83a43.81,43.81,0,0,1,.79-33.58,43.88,43.88,0,0,1,32.32,20.06A8,8,0,0,0,119.82,64h32.35a8,8,0,0,0,6.74-3.69,43.87,43.87,0,0,1,32.32-20.06A43.81,43.81,0,0,1,192,73.83a8.09,8.09,0,0,0,1,7.65A41.72,41.72,0,0,1,200,104Z" />
     </>,
   ],
@@ -99,7 +117,8 @@ export const SETTINGS_DEFAULTS = {
 };
 
 const isMac =
-  typeof navigator !== "undefined" && /Mac|iPod|iPhone|iPad/.test(navigator.platform);
+  typeof navigator !== "undefined" &&
+  /Mac|iPod|iPhone|iPad/.test(navigator.platform);
 const mod = isMac ? "⌘" : "Ctrl";
 
 const SHORTCUTS = [
@@ -144,17 +163,99 @@ const TABS = [
 ];
 
 const SEARCH_INDEX = [
-  { label: "Font Size", tab: "general", settingKey: "font-size", keywords: ["font", "font size", "text size", "size"] },
-  { label: "Focus Mode", tab: "general", settingKey: "focus-mode", keywords: ["focus", "focus mode", "distraction"] },
-  { label: "Language & Grammar", tab: "general", settingKey: "language", keywords: ["language", "grammar", "spelling", "english"] },
-  { label: "Line Spacing", tab: "general", settingKey: "line-spacing", keywords: ["line spacing", "spacing", "comfortable"] },
-  { label: "Prose Scan", tab: "general", settingKey: "prose-scan", keywords: ["prose", "scan", "proofread"] },
-  { label: "Reset Defaults", tab: "general", settingKey: "reset-defaults", keywords: ["reset", "defaults", "restore"] },
-  { label: "Your Dictionary", tab: "dictionary", settingKey: "dictionary-section", keywords: ["dictionary", "word", "words", "vocabulary", "spell check"] },
-  { label: "History & Drafts", tab: "history", settingKey: "history-section", keywords: ["history", "draft", "drafts", "auto-save", "save", "transform", "versions"] },
-  { label: "Lex's Engine", tab: "ai", settingKey: "lex-engine-section", keywords: ["ai", "model", "engine", "ollama", "local", "download", "inference", "bundled", "lexicon model"] },
-  { label: "Custom Actions", tab: "actions", settingKey: "custom-actions-section", keywords: ["custom", "action", "actions", "tool", "prompt", "rewrite"] },
-  { label: "About & Feedback", tab: "about", settingKey: "about-section", keywords: ["about", "feedback", "update", "version", "github", "website", "links", "privacy"] },
+  {
+    label: "Font Size",
+    tab: "general",
+    settingKey: "font-size",
+    keywords: ["font", "font size", "text size", "size"],
+  },
+  {
+    label: "Focus Mode",
+    tab: "general",
+    settingKey: "focus-mode",
+    keywords: ["focus", "focus mode", "distraction"],
+  },
+  {
+    label: "Language & Grammar",
+    tab: "general",
+    settingKey: "language",
+    keywords: ["language", "grammar", "spelling", "english"],
+  },
+  {
+    label: "Line Spacing",
+    tab: "general",
+    settingKey: "line-spacing",
+    keywords: ["line spacing", "spacing", "comfortable"],
+  },
+  {
+    label: "Prose Scan",
+    tab: "general",
+    settingKey: "prose-scan",
+    keywords: ["prose", "scan", "proofread"],
+  },
+  {
+    label: "Reset Defaults",
+    tab: "general",
+    settingKey: "reset-defaults",
+    keywords: ["reset", "defaults", "restore"],
+  },
+  {
+    label: "Your Dictionary",
+    tab: "dictionary",
+    settingKey: "dictionary-section",
+    keywords: ["dictionary", "word", "words", "vocabulary", "spell check"],
+  },
+  {
+    label: "History & Drafts",
+    tab: "history",
+    settingKey: "history-section",
+    keywords: [
+      "history",
+      "draft",
+      "drafts",
+      "auto-save",
+      "save",
+      "transform",
+      "versions",
+    ],
+  },
+  {
+    label: "Lex's Engine",
+    tab: "ai",
+    settingKey: "lex-engine-section",
+    keywords: [
+      "ai",
+      "model",
+      "engine",
+      "ollama",
+      "local",
+      "download",
+      "inference",
+      "bundled",
+      "lexicon model",
+    ],
+  },
+  {
+    label: "Custom Actions",
+    tab: "actions",
+    settingKey: "custom-actions-section",
+    keywords: ["custom", "action", "actions", "tool", "prompt", "rewrite"],
+  },
+  {
+    label: "About & Feedback",
+    tab: "about",
+    settingKey: "about-section",
+    keywords: [
+      "about",
+      "feedback",
+      "update",
+      "version",
+      "github",
+      "website",
+      "links",
+      "privacy",
+    ],
+  },
 ];
 
 function formatTimestamp(ts) {
@@ -198,6 +299,8 @@ export default function Settings({
   onFocusModeChange,
   proseScanEnabled,
   onProseScanChange,
+  docxAuthor,
+  onDocxAuthorChange,
   onResetDefaults,
   onCheckForUpdates,
   updateState,
@@ -256,7 +359,9 @@ export default function Settings({
 
   useEffect(() => {
     if (activeTab !== "dictionary") return;
-    const id = window.requestAnimationFrame(() => dictInputRef.current?.focus());
+    const id = window.requestAnimationFrame(() =>
+      dictInputRef.current?.focus()
+    );
     return () => window.cancelAnimationFrame(id);
   }, [activeTab]);
 
@@ -343,10 +448,7 @@ export default function Settings({
       label: s.action,
       tab: "shortcuts",
       settingKey: `shortcut-${s.action.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
-      keywords: [
-        s.action.toLowerCase(),
-        ...s.keys.map((k) => k.toLowerCase()),
-      ],
+      keywords: [s.action.toLowerCase(), ...s.keys.map((k) => k.toLowerCase())],
     }));
 
     const allItems = [
@@ -371,7 +473,8 @@ export default function Settings({
     // Match index items
     for (const item of allItems) {
       if (matched.length >= 8) break;
-      if (matched.some((m) => m.tab === item.tab && m.label === item.label)) continue;
+      if (matched.some((m) => m.tab === item.tab && m.label === item.label))
+        continue;
       if (item.keywords.some((k) => k.includes(q))) {
         matched.push({
           label: item.label,
@@ -410,7 +513,9 @@ export default function Settings({
   useEffect(() => {
     if (!highlightedKey) return;
     const timer = setTimeout(() => {
-      const el = document.querySelector(`[data-setting-key="${highlightedKey}"]`);
+      const el = document.querySelector(
+        `[data-setting-key="${highlightedKey}"]`
+      );
       if (el) {
         el.scrollIntoView({ behavior: "smooth", block: "center" });
       }
@@ -481,34 +586,45 @@ export default function Settings({
                       searchRef.current?.blur();
                     }
                     if (e.key === "Enter" && searchResults.length > 0) {
-                      handleSearchSelect(searchResults[0].tab, searchResults[0].settingKey);
+                      handleSearchSelect(
+                        searchResults[0].tab,
+                        searchResults[0].settingKey
+                      );
                     }
                   }}
                   className="w-full rounded-lg border border-hairline bg-canvas py-1.5 pl-8 pr-2 font-sans text-xs text-ink placeholder-muted outline-none transition-colors focus:border-pale-blue-text"
                 />
-                {searchFocused && searchQuery.trim() && searchResults.length > 0 && (
-                  <div className="absolute left-0 top-full z-20 mt-0.5 min-w-[280px] overflow-hidden rounded-lg border border-hairline bg-white shadow-lg">
-                    {searchResults.map(({ label, tab, settingKey }) => {
-                      const tabDef = TABS.find((t) => t.id === tab);
-                      const Icon = tabDef?.icon || MagnifyingGlass;
-                      return (
-                        <button
-                          key={`${tab}-${label}`}
-                          type="button"
-                          onMouseDown={(e) => {
-                            e.preventDefault();
-                            handleSearchSelect(tab, settingKey);
-                          }}
-                          className="flex w-full items-center gap-3 px-3 py-2 text-left font-sans text-sm text-ink transition-colors hover:bg-hairline/50"
-                        >
-                          <Icon size={16} weight="regular" className="text-muted" />
-                          <span className="flex-1">{label}</span>
-                          <span className="font-sans text-[10px] text-muted">{tabDef?.label}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
+                {searchFocused &&
+                  searchQuery.trim() &&
+                  searchResults.length > 0 && (
+                    <div className="absolute left-0 top-full z-20 mt-0.5 min-w-[280px] overflow-hidden rounded-lg border border-hairline bg-white shadow-lg">
+                      {searchResults.map(({ label, tab, settingKey }) => {
+                        const tabDef = TABS.find((t) => t.id === tab);
+                        const Icon = tabDef?.icon || MagnifyingGlass;
+                        return (
+                          <button
+                            key={`${tab}-${label}`}
+                            type="button"
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              handleSearchSelect(tab, settingKey);
+                            }}
+                            className="flex w-full items-center gap-3 px-3 py-2 text-left font-sans text-sm text-ink transition-colors hover:bg-hairline/50"
+                          >
+                            <Icon
+                              size={16}
+                              weight="regular"
+                              className="text-muted"
+                            />
+                            <span className="flex-1">{label}</span>
+                            <span className="font-sans text-[10px] text-muted">
+                              {tabDef?.label}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
               </div>
             </div>
 
@@ -525,13 +641,19 @@ export default function Settings({
                       : "text-muted hover:bg-hairline/50 hover:text-ink")
                   }
                 >
-                  <Icon size={16} weight={activeTab === id ? "fill" : "regular"} />
+                  <Icon
+                    size={16}
+                    weight={activeTab === id ? "fill" : "regular"}
+                  />
                   {label}
                 </button>
               ))}
             </div>
 
-            <div data-setting-key="reset-defaults" className={`mt-auto border-t border-hairline px-2 py-3 ${getHighlightClass("reset-defaults")}`}>
+            <div
+              data-setting-key="reset-defaults"
+              className={`mt-auto border-t border-hairline px-2 py-3 ${getHighlightClass("reset-defaults")}`}
+            >
               <button
                 type="button"
                 onClick={onResetDefaults}
@@ -559,14 +681,20 @@ export default function Settings({
               {/* ── General ── */}
               {activeTab === "general" && (
                 <div className="space-y-2.5">
-                  <h2 className="font-serif text-xl font-bold text-ink pb-1">General</h2>
+                  <h2 className="font-serif text-xl font-bold text-ink pb-1">
+                    General
+                  </h2>
 
-                  <div data-setting-key="language" className={getHighlightClass("language")}>
+                  <div
+                    data-setting-key="language"
+                    className={getHighlightClass("language")}
+                  >
                     <p className="font-mono text-[10px] uppercase tracking-widest text-muted">
                       Language
                     </p>
                     <p className="mt-1 font-sans text-xs text-muted">
-                      Sets the spelling and grammar rules used when proofreading.
+                      Sets the spelling and grammar rules used when
+                      proofreading.
                     </p>
                     <div className="mt-3">
                       <LanguageDropdown
@@ -577,15 +705,18 @@ export default function Settings({
                     </div>
                   </div>
 
-                  <div data-setting-key="focus-mode" className={`flex items-start justify-between gap-4 ${getHighlightClass("focus-mode")}`}>
+                  <div
+                    data-setting-key="focus-mode"
+                    className={`flex items-start justify-between gap-4 ${getHighlightClass("focus-mode")}`}
+                  >
                     <div>
                       <p className="font-mono text-[10px] uppercase tracking-widest text-muted">
                         Focus Mode
                       </p>
                       <p className="mt-1 font-sans text-xs text-muted">
-                        Collapses both side panels for a distraction-free writing
-                        view. Hover a screen-edge rail to peek a panel open; it
-                        auto-closes when you move away.
+                        Collapses both side panels for a distraction-free
+                        writing view. Hover a screen-edge rail to peek a panel
+                        open; it auto-closes when you move away.
                       </p>
                     </div>
                     <div className="pt-0.5">
@@ -597,15 +728,18 @@ export default function Settings({
                     </div>
                   </div>
 
-                  <div data-setting-key="prose-scan" className={`flex items-start justify-between gap-4 ${getHighlightClass("prose-scan")}`}>
+                  <div
+                    data-setting-key="prose-scan"
+                    className={`flex items-start justify-between gap-4 ${getHighlightClass("prose-scan")}`}
+                  >
                     <div>
                       <p className="font-mono text-[10px] uppercase tracking-widest text-muted">
                         Scan Prose &amp; Style
                       </p>
                       <p className="mt-1 font-sans text-xs text-muted">
                         Detects passive voice, wordy phrases, and repetitive
-                        sentence openers. Turn off to avoid subjective style flags
-                        in clean copy.
+                        sentence openers. Turn off to avoid subjective style
+                        flags in clean copy.
                       </p>
                     </div>
                     <div className="pt-0.5">
@@ -617,7 +751,10 @@ export default function Settings({
                     </div>
                   </div>
 
-                  <div data-setting-key="font-size" className={getHighlightClass("font-size")}>
+                  <div
+                    data-setting-key="font-size"
+                    className={getHighlightClass("font-size")}
+                  >
                     <p className="font-mono text-[10px] uppercase tracking-widest text-muted">
                       Font Size
                     </p>
@@ -651,7 +788,10 @@ export default function Settings({
                     </div>
                   </div>
 
-                  <div data-setting-key="line-spacing" className={getHighlightClass("line-spacing")}>
+                  <div
+                    data-setting-key="line-spacing"
+                    className={getHighlightClass("line-spacing")}
+                  >
                     <p className="font-mono text-[10px] uppercase tracking-widest text-muted">
                       Line Spacing
                     </p>
@@ -684,18 +824,54 @@ export default function Settings({
                       ))}
                     </div>
                   </div>
+
+                  <div className="mt-6 flex items-center gap-2">
+                    <span className="h-px flex-1 bg-hairline" />
+                    <span className="font-mono text-[10px] uppercase tracking-widest text-muted">
+                      Export
+                    </span>
+                    <span className="h-px flex-1 bg-hairline" />
+                  </div>
+
+                  <div
+                    data-setting-key="docx-author"
+                    className={getHighlightClass("docx-author")}
+                  >
+                    <p className="font-mono text-[10px] uppercase tracking-widest text-muted">
+                      Default Author / Reviewer Name
+                    </p>
+                    <p className="mt-1 font-sans text-xs text-muted">
+                      Pre-fills the tracked-suggestions author for DOCX exports.
+                      Word shows this name next to every redline. Leave blank to
+                      export without a reviewer name.
+                    </p>
+                    <input
+                      type="text"
+                      value={docxAuthor}
+                      onChange={(event) =>
+                        onDocxAuthorChange(event.target.value)
+                      }
+                      placeholder="Lex"
+                      className="mt-3 w-full rounded border border-hairline bg-canvas px-3 py-2 font-sans text-sm text-ink outline-none transition-colors placeholder:text-muted/60 focus:border-muted"
+                    />
+                  </div>
                 </div>
               )}
 
               {/* ── Your Dictionary ── */}
               {activeTab === "dictionary" && (
-                <div data-setting-key="dictionary-section" className={`space-y-5 ${getHighlightClass("dictionary-section")}`}>
-                  <h2 className="font-serif text-xl font-bold text-ink">Your Dictionary</h2>
+                <div
+                  data-setting-key="dictionary-section"
+                  className={`space-y-5 ${getHighlightClass("dictionary-section")}`}
+                >
+                  <h2 className="font-serif text-xl font-bold text-ink">
+                    Your Dictionary
+                  </h2>
 
                   <div>
                     <p className="font-sans text-xs text-muted">
-                      Words you add are ignored by proofreading. Add or remove words
-                      below; changes apply to the next check.
+                      Words you add are ignored by proofreading. Add or remove
+                      words below; changes apply to the next check.
                     </p>
                     <div className="mt-3 flex gap-2">
                       <input
@@ -725,13 +901,17 @@ export default function Settings({
                       </button>
                     </div>
                     {dictNotice && (
-                      <p className="mt-2 font-sans text-xs text-muted">{dictNotice}</p>
+                      <p className="mt-2 font-sans text-xs text-muted">
+                        {dictNotice}
+                      </p>
                     )}
                   </div>
 
                   <div>
                     {userDictionary.length === 0 ? (
-                      <p className="font-sans text-sm text-muted">No words added yet.</p>
+                      <p className="font-sans text-sm text-muted">
+                        No words added yet.
+                      </p>
                     ) : (
                       <>
                         <div className="relative mb-3">
@@ -743,13 +923,17 @@ export default function Settings({
                           <input
                             type="text"
                             value={dictQuery}
-                            onChange={(event) => setDictQuery(event.target.value)}
+                            onChange={(event) =>
+                              setDictQuery(event.target.value)
+                            }
                             placeholder="Filter words…"
                             className="w-full rounded border border-hairline bg-canvas py-2 pl-8 pr-3 font-sans text-sm text-ink outline-none focus:border-muted"
                           />
                         </div>
                         {visibleWords.length === 0 ? (
-                          <p className="font-sans text-sm text-muted">No matches.</p>
+                          <p className="font-sans text-sm text-muted">
+                            No matches.
+                          </p>
                         ) : (
                           <ul className="flex flex-col gap-1">
                             {visibleWords.map((word) => (
@@ -758,8 +942,14 @@ export default function Settings({
                                 className="flex items-center justify-between gap-2 rounded border border-hairline bg-canvas px-3 py-2"
                               >
                                 <span className="flex min-w-0 items-center gap-2">
-                                  <BookBookmark size={14} weight="bold" className="shrink-0 text-muted" />
-                                  <span className="truncate font-sans text-sm text-ink">{word}</span>
+                                  <BookBookmark
+                                    size={14}
+                                    weight="bold"
+                                    className="shrink-0 text-muted"
+                                  />
+                                  <span className="truncate font-sans text-sm text-ink">
+                                    {word}
+                                  </span>
                                 </span>
                                 <button
                                   type="button"
@@ -781,13 +971,21 @@ export default function Settings({
 
               {/* ── History & Drafts ── */}
               {activeTab === "history" && (
-                <div data-setting-key="history-section" className={`flex h-full flex-col ${getHighlightClass("history-section")}`}>
-                  <h2 className="font-serif text-xl font-bold text-ink">History &amp; Drafts</h2>
+                <div
+                  data-setting-key="history-section"
+                  className={`flex h-full flex-col ${getHighlightClass("history-section")}`}
+                >
+                  <h2 className="font-serif text-xl font-bold text-ink">
+                    History &amp; Drafts
+                  </h2>
 
                   <div className="mt-4 flex items-center gap-4 border-b border-hairline pb-2">
                     <button
                       type="button"
-                      onClick={() => { setHistoryTab("drafts"); setHistQuery(""); }}
+                      onClick={() => {
+                        setHistoryTab("drafts");
+                        setHistQuery("");
+                      }}
                       className={
                         "font-mono text-[10px] uppercase tracking-wider transition-colors " +
                         (historyTab === "drafts"
@@ -804,7 +1002,10 @@ export default function Settings({
                     </button>
                     <button
                       type="button"
-                      onClick={() => { setHistoryTab("transforms"); setHistQuery(""); }}
+                      onClick={() => {
+                        setHistoryTab("transforms");
+                        setHistQuery("");
+                      }}
                       className={
                         "font-mono text-[10px] uppercase tracking-wider transition-colors " +
                         (historyTab === "transforms"
@@ -841,10 +1042,12 @@ export default function Settings({
                         />
                         <div className="pointer-events-none absolute left-0 top-6 z-10 w-56 rounded-lg border border-hairline bg-white px-3 py-2 shadow-lg opacity-0 transition-opacity group-hover:opacity-100">
                           <p className="font-sans text-[11px] leading-snug text-ink">
-                            <strong>Auto:</strong> saves 3 seconds after you stop typing.
+                            <strong>Auto:</strong> saves 3 seconds after you
+                            stop typing.
                           </p>
                           <p className="mt-1 font-sans text-[11px] leading-snug text-ink">
-                            <strong>Manual:</strong> only saves when you click &ldquo;Save Draft.&rdquo;
+                            <strong>Manual:</strong> only saves when you click
+                            &ldquo;Save Draft.&rdquo;
                           </p>
                           <p className="mt-1 font-sans text-[11px] leading-snug text-muted">
                             A maximum of 20 save points is kept at any time.
@@ -876,7 +1079,11 @@ export default function Settings({
                         type="text"
                         value={histQuery}
                         onChange={(e) => setHistQuery(e.target.value)}
-                        placeholder={historyTab === "drafts" ? "Search drafts…" : "Search generations…"}
+                        placeholder={
+                          historyTab === "drafts"
+                            ? "Search drafts…"
+                            : "Search generations…"
+                        }
                         className="w-full rounded border border-hairline bg-canvas py-1.5 pl-8 pr-3 font-sans text-xs text-ink outline-none focus:border-muted"
                       />
                     </div>
@@ -902,7 +1109,9 @@ export default function Settings({
                         {!hasDrafts ? (
                           <div className="flex flex-col items-center gap-2 py-8 text-muted">
                             <FileText size={28} weight="thin" />
-                            <p className="font-sans text-sm">No draft snapshots yet.</p>
+                            <p className="font-sans text-sm">
+                              No draft snapshots yet.
+                            </p>
                             <p className="font-sans text-xs">
                               {autoDraftMode
                                 ? "Drafts are auto-saved 3 seconds after you stop typing."
@@ -923,13 +1132,19 @@ export default function Settings({
                                 <div className="flex items-start justify-between gap-2">
                                   <div className="min-w-0 flex-1">
                                     <p className="flex items-center gap-1.5 font-sans text-xs text-ink">
-                                      <ClockCounterClockwise size={12} weight="bold" className="shrink-0 text-muted" />
+                                      <ClockCounterClockwise
+                                        size={12}
+                                        weight="bold"
+                                        className="shrink-0 text-muted"
+                                      />
                                       {formatTimestamp(draft.timestamp)}
                                     </p>
                                     <p className="mt-0.5 font-sans text-[11px] text-muted">
-                                      {draft.wordCount} {draft.wordCount === 1 ? "word" : "words"}
+                                      {draft.wordCount}{" "}
+                                      {draft.wordCount === 1 ? "word" : "words"}
                                       {" · "}
-                                      {draft.charCount} {draft.charCount === 1 ? "char" : "chars"}
+                                      {draft.charCount}{" "}
+                                      {draft.charCount === 1 ? "char" : "chars"}
                                     </p>
                                   </div>
                                   <div className="flex shrink-0 gap-1">
@@ -940,12 +1155,17 @@ export default function Settings({
                                       aria-label="Restore this draft"
                                       title="Restore (replaces current document)"
                                     >
-                                      <ArrowCounterClockwise size={12} weight="bold" />
+                                      <ArrowCounterClockwise
+                                        size={12}
+                                        weight="bold"
+                                      />
                                       Restore
                                     </button>
                                     <button
                                       type="button"
-                                      onClick={() => handleHistCopy(draft.text, draft.id)}
+                                      onClick={() =>
+                                        handleHistCopy(draft.text, draft.id)
+                                      }
                                       className={
                                         "flex items-center gap-1 rounded border px-2 py-1 font-sans text-[11px] transition-colors " +
                                         (histCopiedId === draft.id
@@ -960,21 +1180,40 @@ export default function Settings({
                                       ) : (
                                         <Copy size={12} weight="bold" />
                                       )}
-                                      {histCopiedId === draft.id ? "Copied" : "Copy"}
+                                      {histCopiedId === draft.id
+                                        ? "Copied"
+                                        : "Copy"}
                                     </button>
                                     <button
                                       type="button"
-                                      onClick={() => onToggleDraftLock(draft.id)}
+                                      onClick={() =>
+                                        onToggleDraftLock(draft.id)
+                                      }
                                       className={
                                         "flex items-center gap-1 rounded border px-2 py-1 font-sans text-[11px] transition-colors " +
                                         (draft.locked
                                           ? "border-pale-green-text/20 bg-pale-green text-pale-green-text"
                                           : "border-hairline bg-white text-muted hover:text-ink")
                                       }
-                                      aria-label={draft.locked ? "Unlock this draft" : "Lock this draft"}
-                                      title={draft.locked ? "Locked — survives clear and cap" : "Lock to protect from clear and cap"}
+                                      aria-label={
+                                        draft.locked
+                                          ? "Unlock this draft"
+                                          : "Lock this draft"
+                                      }
+                                      title={
+                                        draft.locked
+                                          ? "Locked — survives clear and cap"
+                                          : "Lock to protect from clear and cap"
+                                      }
                                     >
-                                      {draft.locked ? <LockSimple size={12} weight="fill" /> : <LockSimpleOpen size={12} weight="bold" />}
+                                      {draft.locked ? (
+                                        <LockSimple size={12} weight="fill" />
+                                      ) : (
+                                        <LockSimpleOpen
+                                          size={12}
+                                          weight="bold"
+                                        />
+                                      )}
                                     </button>
                                   </div>
                                 </div>
@@ -993,7 +1232,9 @@ export default function Settings({
                         {!hasTransforms ? (
                           <div className="flex flex-col items-center gap-2 py-8 text-muted">
                             <Robot size={28} weight="thin" />
-                            <p className="font-sans text-sm">No AI generations yet.</p>
+                            <p className="font-sans text-sm">
+                              No AI generations yet.
+                            </p>
                             <p className="font-sans text-xs">
                               Use Rewrite, Tone, or other AI tools and results
                               will appear here.
@@ -1016,7 +1257,11 @@ export default function Settings({
                                       {toolLabel(entry.tool)}
                                     </span>
                                     <p className="mt-1 flex items-center gap-1.5 font-sans text-[11px] text-muted">
-                                      <ClockCounterClockwise size={11} weight="bold" className="shrink-0" />
+                                      <ClockCounterClockwise
+                                        size={11}
+                                        weight="bold"
+                                        className="shrink-0"
+                                      />
                                       {formatTimestamp(entry.timestamp)}
                                     </p>
                                   </div>
@@ -1028,12 +1273,20 @@ export default function Settings({
                                       aria-label="Re-apply to editor"
                                       title="Re-apply to editor"
                                     >
-                                      <ArrowCounterClockwise size={12} weight="bold" />
+                                      <ArrowCounterClockwise
+                                        size={12}
+                                        weight="bold"
+                                      />
                                       Apply
                                     </button>
                                     <button
                                       type="button"
-                                      onClick={() => handleHistCopy(entry.resultText, entry.id)}
+                                      onClick={() =>
+                                        handleHistCopy(
+                                          entry.resultText,
+                                          entry.id
+                                        )
+                                      }
                                       className={
                                         "flex items-center gap-1 rounded border px-2 py-1 font-sans text-[11px] transition-colors " +
                                         (histCopiedId === entry.id
@@ -1048,33 +1301,56 @@ export default function Settings({
                                       ) : (
                                         <Copy size={12} weight="bold" />
                                       )}
-                                      {histCopiedId === entry.id ? "Copied" : "Copy"}
+                                      {histCopiedId === entry.id
+                                        ? "Copied"
+                                        : "Copy"}
                                     </button>
                                     <button
                                       type="button"
-                                      onClick={() => onToggleTransformLock(entry.id)}
+                                      onClick={() =>
+                                        onToggleTransformLock(entry.id)
+                                      }
                                       className={
                                         "flex items-center gap-1 rounded border px-2 py-1 font-sans text-[11px] transition-colors " +
                                         (entry.locked
                                           ? "border-pale-green-text/20 bg-pale-green text-pale-green-text"
                                           : "border-hairline bg-white text-muted hover:text-ink")
                                       }
-                                      aria-label={entry.locked ? "Unlock this generation" : "Lock this generation"}
-                                      title={entry.locked ? "Locked — survives clear and cap" : "Lock to protect from clear and cap"}
+                                      aria-label={
+                                        entry.locked
+                                          ? "Unlock this generation"
+                                          : "Lock this generation"
+                                      }
+                                      title={
+                                        entry.locked
+                                          ? "Locked — survives clear and cap"
+                                          : "Lock to protect from clear and cap"
+                                      }
                                     >
-                                      {entry.locked ? <LockSimple size={12} weight="fill" /> : <LockSimpleOpen size={12} weight="bold" />}
+                                      {entry.locked ? (
+                                        <LockSimple size={12} weight="fill" />
+                                      ) : (
+                                        <LockSimpleOpen
+                                          size={12}
+                                          weight="bold"
+                                        />
+                                      )}
                                     </button>
                                   </div>
                                 </div>
                                 <div className="mt-2 grid grid-cols-2 gap-2">
                                   <div>
-                                    <p className="font-mono text-[10px] uppercase tracking-wider text-muted">Input</p>
+                                    <p className="font-mono text-[10px] uppercase tracking-wider text-muted">
+                                      Input
+                                    </p>
                                     <p className="mt-0.5 line-clamp-2 font-sans text-[11px] leading-snug text-muted">
                                       {snippet(entry.sourceText, 100)}
                                     </p>
                                   </div>
                                   <div>
-                                    <p className="font-mono text-[10px] uppercase tracking-wider text-muted">Output</p>
+                                    <p className="font-mono text-[10px] uppercase tracking-wider text-muted">
+                                      Output
+                                    </p>
                                     <p className="mt-0.5 line-clamp-2 font-sans text-[11px] leading-snug text-ink">
                                       {snippet(entry.resultText, 100)}
                                     </p>
@@ -1092,24 +1368,35 @@ export default function Settings({
 
               {/* ── Lex's Engine ── */}
               {activeTab === "ai" && (
-                <div data-setting-key="lex-engine-section" className={getHighlightClass("lex-engine-section")}>
-                  <h2 className="font-serif text-xl font-bold text-ink">Lex's Engine</h2>
+                <div
+                  data-setting-key="lex-engine-section"
+                  className={getHighlightClass("lex-engine-section")}
+                >
+                  <h2 className="font-serif text-xl font-bold text-ink">
+                    Lex's Engine
+                  </h2>
                   <p className="mt-5 font-mono text-[10px] uppercase tracking-widest text-muted">
                     Lex's Model
                   </p>
                   <p className="mt-1 font-sans text-xs text-muted">
-                    Runs entirely on your device. Download a local AI model or use
-                    your own Ollama server. Your selection is saved and used until
-                    changed.
+                    Runs entirely on your device. Download a local AI model or
+                    use your own Ollama server. Your selection is saved and used
+                    until changed.
                   </p>
                   <div className="mt-3">
                     <ModelManager
                       mode="settings"
                       onPreferenceChange={(pref) => {
-                        setAiPreference(pref.backend, pref.model_key, pref.ollama_model || "").catch(() => { });
+                        setAiPreference(
+                          pref.backend,
+                          pref.model_key,
+                          pref.ollama_model || ""
+                        ).catch(() => {});
                       }}
                       onConfigured={() =>
-                        window.dispatchEvent(new CustomEvent("lexicon:ai-configured"))
+                        window.dispatchEvent(
+                          new CustomEvent("lexicon:ai-configured")
+                        )
                       }
                     />
                   </div>
@@ -1118,8 +1405,13 @@ export default function Settings({
 
               {/* ── Custom Actions ── */}
               {activeTab === "actions" && (
-                <div data-setting-key="custom-actions-section" className={`flex min-h-0 flex-1 flex-col ${getHighlightClass("custom-actions-section")}`}>
-                  <h2 className="font-serif text-xl font-bold text-ink shrink-0 pb-3">Custom Actions</h2>
+                <div
+                  data-setting-key="custom-actions-section"
+                  className={`flex min-h-0 flex-1 flex-col ${getHighlightClass("custom-actions-section")}`}
+                >
+                  <h2 className="font-serif text-xl font-bold text-ink shrink-0 pb-3">
+                    Custom Actions
+                  </h2>
                   <CustomToolsSettings />
                 </div>
               )}
@@ -1127,7 +1419,9 @@ export default function Settings({
               {/* ── Shortcuts ── */}
               {activeTab === "shortcuts" && (
                 <div>
-                  <h2 className="font-serif text-xl font-bold text-ink">Shortcuts</h2>
+                  <h2 className="font-serif text-xl font-bold text-ink">
+                    Shortcuts
+                  </h2>
                   <p className="mt-3 font-sans text-xs text-muted">
                     All available commands and their key bindings.
                   </p>
@@ -1148,9 +1442,14 @@ export default function Settings({
                           </span>
                           <span className="flex items-center gap-1">
                             {shortcut.keys.map((keyStr, i) => (
-                              <span key={keyStr} className="flex items-center gap-1">
+                              <span
+                                key={keyStr}
+                                className="flex items-center gap-1"
+                              >
                                 {i > 0 && (
-                                  <span className="text-[10px] text-muted">+</span>
+                                  <span className="text-[10px] text-muted">
+                                    +
+                                  </span>
                                 )}
                                 <kbd className="lex-kbd">{keyStr}</kbd>
                               </span>
@@ -1165,16 +1464,21 @@ export default function Settings({
 
               {/* ── About & Feedback ── */}
               {activeTab === "about" && (
-                <div data-setting-key="about-section" className={`space-y-4 ${getHighlightClass("about-section")}`}>
-                  <h2 className="font-serif text-xl font-bold text-ink">About &amp; Feedback</h2>
+                <div
+                  data-setting-key="about-section"
+                  className={`space-y-4 ${getHighlightClass("about-section")}`}
+                >
+                  <h2 className="font-serif text-xl font-bold text-ink">
+                    About &amp; Feedback
+                  </h2>
 
                   <div className="rounded-lg border border-hairline bg-canvas px-4 py-3.5">
                     <p className="font-mono text-[10px] uppercase tracking-widest text-muted">
                       Updates
                     </p>
                     <p className="mt-1 font-sans text-xs text-muted">
-                      Check for new releases and install them
-                      without returning to GitHub.
+                      Check for new releases and install them without returning
+                      to GitHub.
                     </p>
                     <button
                       type="button"
@@ -1209,7 +1513,9 @@ export default function Settings({
                     </p>
                     <button
                       type="button"
-                      onClick={() => openExternalUrl("https://lexicon-writer.pages.dev/")}
+                      onClick={() =>
+                        openExternalUrl("https://lexicon-writer.pages.dev/")
+                      }
                       className="mt-2.5 flex w-full items-center justify-center gap-2 rounded border border-hairline bg-white py-2.5 font-sans text-sm font-medium text-ink transition-colors hover:border-muted hover:bg-hairline/40"
                     >
                       <LexiconLogo size={16} />
@@ -1225,7 +1531,9 @@ export default function Settings({
                     </button>
                     <button
                       type="button"
-                      onClick={() => openExternalUrl("https://tally.so/r/LZq8vy")}
+                      onClick={() =>
+                        openExternalUrl("https://tally.so/r/LZq8vy")
+                      }
                       className="mt-1.5 flex w-full items-center justify-center gap-2 rounded border border-transparent py-1.5 font-sans text-xs text-muted transition-colors hover:bg-white hover:border-hairline hover:text-ink"
                     >
                       <PaperPlaneTilt size={14} weight="bold" />

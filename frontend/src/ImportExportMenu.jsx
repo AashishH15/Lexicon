@@ -6,6 +6,7 @@ import {
   FileText,
   FileMd,
   FilePdf,
+  FileDoc,
   Book,
   SquaresFour,
 } from "@phosphor-icons/react";
@@ -13,6 +14,7 @@ import TurndownService from "turndown";
 import { marked } from "marked";
 import ExportOptionsModal from "./ExportOptionsModal.jsx";
 import EpubMetadataModal from "./EpubMetadataModal.jsx";
+import DocxExportModal from "./DocxExportModal.jsx";
 import { downloadBlob } from "./download.js";
 
 const turndown = new TurndownService({
@@ -44,10 +46,12 @@ export default function ImportExportMenu({
   editor,
   onRequestConfirm,
   onOpenTemplates,
+  grammarMatches = [],
 }) {
   const [open, setOpen] = useState(false);
   const [exportMode, setExportMode] = useState(null);
   const [epubOpen, setEpubOpen] = useState(false);
+  const [docxOpen, setDocxOpen] = useState(false);
   const containerRef = useRef(null);
   const fileInputRef = useRef(null);
 
@@ -82,6 +86,9 @@ export default function ImportExportMenu({
     } else if (kind === "epub") {
       setOpen(false);
       setEpubOpen(true);
+    } else if (kind === "docx") {
+      setOpen(false);
+      setDocxOpen(true);
     }
   }
 
@@ -212,6 +219,14 @@ export default function ImportExportMenu({
             <Book size={16} weight="bold" className="text-muted" />
             Export as EPUB…
           </button>
+          <button
+            type="button"
+            className={itemClass}
+            onClick={() => handleExport("docx")}
+          >
+            <FileDoc size={16} weight="bold" className="text-muted" />
+            Export as DOCX…
+          </button>
         </div>
       )}
       {/* Always mounted (not gated by {open}) so the ref stays valid
@@ -232,6 +247,13 @@ export default function ImportExportMenu({
       )}
       {epubOpen && (
         <EpubMetadataModal editor={editor} onClose={() => setEpubOpen(false)} />
+      )}
+      {docxOpen && (
+        <DocxExportModal
+          editor={editor}
+          matches={grammarMatches}
+          onClose={() => setDocxOpen(false)}
+        />
       )}
     </div>
   );

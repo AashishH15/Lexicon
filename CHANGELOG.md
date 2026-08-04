@@ -41,6 +41,13 @@ are listed so the release reads honestly about what works today.
   - **Book Metadata Dialog:** Set Book Title, Author Name, Language (default `en-US`), and Publisher before generating, with a safe slug-based filename derived from the title.
   - **Zero-Impact Bundle Size:** The ZIP packaging engine is lazy-loaded only when you generate a file, keeping the app's main bundle lean.
 
+- **Client-Side DOCX Export with Native Tracked Suggestions**: Export your document as a real Microsoft Word `.docx` file, with grammar suggestions turned into true Word redlines:
+  - **Native Tracked Suggestions:** Each unapplied grammar suggestion is exported as an OOXML `<w:ins>` / `<w:del>` revision pair (shared `w:id`, ISO timestamp). Open the file in Microsoft Word and every fix appears as a native redline you can **Accept** or **Reject** one by one — nothing is silently applied.
+  - **Configurable Reviewer Attribution:** Redlines carry the name of who proposed the fix. The field starts blank (sample text `Lex` shown as a hint), editable per export, and settable as a persistent **Default Author / Reviewer Name** in App Settings.
+  - **Clean or Tracked Export:** One checkbox switches between exporting the document with tracked suggestions or as a clean, fully-applied final copy.
+  - **Full Format Fidelity:** Headings, bold/italic/underline/highlight, bulleted and numbered lists, task-list checkboxes, blockquotes, code blocks, tables, and embedded images (base64) all map to native Word styling. LaTeX math is preserved as plain-text formulas.
+  - **Zero-Impact Bundle Size:** The DOCX engine shares the same lazy-loaded ZIP chunk as EPUB export, keeping the main bundle lean.
+
 ## v0.8.5 — Bug Fixes & Stability Improvements
 
 ### What's New in v0.8.5:

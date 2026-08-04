@@ -1,4 +1,12 @@
-import { useState, useEffect, useLayoutEffect, useRef, useCallback, lazy, Suspense } from "react";
+import {
+  useState,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useCallback,
+  lazy,
+  Suspense,
+} from "react";
 import { useEditor } from "@tiptap/react";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
@@ -45,7 +53,13 @@ import {
   ArrowSquareRight,
   CircleNotch,
 } from "@phosphor-icons/react";
-import { checkGrammar, getAiStatus, ensureBackend, openExternalUrl, transformText } from "./api.js";
+import {
+  checkGrammar,
+  getAiStatus,
+  ensureBackend,
+  openExternalUrl,
+  transformText,
+} from "./api.js";
 import {
   checkForUpdate,
   installUpdate,
@@ -64,7 +78,10 @@ import {
   findErrorAt,
   grammarPluginKey,
 } from "./grammarHighlight.js";
-import { checkProseQuality, extractSentenceContext } from "./proseQualityEngine.js";
+import {
+  checkProseQuality,
+  extractSentenceContext,
+} from "./proseQualityEngine.js";
 import { DecorationSet } from "@tiptap/pm/view";
 import { globalGrammarCache } from "./grammarCache.js";
 
@@ -112,7 +129,11 @@ function insertImageSourcesAtPos(view, sources, pos) {
 function categoryLabel(match) {
   const id = (match.rule?.id || "").toUpperCase();
   const description = (match.rule?.description || "").toLowerCase();
-  if (id.includes("SPELL") || description.includes("spell") || description.includes("typo")) {
+  if (
+    id.includes("SPELL") ||
+    description.includes("spell") ||
+    description.includes("typo")
+  ) {
     return "Spelling";
   }
   if (id.includes("PUNCT") || description.includes("punctuation")) {
@@ -130,6 +151,7 @@ const proseScanKey = "lexicon:proseScanEnabled";
 const dictionaryKey = "lexicon:user_dictionary";
 const documentHistoryKey = "lexicon:document_history";
 const transformHistoryKey = "lexicon:transform_history";
+const docxAuthorKey = "lexicon:docxAuthor";
 const MAX_HISTORY_ITEMS = 20;
 const APP_VERSION = import.meta.env.VITE_APP_VERSION || "v0.7.0";
 
@@ -194,7 +216,19 @@ function loadFocusMode() {
 }
 
 function loadLineSpacing() {
-  return Number(localStorage.getItem(lineSpacingKey)) || SETTINGS_DEFAULTS.lineSpacing;
+  return (
+    Number(localStorage.getItem(lineSpacingKey)) ||
+    SETTINGS_DEFAULTS.lineSpacing
+  );
+}
+
+function loadDocxAuthor() {
+  try {
+    const saved = localStorage.getItem(docxAuthorKey);
+    return saved != null && saved !== "" ? saved : "";
+  } catch {
+    return "";
+  }
 }
 
 function loadPanelOpen(key) {
@@ -218,7 +252,6 @@ function loadHistory(key) {
   } catch {
     return [];
   }
-
 }
 
 function loadPanelWidth(key, fallback, min, max) {
@@ -242,7 +275,7 @@ function requestMathEdit(kind, node, pos) {
   window.dispatchEvent(
     new CustomEvent("lex:edit-math", {
       detail: { kind, pos, latex: node.attrs.latex ?? "" },
-    }),
+    })
   );
 }
 
@@ -261,7 +294,10 @@ function loadDismissedKeys() {
 
 function saveDismissedKeys(set) {
   try {
-    localStorage.setItem(DISMISSED_KEYS_STORAGE_KEY, JSON.stringify(Array.from(set)));
+    localStorage.setItem(
+      DISMISSED_KEYS_STORAGE_KEY,
+      JSON.stringify(Array.from(set))
+    );
   } catch {}
 }
 
@@ -278,6 +314,7 @@ export default function App() {
   const [fontSize, setFontSize] = useState(loadFontSize);
   const [focusMode, setFocusMode] = useState(loadFocusMode);
   const [lineSpacing, setLineSpacing] = useState(loadLineSpacing);
+  const [docxAuthor, setDocxAuthor] = useState(loadDocxAuthor);
   const [userDictionary, setUserDictionary] = useState(loadDictionary);
   const [documentHistory, setDocumentHistory] = useState(() =>
     loadHistory(documentHistoryKey)
@@ -291,7 +328,9 @@ export default function App() {
   });
   const [proseScanEnabled, setProseScanEnabled] = useState(() => {
     const saved = localStorage.getItem(proseScanKey);
-    return saved !== null ? saved === "true" : SETTINGS_DEFAULTS.proseScanEnabled;
+    return saved !== null
+      ? saved === "true"
+      : SETTINGS_DEFAULTS.proseScanEnabled;
   });
   const [docText, setDocText] = useState("");
   const [toneResult, setToneResult] = useState(null);
@@ -378,7 +417,7 @@ export default function App() {
         } else if (progress.total > 0) {
           const percent = Math.min(
             100,
-            Math.round((progress.downloaded / progress.total) * 100),
+            Math.round((progress.downloaded / progress.total) * 100)
           );
           message = `Downloading update (${percent}%)…`;
         }
@@ -393,8 +432,13 @@ export default function App() {
     }
   }, [updateState.update]);
 
-  const { status: transformStatus, error: transformError, run: runTransform, abort: abortTransform, isWarming } =
-    useTransform();
+  const {
+    status: transformStatus,
+    error: transformError,
+    run: runTransform,
+    abort: abortTransform,
+    isWarming,
+  } = useTransform();
   const [transformResults, setTransformResults] = useState([]); // [{ tool, text, from, to, part, total }]
   const [transformProgress, setTransformProgress] = useState(null); // { current, total } | null
   const [transformRunning, setTransformRunning] = useState(false);
@@ -437,16 +481,16 @@ export default function App() {
     return () => window.removeEventListener("lexicon:ai-configured", onCfg);
   }, [refreshAiConfigured]);
   const [leftPanelOpen, setLeftPanelOpen] = useState(() =>
-    loadPanelOpen(leftPanelKey),
+    loadPanelOpen(leftPanelKey)
   );
   const [rightPanelOpen, setRightPanelOpen] = useState(() =>
-    loadPanelOpen(rightPanelKey),
+    loadPanelOpen(rightPanelKey)
   );
   const [leftWidth, setLeftWidth] = useState(() =>
-    loadPanelWidth(leftWidthKey, 175, LEFT_MIN, LEFT_MAX),
+    loadPanelWidth(leftWidthKey, 175, LEFT_MIN, LEFT_MAX)
   );
   const [rightWidth, setRightWidth] = useState(() =>
-    loadPanelWidth(rightWidthKey, 300, RIGHT_MIN, RIGHT_MAX),
+    loadPanelWidth(rightWidthKey, 300, RIGHT_MIN, RIGHT_MAX)
   );
   const [leftPeek, setLeftPeek] = useState(false);
   const [rightPeek, setRightPeek] = useState(false);
@@ -470,12 +514,13 @@ export default function App() {
     rightCloseTimer.current = setTimeout(() => setRightPeek(false), 180);
   }, []);
 
-  const proofreadRef = useRef(() => { });
-  proofreadRef.current = (forceFullScan = true) => runGrammarCheck(false, null, forceFullScan);
+  const proofreadRef = useRef(() => {});
+  proofreadRef.current = (forceFullScan = true) =>
+    runGrammarCheck(false, null, forceFullScan);
   const activeErrorRef = useRef(null);
   const matchesRef = useRef([]);
   const activeToolRef = useRef(activeTool);
-  const scheduleCheckRef = useRef(() => { });
+  const scheduleCheckRef = useRef(() => {});
   const checkTimer = useRef(null);
   const checkAbortRef = useRef(null);
   const checkingRef = useRef(false);
@@ -499,7 +544,9 @@ export default function App() {
       }
       setLowlightReady(true);
     });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Auto-reconnect polling loop when backend is offline
@@ -589,9 +636,8 @@ export default function App() {
           edgeDetection: "none",
         },
         onNodeChange: ({ node, editor }) => {
-          const handle = editor.view.dom.parentElement?.querySelector(
-            ".lex-drag-handle",
-          );
+          const handle =
+            editor.view.dom.parentElement?.querySelector(".lex-drag-handle");
           if (!handle) {
             return;
           }
@@ -697,11 +743,11 @@ export default function App() {
                   reader.onload = () => resolve(reader.result);
                   reader.onerror = () => reject(reader.error);
                   reader.readAsDataURL(file);
-                }),
-            ),
+                })
+            )
           )
             .then((sources) =>
-              insertImageSourcesAtPos(view, sources.filter(Boolean), dropPos),
+              insertImageSourcesAtPos(view, sources.filter(Boolean), dropPos)
             )
             .catch(() => {});
           return true;
@@ -764,7 +810,10 @@ export default function App() {
       try {
         localStorage.setItem(storageKey, html);
       } catch (err) {
-        console.warn("Could not save document draft to localStorage (quota exceeded):", err);
+        console.warn(
+          "Could not save document draft to localStorage (quota exceeded):",
+          err
+        );
       }
       setDocText(text);
       setToneResult(detectTone(text));
@@ -774,7 +823,10 @@ export default function App() {
       // Only rotate to a new prompt when transitioning from having text -> empty
       const hasText = text.trim().length > 0;
       if (!hasText && wasNotEmptyRef.current) {
-        placeholderRef.current = PLACEHOLDER_PROMPTS[Math.floor(Math.random() * PLACEHOLDER_PROMPTS.length)];
+        placeholderRef.current =
+          PLACEHOLDER_PROMPTS[
+            Math.floor(Math.random() * PLACEHOLDER_PROMPTS.length)
+          ];
       }
       wasNotEmptyRef.current = hasText;
       // Debounced draft snapshot (only in auto mode)
@@ -831,19 +883,17 @@ export default function App() {
           }
 
           const logicalPosition = event.payload.position.toLogical(
-            window.devicePixelRatio || 1,
+            window.devicePixelRatio || 1
           );
           const coords = editor.view.posAtCoords({
             left: logicalPosition.x,
             top: logicalPosition.y,
           });
-          const dropPos = coords
-            ? coords.pos
-            : editor.state.selection.from;
+          const dropPos = coords ? coords.pos : editor.state.selection.from;
           insertImageSourcesAtPos(
             editor.view,
             paths.map((path) => convertFileSrc(path)),
-            dropPos,
+            dropPos
           );
         });
 
@@ -916,14 +966,19 @@ export default function App() {
         if (current.length === 0) {
           return current;
         }
-        applyGrammarDecorations(editor, current, buildTextWithMap(editor.state.doc).map, id);
+        applyGrammarDecorations(
+          editor,
+          current,
+          buildTextWithMap(editor.state.doc).map,
+          id
+        );
         return current;
       });
     };
     const handleFocus = () => {
       setEditorFocused(true);
       // Silent background pre-warming of offloaded backend tiers
-      ensureBackend().catch(() => { });
+      ensureBackend().catch(() => {});
     };
     const handleBlur = () => setEditorFocused(false);
     editor.on("selectionUpdate", syncSelection);
@@ -945,7 +1000,7 @@ export default function App() {
   // Silent pre-warming when app window regains focus
   useEffect(() => {
     const onWindowFocus = () => {
-      ensureBackend().catch(() => { });
+      ensureBackend().catch(() => {});
     };
     window.addEventListener("focus", onWindowFocus);
     return () => window.removeEventListener("focus", onWindowFocus);
@@ -982,11 +1037,10 @@ export default function App() {
     };
   }, [editor]);
   function matchKey(match, text) {
-    const original = (
-      text && match.offset != null && match.length != null
+    const original =
+      (text && match.offset != null && match.length != null
         ? text.slice(match.offset, match.offset + match.length)
-        : match.original
-    ) || "";
+        : match.original) || "";
     let sentence = match.sentence || "";
     if (!sentence && text && match.offset != null) {
       sentence = extractSentenceContext(text, match.offset).text;
@@ -994,7 +1048,11 @@ export default function App() {
     return `${match.message}::${original}::${sentence}`;
   }
 
-  async function runGrammarCheck(silent = false, ignoreOverride = null, forceFullScan = false) {
+  async function runGrammarCheck(
+    silent = false,
+    ignoreOverride = null,
+    forceFullScan = false
+  ) {
     if (!editor) {
       return;
     }
@@ -1022,16 +1080,25 @@ export default function App() {
           text,
           language,
           ignore,
-          abortController.signal,
+          abortController.signal
         );
         let currentOffset = 0;
         let prevSuffix = "";
         const paragraphTexts = text.split("\n");
         for (const pText of paragraphTexts) {
           const pLen = pText.length;
-          const pKey = globalGrammarCache.computeKey(pText, prevSuffix, language, ignore);
+          const pKey = globalGrammarCache.computeKey(
+            pText,
+            prevSuffix,
+            language,
+            ignore
+          );
           const pMatches = rawMatches
-            .filter((m) => m.offset >= currentOffset && m.offset + m.length <= currentOffset + pLen)
+            .filter(
+              (m) =>
+                m.offset >= currentOffset &&
+                m.offset + m.length <= currentOffset + pLen
+            )
             .map((m) => ({ ...m, offset: m.offset - currentOffset }));
           globalGrammarCache.set(pKey, pMatches);
           currentOffset += pLen + 1;
@@ -1044,7 +1111,12 @@ export default function App() {
 
         for (const pText of paragraphTexts) {
           const pLen = pText.length;
-          const pKey = globalGrammarCache.computeKey(pText, prevSuffix, language, ignore);
+          const pKey = globalGrammarCache.computeKey(
+            pText,
+            prevSuffix,
+            language,
+            ignore
+          );
           let cached = globalGrammarCache.get(pKey);
 
           if (!cached) {
@@ -1053,7 +1125,7 @@ export default function App() {
                 pText,
                 language,
                 ignore,
-                abortController.signal,
+                abortController.signal
               );
               cached = freshMatches;
               globalGrammarCache.set(pKey, freshMatches);
@@ -1319,10 +1391,7 @@ export default function App() {
   // Persist history to localStorage whenever it changes.
   useEffect(() => {
     try {
-      localStorage.setItem(
-        documentHistoryKey,
-        JSON.stringify(documentHistory)
-      );
+      localStorage.setItem(documentHistoryKey, JSON.stringify(documentHistory));
     } catch {
       // Storage full or unavailable — silently ignore.
     }
@@ -1432,9 +1501,10 @@ export default function App() {
         setResizing(null);
         setAboutToCollapse(null);
         if (overshoot >= (side === "left" ? LEFT_COLLAPSE : RIGHT_COLLAPSE)) {
-          const reset = side === "left"
-            ? Math.max(startWidth, 256)
-            : Math.max(startWidth, 320);
+          const reset =
+            side === "left"
+              ? Math.max(startWidth, 256)
+              : Math.max(startWidth, 320);
           if (side === "left") {
             setLeftPanelOpen(false);
             setLeftWidth(reset);
@@ -1494,17 +1564,28 @@ export default function App() {
     localStorage.setItem(lineSpacingKey, String(next));
   }
 
+  function handleDocxAuthorChange(next) {
+    setDocxAuthor(next);
+    try {
+      localStorage.setItem(docxAuthorKey, next);
+    } catch {
+      // storage unavailable — keep the in-memory value for this session
+    }
+  }
+
   function handleResetDefaults() {
     setLanguage(SETTINGS_DEFAULTS.language);
     setFontSize(SETTINGS_DEFAULTS.fontSize);
     setFocusMode(SETTINGS_DEFAULTS.focusMode);
     setLineSpacing(SETTINGS_DEFAULTS.lineSpacing);
     setProseScanEnabled(SETTINGS_DEFAULTS.proseScanEnabled);
+    setDocxAuthor("Lex");
     localStorage.removeItem(languageKey);
     localStorage.removeItem(fontSizeKey);
     localStorage.removeItem(focusModeKey);
     localStorage.removeItem(lineSpacingKey);
     localStorage.removeItem(proseScanKey);
+    localStorage.removeItem(docxAuthorKey);
   }
 
   useEffect(() => {
@@ -1537,7 +1618,11 @@ export default function App() {
       // Accept / dismiss the suggestion under the caret when one is active,
       // otherwise fall back to the first card in the stream. Values are read
       // through refs so this handler never acts on a stale closure.
-      if ((event.ctrlKey || event.metaKey) && event.altKey && (key === "a" || key === "d")) {
+      if (
+        (event.ctrlKey || event.metaKey) &&
+        event.altKey &&
+        (key === "a" || key === "d")
+      ) {
         const matches = matchesRef.current;
         const activeId = activeErrorRef.current;
         const target =
@@ -1803,7 +1888,9 @@ export default function App() {
   function normalizeTableCells(html) {
     const doc = new DOMParser().parseFromString(html, "text/html");
     doc.querySelectorAll("th, td").forEach((cell) => {
-      const hasBlock = cell.querySelector("p, div, ul, ol, blockquote, pre, h1, h2, h3, h4, h5, h6");
+      const hasBlock = cell.querySelector(
+        "p, div, ul, ol, blockquote, pre, h1, h2, h3, h4, h5, h6"
+      );
       if (!hasBlock) {
         const para = doc.createElement("p");
         para.innerHTML = cell.innerHTML;
@@ -1823,11 +1910,7 @@ export default function App() {
     if (/<table/i.test(html)) {
       html = normalizeTableCells(html);
     }
-    editor
-      .chain()
-      .focus()
-      .insertContentAt({ from, to }, html)
-      .run();
+    editor.chain().focus().insertContentAt({ from, to }, html).run();
     // Remove just this card so remaining parts stay available.
     setTransformResults((prev) => {
       const next = prev.filter((c) => c !== card);
@@ -1873,7 +1956,7 @@ export default function App() {
 
   proofreadRef.current = triggerProofread;
 
-  // Reactive grammar sync while Proofread is active. 
+  // Reactive grammar sync while Proofread is active.
   // 300-400ms is the sweet spot
   const GRAMMAR_DEBOUNCE_MS = 350;
   function scheduleCheck(immediate = false) {
@@ -1896,11 +1979,14 @@ export default function App() {
 
   const emptyDoc = docText.trim().length === 0;
   const totalWords = emptyDoc ? 0 : docText.trim().split(/\s+/).length;
-  const errorMatches = grammarMatches.filter((m) => m.category !== "Prose Style");
+  const errorMatches = grammarMatches.filter(
+    (m) => m.category !== "Prose Style"
+  );
   const errorRatio = totalWords > 0 ? errorMatches.length / totalWords : 0;
-  const clarityScore = (emptyDoc || backendOffline)
-    ? null
-    : Math.max(0, Math.min(100, Math.round(100 - errorRatio * 100 * 12)));
+  const clarityScore =
+    emptyDoc || backendOffline
+      ? null
+      : Math.max(0, Math.min(100, Math.round(100 - errorRatio * 100 * 12)));
 
   function clarityGrade(score) {
     if (score >= 95) return "EXCELLENT";
@@ -1918,7 +2004,8 @@ export default function App() {
         ? "error density moderate"
         : "error density high";
 
-  const clarityGradeLabel = clarityScore == null ? null : clarityGrade(clarityScore);
+  const clarityGradeLabel =
+    clarityScore == null ? null : clarityGrade(clarityScore);
 
   const dimmed = focusMode && editorFocused && grammarMatches.length === 0;
   const panelDim =
@@ -1945,7 +2032,7 @@ export default function App() {
         { transform: fromTransform, [marginProp]: fromMargin },
         { transform: toTransform, [marginProp]: toMargin },
       ],
-      { duration: 300, easing: "ease-out", fill: "forwards" },
+      { duration: 300, easing: "ease-out", fill: "forwards" }
     );
     animRef.current = anim;
   };
@@ -1958,7 +2045,7 @@ export default function App() {
       el,
       "marginLeft",
       leftVisible ? "translateX(0px)" : `translateX(-${w}px)`,
-      leftVisible ? "0px" : `-${w}px`,
+      leftVisible ? "0px" : `-${w}px`
     );
   }, [leftVisible]);
   useLayoutEffect(() => {
@@ -1970,7 +2057,7 @@ export default function App() {
       el,
       "marginRight",
       rightVisible ? "translateX(0px)" : `translateX(${w}px)`,
-      rightVisible ? "0px" : `-${w}px`,
+      rightVisible ? "0px" : `-${w}px`
     );
   }, [rightVisible]);
 
@@ -1978,7 +2065,8 @@ export default function App() {
     if (!editor || !draft) return;
     setConfirmConfig({
       title: "Restore Draft Snapshot?",
-      message: "Restoring this draft snapshot will replace your current document text. Do you want to continue?",
+      message:
+        "Restoring this draft snapshot will replace your current document text. Do you want to continue?",
       confirmLabel: "Restore Draft",
       variant: "warning",
       onConfirm: () => {
@@ -2047,7 +2135,9 @@ export default function App() {
     <div className="lex-app-shell flex flex-col h-screen overflow-hidden bg-canvas text-ink">
       <header className="lex-no-print flex items-center justify-between px-6 h-14 border-b border-hairline">
         <div className="leading-tight">
-          <span className="block font-serif text-lg tracking-tight">Lexicon</span>
+          <span className="block font-serif text-lg tracking-tight">
+            Lexicon
+          </span>
           <div className="flex items-center gap-2">
             <span className="block font-mono text-[10px] uppercase tracking-[0.08em] text-muted">
               {APP_VERSION}
@@ -2068,6 +2158,7 @@ export default function App() {
             editor={editor}
             onRequestConfirm={setConfirmConfig}
             onOpenTemplates={() => setTemplateGalleryOpen(true)}
+            grammarMatches={grammarMatches}
           />
           <button
             type="button"
@@ -2162,8 +2253,8 @@ export default function App() {
                 <div className="mt-2 rounded-lg border border-dashed border-hairline bg-canvas px-3 py-2.5">
                   <p className="font-sans text-xs leading-snug text-muted">
                     AI tools aren&rsquo;t set up yet. Download a local model or
-                    connect your Ollama server to enable Rewrite, Tones,
-                    Summary and more.
+                    connect your Ollama server to enable Rewrite, Tones, Summary
+                    and more.
                   </p>
                   <button
                     type="button"
@@ -2202,9 +2293,7 @@ export default function App() {
           onMouseLeave={() => focusMode && scheduleCloseLeft()}
           className={
             "lex-no-print group absolute left-0 top-0 z-10 flex h-full w-6 items-center justify-center bg-hairline/40 transition-colors hover:bg-hairline " +
-            (leftVisible
-              ? "pointer-events-none opacity-0"
-              : "cursor-pointer")
+            (leftVisible ? "pointer-events-none opacity-0" : "cursor-pointer")
           }
           onClick={handleRailLeftClick}
           aria-label="Show left panel"
@@ -2233,7 +2322,11 @@ export default function App() {
           {transformRunning && (
             <div className="pointer-events-none absolute right-12 top-3 z-10">
               <div className="flex items-center gap-2.5 rounded-full border border-hairline bg-white/90 px-3 py-1.5 shadow-sm backdrop-blur">
-                <CircleNotch size={14} weight="bold" className="animate-spin text-muted" />
+                <CircleNotch
+                  size={14}
+                  weight="bold"
+                  className="animate-spin text-muted"
+                />
                 <p className="font-sans text-xs text-ink">
                   {activeTool} is running — editing paused
                 </p>
@@ -2325,9 +2418,7 @@ export default function App() {
           onMouseLeave={() => focusMode && scheduleCloseRight()}
           className={
             "lex-no-print group absolute right-0 top-0 z-10 flex h-full w-6 items-center justify-center bg-hairline/40 transition-colors hover:bg-hairline " +
-            (rightVisible
-              ? "pointer-events-none opacity-0"
-              : "cursor-pointer")
+            (rightVisible ? "pointer-events-none opacity-0" : "cursor-pointer")
           }
           onClick={handleRailRightClick}
           aria-label="Show right panel"
@@ -2363,6 +2454,8 @@ export default function App() {
           onFocusModeChange={handleFocusModeChange}
           proseScanEnabled={proseScanEnabled}
           onProseScanChange={handleProseScanChange}
+          docxAuthor={docxAuthor}
+          onDocxAuthorChange={handleDocxAuthorChange}
           onResetDefaults={handleResetDefaults}
           onCheckForUpdates={() => runUpdateCheck()}
           updateState={updateState}
@@ -2383,7 +2476,6 @@ export default function App() {
           onClearTransforms={handleClearTransforms}
         />
       </Suspense>
-
 
       <Suspense fallback={null}>
         {aiSetupOpen && (
