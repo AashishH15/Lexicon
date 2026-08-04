@@ -6,11 +6,13 @@ import {
   FileText,
   FileMd,
   FilePdf,
+  Book,
   SquaresFour,
 } from "@phosphor-icons/react";
 import TurndownService from "turndown";
 import { marked } from "marked";
 import ExportOptionsModal from "./ExportOptionsModal.jsx";
+import EpubMetadataModal from "./EpubMetadataModal.jsx";
 import { downloadBlob } from "./download.js";
 
 const turndown = new TurndownService({
@@ -45,6 +47,7 @@ export default function ImportExportMenu({
 }) {
   const [open, setOpen] = useState(false);
   const [exportMode, setExportMode] = useState(null);
+  const [epubOpen, setEpubOpen] = useState(false);
   const containerRef = useRef(null);
   const fileInputRef = useRef(null);
 
@@ -76,6 +79,9 @@ export default function ImportExportMenu({
     } else if (kind === "pdf" || kind === "styled-html") {
       setOpen(false);
       setExportMode(kind === "pdf" ? "pdf" : "html");
+    } else if (kind === "epub") {
+      setOpen(false);
+      setEpubOpen(true);
     }
   }
 
@@ -198,6 +204,14 @@ export default function ImportExportMenu({
             <FilePdf size={16} weight="bold" className="text-muted" />
             Export as PDF
           </button>
+          <button
+            type="button"
+            className={itemClass}
+            onClick={() => handleExport("epub")}
+          >
+            <Book size={16} weight="bold" className="text-muted" />
+            Export as EPUB…
+          </button>
         </div>
       )}
       {/* Always mounted (not gated by {open}) so the ref stays valid
@@ -215,6 +229,9 @@ export default function ImportExportMenu({
           mode={exportMode}
           onClose={() => setExportMode(null)}
         />
+      )}
+      {epubOpen && (
+        <EpubMetadataModal editor={editor} onClose={() => setEpubOpen(false)} />
       )}
     </div>
   );

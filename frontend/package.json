@@ -36,6 +36,7 @@
     "@tiptap/react": "^3.27.4",
     "@tiptap/starter-kit": "^3.27.4",
     "@tiptap/suggestion": "^3.27.4",
+    "jszip": "^3.10.1",
     "katex": "^0.16.47",
     "lowlight": "3.3.0",
     "marked": "^18.0.6",
