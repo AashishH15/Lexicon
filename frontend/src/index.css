@@ -580,6 +580,35 @@
     color: transparent;
   }
 
+  @keyframes lex-progress-slide {
+    0% {
+      left: -35%;
+      width: 35%;
+    }
+    50% {
+      width: 45%;
+    }
+    100% {
+      left: 100%;
+      width: 35%;
+    }
+  }
+
+  .lex-progress-slide-bar {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .lex-progress-slide-bar::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    background-color: var(--color-ink, #000);
+    border-radius: 9999px;
+    animation: lex-progress-slide 1.6s ease-in-out infinite;
+  }
+
   @keyframes lex-ellipsis-typing {
     0% {
       clip-path: inset(0 100% 0 0);

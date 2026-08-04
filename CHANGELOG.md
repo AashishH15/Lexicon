@@ -29,7 +29,8 @@ are listed so the release reads honestly about what works today.
 
 - **Professional PDF & HTML Export Themes**: Transform your drafts into beautifully styled documents before printing or exporting:
   - **Four Print Theme Presets:** Choose from **Academic / Formal** (serif font, numbered section headers, page footers), **Novel / Literary** (classic Garamond/Georgia layout, drop caps), **Minimalist / Modern** (sans-serif Inter, bold monochrome accents), or **Executive / Corporate** (navy header bars, card callout boxes, gold rules).
-  - **Custom CSS Support:** Option to type custom styling rules to personalize your exported documents.
+  - **Ask Lex to Style Your Document (100% Offline AI):** Users can describe their document layout in plain English (or tap 1-click quick style chips like *Navy Headings*, *Double Spaced*, *Legal Brief*, *Callout Cards*). Lexicon's local AI generates clean CSS directly into the Custom CSS box.
+  - **Custom CSS Support:** Power users can type or edit custom CSS rules directly to personalize exported documents.
   - **Clean Vector PDF Export:** Automatically hides background app interface buttons, removes clutter like browser URLs (`localhost:5173`) and dates, and includes an in-app tip guiding users to save clean, 100% highlightable text PDFs.
   - **Export as Styled HTML:** Export self-contained, beautifully styled `.html` files that preserve your selected design theme when opened in any web browser.
 
@@ -60,6 +61,8 @@ are listed so the release reads honestly about what works today.
 - **Grammar Cache Hash Docblock Correction**: Updated the key formula docblock in `grammarCache.js` to accurately state `FNV1A64` instead of `XXH64`, resolving a documentation mismatch with `hashUtils.js`.
 - **Zero-Dependency 27x Hash Performance Optimization**: Replaced `BigInt` character loop allocations in `hashUtils.js` with Dual 32-bit bitwise `Math.imul()` calculations. Achieves a measured 27.6x speedup (time for 10,000 LRU computeKey ops dropped from 691ms to 25ms) while executing in V8 hardware registers with 0 heap object allocations.
 - **Thread-Safe Per-Key Model Download Cancellation**: Replaced single global `_DOWNLOAD_CANCELLED` boolean in `model_manager.py` with a thread-safe `_CANCELLED_KEYS` set and `_CANCEL_LOCK`. Model cancellations now operate strictly per-key (`2b` vs `0.8b`), preventing cross-cancellation and race conditions between concurrent download tasks.
+- **Export Style Preset Population Improvement**: Updated preset chip buttons (*Navy Headings*, *Double Spaced*, *Legal Brief*, *Callout Cards*) in `ExportOptionsModal.jsx` to populate the prompt input field without triggering auto-generation. Users can now inspect and customize the preset text before clicking **Style**.
+- **AI Style Generation Cancellation & Progress Bar**: Added an `AbortController` cancellation system and a clean single **Cancel** button in `ExportOptionsModal.jsx` (and on `Escape` keypress), allowing users to immediately abort long-running CSS generation HTTP requests. Added a smooth, custom animated progress bar (`.lex-progress-slide-bar` in `index.css`), real-time elapsed seconds ticker, and multi-stage status messaging.
 
 ---
 

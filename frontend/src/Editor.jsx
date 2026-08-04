@@ -82,6 +82,7 @@ export default function Editor({
   clarityGrade,
   clarityDensity,
   grammarMatches,
+  emptyDoc,
   proofreadActive,
   toneResult,
 }) {

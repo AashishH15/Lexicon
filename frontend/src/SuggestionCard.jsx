@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { BookBookmark, CircleNotch, Sparkle } from "@phosphor-icons/react";
+import { BookBookmark, CircleNotch, MagicWand } from "@phosphor-icons/react";
 
 function getCategoryBadgeStyle(category = "") {
   const cat = category.toLowerCase();
@@ -157,7 +157,7 @@ export default function SuggestionCard({
               </span>
             ) : (
               <span className="inline-flex items-center justify-center gap-1.5">
-                <Sparkle size={13} weight="bold" className="text-muted" />
+                <MagicWand size={13} weight="bold" className="text-muted" />
                 Active Voice
               </span>
             )}
