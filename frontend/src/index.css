@@ -823,7 +823,7 @@
 }
 
 @page {
-  margin: 0.85in;
+  margin: 0;
 }
 
 @media print {
@@ -843,6 +843,18 @@
 
   .lex-no-print {
     display: none !important;
+  }
+
+  /* Strip visual filters and transforms during print to guarantee vector PDF output */
+  *,
+  *::before,
+  *::after {
+    backdrop-filter: none !important;
+    filter: none !important;
+    transform: none !important;
+    perspective: none !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
   }
 
   /* Kill the app shell chrome; let the editor fill the page. */

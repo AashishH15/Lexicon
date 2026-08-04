@@ -2229,7 +2229,6 @@ export default function App() {
             emptyDoc={emptyDoc}
             proofreadActive={activeTool === "Proofread"}
             toneResult={toneResult}
-            onOpenTemplates={() => setTemplateGalleryOpen(true)}
           />
           {transformRunning && (
             <div className="pointer-events-none absolute right-12 top-3 z-10">

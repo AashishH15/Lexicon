@@ -82,10 +82,8 @@ export default function Editor({
   clarityGrade,
   clarityDensity,
   grammarMatches,
-  emptyDoc,
   proofreadActive,
   toneResult,
-  onOpenTemplates,
 }) {
   const hasMetrics = proofreadActive && !emptyDoc;
   const [showBreakdown, setShowBreakdown] = useState(false);
@@ -589,7 +587,7 @@ export default function Editor({
         </div>
       )}
 
-      <FormatToolbar editor={editor} onRequestLink={requestLink} onRequestMath={requestMath} onOpenTemplates={onOpenTemplates} />
+      <FormatToolbar editor={editor} onRequestLink={requestLink} onRequestMath={requestMath} />
 
       <SelectionBubbleMenu editor={editor} />
 

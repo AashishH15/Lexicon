@@ -7,6 +7,32 @@ This changelog tracks what is **live** in each release and what is still
 **stubbed** (shown in the interface but not yet functional). Stubbed features
 are listed so the release reads honestly about what works today.
 
+## v0.9.0 — Rich Export Formats & Starter Templates
+
+### Quick Downloads:
+
+- 🪟 **[Windows x64 Setup](https://github.com/AashishH15/Lexicon/releases/download/v0.9.0/Lexicon_0.9.0_x64-setup.exe)**: Standard installer for modern 64-bit Windows PCs (Intel / AMD).
+- 🍏 **[macOS Apple Silicon DMG](https://github.com/AashishH15/Lexicon/releases/download/v0.9.0/Lexicon_0.9.0_aarch64.dmg)**: For modern Apple Silicon Macs (M1, M2, M3, M4 chips).
+- 📦 **[View All Assets & Checksums](https://github.com/AashishH15/Lexicon/releases/tag/v0.9.0)**: Complete list of installers including ARM64 Windows, x86 Windows, and Intel macOS.
+
+---
+
+### What's New in v0.9.0:
+
+- **Built-in Document Template Gallery**: Jumpstart your writing with 1-click starter templates tailored for different writing styles:
+  - **Academic Paper:** Pre-structured research layout complete with Abstract, section headers, results data table, LaTeX math formulas, and a references list.
+  - **Novel Manuscript:** Classic fiction manuscript format featuring title block, chapter headers, scene breaks (`***`) or (`---`), dialogue, and first-line paragraph indents.
+  - **Minimalist Blog:** Clean blog post skeleton featuring a lead paragraph, pull-quote callout box, syntax-highlighted code block, and summary list.
+  - **Executive Summary:** Corporate review layout featuring key takeaway callout boxes, metrics table, and interactive action-item task lists.
+  - **Visual Selector Modal:** Easily browse templates with card thumbnails, tags, and descriptions. Includes a safety confirmation dialog to prevent accidentally overwriting active work.
+  - **Quick Access:** Open the gallery anytime via **Template Gallery…** in the top-right export menu (`ImportExportMenu`).
+
+- **Professional PDF & HTML Export Themes**: Transform your drafts into beautifully styled documents before printing or exporting:
+  - **Four Print Theme Presets:** Choose from **Academic / Formal** (serif font, numbered section headers, page footers), **Novel / Literary** (classic Garamond/Georgia layout, drop caps), **Minimalist / Modern** (sans-serif Inter, bold monochrome accents), or **Executive / Corporate** (navy header bars, card callout boxes, gold rules).
+  - **Custom CSS Support:** Option to type custom styling rules to personalize your exported documents.
+  - **Clean Vector PDF Export:** Automatically hides background app interface buttons, removes clutter like browser URLs (`localhost:5173`) and dates, and includes an in-app tip guiding users to save clean, 100% highlightable text PDFs.
+  - **Export as Styled HTML:** Export self-contained, beautifully styled `.html` files that preserve your selected design theme when opened in any web browser.
+
 ## v0.8.5 — Bug Fixes & Stability Improvements
 
 ### What's New in v0.8.5:

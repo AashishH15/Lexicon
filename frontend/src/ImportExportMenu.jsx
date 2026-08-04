@@ -1,7 +1,17 @@
 import { useEffect, useRef, useState } from "react";
-import { Export, DownloadSimple, FileHtml, FileText, FileMd, FilePdf, SquaresFour } from "@phosphor-icons/react";
+import {
+  Export,
+  DownloadSimple,
+  FileHtml,
+  FileText,
+  FileMd,
+  FilePdf,
+  SquaresFour,
+} from "@phosphor-icons/react";
 import TurndownService from "turndown";
 import { marked } from "marked";
+import ExportOptionsModal from "./ExportOptionsModal.jsx";
+import { downloadBlob } from "./download.js";
 
 const turndown = new TurndownService({
   headingStyle: "atx",
@@ -28,27 +38,23 @@ function plainTextToHtml(text) {
   return paragraphs || "<p></p>";
 }
 
-function downloadBlob(content, filename, mime) {
-  const blob = new Blob([content], { type: mime });
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = filename;
-  document.body.appendChild(anchor);
-  anchor.click();
-  document.body.removeChild(anchor);
-  URL.revokeObjectURL(url);
-}
-
-export default function ImportExportMenu({ editor, onRequestConfirm, onOpenTemplates }) {
+export default function ImportExportMenu({
+  editor,
+  onRequestConfirm,
+  onOpenTemplates,
+}) {
   const [open, setOpen] = useState(false);
+  const [exportMode, setExportMode] = useState(null);
   const containerRef = useRef(null);
   const fileInputRef = useRef(null);
 
   useEffect(() => {
     if (!open) return;
     const handleClick = (event) => {
-      if (containerRef.current && !containerRef.current.contains(event.target)) {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(event.target)
+      ) {
         setOpen(false);
       }
     };
@@ -67,9 +73,9 @@ export default function ImportExportMenu({ editor, onRequestConfirm, onOpenTempl
     } else if (kind === "md") {
       const md = turndown.turndown(editor.getHTML());
       downloadBlob(md, "document.md", "text/markdown");
-    } else if (kind === "pdf") {
+    } else if (kind === "pdf" || kind === "styled-html") {
       setOpen(false);
-      requestAnimationFrame(() => window.print());
+      setExportMode(kind === "pdf" ? "pdf" : "html");
     }
   }
 
@@ -105,7 +111,8 @@ export default function ImportExportMenu({ editor, onRequestConfirm, onOpenTempl
     if (onRequestConfirm) {
       onRequestConfirm({
         title: "Overwrite Document?",
-        message: "Importing a new file will permanently overwrite your current document. Do you want to continue?",
+        message:
+          "Importing a new file will permanently overwrite your current document. Do you want to continue?",
         confirmLabel: "Import File",
         variant: "warning",
         onConfirm: processImport,
@@ -151,19 +158,43 @@ export default function ImportExportMenu({ editor, onRequestConfirm, onOpenTempl
             Template Gallery…
           </button>
           <div className="my-1 h-px bg-hairline" />
-          <button type="button" className={itemClass} onClick={() => handleExport("html")}>
+          <button
+            type="button"
+            className={itemClass}
+            onClick={() => handleExport("html")}
+          >
             <FileHtml size={16} weight="bold" className="text-muted" />
             Export as HTML
           </button>
-          <button type="button" className={itemClass} onClick={() => handleExport("txt")}>
+          <button
+            type="button"
+            className={itemClass}
+            onClick={() => handleExport("styled-html")}
+          >
+            <FileHtml size={16} weight="bold" className="text-muted" />
+            Export as Styled HTML…
+          </button>
+          <button
+            type="button"
+            className={itemClass}
+            onClick={() => handleExport("txt")}
+          >
             <FileText size={16} weight="bold" className="text-muted" />
             Export as Plain Text
           </button>
-          <button type="button" className={itemClass} onClick={() => handleExport("md")}>
+          <button
+            type="button"
+            className={itemClass}
+            onClick={() => handleExport("md")}
+          >
             <FileMd size={16} weight="bold" className="text-muted" />
             Export as Markdown
           </button>
-          <button type="button" className={itemClass} onClick={() => handleExport("pdf")}>
+          <button
+            type="button"
+            className={itemClass}
+            onClick={() => handleExport("pdf")}
+          >
             <FilePdf size={16} weight="bold" className="text-muted" />
             Export as PDF
           </button>
@@ -178,6 +209,13 @@ export default function ImportExportMenu({ editor, onRequestConfirm, onOpenTempl
         className="hidden"
         onChange={handleFile}
       />
+      {exportMode && (
+        <ExportOptionsModal
+          editor={editor}
+          mode={exportMode}
+          onClose={() => setExportMode(null)}
+        />
+      )}
     </div>
   );
 }
