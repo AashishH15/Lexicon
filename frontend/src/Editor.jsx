@@ -85,6 +85,7 @@ export default function Editor({
   emptyDoc,
   proofreadActive,
   toneResult,
+  onOpenTemplates,
 }) {
   const hasMetrics = proofreadActive && !emptyDoc;
   const [showBreakdown, setShowBreakdown] = useState(false);
@@ -357,11 +358,6 @@ export default function Editor({
     };
   }, [editor]);
 
-  // Lazy-load KaTeX CSS when math popover is first opened
-  useEffect(() => {
-    if (!mathEdit) return;
-    import("katex/dist/katex.min.css");
-  }, [mathEdit]);
 
   // Click-away close for the math popover (removes a pending box if any).
   useEffect(() => {
@@ -593,7 +589,7 @@ export default function Editor({
         </div>
       )}
 
-      <FormatToolbar editor={editor} onRequestLink={requestLink} onRequestMath={requestMath} />
+      <FormatToolbar editor={editor} onRequestLink={requestLink} onRequestMath={requestMath} onOpenTemplates={onOpenTemplates} />
 
       <SelectionBubbleMenu editor={editor} />
 

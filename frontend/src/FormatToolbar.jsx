@@ -42,6 +42,7 @@ import {
   ArrowsSplit,
   Wrench,
   UploadSimple,
+  Layout,
 } from "@phosphor-icons/react";
 
 
@@ -802,7 +803,7 @@ function LinkButton({ editor, onRequestLink }) {
   );
 }
 
-export default function FormatToolbar({ editor, onRequestLink, onRequestMath }) {
+export default function FormatToolbar({ editor, onRequestLink, onRequestMath, onOpenTemplates }) {
   const state = useEditorState({
     editor,
     selector: (snapshot) => {
@@ -850,6 +851,16 @@ export default function FormatToolbar({ editor, onRequestLink, onRequestMath }) 
       <MathMenu editor={editor} onRequestMath={onRequestMath} />
       <ImageButton editor={editor} />
       <LinkButton editor={editor} onRequestLink={onRequestLink} />
+      <span className="mx-1 h-5 w-px bg-hairline" aria-hidden="true" />
+      <button
+        type="button"
+        title="Templates"
+        aria-label="Templates"
+        onClick={onOpenTemplates}
+        className="group flex h-8 w-8 items-center justify-center rounded border border-transparent text-ink transition-colors hover:bg-hairline/60 focus-visible:ring-1 focus-visible:ring-ink"
+      >
+        <Layout size={16} weight="bold" className="transition-transform duration-200 group-hover:scale-125" />
+      </button>
     </div>
   );
 }

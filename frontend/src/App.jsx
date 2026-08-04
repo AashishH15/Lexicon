@@ -29,6 +29,7 @@ import ImportExportMenu from "./ImportExportMenu.jsx";
 import ReviewPanel from "./ReviewPanel.jsx";
 import GrammarTooltip from "./GrammarTooltip.jsx";
 import ConfirmModal from "./ConfirmModal.jsx";
+import TemplateGalleryModal from "./TemplateGalleryModal.jsx";
 import { SETTINGS_DEFAULTS } from "./Settings.jsx";
 const Settings = lazy(() => import("./Settings.jsx"));
 const AiSetupModal = lazy(() => import("./AiSetupModal.jsx"));
@@ -297,6 +298,7 @@ export default function App() {
   const [editorFocused, setEditorFocused] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [confirmConfig, setConfirmConfig] = useState(null);
+  const [templateGalleryOpen, setTemplateGalleryOpen] = useState(false);
   const [aiConfigured, setAiConfigured] = useState(false);
   const [aiSetupOpen, setAiSetupOpen] = useState(() => {
     // First-run AI setup flow: shown once, gated by a localStorage flag.
@@ -2062,7 +2064,11 @@ export default function App() {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <ImportExportMenu editor={editor} onRequestConfirm={setConfirmConfig} />
+          <ImportExportMenu
+            editor={editor}
+            onRequestConfirm={setConfirmConfig}
+            onOpenTemplates={() => setTemplateGalleryOpen(true)}
+          />
           <button
             type="button"
             onClick={() => handleFocusModeChange(!focusMode)}
@@ -2223,6 +2229,7 @@ export default function App() {
             emptyDoc={emptyDoc}
             proofreadActive={activeTool === "Proofread"}
             toneResult={toneResult}
+            onOpenTemplates={() => setTemplateGalleryOpen(true)}
           />
           {transformRunning && (
             <div className="pointer-events-none absolute right-12 top-3 z-10">
@@ -2406,6 +2413,13 @@ export default function App() {
           update={updateState.update}
           onClose={() => setUpdateModalOpen(false)}
           onInstall={installAvailableUpdate}
+        />
+      )}
+      {templateGalleryOpen && (
+        <TemplateGalleryModal
+          editor={editor}
+          onRequestConfirm={setConfirmConfig}
+          onClose={() => setTemplateGalleryOpen(false)}
         />
       )}
       <ConfirmModal

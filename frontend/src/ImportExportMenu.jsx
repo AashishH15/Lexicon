@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Export, DownloadSimple, FileHtml, FileText, FileMd, FilePdf } from "@phosphor-icons/react";
+import { Export, DownloadSimple, FileHtml, FileText, FileMd, FilePdf, SquaresFour } from "@phosphor-icons/react";
 import TurndownService from "turndown";
 import { marked } from "marked";
 
@@ -40,7 +40,7 @@ function downloadBlob(content, filename, mime) {
   URL.revokeObjectURL(url);
 }
 
-export default function ImportExportMenu({ editor, onRequestConfirm }) {
+export default function ImportExportMenu({ editor, onRequestConfirm, onOpenTemplates }) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -138,6 +138,17 @@ export default function ImportExportMenu({ editor, onRequestConfirm }) {
           <button type="button" className={itemClass} onClick={triggerImport}>
             <DownloadSimple size={16} weight="bold" className="text-muted" />
             Import File…
+          </button>
+          <button
+            type="button"
+            className={itemClass}
+            onClick={() => {
+              setOpen(false);
+              onOpenTemplates?.();
+            }}
+          >
+            <SquaresFour size={16} weight="bold" className="text-muted" />
+            Template Gallery…
           </button>
           <div className="my-1 h-px bg-hairline" />
           <button type="button" className={itemClass} onClick={() => handleExport("html")}>
