@@ -124,7 +124,9 @@ function parseDocument(html) {
         text: `\\[${el.getAttribute("data-latex") || ""}\\]`,
       });
     } else if (el.tagName === "IMG") {
-      current.image = el;
+      // block-level image (TipTap serializes it outside <p>): treat it as an
+      // image run so media registration and rendering pick it up
+      current.runs.push({ image: el });
     } else if (tag === "hr") {
       current.hr = true;
     } else {
@@ -485,6 +487,12 @@ function buildContentTypes(media) {
   }
   if (media.some((m) => m.ext === "jpeg")) {
     defaults.push('<Default Extension="jpeg" ContentType="image/jpeg"/>');
+  }
+  if (media.some((m) => m.ext === "gif")) {
+    defaults.push('<Default Extension="gif" ContentType="image/gif"/>');
+  }
+  if (media.some((m) => m.ext === "webp")) {
+    defaults.push('<Default Extension="webp" ContentType="image/webp"/>');
   }
   return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">

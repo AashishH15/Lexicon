@@ -102,23 +102,37 @@ export default function ImportExportMenu({
     event.target.value = "";
     if (!file || !editor) return;
 
-    const processImport = () => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const text = String(reader.result || "");
-        const lower = file.name.toLowerCase();
+    const processImport = async () => {
+      const lower = file.name.toLowerCase();
+      try {
         let html;
         if (lower.endsWith(".txt")) {
-          html = plainTextToHtml(text);
+          html = plainTextToHtml(await file.text());
         } else if (lower.endsWith(".md") || lower.endsWith(".markdown")) {
-          html = marked.parse(text);
+          html = marked.parse(await file.text());
+        } else if (lower.endsWith(".docx")) {
+          const { docxToHtml } = await import("./docxImport.js");
+          html = (await docxToHtml(await file.arrayBuffer())).html;
         } else {
           // .html / .htm / fallback: assume HTML
-          html = text;
+          html = await file.text();
         }
         editor.commands.setContent(html);
-      };
-      reader.readAsText(file);
+      } catch (err) {
+        console.error("Import failed:", err);
+        const message =
+          lower.endsWith(".docx") &&
+          /(password|encrypted|not a zip)/i.test(String(err?.message || err))
+            ? "This document is password-protected or not a valid .docx file."
+            : `Could not import "${file.name}". ${err?.message || ""}`;
+        onRequestConfirm?.({
+          title: "Import Failed",
+          message,
+          confirmLabel: "OK",
+          variant: "danger",
+          onConfirm: null,
+        });
+      }
     };
 
     if (onRequestConfirm) {
@@ -234,7 +248,7 @@ export default function ImportExportMenu({
       <input
         ref={fileInputRef}
         type="file"
-        accept=".html,.htm,.txt,.md,.markdown"
+        accept=".html,.htm,.txt,.md,.markdown,.docx"
         className="hidden"
         onChange={handleFile}
       />

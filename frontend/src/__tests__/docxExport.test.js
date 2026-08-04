@@ -6,6 +6,10 @@ import { buildDocx, buildPlainText } from "../docxExport.js";
 const PNG_1PX =
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
 
+// 1x1 white JPEG (ffd8ff magic)
+const JPEG_1PX =
+  "/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/wAALCAABAAEBAREA/8QAFAABAAAAAAAAAAAAAAAAAAAACf/EABQQAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQEAAD8AVN//2Q==";
+
 const SAMPLE_HTML = `
 <h1>Chapter</h1>
 <p>Hello <strong>bold</strong> and <em>italic</em>.</p>
@@ -224,10 +228,15 @@ describe("buildDocx — content mapping", () => {
   });
 
   it("embeds base64 images as media and placeholders for remote ones", async () => {
-    const html = `<p><img src="data:image/png;base64,${PNG_1PX}" alt="a"></p><p>Text <img src="https://example.com/x.png" alt="b"> here</p>`;
+    const gif1px = "R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+    const html =
+      `<p><img src="data:image/png;base64,${PNG_1PX}" alt="a"></p>` +
+      `<p>Text <img src="https://example.com/x.png" alt="b"> here</p>` +
+      `<p><img src="data:image/gif;base64,${gif1px}" alt="c"></p>`;
     const blob = await buildDocx({ html });
     const { zip, files } = await loadDocx(blob);
     expect(files["word/media/image1.png"]).toBeTruthy();
+    expect(files["word/media/image2.gif"]).toBeTruthy();
     const doc = files["word/document.xml"];
     expect(doc).toContain("<w:drawing>");
     expect(doc).toContain('r:embed="rId3"');
@@ -235,8 +244,38 @@ describe("buildDocx — content mapping", () => {
     expect(files["word/_rels/document.xml.rels"]).toContain(
       'Target="media/image1.png"'
     );
+    expect(files["[Content_Types].xml"]).toContain(
+      '<Default Extension="png" ContentType="image/png"/>'
+    );
+    expect(files["[Content_Types].xml"]).toContain(
+      '<Default Extension="gif" ContentType="image/gif"/>'
+    );
     const png = await zip.file("word/media/image1.png").async("uint8array");
     expect(png[0]).toBe(0x89); // PNG magic byte
+  });
+
+  it("embeds block-level images (TipTap serializes <img> outside <p>)", async () => {
+    // TipTap's Image node with inline:false emits the <img> as a block element
+    // between paragraphs, not wrapped in <p>.
+    const html =
+      `<p>Before</p>` +
+      `<img src="data:image/jpeg;base64,${JPEG_1PX}" alt="d">` +
+      `<p>After</p>`;
+    const blob = await buildDocx({ html });
+    const { zip, files } = await loadDocx(blob);
+    expect(files["word/media/image1.jpeg"]).toBeTruthy();
+    const doc = files["word/document.xml"];
+    expect(doc).toContain("<w:drawing>");
+    expect(doc).toContain('r:embed="rId3"');
+    expect(files["word/_rels/document.xml.rels"]).toContain(
+      'Target="media/image1.jpeg"'
+    );
+    expect(files["[Content_Types].xml"]).toContain(
+      '<Default Extension="jpeg" ContentType="image/jpeg"/>'
+    );
+    const jpeg = await zip.file("word/media/image1.jpeg").async("uint8array");
+    expect(jpeg[0]).toBe(0xff); // JPEG magic byte
+    expect(jpeg[1]).toBe(0xd8);
   });
 
   it("handles an empty document", async () => {

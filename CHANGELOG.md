@@ -48,6 +48,12 @@ are listed so the release reads honestly about what works today.
   - **Full Format Fidelity:** Headings, bold/italic/underline/highlight, bulleted and numbered lists, task-list checkboxes, blockquotes, code blocks, tables, and embedded images (base64) all map to native Word styling. LaTeX math is preserved as plain-text formulas.
   - **Zero-Impact Bundle Size:** The DOCX engine shares the same lazy-loaded ZIP chunk as EPUB export, keeping the main bundle lean.
 
+- **DOCX File Import**: Open documents from Word, Google Docs, Apple Pages, or LibreOffice directly in Lexicon:
+  - **Native .docx Support:** Import real Word files with headings, bold/italic/underline, bulleted and numbered lists, tables, blockquotes, and embedded images — all converted into the editor and re-exportable in any format.
+  - **Tracked Suggestions Accepted:** If the file contains tracked revisions, the accepted (inserted) text is kept and rejected (deleted) text is dropped, so imports read as the final document.
+  - **Zero-Overhead Conversion:** The converter is pure client-side JavaScript, lazy-loaded only when you pick a `.docx` file — no backend involvement and no startup slowdown. Corrupted or password-protected files show a clear error dialog instead of failing silently.
+  - **Block-Level Image Fix:** Fixed a DOCX export bug where imported images (serialized by the editor as block-level `<img>` elements outside `<p>`) were silently dropped from the exported `.docx`, leaving empty paragraphs in Word. Block images now register as media parts and render as native Word drawings.
+
 ## v0.8.5 — Bug Fixes & Stability Improvements
 
 ### What's New in v0.8.5:
