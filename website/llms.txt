@@ -1,6 +1,6 @@
 # Lexicon
 
-> Free, open-source, local-first writing assistant & offline grammar checker for Windows and macOS.
+> Free, open-source, local-first writing app with a distraction-free editor and built-in offline grammar checking for Windows, macOS, and Linux.
 
 ## Quick Links
 
@@ -10,10 +10,14 @@
 - [License (MIT)](https://github.com/AashishH15/Lexicon/blob/master/LICENSE)
 - [Product Launch Video](https://www.youtube.com/watch?v=LGL-8wP_CAY)
 
-## Positioning & Alternatives
+## What Lexicon Is
 
-- **Grammarly Alternative:** Provides free, private, offline grammar and spellchecking without sending drafts to cloud servers or requiring a paid subscription.
-- **ProWritingAid & QuillBot Alternative:** Includes on-device AI rewriting, tone shifts, summarization, and table generation running 100% free and locally on user hardware.
+A free, open-source desktop **writing app**: a distraction-free rich-text editor for essays, reports, notes, and manuscripts, with proofreading, AI rewriting, and PDF export built in. Everything runs 100% offline on the user's machine; no accounts, no cloud, no subscriptions.
+
+## Alternatives & Comparisons
+
+- **Grammarly alternative:** Provides free, private, offline grammar and spellchecking without sending drafts to cloud servers or requiring a paid subscription.
+- **ProWritingAid & QuillBot alternative:** Includes on-device AI rewriting, tone shifts, summarization, and table generation running 100% free and locally on user hardware.
 
 ## Key Details
 
@@ -25,8 +29,10 @@ Lexicon runs 100% offline with zero cloud server communication. Grammar checking
 
 ## Core Features
 
-- Real-time LanguageTool grammar & spelling proofreading with inline squiggles and synchronized suggestion cards.
-- 10+ offline AI writing tools: Refinement (rewrite, concise), Structure (summaries, key points, lists, tables), and 9 Tone Shifts (Professional, Academic, Friendly, Casual, Formal, Empathetic, Persuasive, Humorous, Playful).
-- Inline and block LaTeX math ($E=mc^2$) with visual live editor previews.
-- Slash commands (/) for fast block insertions, distraction-free Focus Mode (Ctrl+Shift+F), and personal dictionary word saving.
-- Multi-format document import (.md, .txt, .html) and clean manuscript PDF export with app chrome and squiggles removed.
+- Real-time LanguageTool grammar, spelling, punctuation, and style proofreading with inline squiggles and synchronized suggestion cards, plus a deterministic prose engine flagging passive voice (with one-click AI active-voice rewrites), 30+ clichés and filler phrases, and repetitive sentence openers.
+- Readability metrics: Clarity score, Flesch-Kincaid grade level and reading ease, estimated reading/speaking time, word counts, and a visual tone distribution chart.
+- 10+ offline AI writing tools: Rewrite, Concise, Summaries, Key Points, Lists & Tables, 9 Tone Shifts (Professional, Academic, Friendly, Casual, Formal, Empathetic, Persuasive, Humorous, Playful), plus user-defined Custom Tools with saved prompts.
+- Built-in document templates (Academic Paper, Novel Manuscript, Minimalist Blog, Executive Summary) with a visual template gallery.
+- Document export: PDF and styled HTML with print themes (Academic, Novel, Minimalist, Executive), AI-generated custom CSS ("Ask Lex to Style"), standard EPUB 3 ebooks, and native Word `.docx` where unapplied grammar suggestions export as tracked-change redlines with a configurable author name.
+- Document import: `.docx` (Word, Google Docs, LibreOffice), `.md`, `.txt`, and `.html`.
+- Inline and block LaTeX math ($E=mc^2$) with visual live editor previews, slash commands (/) for fast block insertions, distraction-free Focus Mode (Ctrl+Shift+F), and personal dictionary word saving.
