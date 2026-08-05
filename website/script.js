@@ -1,6 +1,8 @@
 (function () {
  'use strict';
 
+ document.documentElement.classList.add('js');
+
  const GITHUB_REPO = 'AashishH15/Lexicon';
  const API_RELEASES_URL = `https://api.github.com/repos/${GITHUB_REPO}/releases`;
  const API_REPO_URL = `https://api.github.com/repos/${GITHUB_REPO}`;
@@ -220,9 +222,71 @@
  });
  }
 
- document.addEventListener('DOMContentLoaded', function () {
- initReleaseInfo();
- initStarsBadge();
- initPlatformDropdown();
+  function initSmoothScroll() {
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  if (typeof window.Lenis === 'undefined') return;
+
+  const lenis = new Lenis({
+  duration: 1.15,
+  smoothWheel: true,
+  });
+
+  function raf(time) {
+  lenis.raf(time);
+  requestAnimationFrame(raf);
+  }
+  requestAnimationFrame(raf);
+
+  document.querySelectorAll('a[href^="#"]').forEach(function (link) {
+  link.addEventListener('click', function (e) {
+  const href = link.getAttribute('href');
+  if (href === '#') {
+  e.preventDefault();
+  lenis.scrollTo(0);
+  return;
+  }
+  const target = document.querySelector(href);
+  if (!target) return;
+  e.preventDefault();
+  lenis.scrollTo(target, { offset: -92 });
+  });
+  });
+  }
+
+  function initRevealAnimations() {
+ const revealSelector =
+ '.section-header, .bento-card, .tutorial-card, .privacy-card, .faq-card, .setup-step-box, .support-card, .privacy-comparison-table, .footer';
+ const revealEls = Array.prototype.slice.call(document.querySelectorAll(revealSelector));
+
+ if (!('IntersectionObserver' in window)) {
+ revealEls.forEach(function (el) { el.classList.add('reveal', 'visible'); });
+ return;
+ }
+
+ const observer = new IntersectionObserver(function (entries) {
+ entries.forEach(function (entry) {
+ if (!entry.isIntersecting) return;
+ const el = entry.target;
+ const siblings = Array.prototype.slice.call(el.parentElement.children)
+ .filter(function (n) { return n.classList && n.classList.contains('reveal'); });
+ const index = siblings.indexOf(el);
+ el.style.transitionDelay = Math.min(index * 80, 400) + 'ms';
+ el.classList.add('visible');
+ observer.unobserve(el);
  });
+ }, { threshold: 0.08, rootMargin: '0px 0px -32px 0px' });
+
+ revealEls.forEach(function (el) {
+ el.classList.add('reveal');
+ observer.observe(el);
+ });
+ }
+
+  document.addEventListener('DOMContentLoaded', function () {
+  initSmoothScroll();
+  initReleaseInfo();
+  initStarsBadge();
+  initPlatformDropdown();
+  initRevealAnimations();
+  });
 })();
