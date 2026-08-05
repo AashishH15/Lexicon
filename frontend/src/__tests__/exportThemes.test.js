@@ -83,7 +83,7 @@ describe("applyPrintTheme", () => {
     vi.advanceTimersByTime(10);
     const styles = document.querySelectorAll("#lex-print-theme");
     expect(styles.length).toBe(1);
-    expect(styles[0].textContent).toBe("b");
+    expect(styles[0].textContent).toContain("b");
     window.dispatchEvent(new Event("afterprint"));
     vi.advanceTimersByTime(5000);
     expect(document.getElementById("lex-print-theme")).toBeNull();

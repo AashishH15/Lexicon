@@ -216,7 +216,8 @@ export function applyPrintTheme(css) {
   document.getElementById("lex-print-theme")?.remove();
   const style = document.createElement("style");
   style.id = "lex-print-theme";
-  style.textContent = css;
+  const printCss = css.includes("@media print") ? css : `${css}\n@media print {\n${css}\n}`;
+  style.textContent = printCss;
   document.head.appendChild(style);
   const cleanup = () => {
     window.removeEventListener("afterprint", cleanup);
