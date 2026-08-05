@@ -316,16 +316,22 @@
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   const scripts = [
-  { text: 'The quik brown fox jumps over the lazy dog.', err: 'quik', fix: 'quick', label: 'Spelling', metrics: 'Clarity 86 \u00B7 0:42 read' },
-  { text: "Its a calm, private way to write your first draft.", err: 'Its', fix: "It's", label: 'Grammar', metrics: 'Clarity 92 \u00B7 1:10 read' },
-  { text: 'The report was written by the team in under an hour.', err: 'was written by the team', fix: 'the team wrote', label: 'Passive voice', metrics: 'Clarity 74 \u00B7 0:58 read' },
-  { text: 'At the end of the day, we need to deliver on time.', err: 'At the end of the day', fix: 'Ultimately', label: 'Clich\u00E9', metrics: 'Clarity 78 \u00B7 0:31 read' },
-  { text: 'I think the report is solid. I think we can ship it.', err: 'I think we can ship it', fix: 'We can ship it', label: 'Repetitive opener', metrics: 'Clarity 70 \u00B7 0:44 read' }
+  { text: 'The quik brown fox jumps over the lazy dog.', err: 'quik', fix: 'quick', label: 'Spelling', clarityBefore: 74 },
+  { text: "Its a calm, private way to write your first draft.", err: 'Its', fix: "It's", label: 'Grammar', clarityBefore: 79 },
+  { text: 'The report was written by the team in under an hour.', err: 'was written by the team', fix: 'the team wrote', label: 'Passive voice', clarityBefore: 71 },
+  { text: 'At the end of the day, we need to deliver on time.', err: 'At the end of the day', fix: 'Ultimately', label: 'Clich\u00E9', clarityBefore: 76 },
+  { text: 'I think the report is solid. I think we can ship it.', err: 'I think we can ship it', fix: 'We can ship it', label: 'Repetitive opener', clarityBefore: 70 }
   ];
+
+  function updateMetrics(clarity, count) {
+  if (!metricsEl) return;
+  metricsEl.textContent = 'Clarity ' + clarity + ' \u00B7 ' + count + (count === 1 ? ' char' : ' chars');
+  }
 
   if (reduced) {
   typeEl.textContent = scripts[0].text.replace(scripts[0].err, scripts[0].fix);
-  if (metricsEl) metricsEl.textContent = scripts[0].metrics;
+  const staticCount = scripts[0].text.length - scripts[0].err.length + scripts[0].fix.length;
+  updateMetrics(100, staticCount);
   return;
   }
 
@@ -349,6 +355,7 @@
   const holder = (errSpan && i < errEnd) ? errSpan : out;
   holder.appendChild(document.createTextNode(ch));
   i += 1;
+  updateMetrics(script.clarityBefore, i);
   setTimeout(tick, 32 + Math.random() * 28);
   }
   tick();
@@ -365,6 +372,8 @@
   }
   chipApply.textContent = 'Applied';
   chip.classList.add('chip-applied');
+  const finalCount = script.text.length - script.err.length + script.fix.length;
+  updateMetrics(100, finalCount);
   }
 
   async function runLoop() {
@@ -373,7 +382,7 @@
   if (!heroVisible) { await sleep(500); continue; }
   const script = scripts[s % scripts.length];
   s += 1;
-  if (metricsEl) metricsEl.textContent = script.metrics;
+  updateMetrics(script.clarityBefore, 0);
   await typeScript(script);
   await sleep(650);
   chipLabel.textContent = script.label;
