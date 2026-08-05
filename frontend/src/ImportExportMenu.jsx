@@ -152,6 +152,9 @@ export default function ImportExportMenu({
   const itemClass =
     "flex w-full items-center gap-2 rounded px-2.5 py-1.5 text-left text-sm text-ink transition-colors hover:bg-hairline/60";
 
+  const sectionClass =
+    "px-2.5 pb-1 pt-2 font-mono text-[10px] font-semibold uppercase tracking-[0.08em] text-muted";
+
   return (
     <div ref={containerRef} className="relative">
       <button
@@ -168,23 +171,12 @@ export default function ImportExportMenu({
         <Export size={16} weight="bold" />
       </button>
       {open && (
-        <div className="absolute right-0 z-30 mt-1 w-52 rounded border border-hairline bg-canvas p-1 shadow-lg">
+        <div className="absolute right-0 z-30 mt-1 w-56 rounded border border-hairline bg-canvas p-1 shadow-lg">
           <button type="button" className={itemClass} onClick={triggerImport}>
             <DownloadSimple size={16} weight="bold" className="text-muted" />
             Import File…
           </button>
-          <button
-            type="button"
-            className={itemClass}
-            onClick={() => {
-              setOpen(false);
-              onOpenTemplates?.();
-            }}
-          >
-            <SquaresFour size={16} weight="bold" className="text-muted" />
-            Template Gallery…
-          </button>
-          <div className="my-1 h-px bg-hairline" />
+          <p className={sectionClass}>Quick Export</p>
           <button
             type="button"
             className={itemClass}
@@ -192,14 +184,6 @@ export default function ImportExportMenu({
           >
             <FileHtml size={16} weight="bold" className="text-muted" />
             Export as HTML
-          </button>
-          <button
-            type="button"
-            className={itemClass}
-            onClick={() => handleExport("styled-html")}
-          >
-            <FileHtml size={16} weight="bold" className="text-muted" />
-            Export as Styled HTML…
           </button>
           <button
             type="button"
@@ -217,13 +201,22 @@ export default function ImportExportMenu({
             <FileMd size={16} weight="bold" className="text-muted" />
             Export as Markdown
           </button>
+          <p className={sectionClass}>Rich Export</p>
+          <button
+            type="button"
+            className={itemClass}
+            onClick={() => handleExport("styled-html")}
+          >
+            <FileHtml size={16} weight="bold" className="text-muted" />
+            Export as Styled HTML…
+          </button>
           <button
             type="button"
             className={itemClass}
             onClick={() => handleExport("pdf")}
           >
             <FilePdf size={16} weight="bold" className="text-muted" />
-            Export as PDF
+            Export as PDF…
           </button>
           <button
             type="button"
@@ -240,6 +233,18 @@ export default function ImportExportMenu({
           >
             <FileDoc size={16} weight="bold" className="text-muted" />
             Export as DOCX…
+          </button>
+          <p className={sectionClass}>Templates</p>
+          <button
+            type="button"
+            className={itemClass}
+            onClick={() => {
+              setOpen(false);
+              onOpenTemplates?.();
+            }}
+          >
+            <SquaresFour size={16} weight="bold" className="text-muted" />
+            Template Gallery…
           </button>
         </div>
       )}

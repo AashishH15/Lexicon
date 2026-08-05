@@ -27,6 +27,8 @@ are listed so the release reads honestly about what works today.
   - **Visual Selector Modal:** Easily browse templates with card thumbnails, tags, and descriptions. Includes a safety confirmation dialog to prevent accidentally overwriting active work.
   - **Quick Access:** Open the gallery anytime via **Template Gallery…** in the top-right export menu (`ImportExportMenu`).
 
+- **Structured Import/Export Menu**: The Import/Export dropdown is now organized into clear sections — **Import File…**, **Quick Export** (HTML, Plain Text, Markdown — one-click downloads), **Rich Export** (Styled HTML, PDF, EPUB, DOCX — each opens its configuration dialog before generating), and **Templates** (Template Gallery…). All existing import/export flows are unchanged.
+
 - **Professional PDF & HTML Export Themes**: Transform your drafts into beautifully styled documents before printing or exporting:
   - **Four Print Theme Presets:** Choose from **Academic / Formal** (serif font, numbered section headers, page footers), **Novel / Literary** (classic Garamond/Georgia layout, drop caps), **Minimalist / Modern** (sans-serif Inter, bold monochrome accents), or **Executive / Corporate** (navy header bars, card callout boxes, gold rules).
   - **Ask Lex to Style Your Document (100% Offline AI):** Users can describe their document layout in plain English (or tap 1-click quick style chips like *Navy Headings*, *Double Spaced*, *Legal Brief*, *Callout Cards*). Lexicon's local AI generates clean CSS directly into the Custom CSS box.
