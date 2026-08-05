@@ -261,7 +261,7 @@
 
   function initRevealAnimations() {
   const revealSelector =
-  '.section-header, .bento-card, .proofread-live, .editor-live, .manifesto-card, .tutorial-card, .privacy-card, .faq-card, .setup-step-box, .support-card, .privacy-comparison-table, .footer';
+  '.section-header, .bento-card, .proofread-live, .editor-live, .export-live-card, .manifesto-card, .tutorial-card, .privacy-card, .faq-card, .setup-step-box, .support-card, .privacy-comparison-table, .footer';
  const revealEls = Array.prototype.slice.call(document.querySelectorAll(revealSelector));
 
  if (!('IntersectionObserver' in window)) {
@@ -491,14 +491,145 @@
   setTimeout(runLoop, 2400);
   }
 
+  function initExportStudioDemo() {
+    const card = document.getElementById('export-demo-card');
+    if (!card) return;
+
+    const formatButtons = Array.prototype.slice.call(card.querySelectorAll('.export-chip'));
+    const themeButtons = Array.prototype.slice.call(card.querySelectorAll('.export-preset-chip'));
+    const previewBox = document.getElementById('export-live-preview');
+    const titleEl = document.getElementById('export-snippet-title');
+    const textEl = document.getElementById('export-snippet-text');
+    const docTag = document.getElementById('export-doc-tag');
+    const metricsText = document.getElementById('export-metrics-text');
+    const progressFill = document.getElementById('export-progress-fill');
+    const statusBadge = document.getElementById('export-status-badge');
+
+    const themesData = {
+      academic: {
+        tag: 'Academic Paper Template',
+        title: 'A Quantitative Analysis of Local-First Systems',
+        text: 'Abstract — Local-first software architectures eliminate remote cloud dependencies, preserve user data privacy, and deliver zero-latency typing.',
+        class: 'theme-academic'
+      },
+      novel: {
+        tag: 'Novel Manuscript Template',
+        title: 'Chapter 1: The Midnight Call',
+        text: 'The rain tapped rhythmically against the window pane. Arthur sat at his mahogany desk, staring at the blank sheet of paper before him...',
+        class: 'theme-novel'
+      },
+      minimalist: {
+        tag: 'Minimalist Blog Post',
+        title: 'Designing for Quiet Focus in Modern Web Apps',
+        text: 'Great interfaces don’t shout. They step out of the way, giving your prose maximum breathing room and visual calm.',
+        class: 'theme-minimalist'
+      },
+      executive: {
+        tag: 'Executive Summary Brief',
+        title: 'Q3 Product Strategy & Privacy Compliance Report',
+        text: 'Key Takeaways: 100% on-device AI rewrites achieved zero compliance risk while reducing cloud API infrastructure costs by $14,000/mo.',
+        class: 'theme-executive'
+      }
+    };
+
+    const formatsData = {
+      pdf: 'PDF (Vector) · 300 DPI',
+      epub: 'EPUB 3 · Reflowable eBook',
+      docx: 'DOCX · Tracked Changes Redlines',
+      html: 'HTML · Self-Contained Web Document'
+    };
+
+    let activeFormat = 'pdf';
+    let activeTheme = 'academic';
+    let autoTimer = null;
+    const themeKeys = ['academic', 'novel', 'minimalist', 'executive'];
+    const formatKeys = ['pdf', 'epub', 'docx', 'html'];
+    let autoIndex = 0;
+
+    function triggerExportAnimation(fmtKey) {
+      if (!progressFill) return;
+      progressFill.style.transition = 'none';
+      progressFill.style.width = '0%';
+      progressFill.style.opacity = '1';
+      setTimeout(function () {
+        progressFill.style.transition = 'width 0.8s ease';
+        progressFill.style.width = '100%';
+        if (statusBadge) statusBadge.textContent = 'Rendering ' + fmtKey.toUpperCase() + '...';
+        setTimeout(function () {
+          if (statusBadge) statusBadge.textContent = 'Export Complete ✓';
+          setTimeout(function () {
+            progressFill.style.transition = 'opacity 0.4s ease';
+            progressFill.style.opacity = '0';
+            setTimeout(function () {
+              progressFill.style.width = '0%';
+              progressFill.style.opacity = '1';
+              if (statusBadge) statusBadge.textContent = 'Ready for 1-click export';
+            }, 400);
+          }, 600);
+        }, 800);
+      }, 20);
+    }
+
+    function updateState(formatKey, themeKey, isUserClick) {
+      activeFormat = formatKey || activeFormat;
+      activeTheme = themeKey || activeTheme;
+
+      formatButtons.forEach(function (btn) {
+        btn.classList.toggle('active', btn.getAttribute('data-format') === activeFormat);
+      });
+
+      themeButtons.forEach(function (btn) {
+        btn.classList.toggle('active', btn.getAttribute('data-theme') === activeTheme);
+      });
+
+      if (metricsText && formatsData[activeFormat]) {
+        metricsText.textContent = formatsData[activeFormat];
+      }
+
+      const tData = themesData[activeTheme];
+      if (tData && previewBox) {
+        previewBox.className = 'export-live-snippet-box ' + tData.class;
+        if (docTag) docTag.textContent = tData.tag;
+        if (titleEl) titleEl.textContent = tData.title;
+        if (textEl) textEl.textContent = tData.text;
+      }
+
+      triggerExportAnimation(activeFormat);
+
+      if (isUserClick && autoTimer) {
+        clearInterval(autoTimer);
+        autoTimer = null;
+      }
+    }
+
+    formatButtons.forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        updateState(btn.getAttribute('data-format'), activeTheme, true);
+      });
+    });
+
+    themeButtons.forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        updateState(activeFormat, btn.getAttribute('data-theme'), true);
+      });
+    });
+
+    // Auto-cycle demo every 3.8 seconds
+    autoTimer = setInterval(function () {
+      autoIndex = (autoIndex + 1) % 4;
+      updateState(formatKeys[autoIndex], themeKeys[autoIndex], false);
+    }, 3800);
+  }
+
   document.addEventListener('DOMContentLoaded', function () {
-  initSmoothScroll();
-  initReleaseInfo();
-  initStarsBadge();
-  initPlatformDropdown();
-  initRevealAnimations();
-  initHeroVisibility();
-  initTypingDemo();
-  initEditorDemo();
+    initSmoothScroll();
+    initReleaseInfo();
+    initStarsBadge();
+    initPlatformDropdown();
+    initRevealAnimations();
+    initHeroVisibility();
+    initTypingDemo();
+    initEditorDemo();
+    initExportStudioDemo();
   });
 })();
