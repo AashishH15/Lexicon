@@ -64,7 +64,6 @@ from this repository's releases page.
 ### Linux
 
 - **DEB (`.deb`)** - Debian, Ubuntu, Linux Mint, Pop!_OS, etc.
-- **AppImage (`.AppImage`)** - Standalone executable compatible with all 64-bit Linux distributions.
 
 ## First launch
 

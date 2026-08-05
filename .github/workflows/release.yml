@@ -100,8 +100,8 @@ jobs:
             include_llama: "true"
             jre_url: https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.5%2B11/OpenJDK21U-jre_x64_linux_hotspot_21.0.5_11.tar.gz
             jre_archive: jre.tar.gz
-            bundle: deb,appimage
-            extension: AppImage
+            bundle: deb
+            extension: deb
             artifact_name: lexicon-linux-x64
 
     steps:
@@ -269,7 +269,7 @@ jobs:
           find "$source_dir" -type f \( \
             -name "*.exe" -o -name "*.exe.sig" -o \
             -name "*.dmg" -o -name "*.app.tar.gz" -o -name "*.app.tar.gz.sig" -o \
-            -name "*.deb" -o -name "*.AppImage" -o -name "*.AppImage.tar.gz" -o -name "*.AppImage.tar.gz.sig" \
+            -name "*.deb" -o -name "*.deb.sig" \
           \) -exec cp {} "$output_dir/" \;
           if [ -f "$output_dir/Lexicon.app.tar.gz" ]; then
             mv "$output_dir/Lexicon.app.tar.gz" "$output_dir/${{ matrix.artifact_name }}.app.tar.gz"
@@ -325,17 +325,19 @@ jobs:
               "windows-i686": ("lexicon-windows-x86", "*.exe"),
               "darwin-x86_64": ("lexicon-macos-x64", "*.app.tar.gz"),
               "darwin-aarch64": ("lexicon-macos-arm64", "*.app.tar.gz"),
-              "linux-x86_64": ("lexicon-linux-x64", "*.AppImage.tar.gz"),
+              "linux-x86_64": ("lexicon-linux-x64", "*.deb"),
           }
           platforms = {}
           for target, (folder, pattern) in targets.items():
               candidates = sorted((root / folder).glob(pattern))
-              if len(candidates) != 1:
-                  raise SystemExit(f"Expected one updater artifact for {target}, found: {candidates}")
+              if not candidates:
+                  print(f"Skipping updater entry for {target} (no matching {pattern} found)")
+                  continue
               artifact = candidates[0]
               signature = Path(f"{artifact}.sig")
               if not signature.is_file():
-                  raise SystemExit(f"Missing updater signature: {signature}")
+                  print(f"No updater signature found for {target} ({artifact.name}), omitting from updater manifest")
+                  continue
               platforms[target] = {
                   "signature": signature.read_text(encoding="utf-8").strip(),
                   "url": f"https://github.com/{repository}/releases/download/{tag}/{artifact.name}",
@@ -351,7 +353,7 @@ jobs:
           - **Windows x86**: legacy 32-bit Windows; proofreading is supported, but the optional native AI engine is not bundled
           - **macOS Intel**: Intel Macs
           - **macOS Apple Silicon**: M-series Macs
-          - **Linux x64**: 64-bit Linux (.deb and AppImage)
+          - **Linux x64**: 64-bit Linux (.deb for Ubuntu, Debian, Mint, Pop!_OS)
 
           macOS builds are unsigned. On first open, right-click the app and choose Open, or run:
           `xattr -dr com.apple.quarantine /Applications/Lexicon.app`
