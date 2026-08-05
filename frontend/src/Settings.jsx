@@ -1575,10 +1575,23 @@ export default function Settings({
                       onClick={() =>
                         openExternalUrl("https://tally.so/r/LZq8vy")
                       }
-                      className="mt-1.5 flex w-full items-center justify-center gap-2 rounded border border-transparent py-1.5 font-sans text-xs text-muted transition-colors hover:bg-white hover:border-hairline hover:text-ink"
+                      className={
+                        betaOptIn
+                          ? "mt-2.5 flex w-full items-center justify-center gap-2 rounded-md border border-[#DDD6FE] bg-[#F5F3FF] py-2 font-sans text-xs font-semibold text-[#6D28D9] shadow-sm transition-colors hover:border-[#C4B5FD] hover:bg-[#EDE9FE]"
+                          : "mt-1.5 flex w-full items-center justify-center gap-2 rounded border border-transparent py-1.5 font-sans text-xs text-muted transition-colors hover:border-hairline hover:bg-white hover:text-ink"
+                      }
                     >
-                      <PaperPlaneTilt size={14} weight="bold" />
-                      Send feedback or report an issue
+                      <PaperPlaneTilt
+                        size={14}
+                        weight="bold"
+                        className={betaOptIn ? "text-[#6D28D9]" : ""}
+                      />
+                      <span>Send feedback or report an issue</span>
+                      {betaOptIn && (
+                        <span className="ml-1 rounded bg-[#DDD6FE] px-1.5 py-0.5 font-mono text-[9px] font-semibold uppercase tracking-wider text-[#5B21B6]">
+                          Beta Tester
+                        </span>
+                      )}
                     </button>
                   </div>
 
