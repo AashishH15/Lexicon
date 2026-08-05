@@ -412,7 +412,7 @@ jobs:
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
-          draft: false
+          draft: ${{ !contains(github.ref_name, '-beta') }}
           prerelease: ${{ contains(github.ref_name, '-beta') }}
           name: Lexicon ${{ github.ref_name }}
           body_path: artifacts/release_notes.txt
