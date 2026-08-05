@@ -62,18 +62,20 @@ describe("applyPrintTheme", () => {
     document.getElementById("lex-print-theme")?.remove();
   });
 
-  it("injects a temporary style and removes it on afterprint", async () => {
+  it("updates the persistent print-only stylesheet", () => {
     vi.useFakeTimers();
     applyPrintTheme(".ProseMirror { color: red; }");
     vi.advanceTimersByTime(10);
     const style = document.getElementById("lex-print-theme");
     expect(style).toBeTruthy();
+    expect(style.media).toBe("print");
     expect(style.textContent).toContain("color: red");
     expect(window.print).toHaveBeenCalledTimes(1);
     window.dispatchEvent(new Event("afterprint"));
     vi.advanceTimersByTime(5000);
-    expect(document.getElementById("lex-print-theme")).toBeNull();
+    expect(document.getElementById("lex-print-theme")).toBe(style);
     vi.useRealTimers();
+    style.remove();
   });
 
   it("dedupes repeated invocations to a single style element", () => {
@@ -86,8 +88,9 @@ describe("applyPrintTheme", () => {
     expect(styles[0].textContent).toContain("b");
     window.dispatchEvent(new Event("afterprint"));
     vi.advanceTimersByTime(5000);
-    expect(document.getElementById("lex-print-theme")).toBeNull();
+    expect(document.getElementById("lex-print-theme")).toBe(styles[0]);
     vi.useRealTimers();
+    styles[0].remove();
   });
 });
 

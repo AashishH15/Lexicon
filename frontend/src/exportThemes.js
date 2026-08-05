@@ -210,29 +210,28 @@ export function getThemeById(id) {
   return EXPORT_THEMES.find((theme) => theme.id === id) || null;
 }
 
-// Injects a temporary print stylesheet, prints, and removes it on `afterprint`
-// so the live editor styles are never polluted. Repeated calls dedupe by id.
+// Updates the print-only stylesheet that is present in index.html from the
+// initial document load. WebView2 can omit stylesheets created immediately
+// before window.print(), so keep this node attached and only change its rules.
+// The `media="print"` attribute prevents export rules from affecting the live
+// editor between print operations.
 export function applyPrintTheme(css) {
-  document.getElementById("lex-print-theme")?.remove();
-  const style = document.createElement("style");
+  const style =
+    document.getElementById("lex-print-theme") ||
+    document.createElement("style");
   style.id = "lex-print-theme";
+  style.media = "print";
   const printCss = css.includes("@media print") ? css : `${css}\n@media print {\n${css}\n}`;
   style.textContent = printCss;
-  document.head.appendChild(style);
-  const cleanup = () => {
-    window.removeEventListener("afterprint", cleanup);
-    setTimeout(() => {
-      document.getElementById("lex-print-theme")?.remove();
-    }, 5000);
-  };
-  window.addEventListener("afterprint", cleanup);
-  requestAnimationFrame(() => {
+  if (!style.isConnected) document.head.appendChild(style);
+  setTimeout(() => {
     try {
       window.print();
     } catch {
-      cleanup();
+      // Keep the print stylesheet attached; it is scoped to print media and
+      // will be replaced by the next export attempt.
     }
-  });
+  }, 0);
 }
 
 // Wraps editor HTML in a standalone, styled document. The content wrapper
