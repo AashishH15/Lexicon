@@ -65,6 +65,7 @@ describe("applyPrintTheme", () => {
   it("injects a temporary style and removes it on afterprint", async () => {
     vi.useFakeTimers();
     applyPrintTheme(".ProseMirror { color: red; }");
+    vi.advanceTimersByTime(10);
     const style = document.getElementById("lex-print-theme");
     expect(style).toBeTruthy();
     expect(style.textContent).toContain("color: red");
@@ -79,6 +80,7 @@ describe("applyPrintTheme", () => {
     vi.useFakeTimers();
     applyPrintTheme("a");
     applyPrintTheme("b");
+    vi.advanceTimersByTime(10);
     const styles = document.querySelectorAll("#lex-print-theme");
     expect(styles.length).toBe(1);
     expect(styles[0].textContent).toBe("b");
