@@ -63,24 +63,29 @@ describe("applyPrintTheme", () => {
   });
 
   it("injects a temporary style and removes it on afterprint", async () => {
+    vi.useFakeTimers();
     applyPrintTheme(".ProseMirror { color: red; }");
-    await new Promise((resolve) => requestAnimationFrame(resolve));
     const style = document.getElementById("lex-print-theme");
     expect(style).toBeTruthy();
     expect(style.textContent).toContain("color: red");
     expect(window.print).toHaveBeenCalledTimes(1);
     window.dispatchEvent(new Event("afterprint"));
+    vi.advanceTimersByTime(5000);
     expect(document.getElementById("lex-print-theme")).toBeNull();
+    vi.useRealTimers();
   });
 
   it("dedupes repeated invocations to a single style element", () => {
+    vi.useFakeTimers();
     applyPrintTheme("a");
     applyPrintTheme("b");
     const styles = document.querySelectorAll("#lex-print-theme");
     expect(styles.length).toBe(1);
     expect(styles[0].textContent).toBe("b");
     window.dispatchEvent(new Event("afterprint"));
+    vi.advanceTimersByTime(5000);
     expect(document.getElementById("lex-print-theme")).toBeNull();
+    vi.useRealTimers();
   });
 });
 
