@@ -277,6 +277,23 @@
           </p>
         </div>
 
+        <!-- Live proofread demo -->
+        <div class="proofread-live" aria-hidden="true">
+            <div class="proofread-live-bar">
+              <span><span class="proofread-live-dot"></span><span class="proofread-live-label">Proofread as you
+                  type</span></span>
+              <span class="proofread-live-metrics">Clarity 86 &middot; 0:42 read</span>
+            </div>
+            <div class="proofread-live-body">
+              <p class="proofread-live-line"><span class="pl-type"></span><span class="pl-caret"></span></p>
+              <div class="proofread-chip">
+                <span class="proofread-chip-label">Spelling</span>
+                <span class="proofread-chip-fix"></span>
+                <span class="chip-apply">Apply</span>
+              </div>
+            </div>
+          </div>
+
         <div class="bento-grid">
           <!-- Step 1: Write (Row 1, Span 1) -->
           <div class="bento-card">
@@ -395,6 +412,28 @@
               with grammar suggestions as native tracked-change redlines. Themes: Academic, Novel, Minimalist,
               Executive, or ask Lex to style it.
             </p>
+          </div>
+        </div>
+
+        <!-- Live slash command demo (fixed-height zone so expansion never shifts the page) -->
+        <div class="editor-live-zone">
+          <div class="editor-live" aria-hidden="true">
+            <div class="proofread-live-bar">
+              <span><span class="proofread-live-dot"></span><span class="proofread-live-label">Slash commands &amp;
+                  math</span></span>
+              <span class="proofread-live-metrics" data-editor-metric>LaTeX &middot; KaTeX math</span>
+            </div>
+            <div class="editor-live-body">
+              <p class="editor-live-line"><span class="el-type"></span><span class="pl-caret"></span></p>
+              <div class="cmd-palette">
+                <div class="cmd-row" data-cmd="math"><span>Math</span><span>/math</span></div>
+                <div class="cmd-row" data-cmd="quote"><span>Quote</span><span>/quote</span></div>
+                <div class="cmd-row" data-cmd="table"><span>Table</span><span>/table</span></div>
+                <div class="cmd-row" data-cmd="heading"><span>Heading</span><span>/heading</span></div>
+                <div class="cmd-row" data-cmd="task"><span>Task list</span><span>/task</span></div>
+              </div>
+              <div class="el-scene-wrap"></div>
+            </div>
           </div>
         </div>
       </div>
@@ -698,7 +737,7 @@
         <div class="support-grid">
           <!-- Windows SmartScreen Setup Card -->
           <div class="support-card">
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+            <div class="support-card-header">
               <h3>Windows (SmartScreen)</h3>
               <span class="badge-pill badge-blue">Windows</span>
             </div>
@@ -713,7 +752,7 @@
 
           <!-- macOS Gatekeeper Setup Card -->
           <div class="support-card">
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+            <div class="support-card-header">
               <h3>macOS (Gatekeeper)</h3>
               <span class="badge-pill badge-blue">macOS</span>
             </div>
@@ -733,7 +772,7 @@
 
           <!-- Linux (Debian/Ubuntu) Setup Card -->
           <div class="support-card">
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+            <div class="support-card-header">
               <h3>Linux (Debian / Ubuntu)</h3>
               <span class="badge-pill badge-blue">Linux</span>
             </div>

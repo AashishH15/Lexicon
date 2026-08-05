@@ -13,8 +13,14 @@
  const releaseVersionText = document.getElementById('release-version');
  const downloadCountBadge = document.getElementById('download-count-badge');
  const downloadCountText = document.getElementById('download-count-text');
- const platformToggleBtn = document.getElementById('platform-toggle');
- const platformMenu = document.getElementById('platform-menu');
+  const platformToggleBtn = document.getElementById('platform-toggle');
+  const platformMenu = document.getElementById('platform-menu');
+
+  let heroVisible = true;
+
+  function sleep(ms) {
+  return new Promise(function (resolve) { setTimeout(resolve, ms); });
+  }
 
  
  function isAppleSiliconGPU() {
@@ -254,8 +260,8 @@
   }
 
   function initRevealAnimations() {
- const revealSelector =
- '.section-header, .bento-card, .tutorial-card, .privacy-card, .faq-card, .setup-step-box, .support-card, .privacy-comparison-table, .footer';
+  const revealSelector =
+  '.section-header, .bento-card, .proofread-live, .editor-live, .tutorial-card, .privacy-card, .faq-card, .setup-step-box, .support-card, .privacy-comparison-table, .footer';
  const revealEls = Array.prototype.slice.call(document.querySelectorAll(revealSelector));
 
  if (!('IntersectionObserver' in window)) {
@@ -276,11 +282,205 @@
  });
  }, { threshold: 0.08, rootMargin: '0px 0px -32px 0px' });
 
- revealEls.forEach(function (el) {
- el.classList.add('reveal');
- observer.observe(el);
- });
- }
+  revealEls.forEach(function (el) {
+  el.classList.add('reveal');
+  Array.prototype.forEach.call(el.children, function (child, i) {
+  child.style.setProperty('--ci', String(i));
+  });
+  observer.observe(el);
+  });
+  }
+
+  function initHeroVisibility() {
+  const targets = [
+  document.querySelector('.proofread-live'),
+  document.querySelector('.editor-live')
+  ].filter(function (el) { return !!el; });
+  if (!targets.length || !('IntersectionObserver' in window)) return;
+  const observer = new IntersectionObserver(function (entries) {
+  heroVisible = entries.some(function (e) { return e.isIntersecting; });
+  }, { threshold: 0.05 });
+  targets.forEach(function (el) { observer.observe(el); });
+  }
+
+  function initTypingDemo() {
+  const typeEl = document.querySelector('.pl-type');
+  const caret = document.querySelector('.pl-caret');
+  const chip = document.querySelector('.proofread-chip');
+  const chipLabel = document.querySelector('.proofread-chip-label');
+  const chipFix = document.querySelector('.proofread-chip-fix');
+  const chipApply = document.querySelector('.chip-apply');
+  const metricsEl = document.querySelector('.proofread-live-metrics');
+  if (!typeEl || !caret || !chip) return;
+
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  const scripts = [
+  { text: 'The quik brown fox jumps over the lazy dog.', err: 'quik', fix: 'quick', label: 'Spelling', metrics: 'Clarity 86 \u00B7 0:42 read' },
+  { text: "Its a calm, private way to write your first draft.", err: 'Its', fix: "It's", label: 'Grammar', metrics: 'Clarity 92 \u00B7 1:10 read' },
+  { text: 'The report was written by the team in under an hour.', err: 'was written by the team', fix: 'the team wrote', label: 'Passive voice', metrics: 'Clarity 74 \u00B7 0:58 read' },
+  { text: 'At the end of the day, we need to deliver on time.', err: 'At the end of the day', fix: 'Ultimately', label: 'Clich\u00E9', metrics: 'Clarity 78 \u00B7 0:31 read' },
+  { text: 'I think the report is solid. I think we can ship it.', err: 'I think we can ship it', fix: 'We can ship it', label: 'Repetitive opener', metrics: 'Clarity 70 \u00B7 0:44 read' }
+  ];
+
+  if (reduced) {
+  typeEl.textContent = scripts[0].text.replace(scripts[0].err, scripts[0].fix);
+  if (metricsEl) metricsEl.textContent = scripts[0].metrics;
+  return;
+  }
+
+  function typeScript(script) {
+  return new Promise(function (resolve) {
+  typeEl.innerHTML = '';
+  const errStart = script.text.indexOf(script.err);
+  const errEnd = errStart + script.err.length;
+  let i = 0;
+  let errSpan = null;
+  const out = document.createElement('span');
+  typeEl.appendChild(out);
+  function tick() {
+  if (i >= script.text.length) { setTimeout(resolve, 300); return; }
+  const ch = script.text.charAt(i);
+  if (i === errStart) {
+  errSpan = document.createElement('span');
+  errSpan.className = 'err';
+  out.appendChild(errSpan);
+  }
+  const holder = (errSpan && i < errEnd) ? errSpan : out;
+  holder.appendChild(document.createTextNode(ch));
+  i += 1;
+  setTimeout(tick, 32 + Math.random() * 28);
+  }
+  tick();
+  });
+  }
+
+  async function applyFix(script) {
+  await sleep(500);
+  const errEl = typeEl.querySelector('.err');
+  if (errEl) {
+  errEl.classList.remove('err');
+  errEl.classList.add('fixed');
+  errEl.textContent = script.fix;
+  }
+  chipApply.textContent = 'Applied';
+  chip.classList.add('chip-applied');
+  }
+
+  async function runLoop() {
+  let s = 0;
+  while (true) {
+  if (!heroVisible) { await sleep(500); continue; }
+  const script = scripts[s % scripts.length];
+  s += 1;
+  if (metricsEl) metricsEl.textContent = script.metrics;
+  await typeScript(script);
+  await sleep(650);
+  chipLabel.textContent = script.label;
+  chipFix.textContent = script.err + ' \u2192 ' + script.fix;
+  chip.classList.add('chip-show');
+  await applyFix(script);
+  await sleep(1900);
+  chip.classList.remove('chip-show', 'chip-applied');
+  chipApply.textContent = 'Apply';
+  typeEl.innerHTML = '';
+  }
+  }
+
+  setTimeout(runLoop, 2400);
+  }
+
+  function initEditorDemo() {
+  const typeEl = document.querySelector('.el-type');
+  const sceneWrap = document.querySelector('.el-scene-wrap');
+  const palette = document.querySelector('.cmd-palette');
+  const metric = document.querySelector('[data-editor-metric]');
+  if (!typeEl || !sceneWrap || !palette) return;
+
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  const scripts = [
+  {
+  cmd: 'math',
+  prefix: 'The area of a circle is ',
+  metric: 'LaTeX \u00B7 KaTeX math',
+  scene: '<div class="el-scene el-scene-math">A = \u03C0r\u00B2</div>'
+  },
+  {
+  cmd: 'quote',
+  prefix: 'Add a moment of calm: ',
+  metric: 'Slash commands',
+  scene: '<div class="el-scene el-scene-quote">A quiet desk, a clear page, nothing else.</div>'
+  },
+  {
+  cmd: 'table',
+  prefix: 'Chapter status: ',
+  metric: 'Rich tables',
+  scene: '<table class="el-scene el-scene-table"><thead><tr><th>Task</th><th>Status</th></tr></thead><tbody><tr><td>Chapter 3</td><td>In progress</td></tr><tr><td>Proofread pass</td><td>Done</td></tr></tbody></table>'
+  }
+  ];
+
+  const rows = Array.prototype.slice.call(palette.querySelectorAll('.cmd-row'));
+
+  if (reduced) {
+  typeEl.textContent = scripts[0].prefix + '/' + scripts[0].cmd;
+  sceneWrap.innerHTML = scripts[0].scene;
+  sceneWrap.style.maxHeight = (sceneWrap.scrollHeight + 2) + 'px';
+  return;
+  }
+
+  function typeText(text, done) {
+  let i = 0;
+  function tick() {
+  if (i >= text.length) { done(); return; }
+  typeEl.appendChild(document.createTextNode(text.charAt(i)));
+  i += 1;
+  setTimeout(tick, 34 + Math.random() * 26);
+  }
+  tick();
+  }
+
+  async function runLoop() {
+  let s = 0;
+  while (true) {
+  if (!heroVisible) { await sleep(500); continue; }
+  const script = scripts[s % scripts.length];
+  s += 1;
+  typeEl.innerHTML = '';
+  sceneWrap.style.maxHeight = '0px';
+  sceneWrap.innerHTML = '';
+  palette.classList.remove('show');
+  if (metric) metric.textContent = script.metric;
+  await new Promise(function (resolve) { typeText(script.prefix, resolve); });
+  typeEl.appendChild(document.createTextNode('/'));
+  palette.classList.add('show');
+  await sleep(420);
+  await new Promise(function (resolve) {
+  let i = 0;
+  function tick() {
+  if (i >= script.cmd.length) { resolve(); return; }
+  const ch = script.cmd.charAt(i);
+  typeEl.appendChild(document.createTextNode(ch));
+  i += 1;
+  const partial = script.cmd.slice(0, i);
+  rows.forEach(function (row) {
+  const active = row.getAttribute('data-cmd').indexOf(partial) === 0;
+  row.classList.toggle('active', active);
+  });
+  setTimeout(tick, 85);
+  }
+  tick();
+  });
+  await sleep(350);
+  palette.classList.remove('show');
+  sceneWrap.innerHTML = script.scene;
+  sceneWrap.style.maxHeight = (sceneWrap.scrollHeight + 2) + 'px';
+  await sleep(2600);
+  }
+  }
+
+  setTimeout(runLoop, 2400);
+  }
 
   document.addEventListener('DOMContentLoaded', function () {
   initSmoothScroll();
@@ -288,5 +488,8 @@
   initStarsBadge();
   initPlatformDropdown();
   initRevealAnimations();
+  initHeroVisibility();
+  initTypingDemo();
+  initEditorDemo();
   });
 })();
