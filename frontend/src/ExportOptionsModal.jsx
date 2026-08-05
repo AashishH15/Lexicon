@@ -84,8 +84,8 @@ export default function ExportOptionsModal({ editor, mode, onClose }) {
       } else {
         const html = await buildExportHtml(editor.getHTML(), css);
         downloadBlob(html, "document.html", "text/html");
+        onClose?.();
       }
-      onClose?.();
     } finally {
       setBusy(false);
     }
