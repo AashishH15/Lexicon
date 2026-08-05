@@ -59,7 +59,7 @@
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     "name": "Lexicon",
-    "operatingSystem": "Windows, macOS",
+    "operatingSystem": "Windows, macOS, Linux",
     "applicationCategory": "ProductivityApplication",
     "applicationSubCategory": "Writing & Proofreading Software",
     "offers": {
@@ -72,7 +72,7 @@
       "ratingValue": "5.0",
       "ratingCount": "10"
     },
-    "description": "Free open source Grammarly alternative and offline grammar checker for Windows and macOS with inline LanguageTool proofreading, local LLM rewrites, LaTeX math, and clean PDF export.",
+    "description": "Free open source Grammarly alternative and offline grammar checker for Windows, macOS, and Linux with inline LanguageTool proofreading, local LLM rewrites, LaTeX math, and clean PDF export.",
     "license": "https://opensource.org/licenses/MIT",
     "downloadUrl": "https://github.com/AashishH15/Lexicon/releases/latest",
     "url": "https://lexicon-writer.pages.dev/"
@@ -234,6 +234,11 @@
                 <a id="dl-mac-x64" href="https://github.com/AashishH15/Lexicon/releases/latest" class="platform-item">
                   <span>macOS Intel (.dmg)</span>
                   <span class="platform-size">x64</span>
+                </a>
+                <div class="platform-group-title">Linux</div>
+                <a id="dl-linux-x64" href="https://github.com/AashishH15/Lexicon/releases/latest" class="platform-item">
+                  <span>Linux x64 (.deb)</span>
+                  <span class="platform-size">DEB</span>
                 </a>
               </div>
             </div>
@@ -676,7 +681,7 @@
               <span class="step-number">1. DOWNLOAD</span>
               <h4>Get the Installer</h4>
               <p>Click <strong>Download for Desktop</strong> at the top of this page to get the installer for your OS
-                (Windows `.exe` or macOS `.dmg`).</p>
+                (Windows `.exe`, macOS `.dmg`, or Linux `.deb`).</p>
             </div>
             <div class="setup-step-box">
               <span class="step-number">2. VERIFY</span>
@@ -727,6 +732,21 @@
               <li style="margin-bottom: 8px;"><strong>Option 3 (Terminal):</strong> Run <kbd>xattr -cr
                   /Applications/Lexicon.app</kbd> in Terminal.</li>
             </ul>
+          </div>
+
+          <!-- Linux (Debian/Ubuntu) Setup Card -->
+          <div class="support-card">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+              <h3>Linux (Debian / Ubuntu)</h3>
+              <span class="badge-pill badge-blue">Linux</span>
+            </div>
+            <p>
+              To install the <code>.deb</code> package on Ubuntu, Debian, Linux Mint, or Pop!_OS:
+            </p>
+            <ol>
+              <li>Double-click the downloaded <code>.deb</code> file to install via Software Center.</li>
+              <li>Or run <kbd>sudo dpkg -i Lexicon_*.deb</kbd> (or <kbd>sudo apt install ./Lexicon_*.deb</kbd>) in Terminal.</li>
+            </ol>
           </div>
         </div>
 

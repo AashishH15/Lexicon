@@ -34,6 +34,7 @@
  const ua = navigator.userAgent || '';
  const isWin = /Windows|Win32|Win64/i.test(ua);
  const isMac = /Macintosh|Mac OS X/i.test(ua);
+ const isLinux = /Linux|X11/i.test(ua) && !/Android/i.test(ua);
 
  let arch = 'x64';
 
@@ -63,6 +64,10 @@
  }
  }
 
+ if (isLinux) {
+ return { key: 'linux_x64', label: 'Download for Linux (DEB)' };
+ }
+
  if (isMac) {
  const isArmMac = arch === 'arm64' || isAppleSiliconGPU() || /Macintosh.*Apple/i.test(ua);
  if (isArmMac) {
@@ -86,8 +91,11 @@
 
  return assets.find(asset => {
  const name = asset.name.toLowerCase();
- if (name.endsWith('.sig') || name.endsWith('.tar.gz') || name.endsWith('.json')) return false;
+ if (name.endsWith('.sig') || name.endsWith('.json')) return false;
 
+ if (key === 'linux_x64') {
+ return name.endsWith('.deb') || (name.includes('linux') && name.endsWith('.tar.gz'));
+ }
  if (key === 'win_x64') {
  return name.endsWith('.exe') && name.includes('x64');
  }
@@ -122,7 +130,7 @@
 
  const releases = await response.json();
  const latestRelease = Array.isArray(releases) && releases.length > 0 ? releases[0] : releases;
- const tagName = latestRelease.tag_name || 'v0.7.0';
+ const tagName = latestRelease.tag_name || 'v0.9.0';
  const latestAssets = latestRelease.assets || [];
 
  if (releaseVersionText) {
@@ -157,7 +165,7 @@
  }
  }
 
- ['win_x64', 'win_arm64', 'win_x86', 'mac_arm64', 'mac_x64'].forEach(key => {
+ ['win_x64', 'win_arm64', 'win_x86', 'mac_arm64', 'mac_x64', 'linux_x64'].forEach(key => {
  const asset = matchAsset(latestAssets, key);
  const el = document.getElementById(`dl-${key.replace('_', '-')}`);
  if (el && asset && asset.browser_download_url) {
