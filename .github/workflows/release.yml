@@ -273,6 +273,7 @@ jobs:
         env:
           RELEASE_TAG: ${{ github.ref_name }}
           REPOSITORY: ${{ github.repository }}
+          IS_BETA: ${{ contains(github.ref_name, '-beta') }}
         run: |
           python - <<'PY'
           import json
@@ -285,6 +286,7 @@ jobs:
           tag = os.environ["RELEASE_TAG"]
           version = tag.removeprefix("v")
           repository = os.environ["REPOSITORY"]
+          is_beta = os.environ["IS_BETA"].strip().lower() == "true"
           root = Path("artifacts")
           targets = {
               "windows-x86_64": ("lexicon-windows-x64", "*.exe"),
@@ -365,6 +367,12 @@ jobs:
                   pass
 
           notes_body = release_notes if release_notes else default_notes
+          if is_beta:
+              beta_notice = (
+                  "**Pre-release (beta)** — for beta testers only. Expect "
+                  "changes and possible rough edges; report issues on GitHub.\n\n"
+              )
+              notes_body = beta_notice + notes_body
 
           manifest = {
               "version": version,
@@ -372,17 +380,40 @@ jobs:
               "pub_date": datetime.now(timezone.utc).isoformat(),
               "platforms": platforms,
           }
-          (root / "latest.json").write_text(
+          # Stable builds publish latest.json as a release asset (the app's
+          # stable endpoint). Beta builds publish beta.json to the gh-pages
+          # branch (the app's beta endpoint), so the "latest" release on
+          # GitHub always stays stable.
+          manifest_name = "beta.json" if is_beta else "latest.json"
+          (root / manifest_name).write_text(
               json.dumps(manifest, indent=2) + "\n", encoding="utf-8"
           )
           (root / "release_notes.txt").write_text(notes_body, encoding="utf-8")
           print(json.dumps(manifest, indent=2))
           PY
 
+      - name: Publish beta manifest to gh-pages
+        if: contains(github.ref_name, '-beta')
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git rev-parse --verify origin/gh-pages >/dev/null 2>&1; then
+            git checkout -B gh-pages origin/gh-pages
+          else
+            git checkout --orphan gh-pages
+            git rm -rf . 2>/dev/null || true
+          fi
+          cp artifacts/beta.json beta.json
+          git add beta.json
+          git commit -m "Update beta manifest for ${{ github.ref_name }}" || true
+          git push origin gh-pages
+
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
           draft: true
+          prerelease: ${{ contains(github.ref_name, '-beta') }}
           name: Lexicon ${{ github.ref_name }}
           body_path: artifacts/release_notes.txt
           files: |
@@ -391,4 +422,4 @@ jobs:
             artifacts/lexicon-windows-arm64/*
             artifacts/lexicon-macos-x64/*
             artifacts/lexicon-macos-arm64/*
-            artifacts/latest.json
+            ${{ contains(github.ref_name, '-beta') && 'artifacts/beta.json' || 'artifacts/latest.json' }}

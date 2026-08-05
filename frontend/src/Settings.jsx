@@ -114,6 +114,7 @@ export const SETTINGS_DEFAULTS = {
   focusMode: false,
   lineSpacing: 1.6,
   proseScanEnabled: false,
+  betaOptIn: false,
 };
 
 const isMac =
@@ -242,6 +243,21 @@ const SEARCH_INDEX = [
     keywords: ["custom", "action", "actions", "tool", "prompt", "rewrite"],
   },
   {
+    label: "Beta Releases",
+    tab: "about",
+    settingKey: "beta-releases",
+    keywords: [
+      "beta",
+      "beta releases",
+      "prerelease",
+      "pre-release",
+      "early access",
+      "updates",
+      "update channel",
+      "channel",
+    ],
+  },
+  {
     label: "About & Feedback",
     tab: "about",
     settingKey: "about-section",
@@ -299,6 +315,8 @@ export default function Settings({
   onFocusModeChange,
   proseScanEnabled,
   onProseScanChange,
+  betaOptIn,
+  onBetaOptInChange,
   docxAuthor,
   onDocxAuthorChange,
   onResetDefaults,
@@ -1505,6 +1523,29 @@ export default function Settings({
                         {updateState.message}
                       </p>
                     )}
+                    <div
+                      data-setting-key="beta-releases"
+                      className={`mt-4 flex items-start justify-between gap-4 border-t border-hairline pt-3.5 ${getHighlightClass("beta-releases")}`}
+                    >
+                      <div>
+                        <p className="font-mono text-[10px] uppercase tracking-widest text-muted">
+                          Beta Releases
+                        </p>
+                        <p className="mt-1 font-sans text-xs text-muted">
+                          Receive pre-release builds before they ship to
+                          everyone. You may encounter rough edges. Switch back
+                          any time; updates only move forward, so you stay on
+                          beta until the next stable release is newer.
+                        </p>
+                      </div>
+                      <div className="shrink-0 pt-0.5">
+                        <Toggle
+                          checked={betaOptIn}
+                          onChange={onBetaOptInChange}
+                          label="Toggle beta releases"
+                        />
+                      </div>
+                    </div>
                   </div>
 
                   <div className="rounded-lg border border-hairline bg-canvas px-4 py-3.5">

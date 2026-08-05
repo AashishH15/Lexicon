@@ -56,6 +56,11 @@ are listed so the release reads honestly about what works today.
   - **Zero-Overhead Conversion:** The converter is pure client-side JavaScript, lazy-loaded only when you pick a `.docx` file — no backend involvement and no startup slowdown. Corrupted or password-protected files show a clear error dialog instead of failing silently.
   - **Block-Level Image Fix:** Fixed a DOCX export bug where imported images (serialized by the editor as block-level `<img>` elements outside `<p>`) were silently dropped from the exported `.docx`, leaving empty paragraphs in Word. Block images now register as media parts and render as native Word drawings.
 
+- **Beta Release Channel**: Opt in to pre-release builds before they ship to everyone:
+  - **Settings Toggle:** Enable **Beta Releases** in **Settings → About & Feedback → Updates** to start receiving pre-release versions. Stable users never see beta builds; beta users can switch back any time (updates only move forward, so you stay on beta until the next stable release is newer).
+  - **Channel-Aware Updater:** The in-app updater checks a separate beta manifest (published to the `gh-pages` branch by the release workflow) when the beta channel is enabled, and the normal GitHub `latest.json` otherwise. Beta tags look like `v0.9.1-beta.1` and publish as pre-releases so GitHub's "latest" release always remains stable.
+  - **Invite Early:** Beta testers get first access to new features — send them the latest beta build link and ask them to enable the toggle to receive future betas automatically.
+
 ## v0.8.5 — Bug Fixes & Stability Improvements
 
 ### What's New in v0.8.5:

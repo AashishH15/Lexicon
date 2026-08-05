@@ -332,6 +332,12 @@ export default function App() {
       ? saved === "true"
       : SETTINGS_DEFAULTS.proseScanEnabled;
   });
+  const [betaOptIn, setBetaOptIn] = useState(() => {
+    const saved = localStorage.getItem("lexicon:betaOptIn");
+    return saved !== null
+      ? saved === "true"
+      : SETTINGS_DEFAULTS.betaOptIn;
+  });
   const [docText, setDocText] = useState("");
   const [toneResult, setToneResult] = useState(null);
   const [editorFocused, setEditorFocused] = useState(false);
@@ -352,45 +358,48 @@ export default function App() {
   });
   const [updateModalOpen, setUpdateModalOpen] = useState(false);
 
-  const runUpdateCheck = useCallback(async ({ silent = false } = {}) => {
-    setUpdateState((current) => ({
-      ...current,
-      status: "checking",
-      message: "",
-      dismissed: false,
-    }));
-    try {
-      const update = await checkForUpdate();
-      if (!update) {
+  const runUpdateCheck = useCallback(
+    async ({ silent = false, beta = betaOptIn } = {}) => {
+      setUpdateState((current) => ({
+        ...current,
+        status: "checking",
+        message: "",
+        dismissed: false,
+      }));
+      try {
+        const update = await checkForUpdate({ beta });
+        if (!update) {
+          setUpdateState({
+            status: updaterIsAvailable() ? "current" : "unavailable",
+            update: null,
+            message: updaterIsAvailable()
+              ? "Lexicon is up to date."
+              : "Updates are checked from an installed Lexicon build.",
+            progress: null,
+            dismissed: false,
+          });
+          return null;
+        }
         setUpdateState({
-          status: updaterIsAvailable() ? "current" : "unavailable",
-          update: null,
-          message: updaterIsAvailable()
-            ? "Lexicon is up to date."
-            : "Updates are checked from an installed Lexicon build.",
+          status: "available",
+          update,
+          message: "",
           progress: null,
           dismissed: false,
         });
+        return update;
+      } catch {
+        setUpdateState((current) => ({
+          ...current,
+          status: silent ? "idle" : "error",
+          message: silent ? "" : "Could not check for updates right now.",
+          progress: null,
+        }));
         return null;
       }
-      setUpdateState({
-        status: "available",
-        update,
-        message: "",
-        progress: null,
-        dismissed: false,
-      });
-      return update;
-    } catch {
-      setUpdateState((current) => ({
-        ...current,
-        status: silent ? "idle" : "error",
-        message: silent ? "" : "Could not check for updates right now.",
-        progress: null,
-      }));
-      return null;
-    }
-  }, []);
+    },
+    [betaOptIn]
+  );
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -1436,6 +1445,15 @@ export default function App() {
     localStorage.setItem(proseScanKey, String(next));
   }
 
+  function handleBetaOptInChange(next) {
+    setBetaOptIn(next);
+    try {
+      localStorage.setItem("lexicon:betaOptIn", String(next));
+    } catch {
+      // storage unavailable — keep the in-memory value for this session
+    }
+  }
+
   function handleToggleLeftPanel() {
     setLeftPanelOpen((open) => {
       const next = !open;
@@ -1579,12 +1597,14 @@ export default function App() {
     setFocusMode(SETTINGS_DEFAULTS.focusMode);
     setLineSpacing(SETTINGS_DEFAULTS.lineSpacing);
     setProseScanEnabled(SETTINGS_DEFAULTS.proseScanEnabled);
+    setBetaOptIn(SETTINGS_DEFAULTS.betaOptIn);
     setDocxAuthor("Lex");
     localStorage.removeItem(languageKey);
     localStorage.removeItem(fontSizeKey);
     localStorage.removeItem(focusModeKey);
     localStorage.removeItem(lineSpacingKey);
     localStorage.removeItem(proseScanKey);
+    localStorage.removeItem("lexicon:betaOptIn");
     localStorage.removeItem(docxAuthorKey);
   }
 
@@ -2454,6 +2474,8 @@ export default function App() {
           onFocusModeChange={handleFocusModeChange}
           proseScanEnabled={proseScanEnabled}
           onProseScanChange={handleProseScanChange}
+          betaOptIn={betaOptIn}
+          onBetaOptInChange={handleBetaOptInChange}
           docxAuthor={docxAuthor}
           onDocxAuthorChange={handleDocxAuthorChange}
           onResetDefaults={handleResetDefaults}

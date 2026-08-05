@@ -9,9 +9,13 @@ use std::process::{Child, Command, Stdio};
 use std::sync::Mutex;
 use std::thread;
 use std::time::{Duration, Instant};
+use serde::Serialize;
+use tauri::ipc::Channel;
 use tauri::menu::{MenuBuilder, MenuItemBuilder};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{Manager, RunEvent, WindowEvent};
+use tauri_plugin_updater::{Update, UpdaterExt};
+use url::Url;
 
 struct BackendState {
     child: Mutex<Option<Child>>,
@@ -302,18 +306,133 @@ fn ensure_backend(app_handle: tauri::AppHandle) -> Result<(), String> {
     Ok(())
 }
 
+#[cfg(target_os = "windows")]
+fn kill_backend_processes() {
+    // Ensure no lingering backend executable processes remain open on Windows
+    // and allow Windows kernel time to release file locks on DLLs.
+    let _ = Command::new("taskkill")
+        .args(["/IM", "lexicon-backend.exe", "/T", "/F"])
+        .status();
+    thread::sleep(Duration::from_millis(500));
+}
+
 #[tauri::command]
 fn prepare_for_update(app_handle: tauri::AppHandle) -> Result<(), String> {
     stop_backend(&app_handle);
     #[cfg(target_os = "windows")]
-    {
-        // Ensure no lingering backend executable processes remain open on Windows
-        // and allow Windows kernel time to release file locks on DLLs.
-        let _ = Command::new("taskkill")
-            .args(["/IM", "lexicon-backend.exe", "/T", "/F"])
-            .status();
-        thread::sleep(Duration::from_millis(500));
-    }
+    kill_backend_processes();
+    Ok(())
+}
+
+// ── Release channels (stable / beta) ──────────────────────────────────
+//
+// Stable builds check the latest GitHub release's updater manifest; beta
+// builds check a manifest published to the gh-pages branch. The frontend
+// opts users into the beta channel; stable users never hit the beta URL.
+
+const STABLE_UPDATE_ENDPOINT: &str =
+    "https://github.com/AashishH15/Lexicon/releases/latest/download/latest.json";
+const BETA_UPDATE_ENDPOINT: &str =
+    "https://raw.githubusercontent.com/AashishH15/Lexicon/gh-pages/beta.json";
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(tag = "event", content = "data")]
+pub enum DownloadEvent {
+    #[serde(rename_all = "camelCase")]
+    Started { content_length: Option<u64> },
+    #[serde(rename_all = "camelCase")]
+    Progress { chunk_length: usize },
+    Preparing,
+    Installing,
+    Finished,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateMetadata {
+    version: String,
+    current_version: String,
+    body: String,
+}
+
+struct PendingUpdate(Mutex<Option<Update>>);
+
+#[tauri::command]
+async fn fetch_update(
+    app: tauri::AppHandle,
+    pending: tauri::State<'_, PendingUpdate>,
+    beta: bool,
+) -> Result<Option<UpdateMetadata>, String> {
+    let endpoint = if beta {
+        BETA_UPDATE_ENDPOINT
+    } else {
+        STABLE_UPDATE_ENDPOINT
+    };
+    let update = app
+        .updater_builder()
+        .endpoints(vec![
+            Url::parse(endpoint).map_err(|error| error.to_string())?,
+        ])
+        .map_err(|error| error.to_string())?
+        .timeout(Duration::from_secs(8))
+        .build()
+        .map_err(|error| error.to_string())?
+        .check()
+        .await
+        .map_err(|error| error.to_string())?;
+
+    let metadata = update.as_ref().map(|update| UpdateMetadata {
+        version: update.version.clone(),
+        current_version: update.current_version.clone(),
+        body: update.body.clone().unwrap_or_default(),
+    });
+
+    *pending
+        .0
+        .lock()
+        .map_err(|_| "update state lock is unavailable".to_string())? = update;
+    Ok(metadata)
+}
+
+#[tauri::command]
+async fn install_update(
+    app: tauri::AppHandle,
+    pending: tauri::State<'_, PendingUpdate>,
+    on_event: Channel<DownloadEvent>,
+) -> Result<(), String> {
+    let update = pending
+        .0
+        .lock()
+        .map_err(|_| "update state lock is unavailable".to_string())?
+        .take()
+        .ok_or_else(|| "there is no pending update".to_string())?;
+
+    let mut first_chunk = true;
+    let bytes = update
+        .download(
+            |chunk_length, content_length| {
+                if first_chunk {
+                    let _ = on_event.send(DownloadEvent::Started { content_length });
+                    first_chunk = false;
+                }
+                let _ = on_event.send(DownloadEvent::Progress { chunk_length });
+            },
+            || {
+                let _ = on_event.send(DownloadEvent::Finished);
+            },
+        )
+        .await
+        .map_err(|error| error.to_string())?;
+
+    // Windows installers replace the bundled backend/JRE files. Stop the
+    // backend explicitly before installing so its DLLs are no longer locked.
+    let _ = on_event.send(DownloadEvent::Preparing);
+    stop_backend(&app);
+    #[cfg(target_os = "windows")]
+    kill_backend_processes();
+
+    let _ = on_event.send(DownloadEvent::Installing);
+    update.install(bytes).map_err(|error| error.to_string())?;
     Ok(())
 }
 
@@ -388,6 +507,7 @@ fn main() {
                 tier2_offloaded: Mutex::new(false),
                 lifecycle: Mutex::new(()),
             });
+            app.manage(PendingUpdate(Mutex::new(None)));
             let handle_clone = app.handle().clone();
             thread::spawn(move || {
                 if let Some(state) = handle_clone.try_state::<BackendState>() {
@@ -458,7 +578,12 @@ fn main() {
 
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![ensure_backend, prepare_for_update])
+        .invoke_handler(tauri::generate_handler![
+            ensure_backend,
+            prepare_for_update,
+            fetch_update,
+            install_update
+        ])
         .build(tauri::generate_context!())
         .expect("error while building Lexicon")
         .run(|app_handle, event| match event {

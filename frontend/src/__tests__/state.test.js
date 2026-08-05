@@ -295,6 +295,7 @@ describe("Settings smart defaults & reset", () => {
       focusMode: false,
       lineSpacing: 1.6,
       proseScanEnabled: false,
+      betaOptIn: false,
     });
   });
 
