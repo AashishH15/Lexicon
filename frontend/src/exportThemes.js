@@ -219,8 +219,10 @@ export function applyPrintTheme(css) {
   style.textContent = css;
   document.head.appendChild(style);
   const cleanup = () => {
-    document.getElementById("lex-print-theme")?.remove();
     window.removeEventListener("afterprint", cleanup);
+    setTimeout(() => {
+      document.getElementById("lex-print-theme")?.remove();
+    }, 5000);
   };
   window.addEventListener("afterprint", cleanup);
   requestAnimationFrame(() => {
