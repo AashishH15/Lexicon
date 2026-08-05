@@ -5,8 +5,9 @@
   --bg-surface-secondary: #F9F9F8;
   --bg-subtle: #F3F3F4;
 
-  --border-color: #EAEAEA;
-  --border-dark: #D4D4D4;
+  /* Borders: Soft, subtle 6.5% alpha outlines */
+  --border-color: rgba(0, 0, 0, 0.065);
+  --border-dark: rgba(0, 0, 0, 0.14);
 
   /* Text Colors */
   --text-primary: #111111;
@@ -28,16 +29,23 @@
   --font-serif: 'Newsreader', 'Georgia', serif;
   --font-mono: 'JetBrains Mono', 'ui-monospace', 'SFMono-Regular', monospace;
 
-  /* Radii & Shadows */
-  --radius-button: 6px;
-  --radius-card: 10px;
+  /* Unified Radii Architecture */
+  --radius-button: 8px;
+  --radius-card: 14px;
+  --radius-card-lg: 18px;
   --radius-pill: 9999px;
-  --shadow-hover: 0 4px 12px rgba(0, 0, 0, 0.04);
-  --shadow-card: 0 1px 2px rgba(17, 17, 17, 0.03);
-  --shadow-lift: 0 16px 32px -16px rgba(17, 17, 17, 0.18);
 
+  /* Unified Elevation Architecture */
+  --shadow-card: 0 2px 10px -2px rgba(0, 0, 0, 0.035);
+  --shadow-card-hover: 0 12px 28px -6px rgba(0, 0, 0, 0.08);
+  --shadow-live-widget: 0 4px 20px -5px rgba(0, 0, 0, 0.04);
+  --shadow-lift: 0 20px 40px -15px rgba(0, 0, 0, 0.12);
+
+  /* Motion & Easing Tokens */
   --ease-soft: cubic-bezier(0.22, 1, 0.36, 1);
-  --transition: all 0.25s var(--ease-soft);
+  --transition-fast: all 0.2s var(--ease-soft);
+  --transition: all 0.3s var(--ease-soft);
+  --transition-slow: all 0.5s var(--ease-soft);
 }
 
 /* Reset & Base */
@@ -620,14 +628,20 @@ b,
 
 .bento-card {
   background: var(--bg-surface);
-  border: 1px solid rgba(0, 0, 0, 0.065);
-  border-radius: 14px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-card);
   padding: 40px;
   transition: var(--transition);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  box-shadow: 0 2px 10px -2px rgba(0, 0, 0, 0.03);
+  box-shadow: var(--shadow-card);
+}
+
+.bento-card:hover {
+  border-color: var(--border-dark);
+  box-shadow: var(--shadow-card-hover);
+  transform: translateY(-3px);
 }
 
 .bento-card:hover {
@@ -705,17 +719,17 @@ b,
 
 .privacy-card {
   background: var(--bg-surface);
-  border: 1px solid rgba(0, 0, 0, 0.065);
-  border-radius: 14px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-card);
   padding: 40px;
   transition: var(--transition);
-  box-shadow: 0 2px 10px -2px rgba(0, 0, 0, 0.03);
+  box-shadow: var(--shadow-card);
 }
 
 .privacy-card:hover {
   border-color: var(--border-dark);
-  box-shadow: var(--shadow-lift);
-  transform: translateY(-4px);
+  box-shadow: var(--shadow-card-hover);
+  transform: translateY(-3px);
 }
 
 .privacy-card-header {
@@ -731,10 +745,10 @@ b,
 
 .privacy-comparison-table {
   background: var(--bg-surface);
-  border: 1px solid rgba(0, 0, 0, 0.065);
-  border-radius: 14px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-card);
   padding: 40px;
-  box-shadow: 0 2px 10px -2px rgba(0, 0, 0, 0.03);
+  box-shadow: var(--shadow-card);
 }
 
 /* Semantic GEO Feature Matrix Table */
@@ -890,17 +904,17 @@ b,
 
 .faq-card {
   background: var(--bg-surface);
-  border: 1px solid rgba(0, 0, 0, 0.065);
-  border-radius: 14px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-card);
   padding: 36px;
   transition: var(--transition);
-  box-shadow: 0 2px 10px -2px rgba(0, 0, 0, 0.03);
+  box-shadow: var(--shadow-card);
 }
 
 .faq-card:hover {
   border-color: var(--border-dark);
-  box-shadow: var(--shadow-lift);
-  transform: translateY(-4px);
+  box-shadow: var(--shadow-card-hover);
+  transform: translateY(-3px);
 }
 
 .faq-card h3 {
