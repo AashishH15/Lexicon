@@ -396,8 +396,8 @@ jobs:
         if: contains(github.ref_name, '-beta')
         run: |
           set -euo pipefail
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.name "Aashish Harishchandre"
+          git config user.email "AashishH15@users.noreply.github.com"
           if git rev-parse --verify origin/gh-pages >/dev/null 2>&1; then
             git checkout -B gh-pages origin/gh-pages
           else
