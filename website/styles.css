@@ -1471,6 +1471,81 @@ section[id] {
   margin-bottom: 12px;
 }
 
+/* Creator Manifesto & Transparency Section */
+.manifesto-section {
+  padding: 165px 0;
+  border-top: 1px solid var(--border-color);
+  background: var(--bg-surface-secondary);
+}
+
+.manifesto-card {
+  background: var(--bg-surface);
+  border: 1px solid rgba(0, 0, 0, 0.065);
+  border-radius: 16px;
+  padding: 56px 48px;
+  box-shadow: 0 4px 20px -5px rgba(0, 0, 0, 0.04);
+  text-align: center;
+  max-width: 860px;
+  margin: 0 auto;
+}
+
+.manifesto-badge {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--pale-blue-text);
+  background: var(--pale-blue-bg);
+  padding: 5px 14px;
+  border-radius: var(--radius-pill);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  display: inline-block;
+  margin-bottom: 24px;
+}
+
+.manifesto-title {
+  font-size: 2.25rem;
+  line-height: 1.15;
+  margin-bottom: 20px;
+  text-wrap: balance;
+}
+
+.manifesto-text {
+  font-size: 1.08rem;
+  color: var(--text-secondary);
+  line-height: 1.7;
+  max-width: 680px;
+  margin: 0 auto 40px;
+  text-wrap: pretty;
+}
+
+.manifesto-trust-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  text-align: left;
+  border-top: 1px solid var(--border-color);
+  padding-top: 36px;
+}
+
+.manifesto-trust-item h4 {
+  font-family: var(--font-sans);
+  font-size: 0.98rem;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.manifesto-trust-item p {
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+@media (max-width: 768px) {
+  .manifesto-trust-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;

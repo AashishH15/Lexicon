@@ -261,7 +261,7 @@
 
   function initRevealAnimations() {
   const revealSelector =
-  '.section-header, .bento-card, .proofread-live, .editor-live, .tutorial-card, .privacy-card, .faq-card, .setup-step-box, .support-card, .privacy-comparison-table, .footer';
+  '.section-header, .bento-card, .proofread-live, .editor-live, .manifesto-card, .tutorial-card, .privacy-card, .faq-card, .setup-step-box, .support-card, .privacy-comparison-table, .footer';
  const revealEls = Array.prototype.slice.call(document.querySelectorAll(revealSelector));
 
  if (!('IntersectionObserver' in window)) {
