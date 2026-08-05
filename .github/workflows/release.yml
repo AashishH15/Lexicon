@@ -92,7 +92,7 @@ jobs:
             artifact_name: lexicon-macos-arm64
 
           - name: Linux x64
-            runner: ubuntu-latest
+            runner: ubuntu-22.04
             platform: linux
             target: x86_64-unknown-linux-gnu
             python_arch: x64
@@ -255,6 +255,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VITE_APP_VERSION: ${{ github.ref_name }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          APPIMAGE_EXTRACT_AND_RUN: 1
         with:
           projectPath: frontend
           args: --target ${{ matrix.target }} --bundles ${{ matrix.bundle }}
