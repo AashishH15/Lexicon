@@ -128,6 +128,10 @@ export default function ModelManager({
       .then((s) => {
         if (cancelled) return;
         setStatus(s);
+        if (s.ollama_models && s.ollama_models.length > 0) {
+          setOllamaModels(s.ollama_models);
+          if (!selectedOllamaModel) setSelectedOllamaModel(s.ollama_models[0]);
+        }
         if (!userPickedRef.current && s.model_key) setModelKey(s.model_key);
         if (s.preference?.ollama_model) setSelectedOllamaModel(s.preference.ollama_model);
       })
@@ -147,7 +151,7 @@ export default function ModelManager({
 
     probeOllamaDirect().then((result) => {
       if (cancelled) return;
-      setOllamaModels(result.models);
+      if (result.models.length > 0) setOllamaModels(result.models);
       setOllamaProbing(false);
       if (result.available) {
         setStatus((prev) => ({ ...prev, ollama_available: true }));

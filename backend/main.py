@@ -123,6 +123,8 @@ def languagetool_unload():
     return {"unloaded": "languagetool"}
 
 
+
+
 @app.post("/grammar/check")
 def grammar_check(request: GrammarRequest):
     matches = check_text(request.text, request.language, request.ignore)
@@ -145,10 +147,13 @@ def ai_status():
     prefs = load_prefs()
     # Always probe Ollama — even if the user chose "bundled" — so the frontend
     # can detect a running server and show available models.
-    ollama_available = OllamaBackend().available()
+    ollama = OllamaBackend()
+    ollama_available = ollama.available()
+    ollama_models = ollama._chat_models() if ollama_available else []
     active = get_backend()
     return {
         "ollama_available": ollama_available,
+        "ollama_models": ollama_models,
         "models_ready": models_ready(),
         "model_key": prefs["model_key"],
         "preference": prefs,
