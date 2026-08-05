@@ -21,7 +21,7 @@
   <a href="https://github.com/AashishH15/Lexicon/releases/latest"><img src="https://img.shields.io/github/v/release/AashishH15/Lexicon?display_name=tag" alt="Latest release" /></a>
   <a href="https://github.com/AashishH15/Lexicon/releases"><img src="https://img.shields.io/github/downloads/AashishH15/Lexicon/total" alt="Total Downloads" /></a>
   <a href="https://github.com/AashishH15/Lexicon/blob/master/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="License" /></a>
-  <a href="#download"><img src="https://img.shields.io/badge/supported%20OS-Windows%20%7C%20macOS-4c8bf5" alt="Supported OS: Windows and macOS" /></a>
+  <a href="#download"><img src="https://img.shields.io/badge/supported%20OS-Windows%20%7C%20macOS%20%7C%20Linux-4c8bf5" alt="Supported OS: Windows, macOS, and Linux" /></a>
 </p>
 
 <p align="center">
@@ -61,7 +61,10 @@ first launch, Control-click the app and choose **Open**, or use
 **System Settings > Privacy & Security > Open Anyway**. Only download builds
 from this repository's releases page.
 
-Linux installers are not packaged yet.
+### Linux
+
+- **DEB (`.deb`)** - Debian, Ubuntu, Linux Mint, Pop!_OS, etc.
+- **AppImage (`.AppImage`)** - Standalone executable compatible with all 64-bit Linux distributions.
 
 ## First launch
 
@@ -196,9 +199,7 @@ runs at <http://localhost:8000>.
 
 ## Platform and release status
 
-The release workflow builds desktop installers for Windows x86, x64, and
-ARM64, plus macOS Intel and Apple Silicon. Builds are triggered from version
-tags and attached to GitHub Releases.
+The release workflow builds desktop installers for Windows (x86, x64, ARM64), macOS (Intel and Apple Silicon), and Linux (x64 `.deb` and `.AppImage`). Builds are triggered from version tags and attached to GitHub Releases.
 
 ## Technology
 

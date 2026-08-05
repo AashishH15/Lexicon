@@ -41,7 +41,9 @@
     "createUpdaterArtifacts": true,
     "targets": [
       "nsis",
-      "dmg"
+      "dmg",
+      "deb",
+      "appimage"
     ],
     "icon": [
       "icons/icon.png",

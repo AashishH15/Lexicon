@@ -13,11 +13,14 @@ are listed so the release reads honestly about what works today.
 
 - 🪟 **[Windows x64 Setup](https://github.com/AashishH15/Lexicon/releases/download/v0.9.0/Lexicon_0.9.0_x64-setup.exe)**: Standard installer for modern 64-bit Windows PCs (Intel / AMD).
 - 🍏 **[macOS Apple Silicon DMG](https://github.com/AashishH15/Lexicon/releases/download/v0.9.0/Lexicon_0.9.0_aarch64.dmg)**: For modern Apple Silicon Macs (M1, M2, M3, M4 chips).
-- 📦 **[View All Assets & Checksums](https://github.com/AashishH15/Lexicon/releases/tag/v0.9.0)**: Complete list of installers including ARM64 Windows, x86 Windows, and Intel macOS.
+- 🐧 **[Linux x64 Downloads](https://github.com/AashishH15/Lexicon/releases/tag/v0.9.0)**: Debian package (`.deb`) and standalone executable (`.AppImage`) for 64-bit Linux.
+- 📦 **[View All Assets & Checksums](https://github.com/AashishH15/Lexicon/releases/tag/v0.9.0)**: Complete list of installers including ARM64 Windows, x86 Windows, Intel macOS, and Linux x64.
 
 ---
 
 ### What's New in v0.9.0:
+
+- **Full Linux x64 Desktop Support**: Lexicon is now packaged for Linux distributions with native `.deb` packages and distro-agnostic `.AppImage` binaries, complete with automated in-app updates via signed AppImage tarballs.
 
 - **Built-in Document Template Gallery**: Jumpstart your writing with 1-click starter templates tailored for different writing styles:
   - **Academic Paper:** Pre-structured research layout complete with Abstract, section headers, results data table, LaTeX math formulas, and a references list.

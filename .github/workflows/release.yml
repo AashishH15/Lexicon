@@ -91,6 +91,19 @@ jobs:
             extension: dmg
             artifact_name: lexicon-macos-arm64
 
+          - name: Linux x64
+            runner: ubuntu-latest
+            platform: linux
+            target: x86_64-unknown-linux-gnu
+            python_arch: x64
+            cmake_args: "-DGGML_NATIVE=OFF"
+            include_llama: "true"
+            jre_url: https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.5%2B11/OpenJDK21U-jre_x64_linux_hotspot_21.0.5_11.tar.gz
+            jre_archive: jre.tar.gz
+            bundle: deb,appimage
+            extension: AppImage
+            artifact_name: lexicon-linux-x64
+
     steps:
       - uses: actions/checkout@v4
 
@@ -120,6 +133,12 @@ jobs:
             brew install cmake
           fi
 
+      - name: Install Linux build tooling
+        if: matrix.platform == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file libssl-dev libayatana-appindicator3-dev liblibrsvg2-dev
+
       - name: Freeze backend sidecar (onedir)
         working-directory: backend
         env:
@@ -133,7 +152,7 @@ jobs:
           pyinstaller lexicon.spec --noconfirm --clean
           rm -rf ../frontend/src-tauri/lexicon-backend
           cp -r dist/lexicon-backend ../frontend/src-tauri/lexicon-backend
-          if [[ "${{ matrix.platform }}" == "macos" ]]; then
+          if [[ "${{ matrix.platform }}" != "windows" ]]; then
             chmod +x ../frontend/src-tauri/lexicon-backend/lexicon-backend
           fi
 
@@ -162,6 +181,16 @@ jobs:
 
       - name: Bundle macOS JRE
         if: matrix.platform == 'macos'
+        working-directory: backend
+        run: |
+          curl -L --fail --retry 5 --retry-all-errors --retry-delay 3 -o "${{ matrix.jre_archive }}" "${{ matrix.jre_url }}"
+          tar -xzf "${{ matrix.jre_archive }}"
+          rm -rf ../frontend/src-tauri/jre
+          mv jdk-21*/ ../frontend/src-tauri/jre
+          rm "${{ matrix.jre_archive }}"
+
+      - name: Bundle Linux JRE
+        if: matrix.platform == 'linux'
         working-directory: backend
         run: |
           curl -L --fail --retry 5 --retry-all-errors --retry-delay 3 -o "${{ matrix.jre_archive }}" "${{ matrix.jre_url }}"
@@ -238,7 +267,8 @@ jobs:
           mkdir -p "$output_dir"
           find "$source_dir" -type f \( \
             -name "*.exe" -o -name "*.exe.sig" -o \
-            -name "*.dmg" -o -name "*.app.tar.gz" -o -name "*.app.tar.gz.sig" \
+            -name "*.dmg" -o -name "*.app.tar.gz" -o -name "*.app.tar.gz.sig" -o \
+            -name "*.deb" -o -name "*.AppImage" -o -name "*.AppImage.tar.gz" -o -name "*.AppImage.tar.gz.sig" \
           \) -exec cp {} "$output_dir/" \;
           if [ -f "$output_dir/Lexicon.app.tar.gz" ]; then
             mv "$output_dir/Lexicon.app.tar.gz" "$output_dir/${{ matrix.artifact_name }}.app.tar.gz"
@@ -294,6 +324,7 @@ jobs:
               "windows-i686": ("lexicon-windows-x86", "*.exe"),
               "darwin-x86_64": ("lexicon-macos-x64", "*.app.tar.gz"),
               "darwin-aarch64": ("lexicon-macos-arm64", "*.app.tar.gz"),
+              "linux-x86_64": ("lexicon-linux-x64", "*.AppImage.tar.gz"),
           }
           platforms = {}
           for target, (folder, pattern) in targets.items():
@@ -319,6 +350,7 @@ jobs:
           - **Windows x86**: legacy 32-bit Windows; proofreading is supported, but the optional native AI engine is not bundled
           - **macOS Intel**: Intel Macs
           - **macOS Apple Silicon**: M-series Macs
+          - **Linux x64**: 64-bit Linux (.deb and AppImage)
 
           macOS builds are unsigned. On first open, right-click the app and choose Open, or run:
           `xattr -dr com.apple.quarantine /Applications/Lexicon.app`
@@ -422,4 +454,5 @@ jobs:
             artifacts/lexicon-windows-arm64/*
             artifacts/lexicon-macos-x64/*
             artifacts/lexicon-macos-arm64/*
+            artifacts/lexicon-linux-x64/*
             ${{ contains(github.ref_name, '-beta') && 'artifacts/beta.json' || 'artifacts/latest.json' }}
