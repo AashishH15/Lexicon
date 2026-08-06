@@ -277,19 +277,56 @@
           </p>
         </div>
 
-        <!-- Live proofread demo -->
-        <div class="proofread-live" aria-hidden="true">
+        <!-- Flagship WOW Demo: Typing + Live Proofreading + Lex Rewrite -->
+        <div class="ai-wow-demo" id="ai-wow-demo">
           <div class="proofread-live-bar">
-            <span><span class="proofread-live-dot"></span><span class="proofread-live-label">Proofread as you
-                type</span></span>
-            <span class="proofread-live-metrics">Clarity 74 &middot; 0 chars</span>
+            <span><span class="proofread-live-dot"></span><span class="proofread-live-label" id="ai-wow-label">Proofread &amp; Lex's Engine</span></span>
+            <span class="proofread-live-metrics" id="ai-wow-status-badge">100% Offline &middot; 0ms Latency</span>
           </div>
-          <div class="proofread-live-body">
-            <p class="proofread-live-line"><span class="pl-type"></span><span class="pl-caret"></span></p>
-            <div class="proofread-chip">
-              <span class="proofread-chip-label">Spelling</span>
-              <span class="proofread-chip-fix"></span>
-              <span class="chip-apply">Apply</span>
+          <div class="ai-wow-body">
+            <!-- Typing Editor Canvas Line -->
+            <p class="ai-wow-text" id="ai-wow-text">
+              <span class="ai-wow-prefix">Canvas: </span><span id="ai-type-text"></span><span class="pl-caret" id="ai-caret"></span>
+            </p>
+
+            <!-- Popups Zone (Grammar Chip & Lex Rewrite Toolbar) -->
+            <div class="ai-wow-popups-zone">
+              <!-- Popup 1: Grammar Fix Chip -->
+              <div class="proofread-chip" id="ai-grammar-chip">
+                <span class="proofread-chip-label">Spelling</span>
+                <span class="proofread-chip-fix" id="ai-grammar-fix">efficient &rarr; efficiently</span>
+                <span class="chip-apply" id="ai-chip-btn">Apply Fix</span>
+              </div>
+
+              <!-- Popup 2: Floating Lex Toolbar (clickable, like Export Studio) -->
+              <div class="ai-wow-toolbar" id="ai-wow-toolbar">
+                <span class="ai-toolbar-tag">
+                  <svg width="12" height="12" viewBox="0 0 256 256" fill="currentColor"><path d="M240,128a15.89,15.89,0,0,1-10.18,14.88l-52.61,21.05L156.16,216.54a16,16,0,0,1-29.76,0l-21.05-52.61L52.74,142.88a16,16,0,0,1,0-29.76l52.61-21.05L126.4,39.46a16,16,0,0,1,29.76,0l21.05,52.61,52.61,21.05A15.89,15.89,0,0,1,240,128Z"/></svg>
+                  <span>Ask Lex</span>
+                </span>
+                <div class="ai-toolbar-tools">
+                  <button type="button" class="ai-toolbar-btn active" data-tool="concise">Concise</button>
+                  <button type="button" class="ai-toolbar-btn" data-tool="rewrite">Rewrite</button>
+                  <button type="button" class="ai-toolbar-btn" data-tool="active">Active Voice</button>
+                  <button type="button" class="ai-toolbar-btn" data-tool="professional">Professional</button>
+                  <button type="button" class="ai-toolbar-btn" data-tool="friendly">Friendly</button>
+                  <button type="button" class="ai-toolbar-btn" data-tool="summary">Summary</button>
+                  <button type="button" class="ai-toolbar-btn" data-tool="keypoints">Key Points</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Instant Diff Card -->
+            <div class="ai-wow-diff-card" id="ai-wow-diff">
+              <div class="ai-diff-header">
+                <span class="ai-diff-label" id="ai-diff-label">Lex Rewrite &middot; Concise</span>
+                <span class="ai-diff-badge">1-Click Apply</span>
+              </div>
+              <div class="ai-diff-content">
+                <span class="diff-removed" id="ai-diff-removed">The algorithm works efficiently.</span>
+                <span class="diff-arrow">&rarr;</span>
+                <span class="diff-added" id="ai-diff-added">The algorithm is efficient.</span>
+              </div>
             </div>
           </div>
         </div>
@@ -353,12 +390,12 @@
           <div class="bento-card bento-card-large">
             <div class="bento-card-header">
               <span class="badge-pill badge-green">03 &middot; Polish</span>
-              <span style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">Local
-                LLM</span>
+              <span style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">Lex's
+                Engine</span>
             </div>
-            <h3 class="bento-title">On-device AI rewrites &amp; tone shifts</h3>
+            <h3 class="bento-title">On-device Lex rewrites &amp; tone shifts</h3>
             <p class="bento-desc">
-              Highlight any passage and run 10+ local AI tools: <strong>Rewrite</strong>, <strong>Concise</strong>,
+              Highlight any passage and run 10+ offline Lex tools: <strong>Rewrite</strong>, <strong>Concise</strong>,
               <strong>Summaries</strong>, <strong>Key Points</strong>, <strong>Lists &amp; Tables</strong>,
               plus 9 tone shifts (<em>Professional</em>, <em>Academic</em>, <em>Friendly</em>, <em>Casual</em>,
               <em>Formal</em>, <em>Empathetic</em>, <em>Persuasive</em>, <em>Humorous</em>, <em>Playful</em>).
@@ -553,10 +590,10 @@
           <div class="privacy-card">
             <div class="privacy-card-header">
               <h3>Offline LLM Inference</h3>
-              <span class="badge-pill badge-blue">LOCAL AI</span>
+              <span class="badge-pill badge-blue">LEX'S ENGINE</span>
             </div>
             <p>
-              Lexicon's AI writing assistant executes GGUF models (<strong>Light</strong> 0.8 GB or
+              Lex, Lexicon's writing assistant, executes GGUF models (<strong>Light</strong> 0.8 GB or
               <strong>Standard</strong> 1.4 GB) directly on your device via native sidecar processes or your existing
               Ollama server.
             </p>

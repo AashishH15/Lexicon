@@ -621,6 +621,237 @@
     }, 3800);
   }
 
+  function initAiWowDemo() {
+    const card = document.getElementById('ai-wow-demo');
+    if (!card) return;
+
+    const typeTextEl = document.getElementById('ai-type-text');
+    const statusBadge = document.getElementById('ai-wow-status-badge');
+    const grammarChip = document.getElementById('ai-grammar-chip');
+    const chipBtn = document.getElementById('ai-chip-btn');
+    const toolbar = document.getElementById('ai-wow-toolbar');
+    const toolButtons = Array.prototype.slice.call(card.querySelectorAll('.ai-toolbar-btn'));
+    const diffCard = document.getElementById('ai-wow-diff');
+    const diffLabel = document.getElementById('ai-diff-label');
+    const diffRemoved = document.getElementById('ai-diff-removed');
+    const diffAdded = document.getElementById('ai-diff-added');
+    const caret = document.getElementById('ai-caret');
+
+    if (!typeTextEl || !grammarChip || !toolbar || !diffCard) return;
+
+    const toolsData = {
+      concise: {
+        source: 'The algorithm works efficiently.',
+        result: 'The algorithm is efficient.',
+        label: 'Lex Rewrite \u00B7 Concise'
+      },
+      rewrite: {
+        source: 'The algorithm works efficiently.',
+        result: 'The algorithm runs efficiently.',
+        label: 'Lex Rewrite \u00B7 Rewrite'
+      },
+      active: {
+        source: 'The report was written by the team.',
+        result: 'The team wrote the report.',
+        label: 'Lex Rewrite \u00B7 Active Voice'
+      },
+      professional: {
+        source: 'The algorithm works efficiently.',
+        result: 'The algorithm operates with optimal efficiency.',
+        label: 'Lex Rewrite \u00B7 Professional'
+      },
+      friendly: {
+        source: 'The algorithm works efficiently.',
+        result: 'This algorithm works really well.',
+        label: 'Lex Rewrite \u00B7 Friendly'
+      },
+      summary: {
+        source: 'The algorithm works efficiently.',
+        result: 'An efficient algorithm.',
+        label: 'Lex Rewrite \u00B7 Summary'
+      },
+      keypoints: {
+        source: 'The algorithm works efficiently.',
+        result: '\u2022 Runs efficiently  \u2022 Reliable performance',
+        label: 'Lex Rewrite \u00B7 Key Points'
+      }
+    };
+    const toolKeys = ['concise', 'rewrite', 'active', 'professional', 'friendly', 'summary', 'keypoints'];
+
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      typeTextEl.textContent = toolsData.concise.result;
+      return;
+    }
+
+    let inView = true;
+    if ('IntersectionObserver' in window) {
+      inView = false;
+      const observer = new IntersectionObserver(function (entries) {
+        inView = entries.some(function (entry) { return entry.isIntersecting; });
+      }, { threshold: 0.15 });
+      observer.observe(card);
+    }
+
+    let autoTimer = null;
+    let autoIndex = 0;
+    let activeTool = 'concise';
+    let interactive = false;
+    let introToken = 0;
+
+    function sleepMs(ms) {
+      return new Promise(function (resolve) { setTimeout(resolve, ms); });
+    }
+
+    async function waitForView() {
+      while (!inView) {
+        await sleepMs(400);
+      }
+    }
+
+    async function typeString(str, speed) {
+      typeTextEl.innerHTML = '';
+      for (let i = 0; i < str.length; i++) {
+        typeTextEl.textContent += str.charAt(i);
+        await sleepMs(speed || 36);
+      }
+    }
+
+    function setHighlightedSource(source) {
+      typeTextEl.innerHTML = '';
+      const span = document.createElement('span');
+      span.className = 'ai-highlighted';
+      span.textContent = source;
+      typeTextEl.appendChild(span);
+      typeTextEl.style.color = '';
+    }
+
+    function applyTool(toolKey, isUserClick) {
+      const data = toolsData[toolKey];
+      if (!data) return;
+      activeTool = toolKey;
+
+      toolButtons.forEach(function (btn) {
+        btn.classList.toggle('active', btn.getAttribute('data-tool') === toolKey);
+      });
+
+      setHighlightedSource(data.source);
+      if (diffLabel) diffLabel.textContent = data.label;
+      if (diffRemoved) diffRemoved.textContent = data.source;
+      if (diffAdded) diffAdded.textContent = data.result;
+
+      grammarChip.classList.remove('visible');
+      toolbar.classList.add('visible');
+      diffCard.classList.add('visible');
+      if (caret) caret.style.display = 'none';
+
+      if (statusBadge) {
+        statusBadge.textContent = isUserClick
+          ? 'Lex \u00B7 ' + toolKey.charAt(0).toUpperCase() + toolKey.slice(1)
+          : 'Lex Rewriting...';
+      }
+
+      if (isUserClick && autoTimer) {
+        clearInterval(autoTimer);
+        autoTimer = null;
+        // Resume auto-cycle after a short pause so the demo stays alive
+        setTimeout(function () {
+          if (!interactive || autoTimer) return;
+          startAutoCycle();
+        }, 8000);
+      }
+    }
+
+    function startAutoCycle() {
+      if (autoTimer) clearInterval(autoTimer);
+      autoTimer = setInterval(function () {
+        if (!inView) return;
+        autoIndex = (autoIndex + 1) % toolKeys.length;
+        applyTool(toolKeys[autoIndex], false);
+        if (statusBadge) statusBadge.textContent = 'Offline Engine \u00B7 Try a tool';
+      }, 3800);
+    }
+
+    function enterInteractiveMode() {
+      interactive = true;
+      applyTool('concise', false);
+      if (statusBadge) statusBadge.textContent = 'Offline Engine \u00B7 Try a tool';
+      startAutoCycle();
+    }
+
+    toolButtons.forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        if (!interactive) return;
+        const key = btn.getAttribute('data-tool');
+        autoIndex = Math.max(0, toolKeys.indexOf(key));
+        applyTool(key, true);
+        if (statusBadge) {
+          const label = (toolsData[key] && toolsData[key].label) || key;
+          statusBadge.textContent = label.replace('Lex Rewrite \u00B7 ', 'Lex \u00B7 ') + ' Applied \u2713';
+        }
+      });
+    });
+
+    async function runIntroOnce(token) {
+      grammarChip.classList.remove('visible');
+      if (chipBtn) chipBtn.classList.remove('clicked');
+      toolbar.classList.remove('visible');
+      diffCard.classList.remove('visible');
+      typeTextEl.innerHTML = '';
+      typeTextEl.style.color = '';
+      if (caret) caret.style.display = '';
+      if (statusBadge) statusBadge.textContent = '100% Offline \u00B7 0ms Latency';
+
+      await waitForView();
+      if (token !== introToken) return;
+      await sleepMs(800);
+      if (token !== introToken) return;
+
+      if (statusBadge) statusBadge.textContent = 'Typing Draft...';
+      await typeString('The algorithm works ', 32);
+      if (token !== introToken) return;
+
+      const typoSpan = document.createElement('span');
+      typoSpan.className = 'pl-squiggle';
+      typeTextEl.appendChild(typoSpan);
+      const typoWord = 'efficient';
+      for (let i = 0; i < typoWord.length; i++) {
+        typoSpan.textContent += typoWord.charAt(i);
+        await sleepMs(38);
+        if (token !== introToken) return;
+      }
+
+      await sleepMs(400);
+      if (token !== introToken) return;
+
+      if (statusBadge) statusBadge.textContent = '1 Grammar Suggestion';
+      grammarChip.classList.add('visible');
+      await sleepMs(1000);
+      if (token !== introToken) return;
+
+      if (chipBtn) chipBtn.classList.add('clicked');
+      await sleepMs(300);
+      if (token !== introToken) return;
+
+      typeTextEl.innerHTML = 'The algorithm works efficiently.';
+      grammarChip.classList.remove('visible');
+      if (statusBadge) statusBadge.textContent = 'Spelling Fixed \u2713';
+      await sleepMs(900);
+      if (token !== introToken) return;
+
+      if (statusBadge) statusBadge.textContent = 'Lex Ready \u00B7 Offline Engine';
+      setHighlightedSource('The algorithm works efficiently.');
+      await sleepMs(600);
+      if (token !== introToken) return;
+
+      enterInteractiveMode();
+    }
+
+    setTimeout(function () {
+      introToken += 1;
+      runIntroOnce(introToken);
+    }, 1000);
+  }
+
   document.addEventListener('DOMContentLoaded', function () {
     initSmoothScroll();
     initReleaseInfo();
@@ -631,5 +862,6 @@
     initTypingDemo();
     initEditorDemo();
     initExportStudioDemo();
+    initAiWowDemo();
   });
 })();

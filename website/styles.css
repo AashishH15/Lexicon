@@ -1229,6 +1229,293 @@ section[id] {
 }
 
 /* ---- Alive motion: live editor demos ---- */
+.ai-wow-demo {
+  max-width: 580px;
+  width: 100%;
+  margin: -16px auto 48px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-live-widget);
+  overflow: hidden;
+  text-align: left;
+  transition: var(--transition);
+  box-sizing: border-box;
+}
+
+.ai-wow-body {
+  padding: 18px 20px 20px;
+  position: relative;
+  box-sizing: border-box;
+}
+
+.ai-wow-text {
+  font-size: 1rem;
+  line-height: 1.5;
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  margin-bottom: 6px;
+}
+
+.ai-wow-prefix {
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-right: 6px;
+}
+
+.pl-squiggle {
+  text-decoration: underline wavy var(--pale-red-text);
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1.5px;
+}
+
+/* Popups share one grid cell so the hidden one never reserves inline space. */
+.ai-wow-popups-zone {
+  min-height: 38px;
+  display: grid;
+  grid-template-areas: "popup";
+  align-items: start;
+  justify-items: start;
+  margin-top: 6px;
+}
+
+.ai-wow-popups-zone>* {
+  grid-area: popup;
+  max-width: 100%;
+}
+
+.proofread-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.78rem;
+  padding: 4px 12px;
+  border-radius: var(--radius-pill);
+  background: var(--pale-red-bg);
+  color: var(--pale-red-text);
+  border: 1px solid #F8C9C8;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(4px);
+  transition: opacity 0.3s var(--ease-soft), transform 0.3s var(--ease-soft);
+  pointer-events: none;
+  flex-wrap: wrap;
+}
+
+.proofread-chip.visible {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.chip-apply {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--pale-green-text);
+  background: var(--pale-green-bg);
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.chip-apply.clicked {
+  background: var(--pale-green-text);
+  color: #FFFFFF;
+}
+
+.ai-wow-toolbar {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(4px);
+  transition: opacity 0.3s var(--ease-soft), transform 0.3s var(--ease-soft);
+  pointer-events: none;
+  max-width: 100%;
+  width: 100%;
+}
+
+.ai-wow-toolbar.visible {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.ai-toolbar-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--pale-blue-text);
+  background: var(--pale-blue-bg);
+  padding: 3px 7px;
+  border-radius: var(--radius-pill);
+  font-weight: 500;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.ai-toolbar-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+  width: 100%;
+}
+
+.ai-toolbar-btn {
+  font-family: var(--font-sans);
+  font-size: 0.72rem;
+  padding: 4px 7px;
+  border-radius: 6px;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  transition: var(--transition);
+  white-space: nowrap;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.ai-toolbar-btn:hover {
+  border-color: var(--border-dark);
+  color: var(--text-primary);
+}
+
+.ai-toolbar-btn.active {
+  background: var(--text-primary);
+  color: #FFFFFF;
+  border-color: var(--text-primary);
+  font-weight: 500;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+}
+
+.ai-toolbar-btn:focus-visible {
+  outline: 2px solid var(--pale-blue-text);
+  outline-offset: 2px;
+}
+
+/* Style & AI Tone blue, matching the app's in-editor Lex highlight. */
+.ai-highlighted {
+  background: var(--pale-blue-bg);
+  color: var(--pale-blue-text);
+  border-radius: 3px;
+  padding: 2px 4px;
+  transition: background 0.3s ease;
+}
+
+/* Stays in flow while hidden so the card never changes height mid-cycle. */
+.ai-wow-diff-card {
+  margin-top: 10px;
+  background: var(--pale-blue-bg);
+  border: 1px solid #BFE3FB;
+  border-radius: 8px;
+  padding: 10px 14px;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(6px);
+  transition: opacity 0.35s var(--ease-soft), transform 0.35s var(--ease-soft);
+}
+
+.ai-wow-diff-card.visible {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.ai-diff-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  font-size: 0.78rem;
+}
+
+.ai-diff-label {
+  font-weight: 600;
+  color: var(--pale-blue-text);
+  font-family: var(--font-sans);
+}
+
+.ai-diff-badge {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  background: var(--bg-surface);
+  color: var(--pale-blue-text);
+  border: 1px solid #BFE3FB;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+}
+
+.ai-diff-content {
+  font-size: 0.86rem;
+  line-height: 1.5;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.diff-removed {
+  text-decoration: line-through;
+  color: var(--pale-red-text);
+  background: var(--pale-red-bg);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.diff-added {
+  color: var(--pale-green-text);
+  background: var(--pale-green-bg);
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.diff-arrow {
+  color: var(--text-muted);
+}
+
+.ai-wow-demo .proofread-live-bar {
+  flex-wrap: wrap;
+  row-gap: 4px;
+}
+
+@media (max-width: 560px) {
+  .ai-wow-body {
+    padding: 16px 14px 18px;
+  }
+
+  .ai-wow-text {
+    font-size: 0.92rem;
+  }
+
+  .ai-diff-content {
+    font-size: 0.8rem;
+    gap: 6px;
+  }
+
+  .ai-toolbar-btn {
+    font-size: 0.72rem;
+    padding: 4px 8px;
+  }
+
+  /* The chip wraps to two rows on narrow screens, where a full pill looks odd. */
+  .proofread-chip {
+    border-radius: 12px;
+    row-gap: 4px;
+  }
+}
+
 .proofread-live {
   max-width: 580px;
   margin: -24px auto 56px;
@@ -1347,44 +1634,6 @@ section[id] {
     background: transparent;
     color: inherit;
   }
-}
-
-.proofread-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 12px;
-  font-size: 0.78rem;
-  background: var(--pale-red-bg);
-  color: var(--pale-red-text);
-  border: 1px solid #F3C7C5;
-  border-radius: 6px;
-  padding: 5px 8px;
-  opacity: 0;
-  transform: translateY(4px);
-  transition: opacity 0.3s var(--ease-soft), transform 0.3s var(--ease-soft);
-  pointer-events: none;
-}
-
-.proofread-chip.chip-show {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-.chip-apply {
-  background: #111111;
-  color: #FFFFFF;
-  border: none;
-  border-radius: 4px;
-  font-size: 0.72rem;
-  font-weight: 500;
-  padding: 3px 10px;
-}
-
-.proofread-chip.chip-applied {
-  background: var(--pale-green-bg);
-  border-color: #D5E2D2;
-  color: var(--pale-green-text);
 }
 
 /* ---- Export Live Demo Widget ---- */
