@@ -1,12 +1,11 @@
-// Paper texture pairs (C47.2). Pure data — no DOM, no styles.
+// Paper texture pairs (C47.2). Pure data, no DOM, no styles.
 //
 // Each texture is a pre-tuned pair: pageColor (the writing surface) +
-// surroundColor (the gutter around the page inside the editor column) with
-// grain and shadow intensities. Consumers set the --lex-* variables on the
-// editor root from these pairs. Plain White is the default and renders with
-// the container white and the page wrapper transparent and full-bleed
-// (gutter 0, max-width none), so shipping v0.10.0 keeps today's pixels —
-// its declared surroundColor never actually shows.
+// surroundColor (the app shell behind chrome — header, side panels, gutters)
+// with grain and shadow intensities. Consumers set the --lex-* variables on
+// the editor root from these pairs. Plain White is the default and renders
+// with the container white and the page wrapper full-bleed so shipping
+// v0.10.0 keeps today's pixels.
 
 export const PAPER_TEXTURES = [
   {
@@ -21,7 +20,7 @@ export const PAPER_TEXTURES = [
     id: "warm-cream",
     label: "Warm Cream",
     pageColor: "#FEFBF0",
-    surroundColor: "#F7F6F3",
+    surroundColor: "#F3EEE0",
     grainOpacity: 0.04,
     shadowStrength: 0.08,
   },
@@ -29,7 +28,7 @@ export const PAPER_TEXTURES = [
     id: "linen",
     label: "Linen",
     pageColor: "#F5EFE0",
-    surroundColor: "#F7F6F3",
+    surroundColor: "#E2DACD",
     grainOpacity: 0.06,
     shadowStrength: 0.12,
   },
@@ -37,7 +36,7 @@ export const PAPER_TEXTURES = [
     id: "newsprint",
     label: "Newsprint",
     pageColor: "#F2F3F1",
-    surroundColor: "#F7F6F3",
+    surroundColor: "#E2E4E0",
     grainOpacity: 0.1,
     shadowStrength: 0.15,
   },

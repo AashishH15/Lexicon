@@ -50,8 +50,8 @@ export default function LanguageDropdown({ options, value, onChange }) {
                   className={
                     "block w-full px-4 py-2 text-left font-sans text-sm transition-colors " +
                     (active
-                      ? "bg-pale-blue text-pale-blue-text"
-                      : "text-ink hover:bg-pale-blue hover:text-pale-blue-text")
+                      ? "bg-pale-blue text-ink"
+                      : "text-ink hover:bg-pale-blue hover:text-ink")
                   }
                 >
                   {item.label}

@@ -296,6 +296,9 @@ describe("Settings smart defaults & reset", () => {
       lineSpacing: 1.6,
       proseScanEnabled: false,
       betaOptIn: false,
+      typographyPreset: "current",
+      paperTexture: "plain-white",
+      readingMode: "off",
     });
   });
 

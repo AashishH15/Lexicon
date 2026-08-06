@@ -23,11 +23,15 @@ import {
   FileText,
   Robot,
   PaperPlaneTilt,
+  Palette,
 } from "@phosphor-icons/react";
 import Toggle from "./Toggle.jsx";
 import LanguageDropdown from "./LanguageDropdown.jsx";
 import ModelManager from "./ModelManager.jsx";
 import CustomToolsSettings from "./CustomToolsSettings.jsx";
+import { TYPOGRAPHY_PRESETS } from "./typographyPresets.js";
+import { PAPER_TEXTURES } from "./paperTextures.js";
+import { READING_MODES } from "./readingMode.js";
 import { setAiPreference, openExternalUrl } from "./api.js";
 
 const githubWeights = new Map([
@@ -115,6 +119,9 @@ export const SETTINGS_DEFAULTS = {
   lineSpacing: 1.6,
   proseScanEnabled: false,
   betaOptIn: false,
+  typographyPreset: "current",
+  paperTexture: "plain-white",
+  readingMode: "off",
 };
 
 const isMac =
@@ -155,6 +162,7 @@ const SHORTCUTS = [
 
 const TABS = [
   { id: "general", label: "General", icon: Sliders },
+  { id: "appearance", label: "Appearance", icon: Palette },
   { id: "dictionary", label: "Your Dictionary", icon: BookBookmark },
   { id: "history", label: "History & Drafts", icon: ClockCounterClockwise },
   { id: "ai", label: "Lex's Engine", icon: Cpu },
@@ -272,6 +280,54 @@ const SEARCH_INDEX = [
       "privacy",
     ],
   },
+  {
+    label: "Typography Preset",
+    tab: "appearance",
+    settingKey: "typography-preset",
+    keywords: [
+      "typography",
+      "preset",
+      "font",
+      "fonts",
+      "serif",
+      "sans",
+      "monospace",
+      "editorial",
+      "modern",
+      "typeface",
+    ],
+  },
+  {
+    label: "Paper Texture",
+    tab: "appearance",
+    settingKey: "paper-texture",
+    keywords: [
+      "paper",
+      "texture",
+      "background",
+      "page",
+      "cream",
+      "linen",
+      "newsprint",
+      "dark",
+      "surround",
+      "grain",
+    ],
+  },
+  {
+    label: "Reading Mode",
+    tab: "appearance",
+    settingKey: "reading-mode",
+    keywords: [
+      "reading",
+      "mode",
+      "bionic",
+      "dyslexic",
+      "open dyslexic",
+      "accessibility",
+      "emphasis",
+    ],
+  },
 ];
 
 function formatTimestamp(ts) {
@@ -319,6 +375,12 @@ export default function Settings({
   onBetaOptInChange,
   docxAuthor,
   onDocxAuthorChange,
+  typographyPreset,
+  onTypographyPresetChange,
+  paperTexture,
+  onPaperTextureChange,
+  readingMode,
+  onReadingModeChange,
   onResetDefaults,
   onCheckForUpdates,
   updateState,
@@ -349,7 +411,10 @@ export default function Settings({
     fontSize === SETTINGS_DEFAULTS.fontSize &&
     focusMode === SETTINGS_DEFAULTS.focusMode &&
     lineSpacing === SETTINGS_DEFAULTS.lineSpacing &&
-    proseScanEnabled === SETTINGS_DEFAULTS.proseScanEnabled;
+    proseScanEnabled === SETTINGS_DEFAULTS.proseScanEnabled &&
+    typographyPreset === SETTINGS_DEFAULTS.typographyPreset &&
+    paperTexture === SETTINGS_DEFAULTS.paperTexture &&
+    readingMode === SETTINGS_DEFAULTS.readingMode;
 
   const updateBusy = ["checking", "installing"].includes(updateState?.status);
   const updateButtonLabel =
@@ -872,6 +937,171 @@ export default function Settings({
                       placeholder="Lex"
                       className="mt-3 w-full rounded border border-hairline bg-canvas px-3 py-2 font-sans text-sm text-ink outline-none transition-colors placeholder:text-muted/60 focus:border-muted"
                     />
+                  </div>
+                </div>
+              )}
+
+              {/* ── Appearance ── */}
+              {activeTab === "appearance" && (
+                <div className="space-y-2.5">
+                  <h2 className="font-serif text-xl font-bold text-ink pb-1">
+                    Appearance
+                  </h2>
+
+                  <div
+                    data-setting-key="typography-preset"
+                    className={getHighlightClass("typography-preset")}
+                  >
+                    <p className="font-mono text-[10px] uppercase tracking-widest text-muted">
+                      Typography Preset
+                    </p>
+                    <p className="mt-1 font-sans text-xs text-muted">
+                      Body and heading fonts for the editor. Screen only;
+                      print and PDF exports keep their own themes.
+                    </p>
+                    <div className="mt-3 flex flex-col gap-2">
+                      {TYPOGRAPHY_PRESETS.map((preset) => {
+                        const active = typographyPreset === preset.id;
+                        return (
+                          <button
+                            key={preset.id}
+                            type="button"
+                            onClick={() => onTypographyPresetChange(preset.id)}
+                            className={
+                              "rounded-xl border px-4 py-2.5 text-left transition-colors " +
+                              (active
+                                ? "border-ink bg-white ring-1 ring-ink"
+                                : "border-hairline bg-white hover:border-muted")
+                            }
+                          >
+                            <span
+                              className="block font-sans text-sm font-medium text-ink"
+                              style={{
+                                fontFamily: preset.bodyFontStack.join(", "),
+                              }}
+                            >
+                              {preset.label}
+                            </span>
+                            <span className="mt-0.5 block font-sans text-xs leading-relaxed text-muted">
+                              {preset.description}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div
+                    data-setting-key="paper-texture"
+                    className={getHighlightClass("paper-texture")}
+                  >
+                    <p className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-muted">
+                      Paper Texture
+                      <span className="rounded border border-hairline px-1.5 py-px font-mono text-[9px] uppercase tracking-wider text-muted">
+                        Beta
+                      </span>
+                      <span className="group relative inline-flex normal-case tracking-normal">
+                        <Info
+                          size={12}
+                          weight="bold"
+                          className="text-muted"
+                          aria-label="Paper texture beta info"
+                        />
+                        <span className="pointer-events-none absolute left-0 top-5 z-20 w-56 rounded-md border border-hairline bg-white p-2.5 font-sans text-[11px] leading-relaxed text-muted opacity-0 shadow-sm transition-opacity duration-150 group-hover:opacity-100">
+                          Paper textures are in beta and some edge cases may
+                          remain. If you find one, please take a screenshot and
+                          send it through the feedback form.
+                        </span>
+                      </span>
+                    </p>
+                    <p className="mt-1 font-sans text-xs text-muted">
+                      Paper texture (page + surround, designed pairs). Screen
+                      only. Exports always print on a plain white page.
+                    </p>
+                    <div className="mt-3 flex flex-col gap-2">
+                      {PAPER_TEXTURES.map((texture) => {
+                        const active = paperTexture === texture.id;
+                        return (
+                          <button
+                            key={texture.id}
+                            type="button"
+                            onClick={() => onPaperTextureChange(texture.id)}
+                            className={
+                              "flex items-center justify-between gap-3 rounded-xl border px-4 py-2.5 text-left transition-colors " +
+                              (active
+                                ? "border-ink bg-white ring-1 ring-ink"
+                                : "border-hairline bg-white hover:border-muted")
+                            }
+                          >
+                            <span>
+                              <span className="block font-sans text-sm font-medium text-ink">
+                                {texture.label}
+                              </span>
+                              <span className="mt-0.5 block font-sans text-xs leading-relaxed text-muted">
+                                Page{" "}
+                                <span className="font-mono">
+                                  {texture.pageColor}
+                                </span>{" "}
+                                · Surround{" "}
+                                <span className="font-mono">
+                                  {texture.surroundColor}
+                                </span>
+                              </span>
+                            </span>
+                            <span className="flex shrink-0 items-center gap-1">
+                              <span
+                                className="h-4 w-4 rounded border border-hairline"
+                                style={{ backgroundColor: texture.pageColor }}
+                                title={`Page ${texture.pageColor}`}
+                              />
+                              <span
+                                className="h-4 w-4 rounded border border-hairline"
+                                style={{ backgroundColor: texture.surroundColor }}
+                                title={`Surround ${texture.surroundColor}`}
+                              />
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div
+                    data-setting-key="reading-mode"
+                    className={getHighlightClass("reading-mode")}
+                  >
+                    <p className="font-mono text-[10px] uppercase tracking-widest text-muted">
+                      Reading Mode
+                    </p>
+                    <p className="mt-1 font-sans text-xs text-muted">
+                      Choose how text appears while you read: plain text,
+                      bold word starts (Bionic), or the OpenDyslexic typeface.
+                    </p>
+                    <div className="relative isolate mt-3 flex overflow-hidden rounded border border-hairline bg-canvas">
+                      <span
+                        className="pointer-events-none absolute inset-y-0 left-0 bg-pale-blue transition-transform duration-200 ease-out"
+                        style={{
+                          width: `${100 / READING_MODES.length}%`,
+                          transform: `translateX(${READING_MODES.findIndex((o) => o.id === readingMode) * 100}%)`,
+                        }}
+                      />
+                      {READING_MODES.map((option, i) => (
+                        <button
+                          key={option.id}
+                          type="button"
+                          onClick={() => onReadingModeChange(option.id)}
+                          className={
+                            "relative z-10 flex flex-1 items-center justify-center py-2 font-mono text-xs uppercase leading-none tracking-widest transition-colors " +
+                            (i > 0 ? "border-l border-hairline " : "") +
+                            (readingMode === option.id
+                              ? "text-ink"
+                              : "bg-transparent text-muted hover:text-ink")
+                          }
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </div>
               )}

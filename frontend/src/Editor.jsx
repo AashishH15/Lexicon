@@ -22,6 +22,9 @@ import {
 import FormatToolbar from "./FormatToolbar.jsx";
 import ToneChart from "./ToneChart.jsx";
 import { openExternalUrl } from "./api.js";
+import { TYPOGRAPHY_PRESETS } from "./typographyPresets.js";
+import { PAPER_TEXTURES } from "./paperTextures.js";
+import { setReadingMode, applyReadingMode } from "./readingMode.js";
 
 // Quick-format actions shown in the selection bubble menu. Each mirrors the
 // toggle commands so a second click removes the format from the selection.
@@ -78,6 +81,9 @@ export default function Editor({
   editor,
   fontSize,
   lineSpacing,
+  typographyPreset,
+  paperTexture,
+  readingMode,
   clarityScore,
   clarityGrade,
   clarityDensity,
@@ -87,6 +93,27 @@ export default function Editor({
   toneResult,
 }) {
   const hasMetrics = proofreadActive && !emptyDoc;
+  // Defensive lookups: an unknown id (corrupt storage, older build) falls
+  // back to the first catalog entry (Current preset / Plain White), never
+  // a blank render.
+  const typography =
+    TYPOGRAPHY_PRESETS.find((p) => p.id === typographyPreset) ??
+    TYPOGRAPHY_PRESETS[0];
+  const texture =
+    PAPER_TEXTURES.find((t) => t.id === paperTexture) ?? PAPER_TEXTURES[0];
+  const surroundRef = useRef(null);
+
+  // Reading mode: sync the module-level mode (the Bionic plugin reads it),
+  // toggle the OpenDyslexic class, and dispatch a no-op transaction so the
+  // plugin's apply() re-evaluates even without a doc change.
+  useEffect(() => {
+    if (!editor || !surroundRef.current) {
+      return;
+    }
+    setReadingMode(readingMode);
+    applyReadingMode(surroundRef.current, readingMode);
+    editor.view.dispatch(editor.state.tr);
+  }, [editor, readingMode]);
   const [showBreakdown, setShowBreakdown] = useState(false);
   const [collapsed, setCollapsed] = useState(() => {
     const saved = localStorage.getItem("lexicon:metricsCollapsed");
@@ -400,18 +427,18 @@ export default function Editor({
       {collapsed ? (
         <div className="lex-no-print mt-4 grid grid-cols-2 gap-4 mb-6">
           <div className="lex-card-enter flex items-center justify-between rounded border border-hairline bg-white px-4 py-3">
-            <span className="font-mono text-xs uppercase leading-none tracking-widest text-[#787774]">
+            <span className="font-mono text-xs uppercase leading-none tracking-widest text-muted">
               Clarity Score
             </span>
-            <span className="font-mono text-sm font-medium text-[#111111]">
+            <span className="font-mono text-sm font-medium text-ink">
               {hasMetrics ? clarityScore : "-"}
             </span>
           </div>
           <div className="lex-card-enter flex items-center justify-between rounded border border-hairline bg-white px-4 py-3">
-            <span className="font-mono text-xs uppercase leading-none tracking-widest text-[#787774]">
+            <span className="font-mono text-xs uppercase leading-none tracking-widest text-muted">
               Tone
             </span>
-            <span className="truncate pl-3 font-mono text-sm font-medium text-[#111111]">
+            <span className="truncate pl-3 font-mono text-sm font-medium text-ink">
               {toneResult ? toneResult.label : "N/A"}
             </span>
           </div>
@@ -425,11 +452,11 @@ export default function Editor({
           <div className="lex-card-enter flex h-full flex-col justify-between rounded border border-hairline bg-white p-6">
             <div className="flex flex-col">
               <div className="mb-4 flex items-center gap-1.5">
-                <span className="font-mono text-xs uppercase leading-none tracking-widest text-[#787774]">
+                <span className="font-mono text-xs uppercase leading-none tracking-widest text-muted">
                   Clarity Score
                 </span>
                 <span className="group relative inline-flex">
-                  <Info size={13} weight="bold" className="-mt-px text-[#787774]" />
+                  <Info size={13} weight="bold" className="-mt-px text-muted" />
                   <span className="pointer-events-none absolute left-0 top-5 z-10 w-60 rounded-md border border-hairline bg-white p-3 font-sans text-[11px] leading-relaxed text-muted opacity-0 shadow-sm transition-opacity duration-150 group-hover:opacity-100">
                     A readbility score from 0 to 100. It uses an error density
                     ratio, not a raw count: Clarity = 100 minus (active
@@ -438,12 +465,12 @@ export default function Editor({
                   </span>
                 </span>
               </div>
-              <p className="font-serif text-4xl font-bold text-[#111111]">
+              <p className="font-serif text-4xl font-bold text-ink">
                 {hasMetrics ? clarityScore : "-"}
               </p>
               {hasMetrics && clarityGrade && (
                 <>
-                  <p className="mt-2 block font-mono text-[10px] font-medium uppercase tracking-widest text-[#111111]">
+                  <p className="mt-2 block font-mono text-[10px] font-medium uppercase tracking-widest text-ink">
                     {clarityGrade}
                   </p>
                   {clarityDensity && (
@@ -460,44 +487,44 @@ export default function Editor({
                 }
               >
                 <div className="rounded-md border border-hairline bg-canvas p-3 font-mono text-[10px] leading-relaxed text-muted">
-                  <p className="mb-1 uppercase tracking-widest text-[#787774]">
+                  <p className="mb-1 uppercase tracking-widest text-muted">
                     Issue Breakdown
                   </p>
                   <div className="flex items-center justify-between gap-2">
                     <span>Spelling Errors</span>
-                    <span className="font-medium text-[#111111]">
+                    <span className="font-medium text-ink">
                       {grammarMatches.filter((m) => m.category === "Spelling").length}
                     </span>
                   </div>
                   <div className="flex items-center justify-between gap-2">
                     <span>Grammar Conflicts</span>
-                    <span className="font-medium text-[#111111]">
+                    <span className="font-medium text-ink">
                       {grammarMatches.filter((m) => m.category === "Grammar").length}
                     </span>
                   </div>
                   <div className="flex items-center justify-between gap-2">
                     <span>Punctuation Marks</span>
-                    <span className="font-medium text-[#111111]">
+                    <span className="font-medium text-ink">
                       {grammarMatches.filter((m) => m.category === "Punctuation").length}
                     </span>
                   </div>
                   <div className="flex items-center justify-between gap-2">
                     <span>Prose Style</span>
-                    <span className="font-medium text-[#111111]">
+                    <span className="font-medium text-ink">
                       {grammarMatches.filter((m) => m.category === "Prose Style").length}
                     </span>
                   </div>
                   <div className="my-1 border-t border-hairline" />
-                  <div className="flex items-center justify-between gap-2 font-medium text-[#111111]">
+                  <div className="flex items-center justify-between gap-2 font-medium text-ink">
                     <span>TOTAL DETECTED</span>
                     <span>{grammarMatches.length}</span>
                   </div>
                 </div>
               </div>
             </div>
-            <div className="mt-4 h-1 w-full overflow-hidden rounded-full bg-[#EAEAEA]">
+            <div className="mt-4 h-1 w-full overflow-hidden rounded-full bg-hairline">
               <div
-                className="h-full bg-[#111111] transition-all duration-500 ease-out"
+                className="h-full bg-ink transition-all duration-500 ease-out"
                 style={{ width: `${hasMetrics ? clarityScore : 0}%` }}
               />
             </div>
@@ -505,11 +532,11 @@ export default function Editor({
           <div className="lex-card-enter flex h-full flex-col justify-between rounded border border-hairline bg-white p-6">
             <div className="flex flex-col">
               <div className="mb-2 flex items-center gap-1.5">
-                <span className="font-mono text-xs uppercase leading-none tracking-widest text-[#787774]">
+                <span className="font-mono text-xs uppercase leading-none tracking-widest text-muted">
                   Tone
                 </span>
                 <span className="group relative inline-flex">
-                  <Info size={13} weight="bold" className="-mt-px text-[#787774]" />
+                  <Info size={13} weight="bold" className="-mt-px text-muted" />
                   <span className="pointer-events-none absolute left-0 top-5 z-10 w-60 rounded-md border border-hairline bg-white p-3 font-sans text-[11px] leading-relaxed text-muted opacity-0 shadow-sm transition-opacity duration-150 group-hover:opacity-100">
                     Automatically detects the dominant tone of your text. It scans
                     for tone signals (formal transitions, pronouns, sentence
@@ -518,13 +545,13 @@ export default function Editor({
                   </span>
                 </span>
               </div>
-              <p className="font-serif text-4xl font-bold text-[#111111]">
+              <p className="font-serif text-4xl font-bold text-ink">
                 {toneResult ? toneResult.label : "N/A"}
               </p>
               {toneResult ? (
                 <div className="group mt-2">
                   <div className="font-mono text-[10px] uppercase tracking-widest">
-                    <span className="text-sm font-medium text-[#111111]">
+                    <span className="text-sm font-medium text-ink">
                       {toneResult.score}% ALIGNMENT
                     </span>
                     <p className="mt-0.5 block text-muted">{toneResult.status}</p>
@@ -538,16 +565,16 @@ export default function Editor({
                     }
                   >
                     <div className="rounded-md border border-hairline bg-canvas p-3 font-mono text-[10px] leading-relaxed text-muted">
-                      <p className="mb-1 uppercase tracking-widest text-[#787774]">
+                      <p className="mb-1 uppercase tracking-widest text-muted">
                         Tone Composition
                       </p>
                       <div className="flex items-center justify-between gap-2">
-                        <span className="truncate font-medium text-[#111111]">
+                        <span className="truncate font-medium text-ink">
                           {toneResult.label === "NEUTRAL / UNCLEAR"
                             ? toneResult.label
                             : `${toneResult.label} Signals`}
                         </span>
-                        <span className="font-medium text-[#111111]">
+                        <span className="font-medium text-ink">
                           {toneResult.score}%
                         </span>
                       </div>
@@ -563,7 +590,7 @@ export default function Editor({
                         </div>
                       ))}
                       <div className="my-1 border-t border-hairline" />
-                      <div className="flex items-center justify-between gap-2 font-medium text-[#111111]">
+                      <div className="flex items-center justify-between gap-2 font-medium text-ink">
                         <span>TOTAL</span>
                         <span>
                           {toneResult.score +
@@ -592,7 +619,21 @@ export default function Editor({
 
       <SelectionBubbleMenu editor={editor} />
 
-      <div className="lex-scroll lex-editor-surround flex-1 overflow-auto rounded border border-hairline">
+      <div
+        ref={surroundRef}
+        className="lex-scroll lex-editor-surround flex-1 overflow-auto rounded border border-hairline"
+        data-typography-preset={typography.id}
+        data-paper-texture={texture.id}
+        data-reading-mode={readingMode}
+        style={{
+          "--lex-page-color": texture.pageColor,
+          "--lex-surround-color": texture.surroundColor,
+          "--lex-grain-opacity": String(texture.grainOpacity),
+          "--lex-shadow-strength": String(texture.shadowStrength),
+          "--lex-font-body": typography.bodyFontStack.join(", "),
+          "--lex-font-heading": typography.headingFontStack.join(", "),
+        }}
+      >
         <div className="lex-page-wrapper">
           <EditorContent
             editor={editor}

@@ -57,7 +57,7 @@ export default function ToneChart({ editor }) {
 
   return (
     <div className="mt-3">
-      <div className="flex h-2 w-full overflow-hidden rounded-full bg-[#EAEAEA]">
+      <div className="flex h-2 w-full overflow-hidden rounded-full bg-hairline">
         {distribution.map((d, i) => (
           <div
             key={d.tone}

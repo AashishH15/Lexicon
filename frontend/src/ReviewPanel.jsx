@@ -293,7 +293,7 @@ export default function ReviewPanel({
                     setFolding(true);
                     setTimeout(() => { setFolding(false); onDismissAll(); }, count * 45 + 350);
                   }}
-                  className="rounded-full px-2.5 py-px font-mono text-[10px] uppercase tracking-widest text-muted transition-colors hover:bg-pale-red hover:text-pale-red-text focus-visible:ring-1 focus-visible:ring-ink"
+                  className="rounded-full px-2.5 py-px font-mono text-[10px] uppercase tracking-widest text-ink transition-colors hover:bg-pale-red hover:text-pale-red-text focus-visible:ring-1 focus-visible:ring-ink"
                 >
                   Dismiss All
                 </button>
@@ -301,7 +301,7 @@ export default function ReviewPanel({
                   type="button"
                   aria-label="Clear review"
                   onClick={onClear}
-                  className="font-mono text-[10px] uppercase tracking-[0.08em] text-muted transition-colors hover:text-ink focus-visible:ring-1 focus-visible:ring-ink"
+                  className="font-mono text-[10px] uppercase tracking-[0.08em] text-ink transition-colors hover:opacity-70 focus-visible:ring-1 focus-visible:ring-ink"
                 >
                   Clear
                 </button>
@@ -402,7 +402,7 @@ function TransformView({ tool, status, error, results, progress, running, onAppl
             <div className="h-9 flex-1 rounded-md lex-shimmer" />
           </div>
           {showProgress && (
-            <div className="mt-4 h-1.5 w-full overflow-hidden rounded-full bg-[#EAEAEA]">
+            <div className="mt-4 h-1.5 w-full overflow-hidden rounded-full bg-hairline">
               <div
                 className="h-full bg-ink transition-all duration-300 ease-out"
                 style={{ width: `${pct}%` }}

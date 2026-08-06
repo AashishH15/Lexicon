@@ -67,6 +67,9 @@ import {
 } from "./updater.js";
 import UpdateBanner from "./UpdateBanner.jsx";
 import UpdateModal from "./UpdateModal.jsx";
+import { BionicReading, READING_MODES } from "./readingMode.js";
+import { TYPOGRAPHY_PRESETS } from "./typographyPresets.js";
+import { PAPER_TEXTURES } from "./paperTextures.js";
 import {
   GrammarHighlight,
   buildTextWithMap,
@@ -148,6 +151,9 @@ const fontSizeKey = "lexicon:fontSize";
 const focusModeKey = "lexicon:focusMode";
 const lineSpacingKey = "lexicon:lineSpacing";
 const proseScanKey = "lexicon:proseScanEnabled";
+const typographyPresetKey = "lexicon:typographyPreset";
+const paperTextureKey = "lexicon:paperTexture";
+const readingModeKey = "lexicon:readingMode";
 const dictionaryKey = "lexicon:user_dictionary";
 const documentHistoryKey = "lexicon:document_history";
 const transformHistoryKey = "lexicon:transform_history";
@@ -229,6 +235,30 @@ function loadDocxAuthor() {
   } catch {
     return "";
   }
+}
+
+// Catalog-validated loaders: a stored value that doesn't match any known
+// preset/texture/mode id (corrupt or from an older build) falls back to the
+// setting default rather than rendering a blank state.
+function loadTypographyPreset() {
+  const saved = localStorage.getItem(typographyPresetKey);
+  return TYPOGRAPHY_PRESETS.some((p) => p.id === saved)
+    ? saved
+    : SETTINGS_DEFAULTS.typographyPreset;
+}
+
+function loadPaperTexture() {
+  const saved = localStorage.getItem(paperTextureKey);
+  return PAPER_TEXTURES.some((t) => t.id === saved)
+    ? saved
+    : SETTINGS_DEFAULTS.paperTexture;
+}
+
+function loadReadingMode() {
+  const saved = localStorage.getItem(readingModeKey);
+  return READING_MODES.some((m) => m.id === saved)
+    ? saved
+    : SETTINGS_DEFAULTS.readingMode;
 }
 
 function loadPanelOpen(key) {
@@ -317,6 +347,9 @@ export default function App() {
   const [focusMode, setFocusMode] = useState(loadFocusMode);
   const [lineSpacing, setLineSpacing] = useState(loadLineSpacing);
   const [docxAuthor, setDocxAuthor] = useState(loadDocxAuthor);
+  const [typographyPreset, setTypographyPreset] = useState(loadTypographyPreset);
+  const [paperTexture, setPaperTexture] = useState(loadPaperTexture);
+  const [readingMode, setReadingMode] = useState(loadReadingMode);
   const [userDictionary, setUserDictionary] = useState(loadDictionary);
   const [documentHistory, setDocumentHistory] = useState(() =>
     loadHistory(documentHistoryKey)
@@ -627,6 +660,11 @@ export default function App() {
         },
       }),
       GrammarHighlight,
+      // Reading mode: Bionic emphasis (bold first half of each word) is a
+      // decoration plugin, so content stays byte-identical. OpenDyslexic is
+      // a font swap toggled via applyReadingMode(); the Settings wiring
+      // (C47.4) picks the mode.
+      BionicReading,
       // Slash command menu: typing "/" opens a filterable command list with
       // full keyboard navigation (arrows + Enter). Active formats are flagged
       // so re-selecting toggles them off.
@@ -1599,6 +1637,21 @@ export default function App() {
     localStorage.setItem(lineSpacingKey, String(next));
   }
 
+  function handleTypographyPresetChange(next) {
+    setTypographyPreset(next);
+    localStorage.setItem(typographyPresetKey, next);
+  }
+
+  function handlePaperTextureChange(next) {
+    setPaperTexture(next);
+    localStorage.setItem(paperTextureKey, next);
+  }
+
+  function handleReadingModeChange(next) {
+    setReadingMode(next);
+    localStorage.setItem(readingModeKey, next);
+  }
+
   function handleDocxAuthorChange(next) {
     setDocxAuthor(next);
     try {
@@ -1616,6 +1669,9 @@ export default function App() {
     setProseScanEnabled(SETTINGS_DEFAULTS.proseScanEnabled);
     setBetaOptIn(SETTINGS_DEFAULTS.betaOptIn);
     setDocxAuthor("Lex");
+    setTypographyPreset(SETTINGS_DEFAULTS.typographyPreset);
+    setPaperTexture(SETTINGS_DEFAULTS.paperTexture);
+    setReadingMode(SETTINGS_DEFAULTS.readingMode);
     localStorage.removeItem(languageKey);
     localStorage.removeItem(fontSizeKey);
     localStorage.removeItem(focusModeKey);
@@ -1623,6 +1679,9 @@ export default function App() {
     localStorage.removeItem(proseScanKey);
     localStorage.removeItem("lexicon:betaOptIn");
     localStorage.removeItem(docxAuthorKey);
+    localStorage.removeItem(typographyPresetKey);
+    localStorage.removeItem(paperTextureKey);
+    localStorage.removeItem(readingModeKey);
   }
 
   useEffect(() => {
@@ -2168,8 +2227,18 @@ export default function App() {
     setTransformHistory((prev) => prev.filter((t) => t.locked));
   }
 
+  // Surround color for the paper texture: the whole app shell background
+  // (header, side panels, editor gutters) tints to match the texture's
+  // surroundColor. The page color itself is applied by Editor.jsx.
+  const shellTexture =
+    PAPER_TEXTURES.find((t) => t.id === paperTexture) ?? PAPER_TEXTURES[0];
+
   return (
-    <div className="lex-app-shell flex flex-col h-screen overflow-hidden bg-canvas text-ink">
+    <div
+      className="lex-app-shell flex flex-col h-screen overflow-hidden bg-canvas text-ink"
+      data-paper-texture={shellTexture.id}
+      style={{ backgroundColor: shellTexture.surroundColor }}
+    >
       <header className="lex-no-print flex items-center justify-between px-6 h-14 border-b border-hairline">
         <div className="leading-tight">
           <span className="block font-serif text-lg tracking-tight">
@@ -2348,6 +2417,9 @@ export default function App() {
             editor={editor}
             fontSize={fontSize}
             lineSpacing={lineSpacing}
+            typographyPreset={typographyPreset}
+            paperTexture={paperTexture}
+            readingMode={readingMode}
             clarityScore={clarityScore}
             clarityGrade={clarityGradeLabel}
             clarityDensity={clarityDensity}
@@ -2497,6 +2569,12 @@ export default function App() {
           onBetaOptInChange={handleBetaOptInChange}
           docxAuthor={docxAuthor}
           onDocxAuthorChange={handleDocxAuthorChange}
+          typographyPreset={typographyPreset}
+          onTypographyPresetChange={handleTypographyPresetChange}
+          paperTexture={paperTexture}
+          onPaperTextureChange={handlePaperTextureChange}
+          readingMode={readingMode}
+          onReadingModeChange={handleReadingModeChange}
           onResetDefaults={handleResetDefaults}
           onCheckForUpdates={() => runUpdateCheck()}
           updateState={updateState}

@@ -184,7 +184,7 @@ export default function SuggestionCard({
               event.stopPropagation();
               onAddToDictionary(match);
             }}
-            className="shrink-0 p-2 rounded-md text-[#787774] transition-colors hover:text-[#111111] focus-visible:ring-1 focus-visible:ring-ink active:scale-95"
+            className="shrink-0 p-2 rounded-md text-muted transition-colors hover:text-ink focus-visible:ring-1 focus-visible:ring-ink active:scale-95"
           >
             <BookBookmark size={18} weight="bold" />
           </button>

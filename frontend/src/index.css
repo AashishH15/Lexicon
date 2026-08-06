@@ -9,6 +9,25 @@
   }
 }
 
+/* Bundled OpenDyslexic faces (regular + bold). License: Bitstream
+   Vera (OpenDyslexic by Abelardo Gonzalez). font-display: swap so text
+   renders immediately and the face fills in when ready. */
+@font-face {
+  font-family: "OpenDyslexic";
+  src: url("./assets/fonts/OpenDyslexic-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "OpenDyslexic";
+  src: url("./assets/fonts/OpenDyslexic-Bold.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
 @layer components {
   .ProseMirror {
     outline: none;
@@ -585,9 +604,11 @@
       left: -35%;
       width: 35%;
     }
+
     50% {
       width: 45%;
     }
+
     100% {
       left: 100%;
       width: 35%;
@@ -647,11 +668,11 @@
     background-color: rgba(0, 0, 0, 0.22);
   }
 
-  /* C47.2 — Paper textures. Screen-only by construction: the C46.2 export
+  /* C47.2: Paper textures. Screen-only by construction: the C46.2 export
      themes and the @media print block below print the live window, and a
      texture background must never leak into a printed page. The defaults
      below render Plain White: white surround, transparent full-bleed page
-     wrapper, no grain, no shadow — pixel-identical to the pre-texture look.
+     wrapper, no grain, no shadow: pixel-identical to the pre-texture look.
      Consumers (C47.4) set these variables on the editor root. */
   @media screen {
     .lex-editor-surround {
@@ -661,7 +682,23 @@
       --lex-shadow-strength: 0;
       --lex-page-gutter: 0;
       --lex-page-max-width: none;
+      --lex-font-body: "Geist Sans", -apple-system, BlinkMacSystemFont,
+        "Segoe UI", Helvetica Neue, Arial, sans-serif;
+      --lex-font-heading: "Newsreader", Georgia, serif;
       background-color: var(--lex-surround-color);
+    }
+
+    /* C47.4: Typography presets. Screen-only like the textures above, so a
+       Serif/Editorial preset never leaks into a Minimalist print export.
+       Consumers (C47.4) set --lex-font-* on the editor root; the defaults
+       reproduce the Current preset (sans body, serif headings). Code and
+       KaTeX set their own families, so they win by their own rules. */
+    .lex-editor-surround .ProseMirror {
+      font-family: var(--lex-font-body);
+    }
+
+    .lex-editor-surround .ProseMirror :is(h1, h2, h3, h4, h5, h6) {
+      font-family: var(--lex-font-heading);
     }
 
     .lex-editor-surround .lex-page-wrapper {
@@ -686,6 +723,243 @@
       background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
       background-size: 140px 140px;
       opacity: var(--lex-grain-opacity);
+    }
+  }
+
+  /* OpenDyslexic reading mode: swaps the whole canvas (headings
+     included) to the bundled faces; code stays monospace. Screen-only, so
+     print/PDF exports keep their themes. */
+  @media screen {
+
+    .lex-reading-open-dyslexic .ProseMirror,
+    .lex-reading-open-dyslexic .ProseMirror h1,
+    .lex-reading-open-dyslexic .ProseMirror h2,
+    .lex-reading-open-dyslexic .ProseMirror h3,
+    .lex-reading-open-dyslexic .ProseMirror h4,
+    .lex-reading-open-dyslexic .ProseMirror h5,
+    .lex-reading-open-dyslexic .ProseMirror h6 {
+      font-family: "OpenDyslexic", "Geist Sans", -apple-system,
+        BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+    }
+
+    .lex-reading-open-dyslexic .ProseMirror pre,
+    .lex-reading-open-dyslexic .ProseMirror code {
+      font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+    }
+
+    /* Dark Slate only: light ink on the dark page, dark code chips, and
+       solid elevated surfaces on the dark surround. Screen-scoped so print
+       stays light-on-white. Does not rewrite the design tokens globally. */
+    .lex-app-shell[data-paper-texture="dark-slate"] {
+      color: #edece8;
+    }
+
+    .lex-app-shell[data-paper-texture="dark-slate"] .text-ink {
+      color: #edece8;
+    }
+
+    .lex-app-shell[data-paper-texture="dark-slate"] .text-muted {
+      color: #b0ada6;
+    }
+
+    .lex-app-shell[data-paper-texture="dark-slate"] .border-hairline {
+      border-color: #3a3a3a;
+    }
+
+    .lex-app-shell[data-paper-texture="dark-slate"] .bg-white {
+      background-color: #2c2c2c;
+    }
+
+    .lex-app-shell[data-paper-texture="dark-slate"] .bg-white\/90 {
+      background-color: rgb(44 44 44 / 0.9);
+    }
+
+    .lex-app-shell[data-paper-texture="dark-slate"] .bg-canvas {
+      background-color: #1b1b1b;
+    }
+
+    .lex-app-shell[data-paper-texture="dark-slate"] .bg-hairline {
+      background-color: #3a3a3a;
+    }
+
+    .lex-app-shell[data-paper-texture="dark-slate"] .bg-hairline\/40 {
+      background-color: rgb(58 58 58 / 0.4);
+    }
+
+    .lex-app-shell[data-paper-texture="dark-slate"] .bg-hairline\/30 {
+      background-color: rgb(58 58 58 / 0.3);
+    }
+
+    .lex-app-shell[data-paper-texture="dark-slate"] .hover\:bg-hairline:hover {
+      background-color: #3a3a3a;
+    }
+
+    /* Segmented-control chip: pale-blue + light ink was invisible. Use a
+       mid accent so the selected label stays readable. */
+    .lex-app-shell[data-paper-texture="dark-slate"] .bg-pale-blue {
+      background-color: #2f6f9c;
+    }
+
+    .lex-app-shell[data-paper-texture="dark-slate"] .bg-pale-blue\/20 {
+      background-color: rgb(47 111 156 / 0.28);
+    }
+
+    /* Status / accent text that stays dark in light theme needs a lift
+       on Dark Slate (Delete, badges, links). */
+    .lex-app-shell[data-paper-texture="dark-slate"] .text-pale-red-text {
+      color: #f0a8a6;
+    }
+
+    .lex-app-shell[data-paper-texture="dark-slate"] .text-pale-blue-text {
+      color: #9ec9e8;
+    }
+
+    /* Pale green chips (Accept all, tooltip suggestions, replacement
+       previews): darken the fill so the lifted green label stays readable. */
+    .lex-app-shell[data-paper-texture="dark-slate"] .bg-pale-green {
+      background-color: #2f4a32;
+    }
+
+    .lex-app-shell[data-paper-texture="dark-slate"] .bg-pale-green\/70 {
+      background-color: rgb(47 74 50 / 0.7);
+    }
+
+    .lex-app-shell[data-paper-texture="dark-slate"] .hover\:bg-pale-green\/70:hover {
+      background-color: rgb(47 74 50 / 0.85);
+    }
+
+    .lex-app-shell[data-paper-texture="dark-slate"] .text-pale-green-text {
+      color: #c5e3c7;
+    }
+
+    .lex-app-shell[data-paper-texture="dark-slate"] .bg-pale-red {
+      background-color: #4a2c2c;
+    }
+
+    .lex-app-shell[data-paper-texture="dark-slate"] .hover\:bg-pale-red:hover {
+      background-color: #4a2c2c;
+    }
+
+    .lex-app-shell[data-paper-texture="dark-slate"] .text-pale-yellow-text {
+      color: #e0c36a;
+    }
+
+    .lex-app-shell[data-paper-texture="dark-slate"] .hover\:bg-hairline\/60:hover,
+    .lex-app-shell[data-paper-texture="dark-slate"] .hover\:bg-hairline\/50:hover {
+      background-color: rgb(58 58 58 / 0.6);
+    }
+
+    .lex-app-shell[data-paper-texture="dark-slate"] .bg-ink {
+      background-color: #edece8;
+    }
+
+    .lex-app-shell[data-paper-texture="dark-slate"] .bg-ink.text-white,
+    .lex-app-shell[data-paper-texture="dark-slate"] .border-ink.bg-ink.text-white {
+      color: #1b1b1b;
+    }
+
+    .lex-app-shell[data-paper-texture="dark-slate"] input::placeholder,
+    .lex-app-shell[data-paper-texture="dark-slate"] .placeholder-muted::placeholder {
+      color: #8a8780;
+    }
+
+    .lex-app-shell[data-paper-texture="dark-slate"] .lex-drag-handle:hover {
+      background: #3a3a3a;
+    }
+
+    .lex-editor-surround[data-paper-texture="dark-slate"] .ProseMirror,
+    .lex-editor-surround[data-paper-texture="dark-slate"] .text-ink {
+      color: #edece8;
+    }
+
+    .lex-editor-surround[data-paper-texture="dark-slate"] .ProseMirror {
+      caret-color: #edece8;
+    }
+
+    .lex-editor-surround[data-paper-texture="dark-slate"] .ProseMirror code,
+    .lex-editor-surround[data-paper-texture="dark-slate"] .ProseMirror pre,
+    .lex-app-shell[data-paper-texture="dark-slate"] .ProseMirror code,
+    .lex-app-shell[data-paper-texture="dark-slate"] .ProseMirror pre {
+      background: #1a1a1a !important;
+      border-color: #3a3a3a !important;
+      color: #edece8 !important;
+    }
+
+    .lex-editor-surround[data-paper-texture="dark-slate"] .ProseMirror pre code,
+    .lex-app-shell[data-paper-texture="dark-slate"] .ProseMirror pre code {
+      background: none !important;
+      border: none !important;
+      color: inherit !important;
+    }
+
+    /* Error chips on a dark page: keep glyph color light so code+error
+       stacks (black code on maroon highlight) stay readable. */
+    .lex-editor-surround[data-paper-texture="dark-slate"] .ProseMirror .lex-error,
+    .lex-editor-surround[data-paper-texture="dark-slate"] .ProseMirror .lex-error code,
+    .lex-editor-surround[data-paper-texture="dark-slate"] .ProseMirror .lex-prose-error,
+    .lex-editor-surround[data-paper-texture="dark-slate"] .ProseMirror .lex-prose-error code,
+    .lex-app-shell[data-paper-texture="dark-slate"] .ProseMirror .lex-error,
+    .lex-app-shell[data-paper-texture="dark-slate"] .ProseMirror .lex-error code,
+    .lex-app-shell[data-paper-texture="dark-slate"] .ProseMirror .lex-prose-error,
+    .lex-app-shell[data-paper-texture="dark-slate"] .ProseMirror .lex-prose-error code {
+      color: #edece8 !important;
+    }
+
+    .lex-editor-surround[data-paper-texture="dark-slate"] .ProseMirror .tiptap-mathematics-render[data-type="inline-math"],
+    .lex-editor-surround[data-paper-texture="dark-slate"] .ProseMirror .tiptap-mathematics-render[data-type="block-math"] {
+      background: #1a1a1a;
+      border-color: #3a3a3a;
+    }
+
+    .lex-editor-surround[data-paper-texture="dark-slate"] .ProseMirror th {
+      background: #1a1a1a;
+      border-color: #3a3a3a;
+    }
+
+    .lex-editor-surround[data-paper-texture="dark-slate"] .ProseMirror td {
+      border-color: #3a3a3a;
+    }
+
+    .lex-editor-surround[data-paper-texture="dark-slate"] .ProseMirror h6,
+    .lex-editor-surround[data-paper-texture="dark-slate"] .ProseMirror blockquote,
+    .lex-editor-surround[data-paper-texture="dark-slate"] .ProseMirror p.is-editor-empty:first-child::before {
+      color: #9a9790;
+    }
+
+    .lex-editor-surround[data-paper-texture="dark-slate"] .katex {
+      color: #edece8;
+    }
+
+    .lex-editor-surround[data-paper-texture="dark-slate"] .ProseMirror .lex-error-spelling {
+      background-color: rgba(200, 70, 65, 0.45);
+    }
+
+    .lex-editor-surround[data-paper-texture="dark-slate"] .ProseMirror .lex-error-grammar {
+      background-color: rgba(180, 130, 20, 0.45);
+    }
+
+    .lex-editor-surround[data-paper-texture="dark-slate"] .ProseMirror .lex-error-style {
+      background-color: rgba(50, 140, 200, 0.45);
+    }
+
+    .lex-editor-surround[data-paper-texture="dark-slate"] .ProseMirror .lex-prose-error {
+      background-color: rgba(140, 70, 200, 0.45);
+    }
+
+    .lex-editor-surround[data-paper-texture="dark-slate"] .ProseMirror .lex-error-spelling.lex-error-active {
+      background-color: rgba(200, 70, 65, 0.65);
+    }
+
+    .lex-editor-surround[data-paper-texture="dark-slate"] .ProseMirror .lex-error-grammar.lex-error-active {
+      background-color: rgba(180, 130, 20, 0.65);
+    }
+
+    .lex-editor-surround[data-paper-texture="dark-slate"] .ProseMirror .lex-error-style.lex-error-active {
+      background-color: rgba(50, 140, 200, 0.65);
+    }
+
+    .lex-editor-surround[data-paper-texture="dark-slate"] .ProseMirror .lex-prose-error.lex-error-active {
+      background-color: rgba(140, 70, 200, 0.65);
     }
   }
 
@@ -940,6 +1214,14 @@
     max-height: none !important;
     overflow: visible !important;
     background: #fff !important;
+    color: #111111 !important;
+  }
+
+  .lex-page-wrapper {
+    background: transparent !important;
+    max-width: none !important;
+    padding: 0 !important;
+    box-shadow: none !important;
   }
 
   /* Hide every scrollbar (incl. the custom .lex-scroll track) so no
