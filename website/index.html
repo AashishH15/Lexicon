@@ -306,7 +306,8 @@
         </div>
 
         <!-- Flagship WOW Demo: Typing + Live Proofreading + Lex Rewrite -->
-        <div class="ai-wow-demo" id="ai-wow-demo">
+        <div class="widget-canvas">
+          <div class="ai-wow-demo" id="ai-wow-demo">
           <div class="proofread-live-bar">
             <span><span class="proofread-live-dot"></span><span class="proofread-live-label" id="ai-wow-label">Proofread &amp; Lex's Engine</span></span>
             <span class="proofread-live-metrics" id="ai-wow-status-badge">100% Offline &middot; On-device</span>
@@ -329,7 +330,7 @@
               <!-- Popup 2: Floating Lex Toolbar (clickable, like Export Studio) -->
               <div class="ai-wow-toolbar" id="ai-wow-toolbar">
                 <span class="ai-toolbar-tag">
-                  <svg width="12" height="12" viewBox="0 0 256 256" fill="currentColor"><path d="M240,128a15.89,15.89,0,0,1-10.18,14.88l-52.61,21.05L156.16,216.54a16,16,0,0,1-29.76,0l-21.05-52.61L52.74,142.88a16,16,0,0,1,0-29.76l52.61-21.05L126.4,39.46a16,16,0,0,1,29.76,0l21.05,52.61,52.61,21.05A15.89,15.89,0,0,1,240,128Z"/></svg>
+                  <svg width="12" height="12" viewBox="0 0 256 256" fill="currentColor"><path d="M48,64a8,8,0,0,1,8-8H72V40a8,8,0,0,1,16,0V56h16a8,8,0,0,1,0,16H88V88a8,8,0,0,1-16,0V72H56A8,8,0,0,1,48,64ZM184,192h-8v-8a8,8,0,0,0-16,0v8h-8a8,8,0,0,0,0,16h8v8a8,8,0,0,0,16,0v-8h8a8,8,0,0,0,0-16Zm56-48H224V128a8,8,0,0,0-16,0v16H192a8,8,0,0,0,0,16h16v16a8,8,0,0,0,16,0V160h16a8,8,0,0,0,0-16ZM219.31,80,80,219.31a16,16,0,0,1-22.62,0L36.68,198.63a16,16,0,0,1,0-22.63L176,36.69a16,16,0,0,1,22.63,0l20.68,20.68A16,16,0,0,1,219.31,80Zm-54.63,32L144,91.31l-96,96L68.68,208ZM208,68.69,187.31,48l-32,32L176,100.69Z"/></svg>
                   <span>Ask Lex</span>
                 </span>
                 <div class="ai-toolbar-tools">
@@ -358,6 +359,7 @@
             </div>
           </div>
         </div>
+        </div>
 
         <div class="trust-strip" aria-label="Product highlights">
           <div class="trust-strip-item">
@@ -366,7 +368,7 @@
           </div>
           <div class="trust-strip-item">
             <span class="trust-strip-value">0</span>
-            <span class="trust-strip-label">Accounts</span>
+            <span class="trust-strip-label">Ads</span>
           </div>
           <div class="trust-strip-item">
             <span class="trust-strip-value" id="trust-downloads">...</span>
@@ -500,19 +502,19 @@
                 </div>
                 <div class="export-preset-bar">
                   <button type="button" class="export-preset-chip active" data-theme="academic">
-                    <svg class="preset-icon" width="14" height="14" viewBox="0 0 256 256" fill="currentColor"><path d="M251.76,88.94l-120-64a8,8,0,0,0-7.52,0l-120,64a8,8,0,0,0,0,14.12L32,117.87V168a8,8,0,0,0,16,0V126.41l72,38.4a8,8,0,0,0,7.52,0l120-64a8,8,0,0,0,4.24-11.87ZM128,148.64,37.38,100,128,51.36,218.62,100Z"/></svg>
+                    <svg class="preset-icon" width="16" height="16" viewBox="0 0 256 256" fill="currentColor"><path d="M249.8,85.49l-116-64a12,12,0,0,0-11.6,0l-116,64a12,12,0,0,0,0,21l21.8,12v47.76a19.89,19.89,0,0,0,5.09,13.32C46.63,194.7,77,220,128,220a136.88,136.88,0,0,0,40-5.75V240a12,12,0,0,0,24,0V204.12a119.53,119.53,0,0,0,30.91-24.51A19.89,19.89,0,0,0,228,166.29V118.53l21.8-12a12,12,0,0,0,0-21ZM128,45.71,219.16,96,186,114.3a1.88,1.88,0,0,1-.18-.12l-52-28.69a12,12,0,0,0-11.6,21l39,21.49L128,146.3,36.84,96ZM128,196c-40.42,0-64.65-19.07-76-31.27v-33l70.2,38.74a12,12,0,0,0,11.6,0L168,151.64v37.23A110.46,110.46,0,0,1,128,196Zm76-31.27a93.21,93.21,0,0,1-12,10.81V138.39l12-6.62Z"/></svg>
                     <span>Academic</span>
                   </button>
                   <button type="button" class="export-preset-chip" data-theme="novel">
-                    <svg class="preset-icon" width="14" height="14" viewBox="0 0 256 256" fill="currentColor"><path d="M224,48H160A32,32,0,0,0,128,64,32,32,0,0,0,96,48H32A16,16,0,0,0,16,64V192a16,16,0,0,0,16,16H96a16,16,0,0,1,16,16,8,8,0,0,0,16,0,16,16,0,0,1,16-16h64a16,16,0,0,0,16-16V64A16,16,0,0,0,224,48ZM96,192H32V64H96a16,16,0,0,1,16,16V192A31.85,31.85,0,0,0,96,192Zm128,0H160a31.85,31.85,0,0,0-16,16V80a16,16,0,0,1,16-16h64Z"/></svg>
+                    <svg class="preset-icon" width="16" height="16" viewBox="0 0 256 256" fill="currentColor"><path d="M232,44H160a43.86,43.86,0,0,0-32,13.85A43.86,43.86,0,0,0,96,44H24A12,12,0,0,0,12,56V200a12,12,0,0,0,12,12H96a20,20,0,0,1,20,20,12,12,0,0,0,24,0,20,20,0,0,1,20-20h72a12,12,0,0,0,12-12V56A12,12,0,0,0,232,44ZM96,188H36V68H96a20,20,0,0,1,20,20V192.81A43.79,43.79,0,0,0,96,188Zm124,0H160a43.71,43.71,0,0,0-20,4.83V88a20,20,0,0,1,20-20h60Z"/></svg>
                     <span>Novel</span>
                   </button>
                   <button type="button" class="export-preset-chip" data-theme="minimalist">
-                    <svg class="preset-icon" width="14" height="14" viewBox="0 0 256 256" fill="currentColor"><path d="M216,40H40A16,16,0,0,0,24,56V200a16,16,0,0,0,16,16H216a16,16,0,0,0,16-16V56A16,16,0,0,0,216,40ZM40,56H216V88H40ZM216,200H40V104H216v96ZM88,136a8,8,0,0,1-8,8H64a8,8,0,0,1,0-16H80A8,8,0,0,1,88,136Zm96,0a8,8,0,0,1-8,8H120a8,8,0,0,1,0-16h56A8,8,0,0,1,184,136Zm0,32a8,8,0,0,1-8,8H64a8,8,0,0,1,0-16H176A8,8,0,0,1,184,168Z"/></svg>
+                    <svg class="preset-icon" width="16" height="16" viewBox="0 0 256 256" fill="currentColor"><path d="M216,36H40A20,20,0,0,0,20,56V200a20,20,0,0,0,20,20H216a20,20,0,0,0,20-20V56A20,20,0,0,0,216,36Zm-4,160H44V60H212ZM68,92A12,12,0,0,1,80,80h96a12,12,0,0,1,0,24H80A12,12,0,0,1,68,92Zm0,36a12,12,0,0,1,12-12h96a12,12,0,0,1,0,24H80A12,12,0,0,1,68,128Zm0,36a12,12,0,0,1,12-12h96a12,12,0,0,1,0,24H80A12,12,0,0,1,68,164Z"/></svg>
                     <span>Minimalist</span>
                   </button>
                   <button type="button" class="export-preset-chip" data-theme="executive">
-                    <svg class="preset-icon" width="14" height="14" viewBox="0 0 256 256" fill="currentColor"><path d="M224,200H32a8,8,0,0,1,0-16H224a8,8,0,0,1,0,16ZM80,168a8,8,0,0,0,8-8V112a8,8,0,0,0-16,0v48A8,8,0,0,0,80,168Zm48,0a8,8,0,0,0,8-8V72a8,8,0,0,0-16,0v88A8,8,0,0,0,128,168Zm48,0a8,8,0,0,0,8-8V40a8,8,0,0,0-16,0V160A8,8,0,0,0,176,168Z"/></svg>
+                    <svg class="preset-icon" width="16" height="16" viewBox="0 0 256 256" fill="currentColor"><path d="M224,196h-4V40a12,12,0,0,0-12-12H152a12,12,0,0,0-12,12V76H96A12,12,0,0,0,84,88v36H48a12,12,0,0,0-12,12v60H32a12,12,0,0,0,0,24H224a12,12,0,0,0,0-24ZM164,52h32V196H164Zm-56,48h32v96H108ZM60,148H84v48H60Z"/></svg>
                     <span>Executive</span>
                   </button>
                 </div>
@@ -923,11 +925,25 @@
     <div class="container footer-container">
       <div>
         <span>Lexicon &bull; Local-First Writing Assistant</span>
+        <div class="footer-byline">Built by Aashish</div>
       </div>
-      <div class="footer-links">
-        <a href="https://github.com/AashishH15/Lexicon" target="_blank" rel="noopener">GitHub</a>
-        <a href="https://github.com/AashishH15/Lexicon/blob/master/LICENSE" target="_blank" rel="noopener">LICENSE</a>
-        <a href="https://www.youtube.com/watch?v=LGL-8wP_CAY" target="_blank" rel="noopener">Launch Video</a>
+      <div>
+        <div class="footer-links">
+          <a href="https://github.com/AashishH15/Lexicon" target="_blank" rel="noopener">GitHub</a>
+          <a href="https://github.com/AashishH15/Lexicon/blob/master/LICENSE" target="_blank" rel="noopener">LICENSE</a>
+          <a href="https://www.youtube.com/watch?v=LGL-8wP_CAY" target="_blank" rel="noopener">Launch Video</a>
+        </div>
+        <div class="footer-socials">
+          <a class="footer-icon-btn" href="https://www.linkedin.com/in/aashish-harishchandre/" target="_blank" rel="noopener" aria-label="LinkedIn">
+            <svg width="16" height="16" viewBox="0 0 256 256" fill="currentColor"><path d="M216,24H40A16,16,0,0,0,24,40V216a16,16,0,0,0,16,16H216a16,16,0,0,0,16-16V40A16,16,0,0,0,216,24Zm0,192H40V40H216V216ZM96,112v64a8,8,0,0,1-16,0V112a8,8,0,0,1,16,0Zm88,28v36a8,8,0,0,1-16,0V140a20,20,0,0,0-40,0v36a8,8,0,0,1-16,0V112a8,8,0,0,1,15.79-1.78A36,36,0,0,1,184,140ZM100,84A12,12,0,1,1,88,72,12,12,0,0,1,100,84Z"/></svg>
+          </a>
+          <a class="footer-icon-btn" href="https://github.com/AashishH15" target="_blank" rel="noopener" aria-label="GitHub">
+            <svg width="16" height="16" viewBox="0 0 256 256" fill="currentColor"><path d="M208.31,75.68A59.78,59.78,0,0,0,202.93,28,8,8,0,0,0,196,24a59.75,59.75,0,0,0-48,24H124A59.75,59.75,0,0,0,76,24a8,8,0,0,0-6.93,4,59.78,59.78,0,0,0-5.38,47.68A58.14,58.14,0,0,0,56,104v8a56.06,56.06,0,0,0,48.44,55.47A39.8,39.8,0,0,0,96,192v8H72a24,24,0,0,1-24-24A40,40,0,0,0,8,136a8,8,0,0,0,0,16,24,24,0,0,1,24,24,40,40,0,0,0,40,40H96v16a8,8,0,0,0,16,0V192a24,24,0,0,1,48,0v40a8,8,0,0,0,16,0V192a39.8,39.8,0,0,0-8.44-24.53A56.06,56.06,0,0,0,216,112v-8A58.14,58.14,0,0,0,208.31,75.68ZM200,112a40,40,0,0,1-40,40H112a40,40,0,0,1-40-40v-8a41.74,41.74,0,0,1,6.9-22.48A8,8,0,0,0,80,73.83a43.81,43.81,0,0,1,.79-33.58,43.88,43.88,0,0,1,32.32,20.06A8,8,0,0,0,119.82,64h32.35a8,8,0,0,0,6.74-3.69,43.87,43.87,0,0,1,32.32-20.06A43.81,43.81,0,0,1,192,73.83a8.09,8.09,0,0,0,1,7.65A41.72,41.72,0,0,1,200,104Z"/></svg>
+          </a>
+          <a class="footer-icon-btn" href="https://aashishharishchandre.netlify.app/" target="_blank" rel="noopener" aria-label="Website">
+            <svg width="16" height="16" viewBox="0 0 256 256" fill="currentColor"><path d="M128,24h0A104,104,0,1,0,232,128,104.12,104.12,0,0,0,128,24Zm88,104a87.61,87.61,0,0,1-3.33,24H174.16a157.44,157.44,0,0,0,0-48h38.51A87.61,87.61,0,0,1,216,128ZM102,168H154a115.11,115.11,0,0,1-26,45A115.27,115.27,0,0,1,102,168Zm-3.9-16a140.84,140.84,0,0,1,0-48h59.88a140.84,140.84,0,0,1,0,48ZM40,128a87.61,87.61,0,0,1,3.33-24H81.84a157.44,157.44,0,0,0,0,48H43.33A87.61,87.61,0,0,1,40,128ZM154,88H102a115.11,115.11,0,0,1,26-45A115.27,115.27,0,0,1,154,88Zm52.33,0H170.71a135.28,135.28,0,0,0-22.3-45.6A88.29,88.29,0,0,1,206.37,88ZM107.59,42.4A135.28,135.28,0,0,0,85.29,88H49.63A88.29,88.29,0,0,1,107.59,42.4ZM49.63,168H85.29a135.28,135.28,0,0,0,22.3,45.6A88.29,88.29,0,0,1,49.63,168Zm98.78,45.6a135.28,135.28,0,0,0,22.3-45.6h35.66A88.29,88.29,0,0,1,148.41,213.6Z"/></svg>
+          </a>
+        </div>
       </div>
     </div>
   </footer>

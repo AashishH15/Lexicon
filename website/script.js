@@ -663,7 +663,7 @@
       },
       professional: {
         source: 'The algorithm works efficiently.',
-        result: 'The algorithm operates with optimal efficiency.',
+        result: 'The algorithm performs optimally.',
         label: 'Lex Rewrite \u00B7 Professional'
       },
       friendly: {
@@ -952,6 +952,181 @@
     window.addEventListener('scroll', update, { passive: true });
   }
 
+  function initCursorAwareDots() {
+    var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var zones = Array.prototype.slice.call(document.querySelectorAll('.demo-showcase, .widget-canvas, .editor-live-zone, .export-journey'));
+    if (!zones.length) return;
+
+    var DOT_GAP = 22;
+    var DOT_RADIUS = 1.5;
+    var DOT_COLOR = 'rgba(0, 0, 0, 0.085)';
+    var PAD_TOP = 48;
+    var PAD_BOTTOM = 48;
+    var PAD_SIDE = 36;
+    var MAX_WIDTH = 1176;
+    var MAX_SHIFT = 10;
+    var RADIUS = 100;
+    var LERP = 0.18;
+    var THRESH = 0.05;
+
+    var items = [];
+    var lastClient = { x: -9999, y: -9999 };
+    var mouse = { x: -9999, y: -9999 };
+    var rafId = null;
+
+    // Canvases live at body level with z-index -1 so the dot pattern always
+    // paints behind cards and widgets (never over them), and are anchored in
+    // page coordinates so scrolling can never desync the cursor mapping.
+    // The target is the widget itself (not its full-width wrapper), so the
+    // artboard hugs the widget instead of spanning the whole container.
+    zones.forEach(function (zone) {
+      var canvas = document.createElement('canvas');
+      canvas.className = 'dot-canvas';
+      document.body.appendChild(canvas);
+      items.push({
+        zone: zone,
+        target: zone.querySelector('.faux-window, .ai-wow-demo, .editor-live, .export-live-card') || zone,
+        canvas: canvas,
+        ctx: canvas.getContext('2d'),
+        dots: [],
+        offsets: null,
+        cssW: 0,
+        cssH: 0,
+        rect: { left: 0, top: 0, width: 0, height: 0 }
+      });
+    });
+
+    document.documentElement.classList.add('dots-live');
+
+    function build(item) {
+      var zoneRect = item.target.getBoundingClientRect();
+      var zoneW = zoneRect.width;
+      var width = Math.min(zoneW + PAD_SIDE * 2, MAX_WIDTH);
+      var height = zoneRect.height + PAD_TOP + PAD_BOTTOM;
+      var dpr = window.devicePixelRatio || 1;
+      var x, y, rows, startY, dots = [];
+      item.cssW = width;
+      item.cssH = height;
+      item.canvas.style.width = width + 'px';
+      item.canvas.style.height = height + 'px';
+      item.canvas.style.left = (zoneRect.left + window.scrollX - (width - zoneW) / 2) + 'px';
+      item.canvas.style.top = (zoneRect.top + window.scrollY - PAD_TOP) + 'px';
+      item.canvas.width = Math.round(width * dpr);
+      item.canvas.height = Math.round(height * dpr);
+      item.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      item.rect.left = zoneRect.left + window.scrollX - (width - zoneW) / 2;
+      item.rect.top = zoneRect.top + window.scrollY - PAD_TOP;
+      item.rect.width = width;
+      item.rect.height = height;
+      // Center the grid vertically so the top and bottom pads always show
+      // the same number of dot rows, regardless of widget height.
+      rows = Math.max(1, Math.floor(height / DOT_GAP));
+      startY = (height - (rows - 1) * DOT_GAP) / 2;
+      for (y = startY; y < height; y += DOT_GAP) {
+        for (x = DOT_GAP / 2; x < width; x += DOT_GAP) {
+          dots.push({ x: x, y: y });
+        }
+      }
+      item.dots = dots;
+      item.offsets = new Float32Array(dots.length * 2);
+      draw(item);
+    }
+
+    function draw(item) {
+      var ctx = item.ctx;
+      var i, d;
+      ctx.clearRect(0, 0, item.cssW, item.cssH);
+      ctx.fillStyle = DOT_COLOR;
+      ctx.beginPath();
+      for (i = 0; i < item.dots.length; i++) {
+        d = item.dots[i];
+        ctx.moveTo(d.x + item.offsets[i * 2] + DOT_RADIUS, d.y + item.offsets[i * 2 + 1]);
+        ctx.arc(d.x + item.offsets[i * 2], d.y + item.offsets[i * 2 + 1], DOT_RADIUS, 0, Math.PI * 2);
+      }
+      ctx.fill();
+    }
+
+    function update(item) {
+      var mx = mouse.x - item.rect.left;
+      var my = mouse.y - item.rect.top;
+      var r2 = RADIUS * RADIUS;
+      var animating = false;
+      var i, d, dx, dy, d2, dist, fall, shift, tx, ty, ix, nx, ny;
+      for (i = 0; i < item.dots.length; i++) {
+        d = item.dots[i];
+        dx = d.x - mx;
+        dy = d.y - my;
+        d2 = dx * dx + dy * dy;
+        tx = 0;
+        ty = 0;
+        if (d2 < r2 && d2 > 0.01) {
+          dist = Math.sqrt(d2);
+          fall = 1 - dist / RADIUS;
+          shift = MAX_SHIFT * fall * fall;
+          tx = (dx / dist) * shift;
+          ty = (dy / dist) * shift;
+        }
+        ix = i * 2;
+        nx = item.offsets[ix] + (tx - item.offsets[ix]) * LERP;
+        ny = item.offsets[ix + 1] + (ty - item.offsets[ix + 1]) * LERP;
+        if (Math.abs(nx - tx) > THRESH || Math.abs(ny - ty) > THRESH) animating = true;
+        item.offsets[ix] = nx;
+        item.offsets[ix + 1] = ny;
+      }
+      return animating;
+    }
+
+    function loop() {
+      var any = false;
+      items.forEach(function (item) {
+        if (update(item)) any = true;
+      });
+      if (any) {
+        items.forEach(function (item) { draw(item); });
+        rafId = window.requestAnimationFrame(loop);
+      } else {
+        rafId = null;
+      }
+    }
+
+    function refreshMouse() {
+      mouse.x = lastClient.x + window.scrollX;
+      mouse.y = lastClient.y + window.scrollY;
+    }
+
+    function onMouseMove(e) {
+      lastClient.x = e.clientX;
+      lastClient.y = e.clientY;
+      refreshMouse();
+      if (rafId === null) {
+        rafId = window.requestAnimationFrame(loop);
+      }
+    }
+
+    function onScroll() {
+      refreshMouse();
+      if (rafId === null) {
+        rafId = window.requestAnimationFrame(loop);
+      }
+    }
+
+    var resizeTimer = null;
+    function onResize() {
+      if (resizeTimer) window.clearTimeout(resizeTimer);
+      resizeTimer = window.setTimeout(function () {
+        items.forEach(build);
+      }, 150);
+    }
+
+    items.forEach(build);
+
+    if (reduceMotion) return;
+
+    window.addEventListener('mousemove', onMouseMove, { passive: true });
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onResize, { passive: true });
+  }
+
   document.addEventListener('DOMContentLoaded', function () {
     initSmoothScroll();
     initReleaseInfo();
@@ -967,5 +1142,6 @@
     initExportStudioDemo();
     initAiWowDemo();
     initNavBarMorph();
+    initCursorAwareDots();
   });
 })();

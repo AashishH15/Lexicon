@@ -1,9 +1,18 @@
 :root {
   /* Surface & Canvas Palette */
   --bg-canvas: #F7F6F3;
+  --bg-canvas-deep: #F2F0EB;
   --bg-surface: #FFFFFF;
   --bg-surface-secondary: #F9F9F8;
   --bg-subtle: #F3F3F4;
+
+  /* Paper grain tile: near-white noise, blended with multiply over each
+     canvas color so it only darkens ~2% and shows as paper tooth. */
+  --grain-bg: url("assets/grain.png");
+
+  /* Dot-grid canvas pattern (static fallback; JS replaces it with a
+     cursor-aware canvas when available) */
+  --dot-grid: radial-gradient(circle, rgba(0, 0, 0, 0.085) 1.5px, transparent 1.5px);
 
   /* Borders: Soft, subtle 6.5% alpha outlines */
   --border-color: rgba(0, 0, 0, 0.065);
@@ -88,6 +97,9 @@ html.lenis body {
 body {
   font-family: var(--font-sans);
   background-color: var(--bg-canvas);
+  background-image: var(--grain-bg);
+  background-size: 256px 256px;
+  background-blend-mode: multiply;
   color: var(--text-primary);
   line-height: 1.625;
   font-size: 16px;
@@ -625,6 +637,52 @@ b,
   margin-top: 40px;
 }
 
+/* Shared dot-grid "canvas/artboard": the hero app preview and the feature
+   widgets (AI demo, editor demo, export studio) float on a design surface.
+   Pure CSS, behind the elements, never over content. */
+.widget-canvas,
+.editor-live-zone,
+.export-journey,
+.demo-showcase {
+  position: relative;
+  z-index: 0;
+}
+
+.widget-canvas::before,
+.editor-live-zone::before,
+.export-journey::before,
+.demo-showcase::before {
+  content: "";
+  position: absolute;
+  top: -48px;
+  bottom: -48px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(calc(100% + 72px), 1176px);
+  z-index: -1;
+  pointer-events: none;
+  border-radius: 32px;
+  background-image: var(--dot-grid);
+  background-size: 22px 22px;
+}
+
+/* Cursor-aware dots: when JS is live, the static pattern is swapped for a
+   canvas that gently pushes dots away from the cursor. Same geometry, same
+   look — just dynamic. */
+.dots-live .demo-showcase::before,
+.dots-live .widget-canvas::before,
+.dots-live .editor-live-zone::before,
+.dots-live .export-journey::before {
+  background-image: none;
+}
+
+.dots-live .dot-canvas {
+  position: absolute;
+  z-index: -1;
+  pointer-events: none;
+  border-radius: 32px;
+}
+
 .faux-window {
   background: var(--bg-surface);
   border: 1px solid var(--border-color);
@@ -755,7 +813,8 @@ b,
   box-shadow:
     0 0 0 1px rgba(0, 0, 0, 0.02),
     0 1px 2px -1px rgba(0, 0, 0, 0.04),
-    0 2px 8px -2px rgba(0, 0, 0, 0.04);
+    0 2px 8px -2px rgba(0, 0, 0, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
   min-height: 0;
 }
 
@@ -838,7 +897,10 @@ b,
 .privacy-full-section {
   padding: 165px 0;
   border-top: 1px solid var(--border-color);
-  background: var(--bg-canvas);
+  background: var(--bg-canvas-deep);
+  background-image: var(--grain-bg);
+  background-size: 256px 256px;
+  background-blend-mode: multiply;
 }
 
 .privacy-grid {
@@ -854,7 +916,7 @@ b,
   border-radius: var(--radius-card);
   padding: 40px;
   transition: var(--transition);
-  box-shadow: var(--shadow-card);
+  box-shadow: var(--shadow-card), inset 0 1px 0 rgba(255, 255, 255, 0.6);
 }
 
 .privacy-card:hover {
@@ -879,7 +941,7 @@ b,
   border: 1px solid var(--border-color);
   border-radius: var(--radius-card);
   padding: 40px;
-  box-shadow: var(--shadow-card);
+  box-shadow: var(--shadow-card), inset 0 1px 0 rgba(255, 255, 255, 0.6);
 }
 
 /* Semantic GEO Feature Matrix Table */
@@ -1025,6 +1087,9 @@ b,
   padding: 165px 0;
   border-top: 1px solid var(--border-color);
   background: var(--bg-canvas);
+  background-image: var(--grain-bg);
+  background-size: 256px 256px;
+  background-blend-mode: multiply;
 }
 
 .faq-header {
@@ -1202,6 +1267,10 @@ b,
 .support-section {
   padding: 165px 0;
   border-top: 1px solid var(--border-color);
+  background: var(--bg-canvas-deep);
+  background-image: var(--grain-bg);
+  background-size: 256px 256px;
+  background-blend-mode: multiply;
 }
 
 .support-grid {
@@ -1216,7 +1285,7 @@ b,
   border-radius: 14px;
   padding: 40px;
   transition: var(--transition);
-  box-shadow: 0 2px 10px -2px rgba(0, 0, 0, 0.03);
+  box-shadow: 0 2px 10px -2px rgba(0, 0, 0, 0.03), inset 0 1px 0 rgba(255, 255, 255, 0.6);
 }
 
 .support-card:hover {
@@ -1286,6 +1355,36 @@ b,
 
 .footer-links a:hover {
   color: var(--text-primary);
+}
+
+.footer-byline {
+  margin-top: 10px;
+  color: var(--text-secondary);
+}
+
+.footer-socials {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.footer-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  color: var(--text-secondary);
+  transition: color 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.footer-icon-btn:hover {
+  color: var(--text-primary);
+  border-color: var(--text-primary);
+  background-color: var(--bg-surface);
 }
 
 /* Responsive Breakpoints */
@@ -1581,7 +1680,7 @@ section[id] {
   background: var(--bg-surface);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-card);
-  box-shadow: var(--shadow-live-widget);
+  box-shadow: var(--shadow-live-widget), inset 0 1px 0 rgba(255, 255, 255, 0.6);
   overflow: hidden;
   text-align: left;
   transition: var(--transition);
@@ -1593,7 +1692,7 @@ section[id] {
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px 16px;
   max-width: 640px;
-  margin: 0 auto 40px;
+  margin: 48px auto 40px;
   padding: 18px 8px;
   border-top: 1px solid var(--border-color);
   border-bottom: 1px solid var(--border-color);
@@ -1928,7 +2027,7 @@ section[id] {
   background: var(--bg-surface);
   border: 1px solid rgba(0, 0, 0, 0.065);
   border-radius: 14px;
-  box-shadow: 0 4px 20px -5px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 4px 20px -5px rgba(0, 0, 0, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.6);
   text-align: left;
   overflow: hidden;
 }
@@ -2053,7 +2152,7 @@ section[id] {
   background: var(--bg-surface);
   border: 1px solid rgba(0, 0, 0, 0.065);
   border-radius: 14px;
-  box-shadow: 0 4px 20px -5px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 4px 20px -5px rgba(0, 0, 0, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.6);
   overflow: hidden;
   text-align: left;
 }
@@ -2360,6 +2459,9 @@ section[id] {
   padding: 165px 0;
   border-top: 1px solid var(--border-color);
   background: var(--bg-surface-secondary);
+  background-image: var(--grain-bg);
+  background-size: 256px 256px;
+  background-blend-mode: multiply;
 }
 
 .manifesto-card {
@@ -2367,7 +2469,7 @@ section[id] {
   border: 1px solid rgba(0, 0, 0, 0.065);
   border-radius: 16px;
   padding: 56px 48px;
-  box-shadow: 0 4px 20px -5px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 4px 20px -5px rgba(0, 0, 0, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.6);
   text-align: center;
   max-width: 860px;
   margin: 0 auto;
