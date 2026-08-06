@@ -260,9 +260,23 @@ const SEARCH_INDEX = [
       "prerelease",
       "pre-release",
       "early access",
-      "updates",
       "update channel",
       "channel",
+    ],
+  },
+  {
+    label: "Send Feedback",
+    tab: "about",
+    settingKey: "feedback-link",
+    keywords: [
+      "feedback",
+      "send feedback",
+      "report",
+      "issue",
+      "bug",
+      "contact",
+      "form",
+      "tally",
     ],
   },
   {
@@ -271,7 +285,6 @@ const SEARCH_INDEX = [
     settingKey: "about-section",
     keywords: [
       "about",
-      "feedback",
       "update",
       "version",
       "github",
@@ -385,6 +398,8 @@ export default function Settings({
   onCheckForUpdates,
   updateState,
   onClose,
+  focusSettingKey = null,
+  onFocusSettingConsumed,
   userDictionary,
   onAddWord,
   onRemoveWord,
@@ -522,6 +537,22 @@ export default function Settings({
     };
   }, []);
 
+  // Deep-link from outside Settings (e.g. header language button → Language).
+  useEffect(() => {
+    if (!open || !focusSettingKey) return;
+    const item = SEARCH_INDEX.find((entry) => entry.settingKey === focusSettingKey);
+    setActiveTab(item?.tab || "general");
+    setHighlightedKey(focusSettingKey);
+    if (highlightTimerRef.current) {
+      clearTimeout(highlightTimerRef.current);
+    }
+    highlightTimerRef.current = setTimeout(() => {
+      setHighlightedKey(null);
+      highlightTimerRef.current = null;
+    }, 2000);
+    onFocusSettingConsumed?.();
+  }, [open, focusSettingKey, onFocusSettingConsumed]);
+
   const searchResults = (() => {
     const q = searchQuery.trim().toLowerCase();
     if (!q) return [];
@@ -542,29 +573,40 @@ export default function Settings({
     ];
 
     const matched = [];
-    // Match tab labels
-    for (const tab of TABS) {
-      if (tab.label.toLowerCase().includes(q)) {
-        const indexItem = SEARCH_INDEX.find((i) => i.tab === tab.id);
-        matched.push({
-          label: tab.label,
-          tab: tab.id,
-          settingKey: indexItem?.settingKey || `${tab.id}-section`,
-        });
-      }
+    function itemMatchesQuery(item, query) {
+      const label = item.label.toLowerCase();
+      if (label.includes(query)) return true;
+      if (item.keywords.some((k) => k.includes(query))) return true;
+      // Multi-word queries: "send feedback" matches label/keywords that
+      // cover each word even when no single keyword equals the full phrase.
+      const haystack = [label, ...item.keywords].join(" ");
+      const words = query.split(/\s+/).filter(Boolean);
+      return words.length > 1 && words.every((word) => haystack.includes(word));
     }
-    // Match index items
+    // Prefer specific setting keyword matches first so a query like
+    // "feedback" lands on the feedback link, not the About tab / beta block.
     for (const item of allItems) {
       if (matched.length >= 8) break;
       if (matched.some((m) => m.tab === item.tab && m.label === item.label))
         continue;
-      if (item.keywords.some((k) => k.includes(q))) {
+      if (itemMatchesQuery(item, q)) {
         matched.push({
           label: item.label,
           tab: item.tab,
           settingKey: item.settingKey,
         });
       }
+    }
+    // Tab labels only when that tab has no stronger keyword hit yet.
+    for (const tab of TABS) {
+      if (matched.length >= 8) break;
+      if (!tab.label.toLowerCase().includes(q)) continue;
+      if (matched.some((m) => m.tab === tab.id)) continue;
+      matched.push({
+        label: tab.label,
+        tab: tab.id,
+        settingKey: `${tab.id}-section`,
+      });
     }
     // Deduplicate by label
     const seen = new Set();
@@ -1800,29 +1842,34 @@ export default function Settings({
                       <GithubLogo size={16} weight="bold" />
                       View source on GitHub
                     </button>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        openExternalUrl("https://tally.so/r/LZq8vy")
-                      }
-                      className={
-                        betaOptIn
-                          ? "mt-2.5 flex w-full items-center justify-center gap-2 rounded-md border border-[#DDD6FE] bg-[#F5F3FF] py-2 font-sans text-xs font-semibold text-[#6D28D9] shadow-sm transition-colors hover:border-[#C4B5FD] hover:bg-[#EDE9FE]"
-                          : "mt-1.5 flex w-full items-center justify-center gap-2 rounded border border-transparent py-1.5 font-sans text-xs text-muted transition-colors hover:border-hairline hover:bg-white hover:text-ink"
-                      }
+                    <div
+                      data-setting-key="feedback-link"
+                      className={`mt-1.5 ${getHighlightClass("feedback-link")}`}
                     >
-                      <PaperPlaneTilt
-                        size={14}
-                        weight="bold"
-                        className={betaOptIn ? "text-[#6D28D9]" : ""}
-                      />
-                      <span>Send feedback or report an issue</span>
-                      {betaOptIn && (
-                        <span className="ml-1 rounded bg-[#DDD6FE] px-1.5 py-0.5 font-mono text-[9px] font-semibold uppercase tracking-wider text-[#5B21B6]">
-                          Beta Tester
-                        </span>
-                      )}
-                    </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          openExternalUrl("https://tally.so/r/LZq8vy")
+                        }
+                        className={
+                          betaOptIn
+                            ? "flex w-full items-center justify-center gap-2 rounded-md border border-[#DDD6FE] bg-[#F5F3FF] py-2 font-sans text-xs font-semibold text-[#6D28D9] shadow-sm transition-colors hover:border-[#C4B5FD] hover:bg-[#EDE9FE]"
+                            : "flex w-full items-center justify-center gap-2 rounded border border-hairline bg-white py-2.5 font-sans text-sm font-medium text-ink transition-colors hover:border-muted hover:bg-hairline/40"
+                        }
+                      >
+                        <PaperPlaneTilt
+                          size={betaOptIn ? 14 : 16}
+                          weight="bold"
+                          className={betaOptIn ? "text-[#6D28D9]" : ""}
+                        />
+                        <span>Send feedback or report an issue</span>
+                        {betaOptIn && (
+                          <span className="ml-1 rounded bg-[#DDD6FE] px-1.5 py-0.5 font-mono text-[9px] font-semibold uppercase tracking-wider text-[#5B21B6]">
+                            Beta Tester
+                          </span>
+                        )}
+                      </button>
+                    </div>
                   </div>
 
                   <div className="rounded-lg border border-hairline bg-canvas px-4 py-3.5">

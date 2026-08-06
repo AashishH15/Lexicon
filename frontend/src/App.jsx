@@ -377,6 +377,7 @@ export default function App() {
   const [toneResult, setToneResult] = useState(null);
   const [editorFocused, setEditorFocused] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settingsFocusKey, setSettingsFocusKey] = useState(null);
   const [confirmConfig, setConfirmConfig] = useState(null);
   const [templateGalleryOpen, setTemplateGalleryOpen] = useState(false);
   const [aiConfigured, setAiConfigured] = useState(false);
@@ -2286,9 +2287,12 @@ export default function App() {
           </button>
           <button
             type="button"
-            onClick={() => setSettingsOpen(true)}
+            onClick={() => {
+              setSettingsFocusKey("language");
+              setSettingsOpen(true);
+            }}
             className="rounded px-2 py-1.5 font-mono text-[10px] uppercase tracking-widest text-muted transition-colors hover:text-ink"
-            aria-label="Open settings"
+            aria-label="Open language settings"
           >
             {language}
           </button>
@@ -2578,7 +2582,12 @@ export default function App() {
           onResetDefaults={handleResetDefaults}
           onCheckForUpdates={() => runUpdateCheck()}
           updateState={updateState}
-          onClose={() => setSettingsOpen(false)}
+          onClose={() => {
+            setSettingsOpen(false);
+            setSettingsFocusKey(null);
+          }}
+          focusSettingKey={settingsFocusKey}
+          onFocusSettingConsumed={() => setSettingsFocusKey(null)}
           userDictionary={userDictionary}
           onAddWord={handleAddWordToDictionary}
           onRemoveWord={handleRemoveFromDictionary}
