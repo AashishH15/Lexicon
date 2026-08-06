@@ -56,10 +56,7 @@ Python, Node.js, or Java to use the installed application.
 - **Apple Silicon / arm64** - M-series Macs
 - **Intel / x64** - Intel Macs
 
-The macOS build is currently unsigned and not notarized. If macOS blocks the
-first launch, Control-click the app and choose **Open**, or use
-**System Settings > Privacy & Security > Open Anyway**. Only download builds
-from this repository's releases page.
+The macOS build is currently pre-release (unsigned). If macOS Gatekeeper blocks launch or prevents the background engine from spawning, run `xattr -cr /Applications/Lexicon.app` in Terminal to clear the download quarantine flag, or follow [Apple's guide for unidentified developer apps](https://support.apple.com/guide/mac-help/open-a-mac-app-from-an-unidentified-developer-mh40616/mac) via **System Settings > Privacy & Security > Open Anyway**. Only download builds from this repository's releases page.
 
 ### Linux
 

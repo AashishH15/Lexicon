@@ -99,6 +99,18 @@ fn start_backend(app_handle: &tauri::AppHandle) -> Result<Child, String> {
     };
     let sidecar_exe: PathBuf = resource_dir.join("lexicon-backend").join(sidecar_name);
 
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        if let Ok(metadata) = std::fs::metadata(&sidecar_exe) {
+            let mut perms = metadata.permissions();
+            if perms.mode() & 0o111 == 0 {
+                perms.set_mode(0o755);
+                let _ = std::fs::set_permissions(&sidecar_exe, perms);
+            }
+        }
+    }
+
     let mut cmd = Command::new(&sidecar_exe);
     // Production uses a dedicated port so a running development backend on
     // 8000 cannot steal the desktop app's requests.

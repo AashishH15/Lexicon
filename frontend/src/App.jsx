@@ -308,6 +308,8 @@ export default function App() {
   const [userResolvedAll, setUserResolvedAll] = useState(false);
   const [dismissedKeys, setDismissedKeys] = useState(loadDismissedKeys);
   const [checking, setChecking] = useState(false);
+  const [backendOffline, setBackendOffline] = useState(false);
+  const [backendError, setBackendError] = useState("");
   const [hoveredError, setHoveredError] = useState(null);
   const [activeErrorId, setActiveErrorId] = useState(null);
   const [language, setLanguage] = useState(loadLanguage);
@@ -541,7 +543,6 @@ export default function App() {
 
   const lowlightRef = useRef(createLowlight());
   const [lowlightReady, setLowlightReady] = useState(false);
-  const [backendOffline, setBackendOffline] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -1015,6 +1016,17 @@ export default function App() {
     return () => window.removeEventListener("focus", onWindowFocus);
   }, []);
 
+  // Automatic background auto-reconnect polling loop (retries every 8s while offline)
+  useEffect(() => {
+    if (!backendOffline) return;
+    const timer = setInterval(() => {
+      ensureBackend()
+        .then(() => runGrammarCheck(true, null, false))
+        .catch(() => {});
+    }, 8000);
+    return () => clearInterval(timer);
+  }, [backendOffline]);
+
   useEffect(() => {
     if (!editor) {
       return;
@@ -1064,6 +1076,9 @@ export default function App() {
   ) {
     if (!editor) {
       return;
+    }
+    if (forceFullScan) {
+      checkingRef.current = false;
     }
     if (checkingRef.current) {
       return;
@@ -1185,9 +1200,11 @@ export default function App() {
       setGrammarMatches(matches);
       applyGrammarDecorations(editor, matches, map, activeErrorId);
       setBackendOffline(false);
+      setBackendError("");
     } catch (error) {
       if (error?.name !== "AbortError") {
         setBackendOffline(true);
+        setBackendError(error?.message || String(error));
         console.warn("Grammar check unavailable:", error);
       }
     } finally {
@@ -2395,6 +2412,8 @@ export default function App() {
               grammarMatches={grammarMatches}
               checking={checking}
               backendOffline={backendOffline}
+              backendError={backendError}
+              onRetry={() => runGrammarCheck(false, null, true)}
               userResolvedAll={userResolvedAll}
               activeErrorId={activeErrorId}
               aboutToCollapse={aboutToCollapse === "right"}

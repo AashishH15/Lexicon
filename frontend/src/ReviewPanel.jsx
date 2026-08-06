@@ -1,7 +1,9 @@
 import SuggestionCard from "./SuggestionCard.jsx";
 import DocStats from "./DocStats.jsx";
 import { useEffect, useRef, useState } from "react";
-import { ArrowLineRight, CheckCircle, Info, Warning, Lightbulb } from "@phosphor-icons/react";
+import { ArrowLineRight, CheckCircle, Info, Warning, Lightbulb, CircleNotch } from "@phosphor-icons/react";
+
+import { openExternalUrl } from "./api.js";
 
 const BLOOM_MESSAGES = [
   "No issues detected. Your draft is clear.",
@@ -9,12 +11,46 @@ const BLOOM_MESSAGES = [
   "Nothing needs attention here.",
 ];
 
+function formatBackendDiagnostic(error) {
+  const rawError = typeof error === "string" ? error : error?.message || String(error || "");
+  const ua = typeof navigator !== "undefined" ? navigator.userAgent || "" : "";
+  const platform = typeof navigator !== "undefined" ? navigator.platform || "" : "";
+  const isMac = /Mac|iPod|iPhone|iPad/i.test(platform) || /Macintosh/i.test(ua);
+
+  let hint = "";
+  let gatekeeperCmd = "";
+  let learnUrl = "";
+
+  if (rawError.includes("Failed to fetch") || rawError.includes("NetworkError")) {
+    hint = "The local engine is offline or still starting up. Lexicon will automatically re-connect once ready.";
+  } else if (
+    rawError.includes("Permission denied") ||
+    rawError.includes("Access is denied") ||
+    rawError.includes("os error 5") ||
+    rawError.includes("os error 13")
+  ) {
+    if (isMac) {
+      hint = "macOS Gatekeeper or file permissions restricted the engine binary from spawning.";
+      gatekeeperCmd = "xattr -cr /Applications/Lexicon.app && chmod +x /Applications/Lexicon.app/Contents/Resources/lexicon-backend/lexicon-backend";
+      learnUrl = "https://github.com/AashishH15/Lexicon#macos";
+    } else {
+      hint = "The operating system restricted the backend process from launching. Restarting Lexicon usually resolves this.";
+    }
+  } else if (rawError.includes("No such file") || rawError.includes("os error 2")) {
+    hint = "Some engine files were not found. Reinstalling Lexicon will resolve this.";
+  }
+
+  return { rawError, hint, gatekeeperCmd, learnUrl };
+}
+
 export default function ReviewPanel({
   editor,
   activeTool,
   grammarMatches,
   checking,
   backendOffline,
+  backendError,
+  onRetry,
   userResolvedAll,
   activeErrorId,
   aboutToCollapse,
@@ -126,11 +162,71 @@ export default function ReviewPanel({
           </>
         ) : activeTool === "Proofread" ? (
           backendOffline ? (
-            <div className="flex w-full items-center gap-2 rounded-xl bg-pale-yellow-bg px-4 py-3 text-amber-900 border border-pale-yellow">
-              <Warning size={18} weight="fill" className="shrink-0 text-amber-600" />
-              <span className="font-sans text-sm font-medium">
-                Grammar engine unreachable. Reconnecting...
-              </span>
+            <div className="flex w-full flex-col gap-2 rounded-xl bg-pale-yellow-bg px-4 py-3 text-amber-900 border border-pale-yellow">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <Warning size={18} weight="fill" className="shrink-0 text-amber-600" />
+                  <span className="font-sans text-sm font-medium truncate">
+                    Grammar engine unreachable. Reconnecting...
+                  </span>
+                </div>
+                {onRetry && (
+                  <button
+                    type="button"
+                    onClick={onRetry}
+                    disabled={checking}
+                    className="shrink-0 flex items-center gap-1.5 rounded-lg bg-amber-200/90 px-2.5 py-1 font-sans text-xs font-semibold text-amber-950 hover:bg-amber-300 disabled:opacity-60 transition-colors shadow-xs"
+                  >
+                    {checking ? (
+                      <>
+                        <CircleNotch size={14} className="animate-spin text-amber-800" />
+                        <span>Retrying...</span>
+                      </>
+                    ) : (
+                      <span>Retry Engine</span>
+                    )}
+                  </button>
+                )}
+              </div>
+              {backendError && (() => {
+                const { rawError, hint, gatekeeperCmd, learnUrl } = formatBackendDiagnostic(backendError);
+                return (
+                  <details className="mt-1 text-xs text-amber-950/80 cursor-pointer">
+                    <summary className="font-mono text-[11px] select-none text-amber-800 hover:text-amber-950 font-medium">
+                      Show error details
+                    </summary>
+                    <div className="mt-1.5 rounded bg-amber-100/70 p-2.5 font-mono text-[11px] leading-relaxed text-amber-900 border border-amber-200/60 select-text">
+                      <div className="font-semibold text-amber-950 break-words">Error: {rawError}</div>
+                      {hint && (
+                        <div className="mt-1.5 border-t border-amber-200/60 pt-1.5 font-sans text-xs text-amber-900/90 whitespace-pre-wrap">
+                          {hint}
+                        </div>
+                      )}
+                      {gatekeeperCmd && (
+                        <div className="mt-2 rounded bg-amber-900/10 p-2 font-mono text-[10px] text-amber-950 break-all select-all border border-amber-900/15">
+                          {gatekeeperCmd}
+                        </div>
+                      )}
+                      {learnUrl && (
+                        <div className="mt-2 text-[11px]">
+                          <a
+                            href={learnUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              openExternalUrl(learnUrl);
+                            }}
+                            className="inline-flex items-center gap-1 font-sans font-medium text-amber-950 underline hover:text-amber-700 transition-colors"
+                          >
+                            Learn why this macOS command is safe on GitHub ↗
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                  </details>
+                );
+              })()}
             </div>
           ) : checking ? (
             <div className="rounded-xl border border-hairline bg-white p-6 pb-4 lex-card-enter">
