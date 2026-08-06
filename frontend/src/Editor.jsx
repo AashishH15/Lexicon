@@ -592,12 +592,14 @@ export default function Editor({
 
       <SelectionBubbleMenu editor={editor} />
 
-      <div className="lex-scroll flex-1 overflow-auto rounded border border-hairline bg-white">
-        <EditorContent
-          editor={editor}
-          style={{ fontSize: `${fontSize}px`, lineHeight: lineSpacing }}
-          className="h-full px-8 py-3 text-ink [&_.ProseMirror]:outline-none [&_.ProseMirror]:min-h-full"
-        />
+      <div className="lex-scroll lex-editor-surround flex-1 overflow-auto rounded border border-hairline">
+        <div className="lex-page-wrapper">
+          <EditorContent
+            editor={editor}
+            style={{ fontSize: `${fontSize}px`, lineHeight: lineSpacing }}
+            className="flex-1 px-8 py-3 text-ink [&_.ProseMirror]:outline-none [&_.ProseMirror]:min-h-full"
+          />
+        </div>
       </div>
 
       {linkPopover && (

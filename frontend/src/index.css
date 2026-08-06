@@ -647,6 +647,48 @@
     background-color: rgba(0, 0, 0, 0.22);
   }
 
+  /* C47.2 — Paper textures. Screen-only by construction: the C46.2 export
+     themes and the @media print block below print the live window, and a
+     texture background must never leak into a printed page. The defaults
+     below render Plain White: white surround, transparent full-bleed page
+     wrapper, no grain, no shadow — pixel-identical to the pre-texture look.
+     Consumers (C47.4) set these variables on the editor root. */
+  @media screen {
+    .lex-editor-surround {
+      --lex-page-color: transparent;
+      --lex-surround-color: #ffffff;
+      --lex-grain-opacity: 0;
+      --lex-shadow-strength: 0;
+      --lex-page-gutter: 0;
+      --lex-page-max-width: none;
+      background-color: var(--lex-surround-color);
+    }
+
+    .lex-editor-surround .lex-page-wrapper {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      min-height: 100%;
+      margin: 0 auto;
+      padding: var(--lex-page-gutter);
+      max-width: var(--lex-page-max-width);
+      background-color: var(--lex-page-color);
+      box-shadow:
+        0 1px 3px rgba(0, 0, 0, var(--lex-shadow-strength)),
+        0 12px 32px rgba(0, 0, 0, var(--lex-shadow-strength));
+    }
+
+    .lex-editor-surround .lex-page-wrapper::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+      background-size: 140px 140px;
+      opacity: var(--lex-grain-opacity);
+    }
+  }
+
   .lex-card-enter {
     animation: lex-card-in 600ms cubic-bezier(0.16, 1, 0.3, 1) both;
   }
