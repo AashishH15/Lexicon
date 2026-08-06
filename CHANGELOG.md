@@ -7,6 +7,33 @@ This changelog tracks what is **live** in each release and what is still
 **stubbed** (shown in the interface but not yet functional). Stubbed features
 are listed so the release reads honestly about what works today.
 
+## v0.9.1 — Hotfix: Backend Engine Startup & macOS Diagnostic Guidance
+
+### Quick Downloads:
+
+- 🪟 **[Windows x64 Setup](https://github.com/AashishH15/Lexicon/releases/download/v0.9.1/Lexicon_0.9.1_x64-setup.exe)**: Standard installer for modern 64-bit Windows PCs (Intel / AMD).
+- 🍏 **[macOS Apple Silicon DMG](https://github.com/AashishH15/Lexicon/releases/download/v0.9.1/Lexicon_0.9.1_aarch64.dmg)**: For modern Apple Silicon Macs (M1, M2, M3, M4 chips).
+- 🐧 **[Linux x64 DEB](https://github.com/AashishH15/Lexicon/releases/tag/v0.9.1)**: Debian package (`.deb`) for 64-bit Linux distributions (Ubuntu, Debian, Mint, Pop!_OS).
+- 📦 **[View All Assets & Checksums](https://github.com/AashishH15/Lexicon/releases/tag/v0.9.1)**: Complete list of installers including ARM64 Windows, x86 Windows, Intel macOS, and Linux x64 DEB.
+
+---
+
+### What's New in v0.9.1:
+
+- **Automatic Sidecar Permissions on macOS & Linux**: Rust now inspects Unix executable permission bits (`0o755`) on `lexicon-backend` prior to spawning. If execution bits are missing, `chmod +x` is automatically applied programmatically before execution, fixing `Permission Denied` startup failures on macOS/Linux.
+
+- **Detailed Diagnostic Error Reporting**: The Review Panel warning card now surfaces the exact raw Rust error message (e.g. `Permission denied`, `No such file`, `Access is denied`) under a collapsible **`▸ Show error details`** toggle, eliminating blind troubleshooting for bug reports.
+
+- **Active Engine Reconnection**:
+  - **Manual `[ Retry Engine ]` Button**: Added a dedicated retry button to the warning card featuring an animated spinning badge (`Retrying...`) to trigger an immediate connection attempt and sidecar spawn on demand.
+  - **8-Second Auto-Reconnect Polling**: Added a background polling loop that retries connection every 8 seconds when offline, automatically clearing the warning card as soon as the sidecar engine responds.
+
+- **Dynamic macOS Gatekeeper Guidance**: When macOS Gatekeeper or quarantine flags block the backend binary, the diagnostic box dynamically parses the user's installation path and formats the exact `xattr -cr` command alongside a direct link to GitHub documentation explaining why the command is safe.
+
+- **Strict Backend URL Targeting**: Removed the speculative 8000↔18000 port fallback from API requests. Requests now always target the configured backend port, restarting the sidecar once if a request fails — eliminating false-success collisions where a request could silently reach the wrong backend.
+
+---
+
 ## v0.9.0 — Rich Export Formats & Starter Templates
 
 ### Quick Downloads:
