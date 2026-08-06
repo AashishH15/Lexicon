@@ -942,6 +942,16 @@
     });
   }
 
+  function initNavBarMorph() {
+    const navbar = document.getElementById('navbar');
+    if (!navbar) return;
+    const update = function () {
+      navbar.classList.toggle('scrolled', window.scrollY > 24);
+    };
+    update();
+    window.addEventListener('scroll', update, { passive: true });
+  }
+
   document.addEventListener('DOMContentLoaded', function () {
     initSmoothScroll();
     initReleaseInfo();
@@ -956,5 +966,6 @@
     initEditorDemo();
     initExportStudioDemo();
     initAiWowDemo();
+    initNavBarMorph();
   });
 })();
