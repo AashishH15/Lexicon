@@ -85,34 +85,50 @@
     "mainEntity": [
       {
         "@type": "Question",
-        "name": "How does Lexicon check grammar without an internet connection?",
+        "name": "Is Lexicon free to download and use?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Lexicon comes with built-in proofreading rules right inside the app. When you install Lexicon on your computer, grammar and spell checking run directly on your device. No Wi-Fi, internet connection, or online servers required."
+          "text": "Yes. Lexicon is MIT-licensed open source: no subscription, no account gate, and no trial that expires. Use it personally or commercially."
         }
       },
       {
         "@type": "Question",
-        "name": "Does Lexicon send my documents or personal writing to the cloud?",
+        "name": "What operating systems can I install Lexicon on?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "No, never. Your text, drafts, and notes stay 100% on your own computer. Lexicon does not upload your writing to cloud servers, OpenAI, or third-party databases, and we never collect tracking data."
+          "text": "Windows (x64, ARM64, and x86), macOS (Apple Silicon and Intel), and Linux via .deb. Pick the matching build from the download button on this page."
         }
       },
       {
         "@type": "Question",
-        "name": "Is Lexicon completely free to use?",
+        "name": "Does Lexicon upload my writing to the cloud?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Yes! Lexicon is 100% free with no monthly subscription fees, hidden paywalls, or trial limits. It is an open-source project created for anyone who wants a private, peaceful writing app."
+          "text": "No. Proofreading and Lex rewrites run on your machine. Drafts stay local, and Lexicon does not ship your prose to remote servers or collect tracking data."
         }
       },
       {
         "@type": "Question",
-        "name": "How is Lexicon different from cloud tools like Grammarly?",
+        "name": "Do I need a Lex model just to proofread?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Most cloud writing tools charge $12 to $30 a month and require sending your personal documents over the internet. Lexicon gives you real-time grammar checks and AI writing tools right on your desktop for free, keeping your private words on your machine."
+          "text": "No. Grammar and style checks work without a model. Download Light (~0.8 GB) or Standard (~1.4 GB) from Settings only when you want Lex rewrites, or connect your own Ollama server."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Can I proofread without an internet connection?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes. An embedded engine handles spelling, grammar, punctuation, and style on your CPU as you type, so the editor keeps working offline."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Why use Lexicon instead of a cloud grammar checker?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Most cloud checkers bill monthly and process your documents on their servers. Lexicon is a free desktop writing app with offline grammar and on-device Lex tools, so your prose never leaves your computer."
         }
       }
     ]
@@ -130,7 +146,7 @@
         <span>Lexicon</span>
       </a>
 
-      <ul class="nav-links">
+      <ul class="nav-links" id="nav-links">
         <li><a href="#features">Features</a></li>
         <li><a href="#manifesto">Why Lexicon</a></li>
         <li><a href="#privacy">Privacy</a></li>
@@ -159,6 +175,15 @@
             <span id="github-stars-count">0</span>
           </span>
         </a>
+        <button type="button" class="nav-toggle" id="nav-toggle" aria-expanded="false" aria-controls="nav-links"
+          aria-label="Open menu">
+          <svg class="nav-toggle-icon nav-toggle-icon-list" width="20" height="20" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
+            <path d="M224,128a8,8,0,0,1-8,8H40a8,8,0,0,1,0-16H216A8,8,0,0,1,224,128ZM40,72H216a8,8,0,0,0,0-16H40a8,8,0,0,0,0,16ZM216,184H40a8,8,0,0,0,0,16H216a8,8,0,0,0,0-16Z"></path>
+          </svg>
+          <svg class="nav-toggle-icon nav-toggle-icon-x" width="20" height="20" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
+            <path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z"></path>
+          </svg>
+        </button>
       </div>
     </div>
   </nav>
@@ -179,9 +204,8 @@
         </h1>
 
         <p class="hero-subtitle">
-          Lexicon is a distraction-free desktop editor for essays, reports, notes, and manuscripts, with
-          offline grammar checking, on-device AI rewrites, and clean PDF export built in. Your words never leave
-          your machine, and there's no subscription to pay for.
+          A distraction-free desktop editor with offline grammar, on-device Lex rewrites, and clean PDF export.
+          Your words never leave your machine, and there's nothing to subscribe to.
         </p>
 
         <!-- Dynamic Download Box -->
@@ -197,13 +221,17 @@
             <span id="primary-download-text">Download for Desktop</span>
           </a>
 
+          <p class="hero-mobile-note">
+            Browsing on your phone? Grab Lexicon on a computer.
+          </p>
+
           <div class="download-meta">
             <span id="release-version">Checking latest release...</span>
-            <span>&bull;</span>
+            <span class="download-meta-sep">&bull;</span>
             <span id="download-count-badge"
               style="visibility: hidden; display: inline-flex; align-items: center; gap: 8px;">
               <span id="download-count-text">0 downloads</span>
-              <span>&bull;</span>
+              <span class="download-meta-sep">&bull;</span>
             </span>
             <div class="platform-selector">
               <button class="platform-toggle-btn" id="platform-toggle" type="button">
@@ -273,7 +301,7 @@
           <h2 class="section-title">Write. Proofread. Polish. Export.</h2>
           <p class="section-subtitle">
             One private canvas for the whole writing process. The editor is the product. Proofreading,
-            AI tools, and export are built in, not bolted on.
+            Lex, and export are built in, not bolted on.
           </p>
         </div>
 
@@ -281,7 +309,7 @@
         <div class="ai-wow-demo" id="ai-wow-demo">
           <div class="proofread-live-bar">
             <span><span class="proofread-live-dot"></span><span class="proofread-live-label" id="ai-wow-label">Proofread &amp; Lex's Engine</span></span>
-            <span class="proofread-live-metrics" id="ai-wow-status-badge">100% Offline &middot; 0ms Latency</span>
+            <span class="proofread-live-metrics" id="ai-wow-status-badge">100% Offline &middot; On-device</span>
           </div>
           <div class="ai-wow-body">
             <!-- Typing Editor Canvas Line -->
@@ -331,41 +359,67 @@
           </div>
         </div>
 
+        <div class="trust-strip" aria-label="Product highlights">
+          <div class="trust-strip-item">
+            <span class="trust-strip-value">100%</span>
+            <span class="trust-strip-label">Offline</span>
+          </div>
+          <div class="trust-strip-item">
+            <span class="trust-strip-value">0</span>
+            <span class="trust-strip-label">Accounts</span>
+          </div>
+          <div class="trust-strip-item">
+            <span class="trust-strip-value" id="trust-downloads">...</span>
+            <span class="trust-strip-label">Downloads</span>
+          </div>
+          <div class="trust-strip-item">
+            <span class="trust-strip-value" id="trust-stars">...</span>
+            <span class="trust-strip-label">GitHub stars</span>
+          </div>
+        </div>
+
         <div class="bento-grid">
-          <!-- Step 1: Write (Row 1, Span 1) -->
+          <!-- Step 1: Write -->
           <div class="bento-card">
             <div class="bento-card-header">
               <span class="badge-pill badge-blue">01 &middot; Write</span>
-              <span style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">The
-                Editor</span>
+              <span class="bento-meta">The Editor</span>
             </div>
             <h3 class="bento-title">A calm canvas for first drafts</h3>
             <p class="bento-desc">
-              A rich-text editor with headings, lists, tasks, tables, images, and blockquotes. Type <kbd>/</kbd>
-              for slash commands and rely on local auto-save. Start from built-in templates: Academic Paper,
-              Novel Manuscript, Minimalist Blog, or Executive Summary.
+              Headings, lists, tasks, tables, and images, plus <kbd>/</kbd> slash commands and local auto-save.
+              Templates for Academic, Novel, Blog, or Executive drafts. One shortcut clears the chrome when you need focus.
             </p>
           </div>
 
-          <!-- Step 2: Proofread (Row 1, Span 2 Large) -->
-          <div class="bento-card bento-card-large">
+          <!-- Step 2: Proofread -->
+          <div class="bento-card">
             <div class="bento-card-header">
               <span class="badge-pill badge-green">02 &middot; Proofread</span>
-              <span style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted);">Grammar
-                &amp; Prose Engine</span>
+              <span class="bento-meta">Grammar &amp; Prose</span>
             </div>
             <h3 class="bento-title">Grammar, style &amp; readability as you type</h3>
             <p class="bento-desc">
-              Inline squiggles for grammar, spelling, punctuation, and style with synchronized suggestion cards
-              and 1-click Apply/Dismiss. The prose engine flags passive voice (with one-click AI active-voice
-              rewrites), 30+ clichés and filler phrases, and repetitive sentence openers. Every check runs on
-              your CPU with no internet and no uploads. Real-time metrics: Clarity score, Flesch-Kincaid
-              readability, reading time, and a tone distribution chart.
+              Inline squiggles for spelling, grammar, and style with 1-click Apply. Clarity, readability, and
+              tone update live. Every check runs on your CPU, never uploaded.
             </p>
           </div>
 
-          <!-- Interstitial Demo 1: Slash Commands & Math (Between Row 1 and Row 2) -->
-          <div class="editor-live-zone" style="grid-column: 1 / -1; margin: 12px 0 16px;">
+          <!-- Step 3: Polish -->
+          <div class="bento-card">
+            <div class="bento-card-header">
+              <span class="badge-pill badge-green">03 &middot; Polish</span>
+              <span class="bento-meta">Lex's Engine</span>
+            </div>
+            <h3 class="bento-title">On-device Lex rewrites &amp; tone shifts</h3>
+            <p class="bento-desc">
+              Highlight a passage and ask Lex to rewrite, tighten, summarize, or shift tone.
+              Professional, Academic, Friendly, and more. Runs entirely on your device.
+            </p>
+          </div>
+
+          <!-- Slash commands demo -->
+          <div class="editor-live-zone">
             <div class="editor-live" aria-hidden="true">
               <div class="proofread-live-bar">
                 <span><span class="proofread-live-dot"></span><span class="proofread-live-label">Slash commands &amp;
@@ -386,79 +440,48 @@
             </div>
           </div>
 
-          <!-- Step 3: Polish (Row 2, Span 2 Large) -->
-          <div class="bento-card bento-card-large">
-            <div class="bento-card-header">
-              <span class="badge-pill badge-green">03 &middot; Polish</span>
-              <span style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">Lex's
-                Engine</span>
-            </div>
-            <h3 class="bento-title">On-device Lex rewrites &amp; tone shifts</h3>
-            <p class="bento-desc">
-              Highlight any passage and run 10+ offline Lex tools: <strong>Rewrite</strong>, <strong>Concise</strong>,
-              <strong>Summaries</strong>, <strong>Key Points</strong>, <strong>Lists &amp; Tables</strong>,
-              plus 9 tone shifts (<em>Professional</em>, <em>Academic</em>, <em>Friendly</em>, <em>Casual</em>,
-              <em>Formal</em>, <em>Empathetic</em>, <em>Persuasive</em>, <em>Humorous</em>, <em>Playful</em>).
-              100% on-device with zero data leaks and zero server latency. Save your own prompts as one-click
-              Custom Tools, so any transform you want is always a click away.
-            </p>
-          </div>
-
-          <!-- Step 4: Format (Row 2, Span 1) -->
+          <!-- Step 4: Format -->
           <div class="bento-card">
             <div class="bento-card-header">
               <span class="badge-pill badge-blue">04 &middot; Format</span>
-              <span style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted);">Math
-                &amp; Code</span>
+              <span class="bento-meta">Math &amp; Code</span>
             </div>
             <h3 class="bento-title">LaTeX math, code, tables &amp; tasks</h3>
             <p class="bento-desc">
-              Insert inline math <kbd>$E=mc^2$</kbd> or block LaTeX <kbd>$$\int_{0}^{\infty} e^{-x^2} dx$$</kbd>
-              with live preview, syntax-highlighted code blocks, inline code <kbd>const lex = new Lexicon()</kbd>,
-              task lists, and font/line-spacing controls.
+              Inline and block LaTeX with live preview, syntax-highlighted code, task lists, and font controls.
             </p>
           </div>
 
-          <!-- Step 5: Vocabulary (Row 3, Span 1) -->
+          <!-- Step 5: Vocabulary -->
           <div class="bento-card">
             <div class="bento-card-header">
               <span class="badge-pill badge-blue">05 &middot; Vocabulary</span>
+              <span class="bento-meta">Your Dictionary</span>
             </div>
             <h3 class="bento-title">A dictionary that learns from you</h3>
             <p class="bento-desc">
-              Save brand names, domain terminology, and unique jargon to your personal dictionary so proofreading
-              never flags them as spelling errors again.
+              Save brand names, domain terminology, and unique jargon so proofreading never flags them again.
             </p>
           </div>
 
-          <!-- Step 6: Focus (Row 3, Span 1) -->
+          <!-- Step 6: Private -->
           <div class="bento-card">
             <div class="bento-card-header">
-              <span class="badge-pill badge-blue">06 &middot; Focus</span>
+              <span class="badge-pill badge-green">06 &middot; Private</span>
+              <span class="bento-meta">Local Storage</span>
             </div>
-            <h3 class="bento-title">Distraction-free canvas</h3>
+            <h3 class="bento-title">Local profile, models kept intact</h3>
             <p class="bento-desc">
-              Collapse sidebars and panels with a single keystroke (<kbd>Ctrl</kbd> + <kbd>Shift</kbd> +
-              <kbd>F</kbd>) to write on a clean, calm, editorial canvas.
+              Local auto-save keeps drafts safe. Updates preserve your Lex models, settings, and personal dictionary.
             </p>
           </div>
 
-          <!-- Step 7: Private (Row 3, Span 1) -->
-          <div class="bento-card">
-            <div class="bento-card-header">
-              <span class="badge-pill badge-green">07 &middot; Private</span>
-              <span style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted);">Local
-                Storage</span>
-            </div>
-            <h3 class="bento-title">Local profile storage &amp; model-preserving updates</h3>
-            <p class="bento-desc">
-              Local auto-save prevents lost work. Preserving your downloaded AI models, custom
-              settings, and personal dictionary intact in your local profile data.
+          <!-- Export studio -->
+          <div class="export-journey">
+            <p class="export-journey-kicker">
+              Write &rarr; Proofread &rarr; Polish &rarr; <strong>Export</strong>
             </p>
-          </div>
 
-          <!-- Interstitial Demo 2: Export & Theme Studio (Between Row 3 and Row 4) -->
-          <div class="export-live-zone" style="grid-column: 1 / -1; margin: 12px 0 16px;">
             <div class="export-live-card" id="export-demo-card">
               <div class="proofread-live-bar">
                 <span><span class="proofread-live-dot"></span><span class="proofread-live-label">Export &amp; Theme Studio</span></span>
@@ -495,29 +518,27 @@
                 </div>
                 <div class="export-live-snippet-box theme-academic" id="export-live-preview">
                   <div class="export-snippet-header" id="export-snippet-title">A Quantitative Analysis of Local-First Systems</div>
-                  <div class="export-snippet-body" id="export-snippet-text">Abstract — Local-first software architectures eliminate remote cloud dependencies, preserve user data privacy, and deliver zero-latency typing.</div>
+                  <div class="export-snippet-body" id="export-snippet-text">Abstract. Local-first software architectures eliminate remote cloud dependencies, preserve user data privacy, and deliver responsive typing.</div>
                   <div class="export-progress-track">
                     <div class="export-progress-fill" id="export-progress-fill"></div>
                   </div>
                 </div>
               </div>
-            </div>
-          </div>
 
-          <!-- Step 8: Export (Row 4, Span 3 Banner) -->
-          <div class="bento-card bento-card-full">
-            <div class="bento-card-header">
-              <span class="badge-pill badge-green">08 &middot; Export</span>
-              <span style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">Portable
-                Files</span>
+              <div class="export-payoff">
+                <div class="export-payoff-header">
+                  <span class="badge-pill badge-green">07 &middot; Export</span>
+                  <span class="bento-meta">Portable Files</span>
+                </div>
+                <div class="export-payoff-copy">
+                  <h3 class="bento-title">Export what you just styled</h3>
+                  <p class="bento-desc">
+                    Import from Word or Markdown. Ship PDF, EPUB, HTML, or DOCX with tracked grammar suggestions,
+                    or ask Lex to style the page.
+                  </p>
+                </div>
+              </div>
             </div>
-            <h3 class="bento-title">PDF, EPUB &amp; DOCX export</h3>
-            <p class="bento-desc" style="max-width: 760px;">
-              Import <code>.md</code>, <code>.txt</code>, <code>.html</code>, and <code>.docx</code> from Word,
-              Google Docs, or LibreOffice. Export clean PDFs, styled HTML, EPUB ebooks, or <code>.docx</code>
-              with grammar suggestions as native tracked-change redlines. Themes: Academic, Novel, Minimalist,
-              Executive, or ask Lex to style it.
-            </p>
           </div>
         </div>
       </div>
@@ -532,7 +553,10 @@
           <p class="manifesto-text">
             Writing is personal. Cloud writing tools turned document editors into monthly subscriptions, background
             telemetry, and remote server queues. We built Lexicon because we wanted a quiet, distraction-free desk on
-            our own machine — where prose is polished offline, data stays private, and software never asks for a login.
+            our own machine, where prose is polished offline, data stays private, and software never asks for a login.
+          </p>
+          <p class="manifesto-aside">
+            Built for people who write things they wouldn&rsquo;t want sitting on someone else&rsquo;s server.
           </p>
           <div class="manifesto-trust-grid">
             <div class="manifesto-trust-item">
@@ -578,8 +602,8 @@
           <div class="privacy-card">
             <div class="privacy-card-header">
               <h3>Embedded LanguageTool Engine</h3>
-              <p style="margin: 0; font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted);">ZERO
-                LATENCY</p>
+              <p style="margin: 0; font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted);">ON
+                DEVICE</p>
             </div>
             <p>
               Grammar, spelling, and style rule passes run deterministically on your local CPU via an embedded runtime.
@@ -667,51 +691,116 @@
       </div>
     </section>
 
-    <!-- Generative Engine Optimization (GEO) FAQ Section -->
     <section class="faq-section" id="faq">
       <div class="container">
-        <div class="section-header">
-          <div class="section-tag">Frequently Asked Questions</div>
-          <h2 class="section-title">Common Questions &amp; Answers</h2>
-          <p class="section-subtitle">Everything you need to know about using Lexicon for offline proofreading and
-            writing.</p>
+        <div class="section-header faq-header">
+          <div class="section-tag">FAQ</div>
+          <h2 class="section-title">Questions writers ask</h2>
         </div>
 
-        <div class="faq-grid">
-          <div class="faq-card">
-            <h3>How does Lexicon check grammar without an internet connection?</h3>
-            <p>
-              Lexicon comes with built-in proofreading rules right inside the app. When you install Lexicon on your
-              computer, grammar and spell checking run directly on your device. No Wi-Fi, internet connection, or online
-              servers required.
-            </p>
-          </div>
-
-          <div class="faq-card">
-            <h3>Does Lexicon send my documents or personal writing to the cloud?</h3>
-            <p>
-              No, never. Your text, drafts, and notes stay 100% on your own computer. Lexicon does not upload your
-              writing
-              to cloud servers, OpenAI, or third-party databases, and we never collect tracking data.
-            </p>
-          </div>
-
-          <div class="faq-card">
-            <h3>Is Lexicon completely free to use?</h3>
-            <p>
-              Yes! Lexicon is 100% free with no monthly subscription fees, hidden paywalls, or trial limits. It is an
-              open-source project created for anyone who wants a private, peaceful writing app.
-            </p>
-          </div>
-
-          <div class="faq-card">
-            <h3>How is Lexicon different from cloud tools like Grammarly?</h3>
-            <p>
-              Most cloud writing tools charge $12 to $30 a month and require sending your personal documents over the
-              internet. Lexicon gives you real-time grammar checks and AI writing tools right on your desktop for free,
-              keeping your private words on your machine.
-            </p>
-          </div>
+        <div class="faq-list">
+          <details class="faq-item">
+            <summary>
+              <span>Is Lexicon free to download and use?</span>
+              <span class="faq-icon" aria-hidden="true">
+                <svg class="faq-icon-plus" width="18" height="18" viewBox="0 0 256 256" fill="currentColor"><path d="M224,128a8,8,0,0,1-8,8H136v80a8,8,0,0,1-16,0V136H40a8,8,0,0,1,0-16h80V40a8,8,0,0,1,16,0v80h80A8,8,0,0,1,224,128Z"></path></svg>
+                <svg class="faq-icon-x" width="18" height="18" viewBox="0 0 256 256" fill="currentColor"><path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z"></path></svg>
+              </span>
+            </summary>
+            <div class="faq-answer">
+              <div class="faq-answer-inner">
+                <p>
+                Yes. Lexicon is MIT-licensed open source: no subscription, no account gate, and no trial that expires.
+                Use it personally or commercially.
+              </p>
+              </div>
+            </div>
+          </details>
+          <details class="faq-item">
+            <summary>
+              <span>What operating systems can I install Lexicon on?</span>
+              <span class="faq-icon" aria-hidden="true">
+                <svg class="faq-icon-plus" width="18" height="18" viewBox="0 0 256 256" fill="currentColor"><path d="M224,128a8,8,0,0,1-8,8H136v80a8,8,0,0,1-16,0V136H40a8,8,0,0,1,0-16h80V40a8,8,0,0,1,16,0v80h80A8,8,0,0,1,224,128Z"></path></svg>
+                <svg class="faq-icon-x" width="18" height="18" viewBox="0 0 256 256" fill="currentColor"><path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z"></path></svg>
+              </span>
+            </summary>
+            <div class="faq-answer">
+              <div class="faq-answer-inner">
+                <p>
+                Windows (x64, ARM64, and x86), macOS (Apple Silicon and Intel), and Linux via <code>.deb</code>.
+                Pick the matching build from the download button on this page.
+              </p>
+              </div>
+            </div>
+          </details>
+          <details class="faq-item">
+            <summary>
+              <span>Does Lexicon upload my writing to the cloud?</span>
+              <span class="faq-icon" aria-hidden="true">
+                <svg class="faq-icon-plus" width="18" height="18" viewBox="0 0 256 256" fill="currentColor"><path d="M224,128a8,8,0,0,1-8,8H136v80a8,8,0,0,1-16,0V136H40a8,8,0,0,1,0-16h80V40a8,8,0,0,1,16,0v80h80A8,8,0,0,1,224,128Z"></path></svg>
+                <svg class="faq-icon-x" width="18" height="18" viewBox="0 0 256 256" fill="currentColor"><path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z"></path></svg>
+              </span>
+            </summary>
+            <div class="faq-answer">
+              <div class="faq-answer-inner">
+                <p>
+                No. Proofreading and Lex rewrites run on your machine. Drafts stay local, and Lexicon does not ship your
+                prose to remote servers or collect tracking data.
+              </p>
+              </div>
+            </div>
+          </details>
+          <details class="faq-item">
+            <summary>
+              <span>Do I need a Lex model just to proofread?</span>
+              <span class="faq-icon" aria-hidden="true">
+                <svg class="faq-icon-plus" width="18" height="18" viewBox="0 0 256 256" fill="currentColor"><path d="M224,128a8,8,0,0,1-8,8H136v80a8,8,0,0,1-16,0V136H40a8,8,0,0,1,0-16h80V40a8,8,0,0,1,16,0v80h80A8,8,0,0,1,224,128Z"></path></svg>
+                <svg class="faq-icon-x" width="18" height="18" viewBox="0 0 256 256" fill="currentColor"><path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z"></path></svg>
+              </span>
+            </summary>
+            <div class="faq-answer">
+              <div class="faq-answer-inner">
+                <p>
+                No. Grammar and style checks work without a model. Download Light (~0.8 GB) or Standard (~1.4 GB) from
+                Settings only when you want Lex rewrites, or connect your own Ollama server.
+              </p>
+              </div>
+            </div>
+          </details>
+          <details class="faq-item">
+            <summary>
+              <span>Can I proofread without an internet connection?</span>
+              <span class="faq-icon" aria-hidden="true">
+                <svg class="faq-icon-plus" width="18" height="18" viewBox="0 0 256 256" fill="currentColor"><path d="M224,128a8,8,0,0,1-8,8H136v80a8,8,0,0,1-16,0V136H40a8,8,0,0,1,0-16h80V40a8,8,0,0,1,16,0v80h80A8,8,0,0,1,224,128Z"></path></svg>
+                <svg class="faq-icon-x" width="18" height="18" viewBox="0 0 256 256" fill="currentColor"><path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z"></path></svg>
+              </span>
+            </summary>
+            <div class="faq-answer">
+              <div class="faq-answer-inner">
+                <p>
+                Yes. An embedded engine handles spelling, grammar, punctuation, and style on your CPU as you type, so
+                the editor keeps working offline.
+              </p>
+              </div>
+            </div>
+          </details>
+          <details class="faq-item">
+            <summary>
+              <span>Why use Lexicon instead of a cloud grammar checker?</span>
+              <span class="faq-icon" aria-hidden="true">
+                <svg class="faq-icon-plus" width="18" height="18" viewBox="0 0 256 256" fill="currentColor"><path d="M224,128a8,8,0,0,1-8,8H136v80a8,8,0,0,1-16,0V136H40a8,8,0,0,1,0-16h80V40a8,8,0,0,1,16,0v80h80A8,8,0,0,1,224,128Z"></path></svg>
+                <svg class="faq-icon-x" width="18" height="18" viewBox="0 0 256 256" fill="currentColor"><path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z"></path></svg>
+              </span>
+            </summary>
+            <div class="faq-answer">
+              <div class="faq-answer-inner">
+                <p>
+                Most cloud checkers bill monthly and process your documents on their servers. Lexicon is a free desktop
+                writing app with offline grammar and on-device Lex tools, so your prose never leaves your computer.
+              </p>
+              </div>
+            </div>
+          </details>
         </div>
       </div>
     </section>

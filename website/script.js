@@ -163,6 +163,10 @@
  downloadCountText.textContent = `${roundedDownloads}+ downloads`;
  downloadCountBadge.style.visibility = 'visible';
  }
+ const trustDownloads = document.getElementById('trust-downloads');
+ if (trustDownloads && roundedDownloads > 0) {
+   trustDownloads.textContent = roundedDownloads + '+';
+ }
 
  const matchedPrimary = matchAsset(latestAssets, env.key);
  if (primaryDownloadBtn) {
@@ -206,6 +210,8 @@
  if (typeof stars === 'number') {
  starsCountText.textContent = stars;
  starsContainer.style.display = 'inline-flex';
+ const trustStars = document.getElementById('trust-stars');
+ if (trustStars) trustStars.textContent = String(stars);
  }
  } catch (err) {
  console.warn('Could not fetch GitHub repository stars automatically:', err);
@@ -261,7 +267,7 @@
 
   function initRevealAnimations() {
   const revealSelector =
-  '.section-header, .bento-card, .proofread-live, .editor-live, .export-live-card, .manifesto-card, .tutorial-card, .privacy-card, .faq-card, .setup-step-box, .support-card, .privacy-comparison-table, .footer';
+  '.section-header, .bento-card, .proofread-live, .editor-live, .export-live-card, .manifesto-card, .tutorial-card, .privacy-card, .faq-item, .setup-step-box, .support-card, .privacy-comparison-table, .footer';
  const revealEls = Array.prototype.slice.call(document.querySelectorAll(revealSelector));
 
  if (!('IntersectionObserver' in window)) {
@@ -509,7 +515,7 @@
       academic: {
         tag: 'Academic Paper Template',
         title: 'A Quantitative Analysis of Local-First Systems',
-        text: 'Abstract — Local-first software architectures eliminate remote cloud dependencies, preserve user data privacy, and deliver zero-latency typing.',
+        text: 'Abstract. Local-first software architectures eliminate remote cloud dependencies, preserve user data privacy, and deliver responsive typing.',
         class: 'theme-academic'
       },
       novel: {
@@ -799,7 +805,7 @@
       typeTextEl.innerHTML = '';
       typeTextEl.style.color = '';
       if (caret) caret.style.display = '';
-      if (statusBadge) statusBadge.textContent = '100% Offline \u00B7 0ms Latency';
+      if (statusBadge) statusBadge.textContent = '100% Offline \u00B7 On-device';
 
       await waitForView();
       if (token !== introToken) return;
@@ -852,11 +858,98 @@
     }, 1000);
   }
 
+  function initMobileNav() {
+    const toggle = document.getElementById('nav-toggle');
+    const links = document.getElementById('nav-links');
+    if (!toggle || !links) return;
+
+    function closeMenu() {
+      links.classList.remove('is-open');
+      toggle.setAttribute('aria-expanded', 'false');
+      toggle.setAttribute('aria-label', 'Open menu');
+    }
+
+    function openMenu() {
+      links.classList.add('is-open');
+      toggle.setAttribute('aria-expanded', 'true');
+      toggle.setAttribute('aria-label', 'Close menu');
+    }
+
+    toggle.addEventListener('click', function () {
+      if (links.classList.contains('is-open')) closeMenu();
+      else openMenu();
+    });
+
+    links.querySelectorAll('a').forEach(function (anchor) {
+      anchor.addEventListener('click', closeMenu);
+    });
+
+    document.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape') closeMenu();
+    });
+
+    document.addEventListener('click', function (event) {
+      if (!links.classList.contains('is-open')) return;
+      if (links.contains(event.target) || toggle.contains(event.target)) return;
+      closeMenu();
+    });
+  }
+
+  function softenMobileHeroVideo() {
+    if (window.matchMedia('(max-width: 640px)').matches) {
+      const video = document.querySelector('.faux-window-body video');
+      if (video) {
+        video.removeAttribute('autoplay');
+        video.pause();
+        video.setAttribute('preload', 'none');
+      }
+    }
+  }
+
+  function initFaqAccordion() {
+    const items = Array.prototype.slice.call(document.querySelectorAll('.faq-item'));
+    if (!items.length) return;
+
+    function setExpanded(item, expanded) {
+      const summary = item.querySelector('summary');
+      const answer = item.querySelector('.faq-answer');
+
+      item.classList.toggle('is-open', expanded);
+      if (summary) summary.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+      if (answer) answer.setAttribute('aria-hidden', expanded ? 'false' : 'true');
+    }
+
+    items.forEach(function (item) {
+      const summary = item.querySelector('summary');
+      if (!summary) return;
+
+      // Keep native open so the browser never tears the panel out of layout
+      // mid-close (that snap/jitter). Visual state is class-driven only.
+      item.open = true;
+      setExpanded(item, false);
+
+      summary.addEventListener('click', function (event) {
+        event.preventDefault();
+
+        const willOpen = !item.classList.contains('is-open');
+
+        items.forEach(function (other) {
+          if (other !== item) setExpanded(other, false);
+        });
+
+        setExpanded(item, willOpen);
+      });
+    });
+  }
+
   document.addEventListener('DOMContentLoaded', function () {
     initSmoothScroll();
     initReleaseInfo();
     initStarsBadge();
     initPlatformDropdown();
+    initMobileNav();
+    softenMobileHeroVideo();
+    initFaqAccordion();
     initRevealAnimations();
     initHeroVisibility();
     initTypingDemo();
