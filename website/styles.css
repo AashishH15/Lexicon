@@ -2537,9 +2537,19 @@ section[id] {
   line-height: 1.5;
 }
 
+@media (max-width: 991px) {
+  .btn-nav-github {
+    display: none !important;
+  }
+}
+
 @media (max-width: 768px) {
   .manifesto-trust-grid {
     grid-template-columns: 1fr;
+  }
+
+  .btn-nav-github {
+    display: none !important;
   }
 }
 
