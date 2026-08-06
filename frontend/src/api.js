@@ -17,29 +17,18 @@ export async function ensureBackend() {
   }
 }
 
-let activeApiUrl = API_URL;
-
 async function request(path, options) {
   await ensureBackend();
   try {
-    return await fetch(`${activeApiUrl}${path}`, options);
+    return await fetch(`${API_URL}${path}`, options);
   } catch (error) {
     if (error?.name === "AbortError") {
       throw error;
     }
-    // Try alternative port (18000 <-> 8000) in case dev mode API_URL differs from running sidecar port
-    const fallbackUrl = activeApiUrl.includes(":8000")
-      ? "http://127.0.0.1:18000"
-      : "http://127.0.0.1:8000";
-    try {
-      const res = await fetch(`${fallbackUrl}${path}`, options);
-      activeApiUrl = fallbackUrl;
-      return res;
-    } catch {
-      // Re-trigger sidecar startup and retry primary port
-      await ensureBackend();
-      return fetch(`${activeApiUrl}${path}`, options);
-    }
+    // The idle monitor may have stopped the sidecar between the first
+    // lifecycle check and the HTTP request. Start it once and retry.
+    await ensureBackend();
+    return fetch(`${API_URL}${path}`, options);
   }
 }
 

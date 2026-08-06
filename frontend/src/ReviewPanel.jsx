@@ -30,8 +30,21 @@ function formatBackendDiagnostic(error) {
     rawError.includes("os error 13")
   ) {
     if (isMac) {
+      let appPath = "/Applications/Lexicon.app";
+      let sidecarPath = "/Applications/Lexicon.app/Contents/Resources/lexicon-backend/lexicon-backend";
+
+      const pathMatch = rawError.match(/"([^"]+lexicon-backend[^"]*)"/i) || rawError.match(/"([^"]+\.app[^"]*)"/i);
+      if (pathMatch) {
+        const fullPath = pathMatch[1];
+        const appMatch = fullPath.match(/^(.*\.app)/i);
+        if (appMatch) {
+          appPath = appMatch[1];
+          sidecarPath = fullPath;
+        }
+      }
+
       hint = "macOS Gatekeeper or file permissions restricted the engine binary from spawning.";
-      gatekeeperCmd = "xattr -cr /Applications/Lexicon.app && chmod +x /Applications/Lexicon.app/Contents/Resources/lexicon-backend/lexicon-backend";
+      gatekeeperCmd = `xattr -cr "${appPath}" && chmod +x "${sidecarPath}"`;
       learnUrl = "https://github.com/AashishH15/Lexicon#macos";
     } else {
       hint = "The operating system restricted the backend process from launching. Restarting Lexicon usually resolves this.";
@@ -203,9 +216,14 @@ export default function ReviewPanel({
                         </div>
                       )}
                       {gatekeeperCmd && (
-                        <div className="mt-2 rounded bg-amber-900/10 p-2 font-mono text-[10px] text-amber-950 break-all select-all border border-amber-900/15">
-                          {gatekeeperCmd}
-                        </div>
+                        <>
+                          <div className="mt-2 rounded bg-amber-900/10 p-2 font-mono text-[10px] text-amber-950 break-all select-all border border-amber-900/15">
+                            {gatekeeperCmd}
+                          </div>
+                          <div className="mt-1 text-[10px] text-amber-900/80 font-sans italic">
+                            (If running from Downloads, replace /Applications/Lexicon.app with ~/Downloads/Lexicon.app)
+                          </div>
+                        </>
                       )}
                       {learnUrl && (
                         <div className="mt-2 text-[11px]">
