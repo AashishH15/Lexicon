@@ -46,6 +46,10 @@
   --transition-fast: all 0.2s var(--ease-soft);
   --transition: all 0.3s var(--ease-soft);
   --transition-slow: all 0.5s var(--ease-soft);
+
+  /* Atmosphere: paper grain + soft light washes */
+  --grain-noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='256' height='256'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='256' height='256' filter='url(%23g)'/%3E%3C/svg%3E");
+  --wash-warm: rgba(238, 224, 198, 0.68);
 }
 
 /* Reset & Base */
@@ -90,6 +94,19 @@ body {
   font-size: 16px;
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
+}
+
+/* Paper grain over the whole canvas so the page feels printed, not flat.
+   Fixed overlay so it never re-rasterizes on scroll. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background-image: var(--grain-noise);
+  background-size: 256px 256px;
+  opacity: 0.055;
 }
 
 /* Headings - Editorial Serif */
@@ -361,6 +378,18 @@ kbd {
 .hero {
   padding: 205px 0 125px;
   text-align: center;
+  position: relative;
+  z-index: 0;
+}
+
+/* Faint warm lamp-light wash behind the hero, fading into flat cream below */
+.hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(ellipse 140% 75% at 50% -8%, var(--wash-warm), transparent 78%);
 }
 
 .hero-badge-wrapper {
@@ -575,6 +604,7 @@ b,
   border-radius: var(--radius-card);
   overflow: hidden;
   transition: var(--transition);
+  box-shadow: var(--shadow-card);
 }
 
 .faux-window:hover {
@@ -611,6 +641,20 @@ b,
   display: block;
   text-decoration: none;
   overflow: hidden;
+  position: relative;
+}
+
+/* The demo window is the writing surface: a whisper of paper grain over the
+   app preview so it reads as paper under light, not a screen in a void. */
+.faux-window-body::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background-image: var(--grain-noise);
+  background-size: 256px 256px;
+  opacity: 0.07;
 }
 
 .faux-window-body img,
