@@ -1127,13 +1127,35 @@
     window.addEventListener('resize', onResize, { passive: true });
   }
 
+  function initMobileHeroVideo() {
+    const video = document.querySelector('.faux-window-body video');
+    if (!video) return;
+    video.muted = true;
+    video.playsInline = true;
+    video.setAttribute('playsinline', '');
+    video.setAttribute('webkit-playsinline', '');
+
+    const playPromise = video.play();
+    if (playPromise !== undefined) {
+      playPromise.catch(function () {
+        const playOnTouch = function () {
+          video.play();
+          document.removeEventListener('touchstart', playOnTouch);
+          document.removeEventListener('click', playOnTouch);
+        };
+        document.addEventListener('touchstart', playOnTouch, { passive: true });
+        document.addEventListener('click', playOnTouch, { passive: true });
+      });
+    }
+  }
+
   document.addEventListener('DOMContentLoaded', function () {
     initSmoothScroll();
     initReleaseInfo();
     initStarsBadge();
     initPlatformDropdown();
     initMobileNav();
-    softenMobileHeroVideo();
+    initMobileHeroVideo();
     initFaqAccordion();
     initRevealAnimations();
     initHeroVisibility();
