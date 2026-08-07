@@ -309,6 +309,7 @@ export default function CustomToolsSettings() {
                       rows={3}
                       value={builtinDraft}
                       onChange={(e) => setBuiltinDraft(e.target.value)}
+                      aria-label={`Edit prompt for ${name}`}
                       className="w-full rounded border border-hairline bg-white p-2 font-sans text-xs text-ink focus:border-ink focus:outline-none"
                     />
                     <div className="flex justify-end gap-2">
@@ -348,8 +349,11 @@ export default function CustomToolsSettings() {
           <div
             className="w-full max-w-sm rounded-xl border border-hairline bg-white p-5 shadow-lg lex-card-enter"
             onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="custom-tool-title"
           >
-            <h3 className="font-sans text-sm font-semibold text-ink">
+            <h3 id="custom-tool-title" className="font-sans text-sm font-semibold text-ink">
               {editingToolId ? "Edit Custom Tool" : "Add Custom Tool"}
             </h3>
             

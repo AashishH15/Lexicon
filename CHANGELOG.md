@@ -58,6 +58,11 @@ are listed so the release reads honestly about what works today.
 
 - **Windows High Contrast (Forced-Colors) Support**: Under Windows High Contrast or any forced-colors OS theme, the custom paper backgrounds (Dark Slate included) collapse to system colors automatically. The grain overlay and page shadows, which forced-colors does not strip, are removed, and every focus ring switches to the system `Highlight` outline so focus stays visible in High Contrast Black.
 
+- **WCAG 2.1 Level A ARIA & Keyboard Navigation Upgrades**:
+  - **Interactive Panel Rails**: Converted left and right collapse/expand handles to keyboard-focusable `<button type="button">` elements with dynamic `tabIndex` management (`tabIndex={0}` when collapsed), enabling full keyboard navigation (Tab, Enter, Space) and screen reader announcement.
+  - **Explicit Input Accessibility Labels**: Added explicit `aria-label` attributes to 12 placeholder-only inputs across `Editor.jsx` (link URL, math LaTeX), `FormatToolbar.jsx` (image URL), `Settings.jsx`, `DictionaryPanel.jsx`, `HistoryPanel.jsx`, `CustomToolsSettings.jsx`, and `DocxExportModal.jsx`.
+  - **Modal Dialog Semantics & ARIA Landmarks**: Configured `role="dialog"`, `aria-modal="true"`, and `aria-labelledby` pointing to modal titles directly on the inner window cards of all 11 modals across the application (`TemplateGalleryModal`, `Settings`, `ExportOptionsModal`, `DocxExportModal`, `EpubMetadataModal`, `UpdateModal`, `ConfirmModal`, `OnboardingModal`, `DictionaryPanel`, `HistoryPanel`, `CustomToolsSettings`).
+
 - **Browser-Style Zoom (Accessibility)**: Full-page zoom is now enabled. Ctrl + Plus / Ctrl + Minus, Ctrl + 0 to reset, Ctrl + mouse wheel, and touchpad pinch gestures all scale the interface exactly like a browser.
 
 ---

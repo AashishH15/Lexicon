@@ -34,6 +34,9 @@ export default function ConfirmModal({
       <div
         className="w-full max-w-sm overflow-hidden rounded-xl border border-hairline bg-white p-5 shadow-2xl lex-card-enter"
         onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="confirm-title"
       >
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-3">
@@ -41,7 +44,7 @@ export default function ConfirmModal({
               {iconMap[variant] || iconMap.warning}
             </div>
             <div>
-              <h3 className="font-serif text-base font-bold text-ink">{title}</h3>
+              <h3 id="confirm-title" className="font-serif text-base font-bold text-ink">{title}</h3>
             </div>
           </div>
           <button

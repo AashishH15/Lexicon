@@ -83,11 +83,16 @@ export default function OnboardingModal({ onClose, onConfigured, onFinish }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4 backdrop-blur-xs">
-      <div className="flex max-h-[90vh] h-auto w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-hairline bg-canvas shadow-2xl">
+      <div
+        className="flex max-h-[90vh] h-auto w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-hairline bg-canvas shadow-2xl"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="onboarding-title"
+      >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-hairline px-6 py-4">
           <div className="flex items-center gap-2">
-            <span className="font-serif text-lg font-medium text-ink">Lexicon Setup</span>
+            <span id="onboarding-title" className="font-serif text-lg font-medium text-ink">Lexicon Setup</span>
             <span className="rounded bg-hairline/60 px-2 py-0.5 font-mono text-[11px] font-medium text-muted">
               Step {step} of 4
             </span>

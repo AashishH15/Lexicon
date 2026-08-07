@@ -748,6 +748,7 @@ const ImagePopover = forwardRef(function ImagePopover(
           }
         }}
         placeholder="https://example.com/photo.png"
+        aria-label="Image URL"
         className="min-w-0 flex-1 rounded border border-hairline bg-canvas px-2 py-1.5 font-sans text-xs text-ink outline-none focus:border-muted"
       />
       <button

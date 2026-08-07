@@ -671,9 +671,12 @@ export default function Settings({
       <div
         className="flex h-[646px] max-h-[85vh] w-full max-w-2xl flex-col overflow-hidden rounded-xl border border-hairline bg-white lex-card-enter"
         onClick={(event) => event.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="settings-title"
       >
         <div className="flex items-center justify-between border-b border-hairline px-6 py-4">
-          <p className="font-mono text-[10px] uppercase tracking-widest text-muted">
+          <p id="settings-title" className="font-mono text-[10px] uppercase tracking-widest text-muted">
             Settings
           </p>
           <button
@@ -701,6 +704,7 @@ export default function Settings({
                   ref={searchRef}
                   type="text"
                   placeholder="Search settings…"
+                  aria-label="Search settings"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onFocus={() => setSearchFocused(true)}
@@ -977,6 +981,7 @@ export default function Settings({
                         onDocxAuthorChange(event.target.value)
                       }
                       placeholder="Lex"
+                      aria-label="Default author / reviewer name"
                       className="mt-3 w-full rounded border border-hairline bg-canvas px-3 py-2 font-sans text-sm text-ink outline-none transition-colors placeholder:text-muted focus:border-muted"
                     />
                   </div>
@@ -1179,6 +1184,7 @@ export default function Settings({
                           }
                         }}
                         placeholder="Add a word…"
+                        aria-label="Add a word to the dictionary"
                         className="min-w-0 flex-1 rounded border border-hairline bg-canvas px-3 py-2 font-sans text-sm text-ink outline-none focus:border-muted"
                       />
                       <button
@@ -1217,6 +1223,7 @@ export default function Settings({
                               setDictQuery(event.target.value)
                             }
                             placeholder="Filter words…"
+                            aria-label="Filter words"
                             className="w-full rounded border border-hairline bg-canvas py-2 pl-8 pr-3 font-sans text-sm text-ink outline-none focus:border-muted"
                           />
                         </div>
@@ -1374,6 +1381,7 @@ export default function Settings({
                             ? "Search drafts…"
                             : "Search generations…"
                         }
+                        aria-label="Search history"
                         className="w-full rounded border border-hairline bg-canvas py-1.5 pl-8 pr-3 font-sans text-xs text-ink outline-none focus:border-muted"
                       />
                     </div>

@@ -100,11 +100,14 @@ export default function DocxExportModal({ editor, matches, onClose }) {
       <div
         className="flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-2xl border border-hairline bg-canvas shadow-xl"
         onClick={(event) => event.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="docx-export-title"
       >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-hairline px-6 py-4">
           <div>
-            <h2 className="font-serif text-lg font-medium text-ink">
+            <h2 id="docx-export-title" className="font-serif text-lg font-medium text-ink">
               Export DOCX
             </h2>
             <p className="font-sans text-xs text-muted">

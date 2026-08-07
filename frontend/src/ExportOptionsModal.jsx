@@ -139,11 +139,14 @@ export default function ExportOptionsModal({ editor, mode, onClose }) {
       <div
         className="lex-scroll flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-hairline bg-canvas shadow-xl"
         onClick={(event) => event.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="export-options-title"
       >
         {/* Header */}
         <div className="flex items-center justify-between border-b border-hairline px-6 py-4">
           <div>
-            <h2 className="font-serif text-lg font-medium text-ink">
+            <h2 id="export-options-title" className="font-serif text-lg font-medium text-ink">
               {isPdf ? "Export PDF" : "Export HTML"}
             </h2>
             <p className="font-sans text-xs text-muted">

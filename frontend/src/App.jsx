@@ -2309,7 +2309,6 @@ export default function App() {
                       : "bg-transparent hover:bg-accent/30")
                 }
                 title="Drag to resize"
-                aria-label="Resize left panel"
               />
             )}
             <div className="flex items-center justify-between px-4 pt-4">
@@ -2383,7 +2382,9 @@ export default function App() {
             same commit as the panel's class change, which would make Chromium
             skip the open transition. Click or (in Focus Mode) hover restores
             the panel. Always faintly visible + wider so users can discover it. */}
-        <div
+        <button
+          type="button"
+          tabIndex={leftVisible ? -1 : 0}
           onMouseEnter={() => focusMode && openLeftPeek()}
           onMouseLeave={() => focusMode && scheduleCloseLeft()}
           className={
@@ -2399,7 +2400,7 @@ export default function App() {
             weight="bold"
             className="text-muted transition-opacity group-hover:text-ink"
           />
-        </div>
+        </button>
 
         <section className="relative flex-1 min-w-0 px-6 pt-4 pb-6">
           <Editor
@@ -2463,7 +2464,6 @@ export default function App() {
                       : "bg-transparent hover:bg-accent/30")
                 }
                 title="Drag to resize"
-                aria-label="Resize right panel"
               />
             )}
             <ReviewPanel
@@ -2513,7 +2513,9 @@ export default function App() {
             same commit as the panel's class change, which would make Chromium
             skip the open transition. Click or (in Focus Mode) hover restores
             the panel. Always faintly visible + wider so users can discover it. */}
-        <div
+        <button
+          type="button"
+          tabIndex={rightVisible ? -1 : 0}
           onMouseEnter={() => focusMode && openRightPeek()}
           onMouseLeave={() => focusMode && scheduleCloseRight()}
           className={
@@ -2529,7 +2531,7 @@ export default function App() {
             weight="bold"
             className="text-muted transition-opacity group-hover:text-ink"
           />
-        </div>
+        </button>
       </main>
 
       {hoveredError && (

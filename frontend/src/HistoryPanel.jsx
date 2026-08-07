@@ -138,9 +138,12 @@ export default function HistoryPanel({
       <div
         className="flex max-h-[80vh] w-full max-w-lg flex-col overflow-hidden rounded-xl border border-hairline bg-white lex-card-enter"
         onClick={(event) => event.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="history-title"
       >
         <div className="flex items-center justify-between border-b border-hairline px-5 py-3">
-          <p className="font-mono text-[10px] uppercase tracking-widest text-muted">
+          <p id="history-title" className="font-mono text-[10px] uppercase tracking-widest text-muted">
             History & Recents
           </p>
           <button
@@ -251,6 +254,7 @@ export default function HistoryPanel({
                   ? "Search drafts…"
                   : "Search generations…"
               }
+              aria-label="Search history"
               className="w-full rounded border border-hairline bg-canvas py-1.5 pl-8 pr-3 font-sans text-xs text-ink outline-none focus:border-muted"
             />
           </div>

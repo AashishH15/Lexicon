@@ -711,6 +711,7 @@ const LinkPopover = forwardRef(function LinkPopover(
           }
         }}
         placeholder="https://example.com"
+        aria-label="Link URL"
         className="min-w-0 flex-1 rounded border border-hairline bg-canvas px-2 py-1.5 font-sans text-xs text-ink outline-none focus:border-muted"
       />
       {data.href && (
@@ -839,6 +840,7 @@ const MathPopover = forwardRef(function MathPopover({ data, onApply, onClose, on
           }
         }}
         placeholder={data.kind === "block" ? "\\sum_{i=1}^{n} x_i" : "\\int_0^\\infty e^{-x^2} dx"}
+        aria-label="Math expression (LaTeX)"
         className="mb-2 w-full rounded border border-hairline bg-canvas px-2 py-1.5 font-mono text-xs text-ink outline-none focus:border-muted"
       />
       <div className="min-h-8 overflow-x-auto rounded border border-hairline bg-canvas px-3 py-2">

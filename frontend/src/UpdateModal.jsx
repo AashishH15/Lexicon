@@ -22,9 +22,14 @@ export default function UpdateModal({ update, onClose, onInstall }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="flex max-h-[85vh] h-auto w-full max-w-md flex-col overflow-hidden rounded-2xl border border-hairline bg-canvas shadow-2xl">
+      <div
+        className="flex max-h-[85vh] h-auto w-full max-w-md flex-col overflow-hidden rounded-2xl border border-hairline bg-canvas shadow-2xl"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="update-title"
+      >
         <div className="flex items-center justify-between border-b border-hairline px-6 py-4">
-          <p className="font-sans text-sm font-semibold text-ink">
+          <p id="update-title" className="font-sans text-sm font-semibold text-ink">
             Update available {versionStr ? `(${versionStr})` : ""}
           </p>
           <button
