@@ -2595,6 +2595,12 @@ export default function App() {
       <Suspense fallback={null}>
         {aiSetupOpen && (
           <AiSetupModal
+            typographyPreset={typographyPreset}
+            onTypographyPresetChange={handleTypographyPresetChange}
+            paperTexture={paperTexture}
+            onPaperTextureChange={handlePaperTextureChange}
+            readingMode={readingMode}
+            onReadingModeChange={handleReadingModeChange}
             onConfigured={refreshAiConfigured}
             onClose={async () => {
               await refreshAiConfigured();

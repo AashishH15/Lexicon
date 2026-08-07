@@ -908,8 +908,23 @@
     }
 
     .lex-app-shell[data-paper-texture="dark-slate"] .bg-ink.text-white,
-    .lex-app-shell[data-paper-texture="dark-slate"] .border-ink.bg-ink.text-white {
-      color: #1b1b1b;
+    .lex-app-shell[data-paper-texture="dark-slate"] .bg-ink.text-canvas,
+    .lex-app-shell[data-paper-texture="dark-slate"] .border-ink.bg-ink.text-white,
+    .lex-app-shell[data-paper-texture="dark-slate"] .border-ink.bg-ink.text-canvas {
+      color: #1b1b1b !important;
+    }
+
+    .lex-app-shell[data-paper-texture="dark-slate"] div[role="dialog"] .bg-hairline\/80 {
+      background-color: #383838;
+      color: #edece8;
+    }
+
+    .lex-app-shell[data-paper-texture="dark-slate"] div[role="dialog"] .bg-canvas {
+      background-color: #242424;
+    }
+
+    .lex-app-shell[data-paper-texture="dark-slate"] div[role="dialog"] .bg-hairline\/40 {
+      background-color: #333333;
     }
 
     .lex-app-shell[data-paper-texture="dark-slate"] input::placeholder,

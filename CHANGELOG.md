@@ -7,6 +7,34 @@ This changelog tracks what is **live** in each release and what is still
 **stubbed** (shown in the interface but not yet functional). Stubbed features
 are listed so the release reads honestly about what works today.
 
+## v0.10.1 — Typography, Paper Textures, Accessibility & Onboarding Studio
+
+### Quick Downloads:
+
+- 🪟 **[Windows x64 Setup](https://github.com/AashishH15/Lexicon/releases/download/v0.10.1/Lexicon_0.10.1_x64-setup.exe)**: Standard installer for modern 64-bit Windows PCs (Intel / AMD).
+- 🍏 **[macOS Apple Silicon DMG](https://github.com/AashishH15/Lexicon/releases/download/v0.10.1/Lexicon_0.10.1_aarch64.dmg)**: For modern Apple Silicon Macs (M1, M2, M3, M4 chips).
+- 🐧 **[Linux x64 DEB](https://github.com/AashishH15/Lexicon/releases/tag/v0.10.1)**: Debian package (`.deb`) for 64-bit Linux distributions (Ubuntu, Debian, Mint, Pop!_OS).
+- 📦 **[View All Assets & Checksums](https://github.com/AashishH15/Lexicon/releases/tag/v0.10.1)**: Complete list of installers including ARM64 Windows, x86 Windows, Intel macOS, and Linux x64 DEB.
+
+### What's New & Fixed in v0.10.1:
+
+#### 🎨 Onboarding Studio Overhaul:
+- **Spacious 5-Step Flow**: Expanded Lexicon Setup modal into a clean 5-step onboarding wizard.
+- **In-Card Live Text Previews**: Added live typography preview boxes showing authentic `JetBrains Mono`, `Inter`, `Newsreader`, and `Geist Sans` directly inside option cards.
+- **Accessibility Previews**: Added live Bionic Reading and OpenDyslexic preview boxes.
+- **Paper Texture Cards**: Added color swatch dots and active checkmark badges for `Plain White`, `Cream`, `Linen`, `Newsprint`, and `Dark Slate`.
+- **Dark Mode Contrast**: Hardened WCAG contrast for step badges and action buttons across all themes.
+
+#### 🔤 Typography & Paper Engine (v0.10 Feature Suite):
+- **Typography Presets**: Switch between Default (System Sans), Editorial (Newsreader Serif), Modern (Inter Sans), and Monospace (JetBrains Mono) with instant live rendering.
+- **Paper Surface Textures**: 5 canvas textures with customizable page colors and surround chrome.
+- **Accessibility & Reading Modes**: Built-in Bionic Reading mode and OpenDyslexic font support.
+- **Previous Releases & Rollback**: Dynamic version history list in Settings -> About & Feedback.
+- **Automated Beta Distribution**: Built-in `beta.json` manifest support for beta release channels.
+
+> For more details about v0.10.0, check the [v0.10.0 release page](https://github.com/AashishH15/Lexicon/releases/tag/v0.10.0)
+---
+
 ## v0.10.0 — Typography, Theme Presets, & Accessibility Additions
 
 ### Quick Downloads:
