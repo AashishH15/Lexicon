@@ -275,7 +275,7 @@ export default function ReviewPanel({
                 </div>
                 <button
                   type="button"
-                  aria-label="Accept all suggestions"
+                  aria-label={`Accept all ${count} suggestions`}
                   onClick={() => {
                     if (folding) return;
                     setFolding(true);

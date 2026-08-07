@@ -102,6 +102,7 @@ export default function EpubMetadataModal({ editor, onClose }) {
               value={author}
               onChange={(event) => setAuthor(event.target.value)}
               placeholder="e.g. Jane Writer"
+              autoComplete="name"
               className={FIELD_CLASS}
             />
           </label>
@@ -131,6 +132,7 @@ export default function EpubMetadataModal({ editor, onClose }) {
               value={publisher}
               onChange={(event) => setPublisher(event.target.value)}
               placeholder="Optional"
+              autoComplete="organization"
               className={FIELD_CLASS}
             />
           </label>

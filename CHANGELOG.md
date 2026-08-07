@@ -63,6 +63,12 @@ are listed so the release reads honestly about what works today.
   - **Explicit Input Accessibility Labels**: Added explicit `aria-label` attributes to 12 placeholder-only inputs across `Editor.jsx` (link URL, math LaTeX), `FormatToolbar.jsx` (image URL), `Settings.jsx`, `DictionaryPanel.jsx`, `HistoryPanel.jsx`, `CustomToolsSettings.jsx`, and `DocxExportModal.jsx`.
   - **Modal Dialog Semantics & ARIA Landmarks**: Configured `role="dialog"`, `aria-modal="true"`, and `aria-labelledby` pointing to modal titles directly on the inner window cards of all 11 modals across the application (`TemplateGalleryModal`, `Settings`, `ExportOptionsModal`, `DocxExportModal`, `EpubMetadataModal`, `UpdateModal`, `ConfirmModal`, `OnboardingModal`, `DictionaryPanel`, `HistoryPanel`, `CustomToolsSettings`).
 
+- **WCAG 2.1 Level AA Accessibility Enhancements**:
+  - **Toggle Track Non-Text Contrast (1.4.11)**: Added a crisp `border border-neutral-300` to unchecked toggle switch tracks in `Toggle.jsx` so control boundaries are clearly demarcated against all paper canvas backgrounds ($\ge 3:1$ contrast).
+  - **Non-Color Error Category Indicators (1.4.1)**: Added visual text decorations to error match types in `index.css` (spelling: `underline wavy`, grammar: `underline wavy`, style: `underline dashed`, prose: `underline dotted`) so colorblind users can visually distinguish error categories without relying on color alone.
+  - **Voice Control & Speech Recognition Label Matching (2.5.3)**: Matched `aria-label` with visible text on ReviewPanel's "Accept all X suggestions" button (`aria-label={`Accept all ${count} suggestions`}`).
+  - **Identify Input Purpose Attributes (1.3.5)**: Added `autoComplete="name"` and `autoComplete="organization"` to author and publisher input fields across export modals (`DocxExportModal.jsx`, `EpubMetadataModal.jsx`).
+
 - **Browser-Style Zoom (Accessibility)**: Full-page zoom is now enabled. Ctrl + Plus / Ctrl + Minus, Ctrl + 0 to reset, Ctrl + mouse wheel, and touchpad pinch gestures all scale the interface exactly like a browser.
 
 ---

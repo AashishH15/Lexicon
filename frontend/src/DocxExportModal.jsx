@@ -137,6 +137,7 @@ export default function DocxExportModal({ editor, matches, onClose }) {
               value={author}
               onChange={(event) => handleAuthorChange(event.target.value)}
               placeholder="Lex"
+              autoComplete="name"
               className="mt-1 w-full rounded-lg border border-hairline bg-white px-3 py-2 font-sans text-sm text-ink outline-none transition-colors placeholder:text-muted focus:border-ink"
             />
             <span className="mt-1 block font-sans text-[11px] leading-relaxed text-muted">
