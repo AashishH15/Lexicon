@@ -141,6 +141,45 @@ describe("Paper texture catalog invariants", () => {
       }
     }
   });
+
+  it("keeps ink readable on the surround shell of every theme (WCAG AA)", () => {
+    for (const texture of PAPER_TEXTURES) {
+      if (texture.id === "dark-slate") {
+        expect(contrastRatio("#edece8", texture.surroundColor)).toBeGreaterThanOrEqual(4.5);
+      } else {
+        expect(contrastRatio("#111111", texture.surroundColor)).toBeGreaterThanOrEqual(4.5);
+      }
+    }
+  });
+
+  it("keeps muted text readable on every page and surround (WCAG AA)", () => {
+    // Muted comes from the Tailwind token so the test tracks the real value.
+    const muted = tailwindConfig.theme.extend.colors.muted;
+    for (const texture of PAPER_TEXTURES) {
+      if (texture.id === "dark-slate") {
+        // Dark Slate overrides text-muted to a light gray on the dark shell.
+        expect(contrastRatio("#b0ada6", texture.pageColor)).toBeGreaterThanOrEqual(4.5);
+        expect(contrastRatio("#b0ada6", texture.surroundColor)).toBeGreaterThanOrEqual(4.5);
+        // ...and on elevated surfaces (the dark bg-white replacement).
+        expect(contrastRatio("#b0ada6", "#2c2c2c")).toBeGreaterThanOrEqual(4.5);
+      } else {
+        expect(contrastRatio(muted, texture.pageColor)).toBeGreaterThanOrEqual(4.5);
+        expect(contrastRatio(muted, texture.surroundColor)).toBeGreaterThanOrEqual(4.5);
+        expect(contrastRatio(muted, "#ffffff")).toBeGreaterThanOrEqual(4.5);
+      }
+    }
+  });
+
+  it("keeps placeholder hints readable (WCAG AA)", () => {
+    // Light theme: the placeholder-muted class and placeholder:text-muted
+    // both resolve to the muted token.
+    const muted = tailwindConfig.theme.extend.colors.muted;
+    expect(contrastRatio(muted, "#ffffff")).toBeGreaterThanOrEqual(4.5);
+    expect(contrastRatio(muted, "#F7F6F3")).toBeGreaterThanOrEqual(4.5);
+    // Dark Slate: the CSS override re-lights placeholders on inputs.
+    expect(contrastRatio("#9a9791", "#2c2c2c")).toBeGreaterThanOrEqual(4.5);
+    expect(contrastRatio("#9a9791", "#1b1b1b")).toBeGreaterThanOrEqual(4.5);
+  });
 });
 
 describe("Bionic prefix transforms", () => {

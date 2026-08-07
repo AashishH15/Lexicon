@@ -6,7 +6,7 @@ export default {
       colors: {
         canvas: "#F7F6F3",
         ink: "#111111",
-        muted: "#787774",
+        muted: "#5F5E5B",
         hairline: "#EAEAEA",
         "pale-red": "#FDEBEC",
         "pale-red-text": "#9F2F2D",

@@ -2397,7 +2397,7 @@ export default function App() {
           <ArrowSquareRight
             size={14}
             weight="bold"
-            className="text-muted/60 transition-opacity group-hover:text-muted"
+            className="text-muted transition-opacity group-hover:text-ink"
           />
         </div>
 
@@ -2527,7 +2527,7 @@ export default function App() {
           <ArrowSquareLeft
             size={14}
             weight="bold"
-            className="text-muted/60 transition-opacity group-hover:text-muted"
+            className="text-muted transition-opacity group-hover:text-ink"
           />
         </div>
       </main>

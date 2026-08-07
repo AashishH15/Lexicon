@@ -977,7 +977,7 @@ export default function Settings({
                         onDocxAuthorChange(event.target.value)
                       }
                       placeholder="Lex"
-                      className="mt-3 w-full rounded border border-hairline bg-canvas px-3 py-2 font-sans text-sm text-ink outline-none transition-colors placeholder:text-muted/60 focus:border-muted"
+                      className="mt-3 w-full rounded border border-hairline bg-canvas px-3 py-2 font-sans text-sm text-ink outline-none transition-colors placeholder:text-muted focus:border-muted"
                     />
                   </div>
                 </div>

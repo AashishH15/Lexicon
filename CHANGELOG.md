@@ -7,7 +7,7 @@ This changelog tracks what is **live** in each release and what is still
 **stubbed** (shown in the interface but not yet functional). Stubbed features
 are listed so the release reads honestly about what works today.
 
-## v0.10.0 — Typography & Reading Presets
+## v0.10.0 — Typography, Theme Presets, & Accessibility Additions
 
 ### Quick Downloads:
 
@@ -49,6 +49,11 @@ are listed so the release reads honestly about what works today.
 - **Appearance Settings Panel**:
   - Dedicated **Appearance** controls in Settings modal with dropdown selectors for Typography Preset, Paper Texture, and Reading Mode.
   - Full persistence across app reboots via `localStorage` with catalog-validated fallback protections.
+
+- **WCAG AA Contrast & Accessibility Verification**:
+  - Upgraded secondary muted text (`#787774` → `#5F5E5B`) to clear WCAG AA contrast requirements ($\ge 4.5:1$) across all light paper themes and surround shells (achieving 6.48:1 on white and 4.68:1 on Linen).
+  - Re-lit Dark Slate placeholders (`#8A8780` → `#9A9791`) and checked task-list items to guarantee high-contrast legibility on dark surfaces.
+  - Added automated math-based contrast assertions (`typography.test.js`) verifying body ink, muted text, surround shells, and placeholders pass WCAG AA contrast thresholds across all 5 themes.
 
 - **Browser-Style Zoom (Accessibility)**: Full-page zoom is now enabled. Ctrl + Plus / Ctrl + Minus, Ctrl + 0 to reset, Ctrl + mouse wheel, and touchpad pinch gestures all scale the interface exactly like a browser.
 

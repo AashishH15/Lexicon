@@ -114,7 +114,7 @@
     line-height: 1.3;
     letter-spacing: 0.02em;
     text-transform: uppercase;
-    color: #787774;
+    color: #5f5e5b;
     margin: 0.4em 0 0.2em;
   }
 
@@ -186,7 +186,7 @@
   }
 
   .ProseMirror ul[data-type="taskList"] li[data-checked="true"]>div {
-    color: #787774;
+    color: #5f5e5b;
     text-decoration: line-through;
   }
 
@@ -208,7 +208,7 @@
     float: left;
     height: 0;
     pointer-events: none;
-    color: #787774;
+    color: #5f5e5b;
     font-style: italic;
     opacity: 0.55;
   }
@@ -217,7 +217,7 @@
     margin: 0.6em 0;
     padding: 0.2em 0 0.2em 1rem;
     border-left: 3px solid #e1f3fe;
-    color: #787774;
+    color: #5f5e5b;
   }
 
   .ProseMirror a {
@@ -265,7 +265,7 @@
   /* Lowlight syntax token colors — desaturated to suit the editorial palette */
   .ProseMirror pre code .hljs-comment,
   .ProseMirror pre code .hljs-quote {
-    color: #787774;
+    color: #5f5e5b;
     font-style: italic;
   }
 
@@ -416,7 +416,7 @@
   .ProseMirror .tiptap-mathematics-render[data-latex=" "] {
     border-style: dashed;
     border-color: #d9d6d0;
-    color: #9b968c;
+    color: #5f5e5b;
     font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
   }
 
@@ -781,6 +781,13 @@
       font-weight: 700;
     }
 
+    /* Placeholder hint text uses the muted token so it clears WCAG AA
+       (4.5:1) on every paper: the browser default falls short on the
+       canvas surround. Dark Slate re-lights it further below. */
+    .placeholder-muted::placeholder {
+      color: #5f5e5b;
+    }
+
     /* Dark Slate only: light ink on the dark page, dark code chips, and
        solid elevated surfaces on the dark surround. Screen-scoped so print
        stays light-on-white. Does not rewrite the design tokens globally. */
@@ -894,7 +901,7 @@
 
     .lex-app-shell[data-paper-texture="dark-slate"] input::placeholder,
     .lex-app-shell[data-paper-texture="dark-slate"] .placeholder-muted::placeholder {
-      color: #8a8780;
+      color: #9a9791;
     }
 
     .lex-app-shell[data-paper-texture="dark-slate"] .lex-drag-handle:hover {
@@ -956,7 +963,9 @@
 
     .lex-editor-surround[data-paper-texture="dark-slate"] .ProseMirror h6,
     .lex-editor-surround[data-paper-texture="dark-slate"] .ProseMirror blockquote,
-    .lex-editor-surround[data-paper-texture="dark-slate"] .ProseMirror p.is-editor-empty:first-child::before {
+    .lex-editor-surround[data-paper-texture="dark-slate"] .ProseMirror p.is-editor-empty:first-child::before,
+    .lex-editor-surround[data-paper-texture="dark-slate"] .ProseMirror ul[data-type="taskList"] li[data-checked="true"]>div,
+    .lex-editor-surround[data-paper-texture="dark-slate"] .ProseMirror .tiptap-mathematics-render[data-latex=" "] {
       color: #9a9790;
     }
 

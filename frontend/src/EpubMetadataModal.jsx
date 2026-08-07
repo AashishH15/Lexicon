@@ -3,7 +3,7 @@ import { X, Book, CircleNotch } from "@phosphor-icons/react";
 import { downloadBlob } from "./download.js";
 
 const FIELD_CLASS =
-  "mt-1 w-full rounded-lg border border-hairline bg-white px-3 py-2 font-sans text-sm text-ink outline-none transition-colors placeholder:text-muted/60 focus:border-ink";
+  "mt-1 w-full rounded-lg border border-hairline bg-white px-3 py-2 font-sans text-sm text-ink outline-none transition-colors placeholder:text-muted focus:border-ink";
 
 export default function EpubMetadataModal({ editor, onClose }) {
   const [title, setTitle] = useState("");

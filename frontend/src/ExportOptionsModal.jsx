@@ -227,7 +227,7 @@ export default function ExportOptionsModal({ editor, mode, onClose }) {
                   }
                 }}
                 placeholder="e.g. Dark navy headings with 1.5 line spacing..."
-                className="flex-1 rounded-lg border border-hairline bg-white px-3 py-1.5 font-sans text-xs text-ink outline-none transition-colors placeholder:text-muted/60 focus:border-ink"
+                className="flex-1 rounded-lg border border-hairline bg-white px-3 py-1.5 font-sans text-xs text-ink outline-none transition-colors placeholder:text-muted focus:border-ink"
               />
               {aiGenerating ? (
                 <button
@@ -303,7 +303,7 @@ export default function ExportOptionsModal({ editor, mode, onClose }) {
                 ? "/* Lex is drafting custom CSS rules... */"
                 : "/* e.g. .ProseMirror p { color: #333; } */"
             }
-            className={`mt-1.5 w-full resize-y rounded-xl border border-hairline bg-white px-3.5 py-2.5 font-mono text-xs text-ink outline-none transition-colors placeholder:text-muted/60 focus:border-ink ${
+            className={`mt-1.5 w-full resize-y rounded-xl border border-hairline bg-white px-3.5 py-2.5 font-mono text-xs text-ink outline-none transition-colors placeholder:text-muted focus:border-ink ${
               aiGenerating ? "animate-pulse border-hairline/80 bg-hairline/10" : ""
             }`}
           />
