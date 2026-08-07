@@ -267,7 +267,7 @@
 
   function initRevealAnimations() {
   const revealSelector =
-  '.section-header, .bento-card, .proofread-live, .editor-live, .export-live-card, .manifesto-card, .tutorial-card, .privacy-card, .faq-item, .setup-step-box, .support-card, .privacy-comparison-table, .footer';
+  '.section-header, .bento-card, .proofread-live, .editor-live, .export-live-card, .appearance-live-card, .manifesto-card, .tutorial-card, .privacy-card, .faq-item, .setup-step-box, .support-card, .privacy-comparison-table, .footer';
  const revealEls = Array.prototype.slice.call(document.querySelectorAll(revealSelector));
 
  if (!('IntersectionObserver' in window)) {
@@ -550,7 +550,9 @@
     let autoTimer = null;
     const themeKeys = ['academic', 'novel', 'minimalist', 'executive'];
     const formatKeys = ['pdf', 'epub', 'docx', 'html'];
-    let autoIndex = 0;
+    let lastCombo = null;
+    let autoPauseUntil = 0;
+    const AUTO_RESUME_DELAY = 10000;
 
     function triggerExportAnimation(fmtKey) {
       if (!progressFill) return;
@@ -602,9 +604,11 @@
 
       triggerExportAnimation(activeFormat);
 
-      if (isUserClick && autoTimer) {
-        clearInterval(autoTimer);
-        autoTimer = null;
+      // User picks only pause the auto-cycle; it resumes on its own after
+      // a while (same behavior as the Appearance Studio widget).
+      if (isUserClick) {
+        autoPauseUntil = Date.now() + AUTO_RESUME_DELAY;
+        lastCombo = { format: activeFormat, theme: activeTheme };
       }
     }
 
@@ -620,11 +624,238 @@
       });
     });
 
-    // Auto-cycle demo every 3.8 seconds
+    // Random walk through all 16 combinations (4 formats x 4 themes), never
+    // showing the exact combo twice in a row; user picks pause the walk,
+    // and it resumes on its own after a while.
     autoTimer = setInterval(function () {
-      autoIndex = (autoIndex + 1) % 4;
-      updateState(formatKeys[autoIndex], themeKeys[autoIndex], false);
+      if (Date.now() < autoPauseUntil) return;
+      let combo;
+      for (let attempt = 0; attempt < 6; attempt++) {
+        combo = {
+          format: formatKeys[Math.floor(Math.random() * formatKeys.length)],
+          theme: themeKeys[Math.floor(Math.random() * themeKeys.length)]
+        };
+        if (!lastCombo || combo.format !== lastCombo.format || combo.theme !== lastCombo.theme) break;
+      }
+      lastCombo = combo;
+      updateState(combo.format, combo.theme, false);
     }, 3800);
+  }
+
+  function initAppearanceDemo() {
+    const card = document.getElementById('appearance-demo-card');
+    if (!card) return;
+
+    const page = document.getElementById('appearance-page');
+    const wrap = document.getElementById('appearance-page-wrap');
+    const metrics = document.getElementById('appearance-metrics');
+    const titleEl = document.getElementById('appearance-title');
+    const parEls = [
+      document.getElementById('appearance-par-1'),
+      document.getElementById('appearance-par-2')
+    ].filter(Boolean);
+    if (!page || !wrap || !titleEl) return;
+
+    // Same catalogs as the desktop app (frontend/src/typographyPresets.js,
+    // paperTextures.js, readingMode.js). Identical stacks, colors, and
+    // grain/shadow pairs so the demo shows exactly what ships.
+    const TYPOGRAPHY = {
+      current: {
+        label: 'Sans / Serif',
+        heading: '"Newsreader", Georgia, serif',
+        body: '"Geist Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif'
+      },
+      editorial: {
+        label: 'Serif / Editorial',
+        heading: '"Newsreader", Georgia, "Times New Roman", serif',
+        body: '"Newsreader", Georgia, "Times New Roman", serif'
+      },
+      modern: {
+        label: 'Sans / Modern',
+        heading: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif',
+        body: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif'
+      },
+      mono: {
+        label: 'Mono / Code',
+        heading: '"JetBrains Mono", ui-monospace, "SFMono-Regular", monospace',
+        body: '"JetBrains Mono", ui-monospace, "SFMono-Regular", monospace'
+      }
+    };
+
+    const PAPER = {
+      'plain-white': { label: 'Plain White', page: '#FFFFFF', surround: '#F7F6F3', grain: 0, shadow: 0, ink: '#111111' },
+      'warm-cream': { label: 'Warm Cream', page: '#FEFBF0', surround: '#F3EEE0', grain: 0.04, shadow: 0.08, ink: '#111111' },
+      linen: { label: 'Linen', page: '#F5EFE0', surround: '#E2DACD', grain: 0.06, shadow: 0.12, ink: '#111111' },
+      newsprint: { label: 'Newsprint', page: '#F2F3F1', surround: '#E2E4E0', grain: 0.1, shadow: 0.15, ink: '#111111' },
+      'dark-slate': { label: 'Dark Slate', page: '#242424', surround: '#1B1B1B', grain: 0.05, shadow: 0.45, ink: '#EDECE8' }
+    };
+
+    const READING = {
+      off: { label: 'Off' },
+      bionic: { label: 'Bionic' },
+      'open-dyslexic': { label: 'OpenDyslexic' }
+    };
+
+    const OPEN_DYSLEXIC_STACK = '"OpenDyslexic", "Geist Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif';
+
+    const SAMPLE = {
+      title: 'A quiet desk for your thoughts.',
+      par1: 'Lexicon proofreads as you type and rewrites with your own local Lex model. Every check runs on your machine, so your prose never leaves your computer.',
+      par2: 'Pick a typeface pairing, warm up the paper, or switch to Bionic or OpenDyslexic. The page follows you instantly.'
+    };
+
+    const chips = Array.prototype.slice.call(card.querySelectorAll('.appearance-chip'));
+    const groups = { typography: [], paper: [], reading: [] };
+    chips.forEach(function (chip) {
+      const group = chip.closest('.appearance-chip-group').getAttribute('data-group');
+      if (groups[group]) groups[group].push(chip);
+    });
+
+    const state = { typography: 'current', paper: 'plain-white', reading: 'off' };
+    let autoTimer = null;
+
+    // Same prefix rule as the app's bionic plugin: the first ~half of each
+    // letter/number run (apostrophe-internal words count as one run), min 1.
+    const WORD_RE = /[\p{L}\p{N}]+(?:['\u2019][\p{L}\p{N}]+)*/gu;
+
+    function bionicHtml(text) {
+      const safe = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      let html = '';
+      let last = 0;
+      let m;
+      WORD_RE.lastIndex = 0;
+      while ((m = WORD_RE.exec(safe)) !== null) {
+        const prefixLen = Math.max(1, Math.ceil(m[0].length / 2));
+        html += safe.slice(last, m.index);
+        html += '<b class="lex-bionic-prefix">' + safe.slice(m.index, m.index + prefixLen) + '</b>';
+        html += safe.slice(m.index + prefixLen, m.index + m[0].length);
+        last = m.index + m[0].length;
+      }
+      html += safe.slice(last);
+      return html;
+    }
+
+    function renderPage() {
+      const type = TYPOGRAPHY[state.typography];
+      const paper = PAPER[state.paper];
+      const reading = READING[state.reading];
+
+      const fonts =
+        state.reading === 'open-dyslexic'
+          ? { heading: OPEN_DYSLEXIC_STACK, body: OPEN_DYSLEXIC_STACK }
+          : { heading: type.heading, body: type.body };
+      page.style.setProperty('--app-heading-font', fonts.heading);
+      page.style.setProperty('--app-body-font', fonts.body);
+
+      wrap.style.setProperty('--app-surround-color', paper.surround);
+      wrap.style.setProperty('--app-grain-opacity', String(paper.grain));
+      page.style.setProperty('--app-page-color', paper.page);
+      page.style.setProperty('--app-ink-color', paper.ink);
+      page.style.setProperty('--app-shadow-strength', String(paper.shadow));
+
+      const bionic = state.reading === 'bionic';
+      if (bionic) {
+        titleEl.innerHTML = bionicHtml(SAMPLE.title);
+        parEls.forEach(function (el, i) { el.innerHTML = bionicHtml(SAMPLE['par' + (i + 1)]); });
+      } else {
+        titleEl.textContent = SAMPLE.title;
+        parEls.forEach(function (el, i) { el.textContent = SAMPLE['par' + (i + 1)]; });
+      }
+
+      metrics.textContent = type.label + ' \u00B7 ' + paper.label + ' \u00B7 Reading: ' + reading.label;
+    }
+
+    function syncChips() {
+      Object.keys(groups).forEach(function (group) {
+        groups[group].forEach(function (chip) {
+          chip.classList.toggle('active', chip.getAttribute('data-value') === state[group]);
+        });
+      });
+    }
+
+    // Picking a combo by hand only pauses the auto-cycle for a while; it
+    // resumes the random walk on its own after that.
+    const AUTO_RESUME_DELAY = 10000;
+    let autoPauseUntil = 0;
+
+    chips.forEach(function (chip) {
+      chip.addEventListener('click', function () {
+        const group = chip.closest('.appearance-chip-group').getAttribute('data-group');
+        state[group] = chip.getAttribute('data-value');
+        syncChips();
+        renderPage();
+        autoPauseUntil = Date.now() + AUTO_RESUME_DELAY;
+        lastCombo = { typography: state.typography, paper: state.paper, reading: state.reading };
+      });
+    });
+
+    renderPage();
+
+    // Random walk through all 60 combinations (4 typography x 5 paper x 3
+    // reading modes), never showing the exact combo twice in a row. Reading
+    // mode participates so Bionic and OpenDyslexic get their moment too;
+    // user picks pause the walk, and it resumes on its own after a while.
+    const TYPOGRAPHY_IDS = Object.keys(TYPOGRAPHY);
+    const PAPER_IDS = Object.keys(PAPER);
+    const READING_IDS = Object.keys(READING);
+    let lastCombo = null;
+    autoTimer = setInterval(function () {
+      if (Date.now() < autoPauseUntil) return;
+      let combo;
+      for (let attempt = 0; attempt < 6; attempt++) {
+        combo = {
+          typography: TYPOGRAPHY_IDS[Math.floor(Math.random() * TYPOGRAPHY_IDS.length)],
+          paper: PAPER_IDS[Math.floor(Math.random() * PAPER_IDS.length)],
+          reading: READING_IDS[Math.floor(Math.random() * READING_IDS.length)]
+        };
+        if (!lastCombo || combo.typography !== lastCombo.typography || combo.paper !== lastCombo.paper || combo.reading !== lastCombo.reading) break;
+      }
+      lastCombo = combo;
+      state.typography = combo.typography;
+      state.paper = combo.paper;
+      state.reading = combo.reading;
+      syncChips();
+      renderPage();
+    }, 4200);
+
+    // Lock the page to its tallest state (the Mono / Code typography wraps
+    // the widest and renders tallest), so switching presets never resizes
+    // the widget. Measured across every typography stack rather than
+    // hardcoded, so OS font fallbacks can't break the fit. Re-measured on
+    // resize because narrower viewports wrap the text further.
+    function lockPageHeight() {
+      const savedHeading = page.style.getPropertyValue('--app-heading-font');
+      const savedBody = page.style.getPropertyValue('--app-body-font');
+      page.style.minHeight = '';
+      let max = 0;
+      Object.keys(TYPOGRAPHY).forEach(function (id) {
+        const preset = TYPOGRAPHY[id];
+        page.style.setProperty('--app-heading-font', preset.heading);
+        page.style.setProperty('--app-body-font', preset.body);
+        max = Math.max(max, page.offsetHeight);
+      });
+      page.style.setProperty('--app-heading-font', savedHeading);
+      page.style.setProperty('--app-body-font', savedBody);
+      if (max > 0) page.style.minHeight = max + 'px';
+    }
+
+    function scheduleHeightLock() {
+      const fontsReady = (document.fonts && document.fonts.ready) || Promise.resolve();
+      const fallback = setTimeout(lockPageHeight, 2000);
+      fontsReady.then(function () {
+        clearTimeout(fallback);
+        lockPageHeight();
+      });
+    }
+
+    let resizeLockTimer = null;
+    window.addEventListener('resize', function () {
+      clearTimeout(resizeLockTimer);
+      resizeLockTimer = setTimeout(scheduleHeightLock, 150);
+    });
+
+    renderPage();
+    scheduleHeightLock();
   }
 
   function initAiWowDemo() {
@@ -954,7 +1185,7 @@
 
   function initCursorAwareDots() {
     var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    var zones = Array.prototype.slice.call(document.querySelectorAll('.demo-showcase, .widget-canvas, .editor-live-zone, .export-journey'));
+    var zones = Array.prototype.slice.call(document.querySelectorAll('.demo-showcase, .widget-canvas, .editor-live-zone, .export-journey, .appearance-zone'));
     if (!zones.length) return;
 
     var DOT_GAP = 22;
@@ -985,7 +1216,7 @@
       document.body.appendChild(canvas);
       items.push({
         zone: zone,
-        target: zone.querySelector('.faux-window, .ai-wow-demo, .editor-live, .export-live-card') || zone,
+        target: zone.querySelector('.faux-window, .ai-wow-demo, .editor-live, .export-live-card, .appearance-live-card') || zone,
         canvas: canvas,
         ctx: canvas.getContext('2d'),
         dots: [],
@@ -1004,7 +1235,7 @@
       var width = Math.min(zoneW + PAD_SIDE * 2, MAX_WIDTH);
       var height = zoneRect.height + PAD_TOP + PAD_BOTTOM;
       var dpr = window.devicePixelRatio || 1;
-      var x, y, rows, startY, dots = [];
+      var x, y, cols, rows, startX, startY, dots = [];
       item.cssW = width;
       item.cssH = height;
       item.canvas.style.width = width + 'px';
@@ -1018,12 +1249,14 @@
       item.rect.top = zoneRect.top + window.scrollY - PAD_TOP;
       item.rect.width = width;
       item.rect.height = height;
-      // Center the grid vertically so the top and bottom pads always show
-      // the same number of dot rows, regardless of widget height.
+      // Center the grid both ways so the side pads always show the same
+      // number of dot columns as the top and bottom pads show rows.
+      cols = Math.max(1, Math.floor(width / DOT_GAP));
       rows = Math.max(1, Math.floor(height / DOT_GAP));
+      startX = (width - (cols - 1) * DOT_GAP) / 2;
       startY = (height - (rows - 1) * DOT_GAP) / 2;
       for (y = startY; y < height; y += DOT_GAP) {
-        for (x = DOT_GAP / 2; x < width; x += DOT_GAP) {
+        for (x = startX; x < width; x += DOT_GAP) {
           dots.push({ x: x, y: y });
         }
       }
@@ -1120,6 +1353,15 @@
 
     items.forEach(build);
 
+    // Rebuild a canvas whenever its target's size changes, not just on
+    // window resize: the appearance widget locks its page height after
+    // fonts finish loading, which resizes the card after this init ran and
+    // would otherwise leave the dot artboard bottom-heavy.
+    if (typeof ResizeObserver === 'function') {
+      var resizeObserver = new ResizeObserver(function () { onResize(); });
+      items.forEach(function (item) { resizeObserver.observe(item.target); });
+    }
+
     if (reduceMotion) return;
 
     window.addEventListener('mousemove', onMouseMove, { passive: true });
@@ -1162,6 +1404,7 @@
     initTypingDemo();
     initEditorDemo();
     initExportStudioDemo();
+    initAppearanceDemo();
     initAiWowDemo();
     initNavBarMorph();
     initCursorAwareDots();
