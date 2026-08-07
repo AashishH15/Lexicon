@@ -467,7 +467,7 @@ jobs:
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
-          draft: false
+          draft: true
           prerelease: false
           name: Lexicon ${{ github.ref_name }}
           body_path: artifacts/release_notes.txt
