@@ -46,8 +46,9 @@ are listed so the release reads honestly about what works today.
   - **Bionic Reading**: Non-destructive ProseMirror decoration plugin (`.lex-bionic-prefix`) that bolds the leading prefix (~50%) of every word. Code blocks, LaTeX math formulas, and inline code are automatically skipped. Document content and marks remain 100% byte-identical so undo/redo, saving, and grammar highlight offsets are completely untouched.
   - **OpenDyslexic**: Bundled local `OpenDyslexic-Regular.woff2` and `OpenDyslexic-Bold.woff2` fonts (Bitstream Vera license). Swaps the entire writing canvas (headings included) to OpenDyslexic while keeping code blocks monospaced.
 
-- **Appearance Settings Panel**:
+- **Appearance Settings Panel & Rollback Access**:
   - Dedicated **Appearance** controls in Settings modal with dropdown selectors for Typography Preset, Paper Texture, and Reading Mode.
+  - Added expandable **Previous Releases & Rollback** section under Settings → About & Feedback, which dynamically fetches past releases directly from the GitHub Releases API so users can view release notes or download previous installer packages if they encounter regressions.
   - Full persistence across app reboots via `localStorage` with catalog-validated fallback protections.
 
 - **WCAG AA Contrast & Accessibility Verification**:

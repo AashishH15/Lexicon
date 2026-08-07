@@ -24,6 +24,9 @@ import {
   Robot,
   PaperPlaneTilt,
   Palette,
+  CaretDown,
+  ArrowSquareOut,
+  CircleNotch,
 } from "@phosphor-icons/react";
 import Toggle from "./Toggle.jsx";
 import LanguageDropdown from "./LanguageDropdown.jsx";
@@ -341,7 +344,44 @@ const SEARCH_INDEX = [
       "emphasis",
     ],
   },
+  {
+    label: "Previous Releases & Rollback",
+    tab: "about",
+    settingKey: "rollback-version",
+    keywords: [
+      "rollback",
+      "version",
+      "previous",
+      "release",
+      "downgrade",
+      "older",
+      "history",
+      "tag",
+      "github",
+      "installer",
+    ],
+  },
 ];
+
+function getReleaseTitle(rel) {
+  if (!rel) return "";
+  if (rel.body) {
+    const match = rel.body.match(/##\s*v?\d+\.\d+(?:\.\d+)?\s*[\u2014\-–]\s*([^\r\n]+)/);
+    if (match && match[1]?.trim()) {
+      return match[1].trim();
+    }
+  }
+  if (rel.name) {
+    const match = rel.name.match(/[\u2014\-–]\s*([^\r\n]+)/);
+    if (match && match[1]?.trim()) {
+      return match[1].trim();
+    }
+    if (rel.name !== rel.tag_name && !/^lexicon\s+v\d/i.test(rel.name.trim())) {
+      return rel.name.trim();
+    }
+  }
+  return "";
+}
 
 function formatTimestamp(ts) {
   const diff = Date.now() - ts;
@@ -454,6 +494,33 @@ export default function Settings({
   const [histQuery, setHistQuery] = useState("");
   const [histCopiedId, setHistCopiedId] = useState(null);
   const histCopiedTimerRef = useRef(null);
+  const [showRollback, setShowRollback] = useState(false);
+  const [githubReleases, setGithubReleases] = useState([]);
+  const [releasesLoading, setReleasesLoading] = useState(false);
+  const [releasesError, setReleasesError] = useState(false);
+
+  useEffect(() => {
+    if (!showRollback || githubReleases.length > 0 || releasesLoading) return;
+    setReleasesLoading(true);
+    setReleasesError(false);
+    fetch("https://api.github.com/repos/AashishH15/Lexicon/releases")
+      .then((res) => {
+        if (!res.ok) throw new Error("GitHub API HTTP " + res.status);
+        return res.json();
+      })
+      .then((data) => {
+        const list = (Array.isArray(data) ? data : [])
+          .filter((r) => !r.draft)
+          .slice(0, 3);
+        setGithubReleases(list);
+        setReleasesLoading(false);
+      })
+      .catch((err) => {
+        console.warn("[Settings] Error fetching dynamic GitHub releases:", err);
+        setReleasesError(true);
+        setReleasesLoading(false);
+      });
+  }, [showRollback, githubReleases.length, releasesLoading]);
 
   useEffect(() => {
     if (activeTab !== "dictionary") return;
@@ -1825,6 +1892,118 @@ export default function Settings({
                           label="Toggle beta releases"
                         />
                       </div>
+                    </div>
+
+                    <div
+                      data-setting-key="rollback-version"
+                      className={`mt-4 border-t border-hairline pt-3.5 ${getHighlightClass("rollback-version")}`}
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <p className="font-mono text-[10px] uppercase tracking-widest text-muted">
+                            Previous Releases & Rollback
+                          </p>
+                          <p className="mt-1 font-sans text-xs text-muted">
+                            Encountered an issue with the latest release? Quickly view or download previous Lexicon release packages from GitHub.
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setShowRollback(!showRollback)}
+                          className="flex items-center gap-1.5 shrink-0 rounded border border-hairline bg-white px-2.5 py-1.5 font-sans text-xs font-medium text-ink transition-colors hover:border-muted hover:bg-hairline/40 focus-visible:ring-1 focus-visible:ring-ink"
+                          aria-label="Toggle previous release versions list"
+                        >
+                          <ClockCounterClockwise size={14} weight="bold" />
+                          <span>{showRollback ? "Hide Versions" : "View Versions"}</span>
+                          <CaretDown
+                            size={12}
+                            weight="bold"
+                            className={`transition-transform duration-200 ${showRollback ? "rotate-180" : ""}`}
+                          />
+                        </button>
+                      </div>
+
+                      {showRollback && (
+                        <div className="mt-3 flex flex-col gap-2 rounded-lg border border-hairline bg-white p-3">
+                          <p className="font-sans text-[11px] font-medium text-muted">
+                            Select a previous release to view assets or download installers:
+                          </p>
+                          {releasesLoading ? (
+                            <div className="flex items-center justify-center gap-2 py-4 text-xs text-muted">
+                              <CircleNotch size={15} className="animate-spin text-ink" />
+                              <span>Fetching releases from GitHub…</span>
+                            </div>
+                          ) : releasesError || githubReleases.length === 0 ? (
+                            <div className="flex flex-col gap-2 py-2">
+                              <p className="font-sans text-xs text-muted">
+                                Could not load release history dynamically. Browse releases directly on GitHub:
+                              </p>
+                              <button
+                                type="button"
+                                onClick={() => openExternalUrl("https://github.com/AashishH15/Lexicon/releases")}
+                                className="flex items-center justify-center gap-1.5 rounded border border-hairline bg-canvas py-2 font-sans text-xs font-medium text-ink transition-colors hover:bg-hairline/50"
+                              >
+                                <GithubLogo size={14} weight="bold" />
+                                <span>Browse Releases on GitHub</span>
+                                <ArrowSquareOut size={12} className="text-muted" />
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="flex flex-col gap-1.5">
+                              {githubReleases.map((rel) => {
+                                const releaseTitle = getReleaseTitle(rel);
+                                return (
+                                  <button
+                                    key={rel.id || rel.tag_name}
+                                    type="button"
+                                    onClick={() =>
+                                      openExternalUrl(
+                                        rel.html_url ||
+                                          `https://github.com/AashishH15/Lexicon/releases/tag/${rel.tag_name}`
+                                      )
+                                    }
+                                    className="flex items-center justify-between gap-3 rounded border border-hairline/60 bg-canvas px-3 py-2 text-left font-sans text-xs transition-colors hover:border-muted hover:bg-hairline/50"
+                                  >
+                                    <div className="min-w-0 flex-1">
+                                      <div className="flex items-center gap-2">
+                                        <span className="font-semibold text-ink">
+                                          {rel.tag_name}
+                                        </span>
+                                        {rel.prerelease && (
+                                          <span className="rounded bg-amber-500/10 px-1.5 py-0.5 font-mono text-[9px] font-semibold text-amber-600">
+                                            Pre-release
+                                          </span>
+                                        )}
+                                      </div>
+                                      {releaseTitle && (
+                                        <p className="truncate text-[11px] text-muted">
+                                          — {releaseTitle}
+                                        </p>
+                                      )}
+                                    </div>
+                                    <ArrowSquareOut
+                                      size={13}
+                                      className="text-muted shrink-0"
+                                    />
+                                  </button>
+                                );
+                              })}
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  openExternalUrl(
+                                    "https://github.com/AashishH15/Lexicon/releases"
+                                  )
+                                }
+                                className="mt-1 flex items-center justify-center gap-1.5 font-sans text-xs font-medium text-pale-blue-text hover:underline"
+                              >
+                                <span>View all releases on GitHub</span>
+                                <ArrowSquareOut size={12} />
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
 
