@@ -51,9 +51,12 @@ are listed so the release reads honestly about what works today.
   - Full persistence across app reboots via `localStorage` with catalog-validated fallback protections.
 
 - **WCAG AA Contrast & Accessibility Verification**:
-  - Upgraded secondary muted text (`#787774` → `#5F5E5B`) to clear WCAG AA contrast requirements ($\ge 4.5:1$) across all light paper themes and surround shells (achieving 6.48:1 on white and 4.68:1 on Linen).
+  - Upgraded secondary muted text (`#787774` → `#5F5E5B`) to clear WCAG AA contrast requirements (≥ 4.5:1) across all light paper themes and surround shells (achieving 6.48:1 on white and 4.68:1 on Linen).
   - Re-lit Dark Slate placeholders (`#8A8780` → `#9A9791`) and checked task-list items to guarantee high-contrast legibility on dark surfaces.
+  - Light-theme placeholder hints and editor content (h6 headings, blockquotes, code comments, empty-draft prompt, pending-math hint) no longer use faded 60% opacity muted (≈ 2.2:1) and now render at full contrast.
   - Added automated math-based contrast assertions (`typography.test.js`) verifying body ink, muted text, surround shells, and placeholders pass WCAG AA contrast thresholds across all 5 themes.
+
+- **Windows High Contrast (Forced-Colors) Support**: Under Windows High Contrast or any forced-colors OS theme, the custom paper backgrounds (Dark Slate included) collapse to system colors automatically. The grain overlay and page shadows, which forced-colors does not strip, are removed, and every focus ring switches to the system `Highlight` outline so focus stays visible in High Contrast Black.
 
 - **Browser-Style Zoom (Accessibility)**: Full-page zoom is now enabled. Ctrl + Plus / Ctrl + Minus, Ctrl + 0 to reset, Ctrl + mouse wheel, and touchpad pinch gestures all scale the interface exactly like a browser.
 

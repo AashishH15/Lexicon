@@ -1210,6 +1210,36 @@
 
 }
 
+/* Windows High Contrast / forced-colors: let the OS own the palette.
+   The page and surround are plain background-colors, so forced-color
+   adjustment already maps them to Canvas and CanvasText (Dark Slate
+   included: its overrides are plain colors too, so nothing there fights
+   the OS). What survives forced colors is the grain (a background-image)
+   and the page shadow (a box-shadow), both of which are images and are
+   NOT auto-stripped, so they are removed explicitly. Focus rings are
+   box-shadows in Tailwind and would stay theme-colored (invisible in
+   High Contrast Black), so focus-visible gets a system outline. */
+@media (forced-colors: active) {
+
+  .lex-editor-surround .lex-page-wrapper::before {
+    display: none;
+  }
+
+  .lex-editor-surround .lex-page-wrapper {
+    box-shadow: none;
+  }
+
+  .lex-editor-surround .ProseMirror {
+    caret-color: CanvasText;
+  }
+
+  *:focus-visible {
+    outline: 2px solid Highlight;
+    outline-offset: 1px;
+  }
+
+}
+
 @page {
   margin: 0;
 }
