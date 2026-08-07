@@ -355,18 +355,20 @@ describe("OpenDyslexic reading mode", () => {
     const cssPath = resolve(dirname(fileURLToPath(import.meta.url)), "../index.css");
     const css = readFileSync(cssPath, "utf8");
 
-    const faces = [...css.matchAll(/@font-face\s*\{([^}]*)\}/g)].map((m) => m[1]);
-    expect(faces).toHaveLength(2);
+    const allFaces = [...css.matchAll(/@font-face\s*\{([^}]*)\}/g)].map((m) => m[1]);
+    expect(allFaces.length).toBeGreaterThanOrEqual(4);
 
-    for (const face of faces) {
-      expect(face).toContain('font-family: "OpenDyslexic"');
+    for (const face of allFaces) {
       const match = face.match(/url\(\s*"?\.\/assets\/fonts\/([^")\s]+)"?\)/);
       expect(match).not.toBeNull();
       const filePath = resolve(dirname(cssPath), "assets/fonts", match[1]);
       expect(existsSync(filePath)).toBe(true);
     }
 
-    const weights = faces.map((f) => f.match(/font-weight:\s*(\d+)/)?.[1]);
+    const openDyslexicFaces = allFaces.filter((f) => f.includes('font-family: "OpenDyslexic"'));
+    expect(openDyslexicFaces).toHaveLength(2);
+
+    const weights = openDyslexicFaces.map((f) => f.match(/font-weight:\s*(\d+)/)?.[1]);
     expect(weights.sort()).toEqual(["400", "700"]);
     expect(css).toContain(".lex-reading-open-dyslexic");
   });

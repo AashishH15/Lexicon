@@ -1,7 +1,7 @@
 export const TYPOGRAPHY_PRESETS = [
   {
     id: "current",
-    label: "Sans / Serif",
+    label: "Default",
     bodyFontStack: [
       '"Geist Sans"',
       "-apple-system",
@@ -13,19 +13,19 @@ export const TYPOGRAPHY_PRESETS = [
     ],
     headingFontStack: ['"Newsreader"', "Georgia", "serif"],
     description:
-      "The default look: system sans-serif body with serif headings.",
+      "System sans-serif body with serif headings.",
   },
   {
     id: "editorial",
-    label: "Serif / Editorial",
+    label: "Editorial",
     bodyFontStack: ['"Newsreader"', "Georgia", '"Times New Roman"', "serif"],
     headingFontStack: ['"Newsreader"', "Georgia", '"Times New Roman"', "serif"],
     description:
-      "Classic serif body and headings: Newsreader with Georgia and Times fallbacks.",
+      "Newsreader serif body and headings for classic literary writing.",
   },
   {
     id: "modern",
-    label: "Sans / Modern",
+    label: "Modern",
     bodyFontStack: [
       "Inter",
       "-apple-system",
@@ -45,14 +45,14 @@ export const TYPOGRAPHY_PRESETS = [
       "sans-serif",
     ],
     description:
-      "Inter-led sans-serif body and headings for a clean, contemporary look.",
+      "Inter sans-serif body and headings for clean contemporary prose.",
   },
   {
     id: "mono",
-    label: "Monospace / Code",
+    label: "Monospace",
     bodyFontStack: ['"JetBrains Mono"', "ui-monospace", "SFMono-Regular", "monospace"],
     headingFontStack: ['"JetBrains Mono"', "ui-monospace", "SFMono-Regular", "monospace"],
     description:
-      "JetBrains Mono for body and headings: a technical, monospaced look.",
+      "JetBrains Mono body and headings for technical drafting.",
   },
 ];

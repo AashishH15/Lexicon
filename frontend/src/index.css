@@ -28,6 +28,36 @@
   font-display: swap;
 }
 
+/* Bundled Newsreader (variable, optical size + weight) so the app's default
+   serif never depends on the network. License: SIL Open Font License 1.1. */
+@font-face {
+  font-family: "Newsreader";
+  src: url("./assets/fonts/Newsreader.woff2") format("woff2");
+  font-weight: 400 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Bundled JetBrains Mono (variable, weight), used across the editor chrome.
+   License: SIL Open Font License 1.1. */
+@font-face {
+  font-family: "JetBrains Mono";
+  src: url("./assets/fonts/JetBrainsMono.woff2") format("woff2");
+  font-weight: 400 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Bundled Inter (clean sans), used for Modern typography preset.
+   License: SIL Open Font License 1.1. */
+@font-face {
+  font-family: "Inter";
+  src: url("./assets/fonts/Inter.woff2") format("woff2");
+  font-weight: 400 500 600 700;
+  font-style: normal;
+  font-display: swap;
+}
+
 @layer components {
   .ProseMirror {
     outline: none;
