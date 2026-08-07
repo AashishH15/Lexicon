@@ -10,8 +10,10 @@ DLLs/modules, which is exactly what Tauri's resource_dir layout expects.
 
 Native gotchas handled:
   * llama-cpp-python ships a compiled C extension; --collect-all pulls it in.
-  * language-tool-python pulls a server jar + language profiles; --collect-all
-    keeps them. The JRE itself is bundled separately (resources/jre).
+  * language-tool-python is a pure-Python client; the LanguageTool Java engine
+    is NOT inside the pip package. The release workflow downloads and bundles
+    it into the onedir's lt/ folder, and launcher.py points LTP_PATH at it.
+    The JRE itself is bundled separately (resources/jre).
 """
 
 import os

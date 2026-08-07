@@ -156,6 +156,26 @@ jobs:
             chmod +x ../frontend/src-tauri/lexicon-backend/lexicon-backend
           fi
 
+      - name: Bundle LanguageTool engine (offline proofreading)
+        working-directory: backend
+        run: |
+          set -euo pipefail
+          curl -L --fail --retry 5 --retry-all-errors --retry-delay 3 -o languagetool.zip \
+            "https://github.com/jxmorris12/language_tool_python/releases/download/LanguageTool-6.8/LanguageTool-6.8.zip"
+          python - <<'PY'
+          import os
+          import shutil
+          import zipfile
+
+          with zipfile.ZipFile("languagetool.zip") as z:
+              z.extractall(".")
+          dest = "../frontend/src-tauri/lexicon-backend/lt/LanguageTool-6.8"
+          shutil.rmtree(dest, ignore_errors=True)
+          os.makedirs(os.path.dirname(dest), exist_ok=True)
+          shutil.move("LanguageTool-6.8", dest)
+          PY
+          rm -f languagetool.zip
+
       - name: Bundle Windows JRE
         if: matrix.platform == 'windows'
         working-directory: backend

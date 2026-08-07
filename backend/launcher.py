@@ -19,6 +19,11 @@ if getattr(os.sys, "frozen", False):
     if os.path.isdir(jre_dir):
         os.environ.setdefault("LEXICON_JAVA_HOME", jre_dir)
         os.environ.setdefault("JAVA_HOME", jre_dir)
+    lt_dir = os.path.join(BASE_DIR, "lt")
+    if os.path.isdir(lt_dir) and any(
+        name.startswith("LanguageTool-") for name in os.listdir(lt_dir)
+    ):
+        os.environ.setdefault("LTP_PATH", lt_dir)
 
 
 def main():
