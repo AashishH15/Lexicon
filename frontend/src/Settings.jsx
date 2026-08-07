@@ -363,6 +363,30 @@ const SEARCH_INDEX = [
   },
 ];
 
+const FALLBACK_RELEASES = [
+  {
+    id: "v0.9.1",
+    tag_name: "v0.9.1",
+    name: "v0.9.1 — Hotfix: Backend Engine Startup & Diagnostics",
+    html_url: "https://github.com/AashishH15/Lexicon/releases/tag/v0.9.1",
+    prerelease: false,
+  },
+  {
+    id: "v0.9.0",
+    tag_name: "v0.9.0",
+    name: "v0.9.0 — AI Rewrites, Local GGUF Model & Export Themes",
+    html_url: "https://github.com/AashishH15/Lexicon/releases/tag/v0.9.0",
+    prerelease: false,
+  },
+  {
+    id: "v0.8.5",
+    tag_name: "v0.8.5",
+    name: "v0.8.5 — Bug Fixes & Stability Improvements",
+    html_url: "https://github.com/AashishH15/Lexicon/releases/tag/v0.8.5",
+    prerelease: false,
+  }
+];
+
 function getReleaseTitle(rel) {
   if (!rel) return "";
   if (rel.body) {
@@ -503,7 +527,9 @@ export default function Settings({
     if (!showRollback || githubReleases.length > 0 || releasesLoading) return;
     setReleasesLoading(true);
     setReleasesError(false);
-    fetch("https://api.github.com/repos/AashishH15/Lexicon/releases")
+    fetch("https://api.github.com/repos/AashishH15/Lexicon/releases", {
+      headers: { Accept: "application/vnd.github+json" },
+    })
       .then((res) => {
         if (!res.ok) throw new Error("GitHub API HTTP " + res.status);
         return res.json();
@@ -512,12 +538,16 @@ export default function Settings({
         const list = (Array.isArray(data) ? data : [])
           .filter((r) => !r.draft)
           .slice(0, 3);
-        setGithubReleases(list);
+        if (list.length > 0) {
+          setGithubReleases(list);
+        } else {
+          setGithubReleases(FALLBACK_RELEASES);
+        }
         setReleasesLoading(false);
       })
       .catch((err) => {
-        console.warn("[Settings] Error fetching dynamic GitHub releases:", err);
-        setReleasesError(true);
+        console.warn("[Settings] Error fetching dynamic GitHub releases, using fallback catalog:", err);
+        setGithubReleases(FALLBACK_RELEASES);
         setReleasesLoading(false);
       });
   }, [showRollback, githubReleases.length, releasesLoading]);
@@ -1756,7 +1786,7 @@ export default function Settings({
                           pref.backend,
                           pref.model_key,
                           pref.ollama_model || ""
-                        ).catch(() => {});
+                        ).catch(() => { });
                       }}
                       onConfigured={() =>
                         window.dispatchEvent(
@@ -1959,7 +1989,7 @@ export default function Settings({
                                     onClick={() =>
                                       openExternalUrl(
                                         rel.html_url ||
-                                          `https://github.com/AashishH15/Lexicon/releases/tag/${rel.tag_name}`
+                                        `https://github.com/AashishH15/Lexicon/releases/tag/${rel.tag_name}`
                                       )
                                     }
                                     className="flex items-center justify-between gap-3 rounded border border-hairline/60 bg-canvas px-3 py-2 text-left font-sans text-xs transition-colors hover:border-muted hover:bg-hairline/50"

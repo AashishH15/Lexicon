@@ -437,10 +437,11 @@ jobs:
           }
           # Stable builds publish latest.json as a release asset (the app's
           # stable endpoint). Beta builds publish beta.json to the gh-pages
-          # branch (the app's beta endpoint), so the "latest" release on
-          # GitHub always stays stable.
-          manifest_name = "beta.json" if is_beta else "latest.json"
-          (root / manifest_name).write_text(
+          manifest_name = "latest.json"
+          (root / "latest.json").write_text(
+              json.dumps(manifest, indent=2) + "\n", encoding="utf-8"
+          )
+          (root / "beta.json").write_text(
               json.dumps(manifest, indent=2) + "\n", encoding="utf-8"
           )
           (root / "release_notes.txt").write_text(notes_body, encoding="utf-8")
@@ -448,7 +449,6 @@ jobs:
           PY
 
       - name: Publish beta manifest to gh-pages
-        if: contains(github.ref_name, '-beta')
         run: |
           set -euo pipefail
           git config user.name "Aashish Harishchandre"
@@ -467,8 +467,8 @@ jobs:
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
-          draft: ${{ !contains(github.ref_name, '-beta') }}
-          prerelease: ${{ contains(github.ref_name, '-beta') }}
+          draft: false
+          prerelease: false
           name: Lexicon ${{ github.ref_name }}
           body_path: artifacts/release_notes.txt
           files: |
@@ -478,4 +478,5 @@ jobs:
             artifacts/lexicon-macos-x64/*
             artifacts/lexicon-macos-arm64/*
             artifacts/lexicon-linux-x64/*
-            ${{ contains(github.ref_name, '-beta') && 'artifacts/beta.json' || 'artifacts/latest.json' }}
+            artifacts/latest.json
+            artifacts/beta.json
