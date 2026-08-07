@@ -33,7 +33,7 @@ let editor;
 beforeAll(() => {
   editor = new Editor({
     extensions: [
-      StarterKit.configure({ codeBlock: false }),
+      StarterKit.configure({ codeBlock: false, strike: false, underline: false, link: false }),
       Underline,
       Strike,
       Highlight.configure({ multicolor: false }),

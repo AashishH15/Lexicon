@@ -747,6 +747,10 @@
       font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
     }
 
+    .lex-bionic-prefix {
+      font-weight: 700;
+    }
+
     /* Dark Slate only: light ink on the dark page, dark code chips, and
        solid elevated surfaces on the dark surround. Screen-scoped so print
        stays light-on-white. Does not rewrite the design tokens globally. */

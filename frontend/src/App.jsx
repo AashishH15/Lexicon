@@ -67,9 +67,16 @@ import {
 } from "./updater.js";
 import UpdateBanner from "./UpdateBanner.jsx";
 import UpdateModal from "./UpdateModal.jsx";
-import { BionicReading, READING_MODES } from "./readingMode.js";
-import { TYPOGRAPHY_PRESETS } from "./typographyPresets.js";
+import { BionicReading } from "./readingMode.js";
 import { PAPER_TEXTURES } from "./paperTextures.js";
+import {
+  typographyPresetKey,
+  paperTextureKey,
+  readingModeKey,
+  loadTypographyPreset,
+  loadPaperTexture,
+  loadReadingMode,
+} from "./appearanceSettings.js";
 import {
   GrammarHighlight,
   buildTextWithMap,
@@ -151,9 +158,6 @@ const fontSizeKey = "lexicon:fontSize";
 const focusModeKey = "lexicon:focusMode";
 const lineSpacingKey = "lexicon:lineSpacing";
 const proseScanKey = "lexicon:proseScanEnabled";
-const typographyPresetKey = "lexicon:typographyPreset";
-const paperTextureKey = "lexicon:paperTexture";
-const readingModeKey = "lexicon:readingMode";
 const dictionaryKey = "lexicon:user_dictionary";
 const documentHistoryKey = "lexicon:document_history";
 const transformHistoryKey = "lexicon:transform_history";
@@ -237,29 +241,10 @@ function loadDocxAuthor() {
   }
 }
 
-// Catalog-validated loaders: a stored value that doesn't match any known
-// preset/texture/mode id (corrupt or from an older build) falls back to the
-// setting default rather than rendering a blank state.
-function loadTypographyPreset() {
-  const saved = localStorage.getItem(typographyPresetKey);
-  return TYPOGRAPHY_PRESETS.some((p) => p.id === saved)
-    ? saved
-    : SETTINGS_DEFAULTS.typographyPreset;
-}
-
-function loadPaperTexture() {
-  const saved = localStorage.getItem(paperTextureKey);
-  return PAPER_TEXTURES.some((t) => t.id === saved)
-    ? saved
-    : SETTINGS_DEFAULTS.paperTexture;
-}
-
-function loadReadingMode() {
-  const saved = localStorage.getItem(readingModeKey);
-  return READING_MODES.some((m) => m.id === saved)
-    ? saved
-    : SETTINGS_DEFAULTS.readingMode;
-}
+// Catalog-validated appearance loaders (typography preset, paper texture,
+// reading mode) live in appearanceSettings.js so the unit suite can test
+// the fallback contract. See loadTypographyPreset, loadPaperTexture,
+// loadReadingMode.
 
 function loadPanelOpen(key) {
   // Default to open (key absent === true). Only an explicit "false" collapses.
@@ -614,7 +599,7 @@ export default function App() {
       // StarterKit bundles the base `codeBlock` node; disable it so the
       // Lowlight-powered one below can own the `codeBlock` schema type
       // without a node-type collision.
-      StarterKit.configure({ codeBlock: false }),
+      StarterKit.configure({ codeBlock: false, strike: false, underline: false, link: false }),
       Underline,
       Strike,
       Highlight.configure({ multicolor: false }),

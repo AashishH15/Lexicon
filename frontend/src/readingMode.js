@@ -61,6 +61,9 @@ export function bionicPrefixes(text) {
 export const BIONIC_SKIP_NODES = new Set(["codeBlock", "inlineMath", "blockMath"]);
 
 function bionicDecorations(doc) {
+  if (!doc || typeof doc.descendants !== "function") {
+    return DecorationSet.empty;
+  }
   const decorations = [];
   doc.descendants((node, pos) => {
     if (BIONIC_SKIP_NODES.has(node.type.name)) {
@@ -75,7 +78,7 @@ function bionicDecorations(doc) {
     for (const prefix of bionicPrefixes(node.text)) {
       decorations.push(
         Decoration.inline(pos + prefix.from, pos + prefix.to, {
-          style: "font-weight: 600",
+          class: "lex-bionic-prefix",
         }),
       );
     }
@@ -96,12 +99,13 @@ export const BionicReading = Extension.create({
         // Recompute only when the document changes or the mode flips, so
         // caret moves and selection renders don't re-walk the document.
         state: {
-          init(config) {
+          init(config, instance) {
+            const doc = instance?.doc || config?.doc;
             return {
-              doc: config.doc,
+              doc,
               set:
-                activeMode === "bionic"
-                  ? bionicDecorations(config.doc)
+                activeMode === "bionic" && doc
+                  ? bionicDecorations(doc)
                   : DecorationSet.empty,
               mode: activeMode,
             };
