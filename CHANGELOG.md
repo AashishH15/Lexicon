@@ -21,10 +21,18 @@ are listed so the release reads honestly about what works today.
 ### What's New in v0.10.0:
 
 - **Typography Preset Catalog**: Switch between 4 curated font pairings in real time:
-  - **Sans / Serif (Shipping Default)**: System sans-serif body with serif headings (`Newsreader` / `Georgia`).
-  - **Serif / Editorial**: Newsreader-led serif body and headings with Georgia & Times fallbacks for classic literary writing.
-  - **Sans / Modern**: Inter-led sans-serif body and headings for clean contemporary prose.
-  - **Monospace / Code**: JetBrains Mono body and headings for a technical monospaced environment.
+  - **Default**: System sans-serif body with serif headings (`Newsreader` / `Georgia`).
+  - **Editorial**: Newsreader serif body and headings for classic literary writing.
+  - **Modern**: Inter sans-serif body and headings for clean contemporary prose.
+  - **Monospace**: JetBrains Mono body and headings for technical drafting.
+
+- **100% Local Bundled Fonts (Zero Network Privacy)**:
+  - Bundled `Newsreader.woff2`, `Inter.woff2`, `JetBrainsMono.woff2`, and `OpenDyslexic.woff2` locally under `src/assets/fonts/`.
+  - Removed all external Google Fonts API network calls (`fonts.googleapis.com` / `fonts.gstatic.com`). All custom typefaces render 100% offline with zero external network connections or IP telemetry.
+
+- **Bundled LanguageTool Engine (Out-of-the-Box Offline Proofreading)**:
+  - The exact `LanguageTool-6.8` Java engine is now pre-bundled directly into the application sidecar bundle (`lt/`).
+  - Fresh installs on Windows, macOS, and Linux run grammar proofreading 100% offline from second zero without triggering background downloads.
 
 - **Paper Texture Backgrounds**: Customize the reading and writing canvas with 5 pre-tuned paper surface pairs:
   - **Plain White (Default)**: Crisp `#FFFFFF` page with `#F7F6F3` surround.
