@@ -2601,15 +2601,17 @@ export default function App() {
             onPaperTextureChange={handlePaperTextureChange}
             readingMode={readingMode}
             onReadingModeChange={handleReadingModeChange}
+            betaOptIn={betaOptIn}
+            onBetaOptInChange={handleBetaOptInChange}
             onConfigured={refreshAiConfigured}
-            onClose={async () => {
-              await refreshAiConfigured();
+            onClose={() => {
               setAiSetupOpen(false);
+              refreshAiConfigured();
             }}
-            onFinish={async ({ loadSample = false } = {}) => {
+            onFinish={({ loadSample = false } = {}) => {
               localStorage.setItem("lexicon:aiSetupDone", "true");
-              await refreshAiConfigured();
               setAiSetupOpen(false);
+              refreshAiConfigured();
               if (loadSample && editor) {
                 editor.commands.setContent(SAMPLE_DOC_HTML);
                 setTimeout(() => {

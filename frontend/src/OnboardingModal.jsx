@@ -11,8 +11,11 @@ import {
   SlidersHorizontal,
   Sparkle,
   Palette,
+  Flask,
+  ChatTeardropText,
 } from "@phosphor-icons/react";
 import ModelManager from "./ModelManager.jsx";
+import Toggle from "./Toggle.jsx";
 import { SETTINGS_DEFAULTS } from "./Settings.jsx";
 import { TYPOGRAPHY_PRESETS } from "./typographyPresets.js";
 import { PAPER_TEXTURES } from "./paperTextures.js";
@@ -46,6 +49,8 @@ export default function OnboardingModal({
   onPaperTextureChange,
   readingMode: activeReadingModeProp,
   onReadingModeChange,
+  betaOptIn: activeBetaOptInProp,
+  onBetaOptInChange,
 }) {
   const [step, setStep] = useState(1);
   const [language, setLanguage] = useState(() => {
@@ -68,6 +73,12 @@ export default function OnboardingModal({
     }
   });
 
+  const [betaOptIn, setBetaOptIn] = useState(() => {
+    if (activeBetaOptInProp !== undefined) return activeBetaOptInProp;
+    const saved = localStorage.getItem("lexicon:betaOptIn");
+    return saved !== null ? saved === "true" : (SETTINGS_DEFAULTS.betaOptIn || false);
+  });
+
   const [preset, setPreset] = useState(() => activePresetProp || loadTypographyPreset());
   const [texture, setTexture] = useState(() => activeTextureProp || loadPaperTexture());
   const [reading, setReading] = useState(() => activeReadingModeProp || loadReadingMode());
@@ -88,6 +99,27 @@ export default function OnboardingModal({
     setReading(val);
     localStorage.setItem(readingModeKey, val);
     onReadingModeChange?.(val);
+  }
+
+  function handleBetaToggle(val) {
+    setBetaOptIn(val);
+    try {
+      localStorage.setItem("lexicon:betaOptIn", String(val));
+    } catch {
+      // Ignore
+    }
+    onBetaOptInChange?.(val);
+  }
+
+  async function openFeedbackUrl(e) {
+    e?.preventDefault?.();
+    const url = "https://tally.so/r/LZq8vy";
+    try {
+      const { openUrl } = await import("@tauri-apps/plugin-opener");
+      await openUrl(url);
+    } catch {
+      window.open(url, "_blank");
+    }
   }
 
   function saveSettings(newLang, newLive) {
@@ -418,12 +450,12 @@ export default function OnboardingModal({
           )}
 
           {step === 5 && (
-            <div className="space-y-6 text-center py-2">
-              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-hairline/40 p-2">
-                <img src="/lexicon-logo.png" alt="Lexicon Logo" className="h-12 w-12 object-contain" />
+            <div className="space-y-5 text-center py-1">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-hairline/40 p-2">
+                <img src="/lexicon-logo.png" alt="Lexicon Logo" className="h-10 w-10 object-contain" />
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <h2 className="font-serif text-2xl font-medium tracking-tight text-ink">
                   You're Ready to Write!
                 </h2>
@@ -432,22 +464,54 @@ export default function OnboardingModal({
                 </p>
               </div>
 
-              <div className="space-y-3 pt-2 max-w-xs mx-auto">
+              {/* Beta Updates Opt-In Card */}
+              <div className="mx-auto max-w-sm rounded-xl border border-hairline bg-canvas p-3.5 text-left transition-colors">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="rounded-lg bg-hairline/60 p-2 text-ink">
+                      <Flask size={18} weight="bold" />
+                    </div>
+                    <div>
+                      <h3 className="font-sans text-xs font-semibold text-ink">Receive Beta Updates</h3>
+                      <p className="font-sans text-[11px] text-muted leading-tight mt-0.5">
+                        Get early pre-release builds and test new features.
+                      </p>
+                    </div>
+                  </div>
+                  <Toggle checked={betaOptIn} onChange={handleBetaToggle} label="Toggle beta releases" />
+                </div>
+              </div>
+
+              {/* Start Buttons */}
+              <div className="space-y-2.5 pt-1 max-w-xs mx-auto">
                 <button
                   type="button"
                   onClick={() => completeOnboarding(true)}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-ink px-5 py-3 font-sans text-sm font-medium text-white shadow-md transition-all hover:bg-ink/90 active:scale-[0.99]"
+                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-ink px-5 py-2.5 font-sans text-xs font-semibold text-white shadow-md transition-all hover:bg-ink/90 active:scale-[0.99]"
                 >
-                  <BookOpen size={18} weight="bold" />
+                  <BookOpen size={16} weight="bold" />
                   <span>Start Writing with Sample Draft</span>
                 </button>
+
                 <button
                   type="button"
                   onClick={() => completeOnboarding(false)}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-hairline bg-canvas px-5 py-2.5 font-sans text-sm font-medium text-ink transition-colors hover:bg-hairline/40"
+                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-hairline bg-canvas px-5 py-2 font-sans text-xs font-semibold text-ink transition-colors hover:bg-hairline/40"
                 >
-                  <span>Start with Blank Document</span>
+                  <span>Start Blank Canvas</span>
                 </button>
+
+                {/* Send Feedback / Report Issue */}
+                <div className="pt-1">
+                  <button
+                    type="button"
+                    onClick={openFeedbackUrl}
+                    className="inline-flex items-center justify-center gap-1.5 font-sans text-[11px] font-medium text-muted transition-colors hover:text-ink hover:underline cursor-pointer"
+                  >
+                    <ChatTeardropText size={14} weight="bold" />
+                    <span>Send feedback or report an issue</span>
+                  </button>
+                </div>
               </div>
             </div>
           )}
