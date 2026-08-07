@@ -213,11 +213,23 @@ Lexicon is built with:
 - [KaTeX](https://katex.org/)
 - [lowlight](https://github.com/wooorm/lowlight)
 - [marked](https://marked.js.org/) and [Turndown](https://github.com/mixmark-io/turndown)
+- [Mammoth](https://github.com/mwilliamson/mammoth.js) and [JSZip](https://stuk.github.io/jszip/) for DOCX and EPUB import and export
 - [Phosphor Icons](https://phosphoricons.com/)
 - [LanguageTool](https://languagetool.org/)
 - [React](https://react.dev/), [Vite](https://vite.dev/), and
   [Tailwind CSS](https://tailwindcss.com/)
 - [FastAPI](https://fastapi.tiangolo.com/) and
   [Uvicorn](https://www.uvicorn.org/)
+- [Hugging Face Hub](https://huggingface.co/) and [requests](https://requests.readthedocs.io/) for model downloads and inference
 
 See [LICENSE](LICENSE) for licensing information.
+
+## Built by
+
+**Aashish Harishchandre**
+
+[Website](https://aashishharishchandre.netlify.app/)
+&nbsp;&middot;&nbsp;
+[GitHub](https://github.com/AashishH15)
+&nbsp;&middot;&nbsp;
+[LinkedIn](https://www.linkedin.com/in/aashish-harishchandre/)
