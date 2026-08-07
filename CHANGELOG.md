@@ -7,6 +7,43 @@ This changelog tracks what is **live** in each release and what is still
 **stubbed** (shown in the interface but not yet functional). Stubbed features
 are listed so the release reads honestly about what works today.
 
+## v0.10.0 — Typography & Reading Presets
+
+### Quick Downloads:
+
+- 🪟 **[Windows x64 Setup](https://github.com/AashishH15/Lexicon/releases/download/v0.10.0/Lexicon_0.10.0_x64-setup.exe)**: Standard installer for modern 64-bit Windows PCs (Intel / AMD).
+- 🍏 **[macOS Apple Silicon DMG](https://github.com/AashishH15/Lexicon/releases/download/v0.10.0/Lexicon_0.10.0_aarch64.dmg)**: For modern Apple Silicon Macs (M1, M2, M3, M4 chips).
+- 🐧 **[Linux x64 DEB](https://github.com/AashishH15/Lexicon/releases/tag/v0.10.0)**: Debian package (`.deb`) for 64-bit Linux distributions (Ubuntu, Debian, Mint, Pop!_OS).
+- 📦 **[View All Assets & Checksums](https://github.com/AashishH15/Lexicon/releases/tag/v0.10.0)**: Complete list of installers including ARM64 Windows, x86 Windows, Intel macOS, and Linux x64 DEB.
+
+---
+
+### What's New in v0.10.0:
+
+- **Typography Preset Catalog**: Switch between 4 curated font pairings in real time:
+  - **Sans / Serif (Shipping Default)**: System sans-serif body with serif headings (`Newsreader` / `Georgia`).
+  - **Serif / Editorial**: Newsreader-led serif body and headings with Georgia & Times fallbacks for classic literary writing.
+  - **Sans / Modern**: Inter-led sans-serif body and headings for clean contemporary prose.
+  - **Monospace / Code**: JetBrains Mono body and headings for a technical monospaced environment.
+
+- **Paper Texture Backgrounds**: Customize the reading and writing canvas with 5 pre-tuned paper surface pairs:
+  - **Plain White (Default)**: Crisp `#FFFFFF` page with `#F7F6F3` surround.
+  - **Warm Cream**: Warm `#FEFBF0` page with `#F3EEE0` surround.
+  - **Linen**: Textured `#F5EFE0` page with `#E2DACD` surround.
+  - **Newsprint**: Newspaper-style `#F2F3F1` page with `#E2E4E0` surround.
+  - **Dark Slate**: Low-glare `#242424` dark theme with `#1B1B1B` surround and inverted light ink.
+  - Includes subtle procedural grain overlays and soft edge drop-shadows.
+
+- **Reading Modes (Bionic & OpenDyslexic)**:
+  - **Bionic Reading**: Non-destructive ProseMirror decoration plugin (`.lex-bionic-prefix`) that bolds the leading prefix (~50%) of every word. Code blocks, LaTeX math formulas, and inline code are automatically skipped. Document content and marks remain 100% byte-identical so undo/redo, saving, and grammar highlight offsets are completely untouched.
+  - **OpenDyslexic**: Bundled local `OpenDyslexic-Regular.woff2` and `OpenDyslexic-Bold.woff2` fonts (Bitstream Vera license). Swaps the entire writing canvas (headings included) to OpenDyslexic while keeping code blocks monospaced.
+
+- **Appearance Settings Panel**:
+  - Dedicated **Appearance** controls in Settings modal with dropdown selectors for Typography Preset, Paper Texture, and Reading Mode.
+  - Full persistence across app reboots via `localStorage` with catalog-validated fallback protections.
+
+---
+
 ## v0.9.1 — Hotfix: Backend Engine Startup & macOS Diagnostic Guidance
 
 ### Quick Downloads:
