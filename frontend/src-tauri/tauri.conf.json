@@ -21,7 +21,8 @@
         "fullscreen": false,
         "theme": "Light",
         "backgroundColor": "#f7f7f5",
-        "decorations": true
+        "decorations": true,
+        "zoomHotkeysEnabled": true
       }
     ],
     "security": {

@@ -50,6 +50,8 @@ are listed so the release reads honestly about what works today.
   - Dedicated **Appearance** controls in Settings modal with dropdown selectors for Typography Preset, Paper Texture, and Reading Mode.
   - Full persistence across app reboots via `localStorage` with catalog-validated fallback protections.
 
+- **Browser-Style Zoom (Accessibility)**: Full-page zoom is now enabled. Ctrl + Plus / Ctrl + Minus, Ctrl + 0 to reset, Ctrl + mouse wheel, and touchpad pinch gestures all scale the interface exactly like a browser.
+
 ---
 
 ## v0.9.1 — Hotfix: Backend Engine Startup & macOS Diagnostic Guidance
