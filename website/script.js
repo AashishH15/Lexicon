@@ -626,20 +626,31 @@
 
     // Random walk through all 16 combinations (4 formats x 4 themes), never
     // showing the exact combo twice in a row; user picks pause the walk,
-    // and it resumes on its own after a while.
-    autoTimer = setInterval(function () {
-      if (Date.now() < autoPauseUntil) return;
-      let combo;
-      for (let attempt = 0; attempt < 6; attempt++) {
-        combo = {
-          format: formatKeys[Math.floor(Math.random() * formatKeys.length)],
-          theme: themeKeys[Math.floor(Math.random() * themeKeys.length)]
-        };
-        if (!lastCombo || combo.format !== lastCombo.format || combo.theme !== lastCombo.theme) break;
-      }
-      lastCombo = combo;
-      updateState(combo.format, combo.theme, false);
-    }, 3800);
+    // and it resumes on its own after a while. Hover or keyboard focus
+    // pauses it too, and it never starts at all under prefers-reduced-motion
+    // (WCAG 2.2.2: auto-updating content needs a pause mechanism).
+    if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      let hoverPaused = false;
+      card.addEventListener('mouseenter', function () { hoverPaused = true; });
+      card.addEventListener('mouseleave', function () { hoverPaused = false; });
+      card.addEventListener('focusin', function () { hoverPaused = true; });
+      card.addEventListener('focusout', function () {
+        hoverPaused = card.contains(document.activeElement);
+      });
+      autoTimer = setInterval(function () {
+        if (Date.now() < autoPauseUntil || hoverPaused) return;
+        let combo;
+        for (let attempt = 0; attempt < 6; attempt++) {
+          combo = {
+            format: formatKeys[Math.floor(Math.random() * formatKeys.length)],
+            theme: themeKeys[Math.floor(Math.random() * themeKeys.length)]
+          };
+          if (!lastCombo || combo.format !== lastCombo.format || combo.theme !== lastCombo.theme) break;
+        }
+        lastCombo = combo;
+        updateState(combo.format, combo.theme, false);
+      }, 3800);
+    }
   }
 
   function initAppearanceDemo() {
@@ -794,29 +805,40 @@
     // Random walk through all 60 combinations (4 typography x 5 paper x 3
     // reading modes), never showing the exact combo twice in a row. Reading
     // mode participates so Bionic and OpenDyslexic get their moment too;
-    // user picks pause the walk, and it resumes on its own after a while.
+    // user picks, hover, and keyboard focus pause the walk, and it resumes
+    // on its own after a while. Under prefers-reduced-motion it never starts
+    // at all (WCAG 2.2.2: auto-updating content needs a pause mechanism).
     const TYPOGRAPHY_IDS = Object.keys(TYPOGRAPHY);
     const PAPER_IDS = Object.keys(PAPER);
     const READING_IDS = Object.keys(READING);
     let lastCombo = null;
-    autoTimer = setInterval(function () {
-      if (Date.now() < autoPauseUntil) return;
-      let combo;
-      for (let attempt = 0; attempt < 6; attempt++) {
-        combo = {
-          typography: TYPOGRAPHY_IDS[Math.floor(Math.random() * TYPOGRAPHY_IDS.length)],
-          paper: PAPER_IDS[Math.floor(Math.random() * PAPER_IDS.length)],
-          reading: READING_IDS[Math.floor(Math.random() * READING_IDS.length)]
-        };
-        if (!lastCombo || combo.typography !== lastCombo.typography || combo.paper !== lastCombo.paper || combo.reading !== lastCombo.reading) break;
-      }
-      lastCombo = combo;
-      state.typography = combo.typography;
-      state.paper = combo.paper;
-      state.reading = combo.reading;
-      syncChips();
-      renderPage();
-    }, 4200);
+    if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      let hoverPaused = false;
+      card.addEventListener('mouseenter', function () { hoverPaused = true; });
+      card.addEventListener('mouseleave', function () { hoverPaused = false; });
+      card.addEventListener('focusin', function () { hoverPaused = true; });
+      card.addEventListener('focusout', function () {
+        hoverPaused = card.contains(document.activeElement);
+      });
+      autoTimer = setInterval(function () {
+        if (Date.now() < autoPauseUntil || hoverPaused) return;
+        let combo;
+        for (let attempt = 0; attempt < 6; attempt++) {
+          combo = {
+            typography: TYPOGRAPHY_IDS[Math.floor(Math.random() * TYPOGRAPHY_IDS.length)],
+            paper: PAPER_IDS[Math.floor(Math.random() * PAPER_IDS.length)],
+            reading: READING_IDS[Math.floor(Math.random() * READING_IDS.length)]
+          };
+          if (!lastCombo || combo.typography !== lastCombo.typography || combo.paper !== lastCombo.paper || combo.reading !== lastCombo.reading) break;
+        }
+        lastCombo = combo;
+        state.typography = combo.typography;
+        state.paper = combo.paper;
+        state.reading = combo.reading;
+        syncChips();
+        renderPage();
+      }, 4200);
+    }
 
     // Lock the page to its tallest state (the Mono / Code typography wraps
     // the widest and renders tallest), so switching presets never resizes
