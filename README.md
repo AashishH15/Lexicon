@@ -15,6 +15,8 @@
   <a href="https://github.com/AashishH15/Lexicon/releases/latest">Download release</a>
   &nbsp;&middot;&nbsp;
   <a href="https://tally.so/r/LZq8vy">Report an issue</a>
+  &nbsp;&middot;&nbsp;
+  <a href="https://discord.gg/nDCedWH3SV">Discord</a>
 </p>
 
 <p align="center">
