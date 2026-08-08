@@ -22,6 +22,7 @@ const SHIP_FILES = [
   "squiggle.js",
   "content.js",
   "api.js",
+  "backendStatus.js",
   "prompts.js",
   "popup.html",
   "popup.css",

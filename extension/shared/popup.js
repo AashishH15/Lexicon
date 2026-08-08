@@ -5,9 +5,9 @@ import {
   discoverBackend,
   checkGrammar,
   transformText,
-  getBackendBaseUrl,
 } from "./api.js";
 import { REWRITE_PROMPT } from "./prompts.js";
+import { createBackendStatus } from "./backendStatus.js";
 
 const statusEl = document.getElementById("status");
 const inputEl = document.getElementById("input");
@@ -15,16 +15,29 @@ const proofreadBtn = document.getElementById("proofread");
 const rewriteBtn = document.getElementById("rewrite");
 const resultsEl = document.getElementById("results");
 
-function renderStatus() {
-  const baseUrl = getBackendBaseUrl();
-  if (baseUrl) {
+function renderStatus(state) {
+  if (state === "connected") {
     statusEl.textContent = "Connected to Lexicon";
     statusEl.classList.remove("offline");
+    proofreadBtn.disabled = false;
+    rewriteBtn.disabled = false;
+  } else if (state === "checking") {
+    statusEl.textContent = "Checking for Lexicon…";
+    statusEl.classList.remove("offline");
+    proofreadBtn.disabled = true;
+    rewriteBtn.disabled = true;
   } else {
     statusEl.textContent = "Open Lexicon to use grammar checking here";
     statusEl.classList.add("offline");
+    proofreadBtn.disabled = true;
+    rewriteBtn.disabled = true;
   }
 }
+
+const monitor = createBackendStatus({
+  ping: async () => (await discoverBackend()) !== null,
+  onChange: renderStatus,
+});
 
 function clearResults() {
   resultsEl.replaceChildren();
@@ -99,7 +112,7 @@ async function onProofread() {
     } else {
       showMatches(matches);
     }
-    renderStatus();
+    renderStatus(monitor.state);
   } catch (error) {
     showError(error.message);
   } finally {
@@ -115,7 +128,7 @@ async function onRewrite() {
   try {
     const rewritten = await transformText(REWRITE_PROMPT, text);
     showRewrite(rewritten);
-    renderStatus();
+    renderStatus(monitor.state);
   } catch (error) {
     showError(error.message);
   } finally {
@@ -126,4 +139,5 @@ async function onRewrite() {
 proofreadBtn.addEventListener("click", onProofread);
 rewriteBtn.addEventListener("click", onRewrite);
 
-refreshStatus();
+renderStatus(monitor.state);
+monitor.start();
