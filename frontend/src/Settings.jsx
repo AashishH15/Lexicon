@@ -359,17 +359,17 @@ const SEARCH_INDEX = [
 
 const FALLBACK_RELEASES = [
   {
+    id: "v0.10.1",
+    tag_name: "v0.10.1",
+    name: "v0.10.1 — Typography, Paper Textures, Accessibility & Onboarding Studio",
+    html_url: "https://github.com/AashishH15/Lexicon/releases/tag/v0.10.1",
+    prerelease: false,
+  },
+  {
     id: "v0.9.1",
     tag_name: "v0.9.1",
     name: "v0.9.1 — Hotfix: Backend Engine Startup & Diagnostics",
     html_url: "https://github.com/AashishH15/Lexicon/releases/tag/v0.9.1",
-    prerelease: false,
-  },
-  {
-    id: "v0.9.0",
-    tag_name: "v0.9.0",
-    name: "v0.9.0 — AI Rewrites, Local GGUF Model & Export Themes",
-    html_url: "https://github.com/AashishH15/Lexicon/releases/tag/v0.9.0",
     prerelease: false,
   },
   {
@@ -378,7 +378,7 @@ const FALLBACK_RELEASES = [
     name: "v0.8.5 — Bug Fixes & Stability Improvements",
     html_url: "https://github.com/AashishH15/Lexicon/releases/tag/v0.8.5",
     prerelease: false,
-  }
+  },
 ];
 
 function getReleaseTitle(rel) {
