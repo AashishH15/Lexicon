@@ -133,6 +133,15 @@ def test_grammar_check_reports_engine_failure_as_503(monkeypatch):
     assert "java" in body["detail"].lower()
 
 
+def test_strip_extended_path_removes_win32_prefix():
+    assert (
+        _strip_extended_path(r"\\?\C:\Program Files\Lexicon\jre\bin\java.EXE")
+        == r"C:\Program Files\Lexicon\jre\bin\java.EXE"
+    )
+    assert _strip_extended_path(r"C:\plain\java.exe") == r"C:\plain\java.exe"
+    assert _strip_extended_path("") == ""
+
+
 def test_jvm_flags_only_for_languagetool_server():
     assert _should_inject_jvm_flags(["java", "-version"]) is False
     assert (
