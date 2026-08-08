@@ -1,22 +1,7 @@
-// Editable-text detection and extraction (C48.4).
-//
-// Loaded as a CLASSIC script inside the content script (content scripts can't
-// be ES modules), so this file exposes a namespace on globalThis instead of
-// using import/export. Pure helpers are unit-tested in extension/tests via
-// node:vm; the DOM parts are exercised manually (see C48.7).
-//
-// Strategy (v1 allowlist): prefer the FOCUSED field — that covers plain
-// <textarea>/contenteditable fields on any allowlisted site and most real
-// usage. Fall back to site-specific selectors for the C48.4 allowlist
-// (Gmail compose, web Slack, Discord). Google Docs and Notion are
-// deliberately deferred out of the v1 allowlist: both are ProseMirror-based
-// editors that rebuild the DOM from their own model, which makes range
-// mapping unreliable here.
-//
-// Newline normalization: textarea values on Windows can report \r\n while
-// DOM indexes and the backend's offsets use \n. Everything extracted here is
-// normalized to \n and the offset segments are rebuilt accordingly, so
-// squiggles stay aligned across OS platforms.
+// Editable-field detection and text extraction.
+// This file runs as a classic script. It exposes __lexiconEditable.
+// Use the focused field first. Fall back to site selectors.
+// Normalize newlines to \n so offsets stay aligned.
 
 (function () {
   "use strict";
@@ -28,8 +13,7 @@
     "PRE", "SECTION", "TABLE", "UL",
   ]);
 
-  // Site-specific editable selectors, in detection order. Kept deliberately
-  // narrow; each entry is verified per-site before being trusted (C48.7).
+  // Site-specific selectors. Keep them narrow.
   const SITE_SELECTORS = {
     "mail.google.com": [
       "div[aria-label='Message Body'][contenteditable='true']",
@@ -47,8 +31,7 @@
 
   function siteForHost(host) {
     if (host === "mail.google.com") return "mail.google.com";
-    // Keep in lockstep with the content-script matches in both manifests:
-    // detection must never claim hosts the extension isn't injected into.
+    // Keep in sync with the content-script matches.
     if (host === "discord.com") return "discord.com";
     if (host === "slack.com" || host.endsWith(".slack.com")) return "*.slack.com";
     return null;
@@ -80,11 +63,7 @@
     return text.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
   }
 
-  // Walks a contenteditable root, producing:
-  //   text     — the full text, line breaks as \n
-  //   segments — [{ node, start, end }] per text node, plus
-  //              [{ node: null, start, end }] for synthetic \n at <br> /
-  //              block boundaries (they have no DOM to range into)
+  // Map each text node to offsets. A line break has no node.
   function textSegments(root) {
     const segments = [];
     let text = "";
@@ -122,8 +101,7 @@
     return { text, segments };
   }
 
-  // Rebuilds text + segments over normalized (\n-only) text so offsets stay
-  // exact when the raw DOM text contains \r\n or \r.
+  // Rebuild offsets over normalized text.
   function normalizeSegments(text, segments) {
     let out = "";
     const outSegments = [];
@@ -149,10 +127,7 @@
     return { kind: "contenteditable", ...normalizeSegments(text, segments) };
   }
 
-  // Maps backend matches [{offset, length}] onto extraction segments, giving
-  // [{startNode, startOffset, endNode, endOffset}] for range construction.
-  // Matches that land entirely on synthetic line breaks are dropped; matches
-  // crossing a break are bridged across it.
+  // Map matches to DOM ranges. Drop unmappable matches.
   function matchRanges(matches, segments) {
     const out = [];
     for (const match of matches) {

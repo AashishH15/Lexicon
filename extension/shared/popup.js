@@ -1,7 +1,5 @@
-// Popup (C48.2): minimal action set — Proofread via /grammar/check and
-// Rewrite via /transform, using the same request shapes as the desktop app.
-// The full popup experience (C48.6) builds on this, and the content-script
-// message contract replaces direct page access then.
+// Popup actions: proofread and rewrite.
+// The request shapes match the desktop app.
 
 import {
   discoverBackend,

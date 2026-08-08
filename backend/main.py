@@ -56,16 +56,13 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
-# Pinned extension origins so the local API is not open to arbitrary
-# extensions (C48.1).
-# Chrome: the dev-loaded build's ID is derived from the `key` field in
-# extension/chrome/manifest.json and is stable across machines — regenerate
-# with extension/tools/extension_id.py. The Web Store build's ID is derived
-# from the key shipped in the submitted zip and should match; if it ever
-# differs, add the store ID here or via LEXICON_EXTENSION_ORIGINS.
-# Firefox: moz-extension:// origins are random per profile by design
-# (anti-fingerprinting), so they cannot be pinned per ID — the regex admits
-# only well-formed moz-extension UUID origins and nothing else.
+# Pinned extension origins. The local API is not open to arbitrary
+# extensions.
+# Chrome: the ID derives from the `key` field in
+# extension/chrome/manifest.json and is stable across machines. If the Web
+# Store ID differs, add it here or via LEXICON_EXTENSION_ORIGINS.
+# Firefox: moz-extension origins are random per profile. The regex admits
+# only well-formed moz-extension UUID origins.
 EXTENSION_ORIGINS = [
     "chrome-extension://egcfmlgpcidpanppnampkkdknogccpjg",
 ]
@@ -138,11 +135,10 @@ def health():
 
 @app.get("/extension/ping")
 def extension_ping():
-    """Health probe for the browser extension (C48.1).
+    """Health probe for the browser extension.
 
-    Deliberately free of LanguageTool/model dependencies — its only job is
-    proving the caller is talking to Lexicon's backend and not some other
-    process squatting on the port.
+    It has no LanguageTool or model dependencies. It proves the caller is
+    talking to Lexicon's backend and not another process on the port.
     """
     return {"ok": True, "app": "lexicon"}
 

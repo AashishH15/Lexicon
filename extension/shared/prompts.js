@@ -1,7 +1,5 @@
-// Rewrite prompt for the popup — must stay byte-identical in structure to the
-// desktop app's frontend/src/prompts.js: base instruction + OUTPUT_RULES, so
-// the same small local model behaves the same in both surfaces. Small models
-// drift toward preamble unless told exactly what to do and not do.
+// Rewrite prompt for the popup.
+// Keep its structure identical to the desktop app prompt.
 
 const OUTPUT_RULES =
   " Output only the result and nothing else. No preamble, no headings, no explanation, and do not wrap it in quotation marks.";

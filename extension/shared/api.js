@@ -1,10 +1,6 @@
-// Minimal client for Lexicon's local backend — the same request shapes the
-// desktop app's frontend/src/api.js uses, so the extension and the app speak
-// one contract (C48.2).
-//
-// Port discovery (C48.1): the packaged desktop app pins the sidecar to
-// 18000, the standalone dev launcher to 8000. discoverBackend() probes both
-// in order and remembers the working port for the session.
+// Client for the Lexicon backend.
+// Ports: 18000 (packaged app), 8000 (dev launcher).
+// The request shapes match the desktop app.
 
 export const BACKEND_PORTS = [18000, 8000];
 
@@ -18,8 +14,7 @@ export function getBackendBaseUrl() {
   return baseUrl;
 }
 
-// The ping must prove this is Lexicon's backend, not something else that
-// happens to answer on the port.
+// Confirm that the backend is Lexicon's.
 export function isValidPing(body) {
   return (
     body !== null &&
@@ -34,8 +29,7 @@ export function buildGrammarRequest(text, language = "en-US", ignore = []) {
 }
 
 export function buildTransformRequest(prompt, text) {
-  // Matches the desktop app: model_key/backend are omitted so the backend
-  // routes through whichever AI backend is active.
+  // The backend selects the model itself.
   return { prompt, text };
 }
 
@@ -58,8 +52,7 @@ async function jsonRequest(path, options) {
   return response.json();
 }
 
-// Probes 18000 then 8000; the first reachable Lexicon backend wins for the
-// session. Returns the base URL, or null when the desktop app isn't running.
+// Probe both ports. Return the first live backend, or null.
 export async function discoverBackend() {
   for (const port of BACKEND_PORTS) {
     try {
@@ -72,7 +65,7 @@ export async function discoverBackend() {
       baseUrl = `http://127.0.0.1:${port}`;
       return baseUrl;
     } catch {
-      // Port not listening (or answered with garbage) — try the next one.
+      // The port is closed. Try the next port.
     }
   }
   baseUrl = null;

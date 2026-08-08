@@ -1,7 +1,4 @@
-// Chrome manifest invariants (C48.2): MV3 shape, pinned ID, allowlist-scoped
-// permissions, no dangling file references. Runs the build first and validates
-// the staged dist — that's what Load unpacked and the store zip contain.
-//
+// Chrome manifest invariants. Runs the build and checks the staged dist.
 // Run: node --test extension/tests/
 
 import test from "node:test";
@@ -25,8 +22,7 @@ const manifest = JSON.parse(
   readFileSync(join(CHROME_DIR, "manifest.json"), "utf-8"),
 );
 
-// Mirrors extension/tools/extension_id.py: first 128 bits of SHA-256 over the
-// key's SPKI DER, each nibble rendered a-p.
+// Same algorithm as extension/tools/extension_id.py.
 function extensionIdFromKey(spkiB64) {
   const digest = createHash("sha256").update(Buffer.from(spkiB64, "base64")).digest();
   const alphabet = "abcdefghijklmnop";
@@ -51,8 +47,7 @@ test("manifest is MV3 with semver version and pinned key", () => {
 });
 
 test("pinned extension ID still matches the key in the manifest", () => {
-  // C48.1 pins this ID in backend/main.py — if this test fails, the CORS
-  // allowlist and the loaded extension are out of sync.
+  // The backend pins this ID in its CORS allowlist.
   assert.equal(
     extensionIdFromKey(manifest.key),
     "egcfmlgpcidpanppnampkkdknogccpjg",
@@ -71,15 +66,13 @@ test("proofread shortcut command is declared", () => {
   assert.ok(manifest.commands["lexicon-proofread"].suggested_key.default);
 });
 
-test("content scripts are scoped to the C48.4 allowlist only", () => {
+test("content scripts are scoped to the allowlist only", () => {
   const matches = manifest.content_scripts.flatMap((cs) => cs.matches);
   assert.deepEqual(matches, ALLOWLIST_PATTERNS);
   for (const pattern of matches) {
     assert.ok(pattern.startsWith("https://"), `non-https match pattern: ${pattern}`);
     assert.ok(!pattern.includes("all_urls"), "all_urls must never ship");
   }
-  // Classic scripts load in dependency order: polyfill, then the shared
-  // layer files, then the message-handling content script.
   assert.deepEqual(manifest.content_scripts.flatMap((cs) => cs.js), [
     "vendor/browser-polyfill.min.js",
     "detectEditable.js",

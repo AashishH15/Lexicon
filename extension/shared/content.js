@@ -1,19 +1,10 @@
-// Content script (C48.4): owns editable-field detection, text extraction,
-// and squiggle rendering. The popup (C48.6) and background talk to it only
-// through the message contract below — the content script never exposes page
-// DOM to other extension contexts, and page-origin fetches to the backend
-// are impossible anyway (CORS), so the backend client stays in extension
-// contexts (background/popup).
-//
-// Message contract (shared by both browser builds):
-//   { type: "lexicon:get-text" }        -> { ok, text, kind } — the focused
-//                                          editable's normalized text
-//   { type: "lexicon:highlight", matches } -> { ok, count } — squiggles for
-//                                          [{offset,length}] from the backend
-//   { type: "lexicon:clear-highlights" } -> { ok }
-//
-// Classic script (content scripts can't be ES modules); uses the namespaces
-// from detectEditable.js / squiggle.js, which must load before this file.
+// Content script.
+// It detects editable fields, extracts text, and draws squiggles.
+// The background uses these messages:
+//   lexicon:get-text          -> { ok, text, kind }
+//   lexicon:highlight         -> { ok, count }
+//   lexicon:clear-highlights  -> { ok }
+// This file runs as a classic script.
 
 (function () {
   "use strict";
@@ -21,8 +12,7 @@
   const editable = globalThis.__lexiconEditable;
   const squiggle = globalThis.__lexiconSquiggle;
 
-  // The field + extracted text the backend saw. Matches from the backend are
-  // only valid against this exact text; any input invalidates it.
+  // The field and text the backend checked. Input invalidates them.
   let lastField = null;
   let lastText = null;
   let lastSegments = null;

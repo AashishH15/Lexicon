@@ -1,9 +1,5 @@
-// Unit tests for detectEditable.js pure helpers (C48.4). The file is a
-// classic script (content scripts can't be ES modules), so it's loaded via
-// node:vm and the exported namespace is read from the sandbox. DOM-dependent
-// parts (textSegments, detectEditableField) are exercised manually per C48.7.
-//
-// Run: node --test extension/tests/
+// Tests for detectEditable.js. The file runs as a classic script, so it
+// loads via node:vm. Run: node --test extension/tests/
 
 import test from "node:test";
 import assert from "node:assert/strict";
@@ -28,12 +24,10 @@ const {
   matchRanges,
 } = sandbox.__lexiconEditable;
 
-// vm runs the file in a separate realm, so objects it creates carry a foreign
-// prototype and fail deepStrictEqual's prototype check. Round-trip through
-// JSON to compare plain data.
+// JSON round-trip avoids cross-realm prototype mismatches.
 const plain = (value) => JSON.parse(JSON.stringify(value));
 
-test("siteForHost matches the C48.4 allowlist", () => {
+test("siteForHost matches the allowlist", () => {
   assert.equal(siteForHost("mail.google.com"), "mail.google.com");
   assert.equal(siteForHost("sub.slack.com"), "*.slack.com");
   assert.equal(siteForHost("slack.com"), "*.slack.com");
@@ -90,7 +84,7 @@ test("matchRanges maps a simple match to one node range", () => {
 });
 
 test("matchRanges bridges a match across a synthetic line break", () => {
-  // "teh\nalgoritm" (offset 0, length 12): "teh" + synthetic \n + "algoritm"
+  // "teh" + synthetic newline + "algoritm" (offset 0, length 12)
   const ranges = matchRanges([{ offset: 0, length: 12 }], BASIC_SEGMENTS);
   assert.deepEqual(plain(ranges), [
     { startNode: "n1", startOffset: 0, endNode: "n2", endOffset: 8 },

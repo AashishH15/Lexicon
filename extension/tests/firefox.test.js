@@ -1,9 +1,4 @@
-// Firefox manifest invariants (C48.3): genuinely different from Chrome —
-// event-page background (not a service worker), gecko id for AMO, no
-// Chrome-only `key` field — while content-script scope and permissions stay
-// in lockstep with the Chrome build. Runs the build first and validates the
-// staged dist.
-//
+// Firefox manifest invariants. Runs the build and checks the staged dist.
 // Run: node --test extension/tests/
 
 import test from "node:test";
@@ -36,7 +31,7 @@ test("firefox manifest is MV3 with semver version", () => {
 
 test("gecko id present for AMO; Chrome-only `key` never ships", () => {
   assert.equal(firefox.browser_specific_settings.gecko.id, "lexicon@lexicon.app");
-  // web-ext lint requires >= 142 (Android) for data_collection_permissions.
+  // web-ext lint requires version 142 or higher.
   assert.ok(
     Number(firefox.browser_specific_settings.gecko.strict_min_version) >= 142,
   );
@@ -69,8 +64,8 @@ test("shared background imports the polyfill (no importScripts in Firefox)", () 
 });
 
 test("polyfill loads before every script that uses browser.*", () => {
-  // Content scripts load the polyfill explicitly first; the background
-  // imports it as a module itself.
+  // Content scripts load the polyfill first.
+  // The background imports it as a module.
   for (const cs of firefox.content_scripts) {
     assert.equal(cs.js[0], "vendor/browser-polyfill.min.js");
   }

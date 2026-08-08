@@ -1,20 +1,8 @@
-// Squiggle overlay rendering (C48.4).
-//
-// Classic script (content scripts can't be ES modules); exposes
-// globalThis.__lexiconSquiggle. Renders red underlines for grammar matches
-// keyed to raw DOM ranges — deliberately NOT reusing the desktop app's
-// grammarHighlight.js, which is built against TipTap's ProseMirror schema.
-//
-// Two positioning paths:
-//   - contenteditable (Gmail/Slack/Discord/generic): build a DOM Range per
-//     match and draw at range.getClientRects().
-//   - textarea: no DOM ranges exist, so a hidden text-mirror (same font and
-//     wrapping width) renders the normalized text, matches wrapped in spans,
-//     and squiggle positions are read from the span rects.
-//
-// The overlay is one fixed, pointer-transparent layer. Positions are
-// recomputed on scroll/resize (rAF-throttled); the content script clears
-// squiggles on input because offsets go stale.
+// Squiggle overlay rendering.
+// Draw red underlines for grammar matches.
+// contenteditable: use DOM ranges.
+// textarea: use a hidden mirror with the same font and width.
+// Recompute positions on scroll and resize.
 
 (function () {
   "use strict";
@@ -28,7 +16,7 @@
     `#${MIRROR_ID}{position:absolute;visibility:hidden;white-space:pre-wrap;overflow:hidden;pointer-events:none}`;
 
   let state = null; // { field, ranges, text, spans?, mirror? }
-  let boundField = null; // textarea the scroll listener is attached to
+  let boundField = null; // the textarea that has the scroll listener
 
   function ensureLayer() {
     if (!document.getElementById(STYLE_ID)) {
@@ -55,8 +43,7 @@
     layer.appendChild(el);
   }
 
-  // Merges overlapping/adjacent ranges so nested spans never occur in the
-  // mirror and overlapping squiggles don't stack.
+  // Merge overlapping ranges.
   function mergeRanges(ranges) {
     const sorted = [...ranges].sort((a, b) => a.start - b.start);
     const out = [];
@@ -88,8 +75,7 @@ function mirrorStyle(field, computed) {
     fontWeight: computed.fontWeight,
     letterSpacing: computed.letterSpacing,
     lineHeight,
-    // Wrapping must match the textarea exactly (long words can break at word
-    // boundaries rather than mid-word) — copy its computed wrap rules.
+    // Copy the textarea wrap rules. Wrapping must match exactly.
     whiteSpace: computed.whiteSpace || "pre-wrap",
     overflowWrap: computed.overflowWrap || "break-word",
     wordBreak: computed.wordBreak || "normal",
@@ -195,8 +181,7 @@ function mirrorStyle(field, computed) {
     });
   }
 
-  // Listeners are added per applySquiggles and removed in clearSquiggles so
-  // repeated proofreads never stack them.
+  // Bind at apply. Unbind at clear.
   function bindReposition() {
     window.addEventListener("scroll", scheduleRender, {
       capture: true,
@@ -218,9 +203,8 @@ function mirrorStyle(field, computed) {
     }
   }
 
-  // field: the editable element; ranges: [{startNode, startOffset, endNode,
-  // endOffset}] for contenteditable OR [{start, end}] char ranges for
-  // textarea; text: the exact (normalized) text the offsets refer to.
+  // field: the editable element. ranges: DOM or char ranges.
+  // text: the normalized text that the offsets refer to.
   function applySquiggles(field, ranges, text) {
     clearSquiggles();
     if (!field || !ranges || ranges.length === 0 || text == null) return;

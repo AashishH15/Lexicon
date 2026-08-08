@@ -4,16 +4,14 @@ Chrome extension IDs are the first 128 bits of the SHA-256 digest of the
 public key's SPKI DER bytes, each 4-bit nibble rendered as a letter a-p
 (see https://developer.chrome.com/docs/extensions/reference/manifest/key).
 
-C48.1 pins this ID in backend/main.py so the local API accepts calls only
-from Lexicon's own extension. Re-run after publishing to the Web Store: if
-the store build's ID differs from the dev ID (it is derived from the key
-shipped in the submitted zip, so it usually matches), add the store ID to
-backend/main.py's EXTENSION_ORIGINS or set LEXICON_EXTENSION_ORIGINS.
+The ID is pinned in backend/main.py so the local API accepts calls only
+from Lexicon's own extension. Re-run after publishing to the Web Store.
+If the store ID differs from the dev ID, add it to EXTENSION_ORIGINS in
+backend/main.py or set LEXICON_EXTENSION_ORIGINS.
 
-Lives in extension/tools/ rather than extension/chrome/ on purpose: Chrome
-refuses to load unpacked extensions from folders containing files or
-directories that start with "_" (e.g. __pycache__), so the chrome build
-folder must only ever contain extension assets.
+Lives in extension/tools/ rather than extension/chrome/: Chrome refuses
+to load unpacked extensions from folders that contain _-prefixed entries
+such as __pycache__.
 
 Usage:
     python extension_id.py            # ID for extension/chrome/manifest.json

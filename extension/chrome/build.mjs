@@ -1,13 +1,7 @@
-// Builds the Chrome extension (C48.2):
-//   1. validates the manifest (required MV3 fields, semver version)
-//   2. stages a clean dist/ containing only shipable files — the same
-//      whitelist the Web Store zip needs, so nothing stray ever ships
-//   3. packs dist/ into extension/dist/lexicon-chrome-<version>.zip
-//
-// Dev loop: run this once, then Load unpacked points at extension/chrome/dist.
-// The manifest and the vendored polyfill ship from this dir and shared/.
-//
-// Usage: node build.mjs
+// Builds the Chrome extension.
+// 1. Validate the manifest.
+// 2. Stage dist/ with only the ship files.
+// 3. Pack dist/ into extension/dist/lexicon-chrome-<version>.zip.
 
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -19,8 +13,7 @@ const SHARED_DIR = join(CHROME_DIR, "..", "shared");
 const DIST_DIR = join(CHROME_DIR, "dist");
 const OUT_DIR = join(CHROME_DIR, "..", "dist");
 
-// Files that ship. Anything else (build.mjs, etc.) is dev tooling and must
-// never end up in the zip. Resolved platform-first, then from shared/.
+// Only these files ship. Resolve from the platform dir first, then shared/.
 const SHIP_FILES = [
   "manifest.json",
   "vendor/browser-polyfill.min.js",

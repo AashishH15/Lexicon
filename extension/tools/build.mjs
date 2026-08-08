@@ -1,11 +1,5 @@
-// Shared build helpers for the platform build scripts (C48.3).
-//
-// Both Chrome and Firefox builds: stage a clean dist/ from the platform
-// dir (manifest.json) plus the shared core (everything else), then pack it
-// as a zip (.zip for Chrome Web Store, .xpi for AMO — same format).
-//
-// Files are resolved platform-first, then from shared/, so a platform can
-// override a shared file by adding one of its own with the same name.
+// Shared build helpers for both platform build scripts.
+// Files resolve from the platform dir first, then from shared/.
 
 import { spawnSync } from "node:child_process";
 import { cpSync, existsSync, mkdirSync, readFileSync, rmSync } from "node:fs";
@@ -54,9 +48,7 @@ export function packArchive(distDir, outPath) {
   mkdirSync(dirname(outPath), { recursive: true });
   rmSync(outPath, { force: true });
 
-  // Prefer the `zip` CLI (preinstalled on GitHub Actions runners), fall back
-  // to .NET ZipFile via PowerShell for local Windows dev — handles any
-  // archive extension (.zip, .xpi) where Compress-Archive only takes .zip.
+  // Prefer the zip CLI. Fall back to .NET ZipFile on Windows.
   const zip = spawnSync("zip", ["-r", "-q", outPath, "."], {
     cwd: distDir,
     stdio: "inherit",

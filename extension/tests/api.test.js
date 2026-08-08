@@ -1,7 +1,4 @@
-// Unit tests for the extension's backend client (C48.2). Pure helpers are
-// tested here; the fetch path is exercised manually against a live backend.
-//
-// Run: node --test extension/tests/
+// Tests for the backend client. Run: node --test extension/tests/
 
 import test from "node:test";
 import assert from "node:assert/strict";

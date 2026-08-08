@@ -1,5 +1,4 @@
-/* Popup styling follows the desktop app's cream/ink design system
-   (canvas #F7F6F3 / ink #111111 / muted #5F5E5B / accent #1F6C9F). */
+/* Colors match the desktop app design system. */
 
 :root {
   color-scheme: light;

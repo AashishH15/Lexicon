@@ -1,11 +1,9 @@
-"""C48.1: extension CORS handshake and /extension/ping.
+"""Extension CORS handshake and /extension/ping.
 
-The browser extension calls the same FastAPI sidecar the desktop app uses.
-Two things make that safe and testable here:
-- pinned Chrome extension origin (derived from the manifest `key`) plus a
-  strict regex for Firefox's per-profile moz-extension UUID origins;
-- a cheap /extension/ping endpoint the extension probes to confirm it is
-  talking to Lexicon and not something else on the port.
+The extension uses the same FastAPI sidecar as the desktop app.
+- Chrome: a pinned extension origin derived from the manifest `key`.
+- Firefox: a strict regex for per-profile moz-extension UUID origins.
+- The /extension/ping endpoint proves the caller is Lexicon.
 """
 
 import re
@@ -19,9 +17,8 @@ BACKEND_DIR = Path(__file__).resolve().parents[1]
 if str(BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(BACKEND_DIR))
 
-# extension/tools hosts extension_id.py, shared with the manifest's `key`.
-# It must not live in extension/chrome/: Chrome refuses to load unpacked
-# extensions from folders containing _-prefixed entries like __pycache__.
+# extension_id.py must not live in extension/chrome/: Chrome refuses to
+# load unpacked extensions from folders with _-prefixed entries.
 EXTENSION_TOOLS_DIR = BACKEND_DIR.parent / "extension" / "tools"
 if str(EXTENSION_TOOLS_DIR) not in sys.path:
     sys.path.insert(0, str(EXTENSION_TOOLS_DIR))
