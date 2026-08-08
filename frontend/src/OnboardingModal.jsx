@@ -13,6 +13,7 @@ import {
   Palette,
   Flask,
   ChatTeardropText,
+  Info,
 } from "@phosphor-icons/react";
 import ModelManager from "./ModelManager.jsx";
 import Toggle from "./Toggle.jsx";
@@ -256,6 +257,19 @@ export default function OnboardingModal({
                 <div className="space-y-1.5">
                   <label className="flex items-center gap-1.5 font-sans text-xs font-semibold text-ink uppercase tracking-wider">
                     <SlidersHorizontal size={14} weight="bold" /> Primary Language
+                    <span className="group relative inline-flex normal-case tracking-normal">
+                      <Info
+                        size={12}
+                        weight="bold"
+                        className="text-muted"
+                        aria-label="Language info"
+                      />
+                      <span className="pointer-events-none absolute left-0 top-5 z-20 w-56 rounded-md border border-hairline bg-white p-2.5 font-sans text-[11px] font-normal leading-relaxed text-muted opacity-0 shadow-sm transition-opacity duration-150 group-hover:opacity-100">
+                        If a selected language doesn&apos;t load or apply
+                        correctly in Lexicon, please take a screenshot and send
+                        it through the feedback form.
+                      </span>
+                    </span>
                   </label>
                   <LanguageDropdown
                     options={LANGUAGES}
@@ -332,6 +346,22 @@ export default function OnboardingModal({
                 <div className="space-y-2">
                   <label className="flex items-center gap-1.5 font-sans text-xs font-semibold text-ink uppercase tracking-wider">
                     <Palette size={14} weight="bold" /> Paper Texture
+                    <span className="rounded border border-hairline px-1.5 py-px font-mono text-[9px] font-normal uppercase tracking-wider text-muted">
+                      Beta
+                    </span>
+                    <span className="group relative inline-flex normal-case tracking-normal">
+                      <Info
+                        size={12}
+                        weight="bold"
+                        className="text-muted"
+                        aria-label="Paper texture beta info"
+                      />
+                      <span className="pointer-events-none absolute left-0 top-5 z-20 w-56 rounded-md border border-hairline bg-white p-2.5 font-sans text-[11px] font-normal leading-relaxed text-muted opacity-0 shadow-sm transition-opacity duration-150 group-hover:opacity-100">
+                        Paper textures are in beta and some edge cases may
+                        remain. If you find one, please take a screenshot and
+                        send it through the feedback form.
+                      </span>
+                    </span>
                   </label>
                   <div className="grid grid-cols-5 gap-2">
                     {PAPER_TEXTURES.map((t) => {

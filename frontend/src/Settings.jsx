@@ -909,8 +909,21 @@ export default function Settings({
                     data-setting-key="language"
                     className={getHighlightClass("language")}
                   >
-                    <p className="font-mono text-[10px] uppercase tracking-widest text-muted">
+                    <p className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-muted">
                       Language
+                      <span className="group relative inline-flex normal-case tracking-normal">
+                        <Info
+                          size={12}
+                          weight="bold"
+                          className="text-muted"
+                          aria-label="Language info"
+                        />
+                        <span className="pointer-events-none absolute left-0 top-5 z-20 w-56 rounded-md border border-hairline bg-white p-2.5 font-sans text-[11px] leading-relaxed text-muted opacity-0 shadow-sm transition-opacity duration-150 group-hover:opacity-100">
+                          If a selected language doesn&apos;t load or apply
+                          correctly in Lexicon, please take a screenshot and
+                          send it through the feedback form.
+                        </span>
+                      </span>
                     </p>
                     <p className="mt-1 font-sans text-xs text-muted">
                       Sets the spelling and grammar rules used when
