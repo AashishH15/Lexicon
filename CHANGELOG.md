@@ -7,6 +7,41 @@ This changelog tracks what is **live** in each release and what is still
 **stubbed** (shown in the interface but not yet functional). Stubbed features
 are listed so the release reads honestly about what works today.
 
+## v0.10.2 — Multi-Language Proofreading, Onboarding Polish & Dev API Fix
+
+### Quick Downloads:
+
+- 🪟 **[Windows x64 Setup](https://github.com/AashishH15/Lexicon/releases/download/v0.10.2/Lexicon_0.10.2_x64-setup.exe)**: Standard installer for modern 64-bit Windows PCs (Intel / AMD).
+- 🍏 **[macOS Apple Silicon DMG](https://github.com/AashishH15/Lexicon/releases/download/v0.10.2/Lexicon_0.10.2_aarch64.dmg)**: For modern Apple Silicon Macs (M1, M2, M3, M4 chips).
+- 🐧 **[Linux x64 DEB](https://github.com/AashishH15/Lexicon/releases/tag/v0.10.2)**: Debian package (`.deb`) for 64-bit Linux distributions (Ubuntu, Debian, Mint, Pop!_OS).
+- 📦 **[View All Assets & Checksums](https://github.com/AashishH15/Lexicon/releases/tag/v0.10.2)**: Complete list of installers including ARM64 Windows, x86 Windows, Intel macOS, and Linux x64 DEB.
+
+### What's New & Fixed in v0.10.2:
+
+#### 🌐 Multi-Language Proofreading:
+- **49 Languages & Dialects**: Shared `languages.js` catalog for Settings and Onboarding, covering every LanguageTool 6.8 grammar locale Lexicon exposes — English variants pinned at the top, all others sorted alphabetically (including Catalan Balearic/Valencian, Portuguese Angola/Mozambique preAO, Spanish voseo, Simple German, and more).
+- **Searchable Language Dropdown**: Replaced the short native `<select>` with a searchable picker that shows display names and LanguageTool codes.
+- **Relevance-Ranked Search**: Typing codes like `es` or `ta` now surfaces Spanish and Tamil first (exact code → code prefix → name prefix → word start → loose substring), so mid-word noise like “States / Catalan / Chinese” no longer buries the intended language.
+- **Catalog Tests**: Added `languages.test.js` covering count, uniqueness, English pin order, alphabetical labels, official naming for voseo/preAO/Swiss/Simple German, and exclusion of LibreOffice aliases plus spellcheck-only Norwegian.
+- **Language Info Tooltip**: Settings and Onboarding language labels include an info icon asking users to report Lexicon implementation issues (language not loading/applying), not LanguageTool grammar-rule quality.
+
+#### 🧭 Onboarding Polish:
+- **Beta Updates Opt-In**: Final onboarding step now includes a “Receive Beta Updates” toggle (same `lexicon:betaOptIn` preference as Settings) plus a feedback link.
+- **Faster Modal Close**: Onboarding finish/close no longer awaits AI refresh before dismissing the modal, so the wizard closes immediately.
+- **Paper Texture Beta Badge**: Onboarding Paper Texture now matches Settings with the Beta badge and edge-case feedback tooltip.
+
+#### 🔧 Desktop Dev / Sidecar Reliability:
+- **Tauri Always Uses Port 18000**: `api.js` now routes Tauri runtime (including `tauri dev`) to the sidecar on `127.0.0.1:18000`, so a website preview or other process on port 8000 can no longer steal `/ai/status` and produce false CORS/404 failures. Bare browser Vite still expects uvicorn on 8000.
+
+#### ↩️ Rollback Catalog:
+- **Fallback Releases**: Previous Releases & Rollback offline fallback list is now **v0.10.1**, **v0.9.1**, and **v0.8.5**.
+
+#### 🌐 Website:
+- Trust strip **0 Ads** → **45+ Languages**.
+- Removed the outdated “Appearance presets arrive in v0.10.0…” disclaimer (and its unused CSS).
+
+---
+
 ## v0.10.1 — Typography, Paper Textures, Accessibility & Onboarding Studio
 
 ### Quick Downloads:
