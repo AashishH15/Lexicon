@@ -62,6 +62,13 @@ test("pinned extension ID still matches the key in the manifest", () => {
 test("popup and background are wired", () => {
   assert.equal(manifest.action.default_popup, "popup.html");
   assert.equal(manifest.background.service_worker, "background.js");
+  assert.equal(manifest.background.type, "module");
+});
+
+test("proofread shortcut command is declared", () => {
+  assert.ok(manifest.commands["lexicon-proofread"]);
+  assert.equal(manifest.commands["lexicon-proofread"].description, "Proofread the focused text field");
+  assert.ok(manifest.commands["lexicon-proofread"].suggested_key.default);
 });
 
 test("content scripts are scoped to the C48.4 allowlist only", () => {
@@ -71,6 +78,14 @@ test("content scripts are scoped to the C48.4 allowlist only", () => {
     assert.ok(pattern.startsWith("https://"), `non-https match pattern: ${pattern}`);
     assert.ok(!pattern.includes("all_urls"), "all_urls must never ship");
   }
+  // Classic scripts load in dependency order: polyfill, then the shared
+  // layer files, then the message-handling content script.
+  assert.deepEqual(manifest.content_scripts.flatMap((cs) => cs.js), [
+    "vendor/browser-polyfill.min.js",
+    "detectEditable.js",
+    "squiggle.js",
+    "content.js",
+  ]);
 });
 
 test("required permissions stay minimal; everything else is optional", () => {

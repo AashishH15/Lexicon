@@ -17,7 +17,16 @@
     "default_popup": "popup.html"
   },
   "background": {
-    "scripts": ["vendor/browser-polyfill.min.js", "background.js"]
+    "scripts": ["background.js"],
+    "type": "module"
+  },
+  "commands": {
+    "lexicon-proofread": {
+      "suggested_key": {
+        "default": "Alt+Shift+L"
+      },
+      "description": "Proofread the focused text field"
+    }
   },
   "content_scripts": [
     {
@@ -26,7 +35,12 @@
         "https://*.slack.com/*",
         "https://discord.com/*"
       ],
-      "js": ["vendor/browser-polyfill.min.js", "content.js"],
+      "js": [
+        "vendor/browser-polyfill.min.js",
+        "detectEditable.js",
+        "squiggle.js",
+        "content.js"
+      ],
       "run_at": "document_idle"
     }
   ],

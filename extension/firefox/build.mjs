@@ -30,6 +30,8 @@ const SHIP_FILES = [
   "manifest.json",
   "vendor/browser-polyfill.min.js",
   "background.js",
+  "detectEditable.js",
+  "squiggle.js",
   "content.js",
   "api.js",
   "prompts.js",

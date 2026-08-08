@@ -47,27 +47,30 @@ test("gecko id present for AMO; Chrome-only `key` never ships", () => {
   assert.equal("key" in firefox, false);
 });
 
-test("background is an event page, not a service worker", () => {
+test("background is a module event page, not a service worker", () => {
   assert.ok(Array.isArray(firefox.background.scripts), "background.scripts required");
   assert.equal("service_worker" in firefox.background, false);
+  assert.equal(firefox.background.type, "module");
 });
 
-test("shared background guards importScripts (event pages lack it)", () => {
+test("shared background imports the polyfill (no importScripts in Firefox)", () => {
   const background = readFileSync(
     join(EXTENSION_DIR, "shared", "background.js"),
     "utf-8",
   );
   assert.ok(
-    /typeof importScripts === "function"/.test(background),
-    "background.js must guard importScripts for Firefox event pages",
+    background.includes('import "./vendor/browser-polyfill.min.js"'),
+    "background.js must import the polyfill as a module (Firefox event pages have no importScripts)",
+  );
+  assert.ok(
+    !/importScripts\(/.test(background),
+    "background.js must not use importScripts",
   );
 });
 
 test("polyfill loads before every script that uses browser.*", () => {
-  for (const script of firefox.background.scripts.slice(1)) {
-    assert.ok(script.endsWith(".js"));
-  }
-  assert.equal(firefox.background.scripts[0], "vendor/browser-polyfill.min.js");
+  // Content scripts load the polyfill explicitly first; the background
+  // imports it as a module itself.
   for (const cs of firefox.content_scripts) {
     assert.equal(cs.js[0], "vendor/browser-polyfill.min.js");
   }
@@ -77,12 +80,17 @@ test("polyfill loads before every script that uses browser.*", () => {
   assert.ok(polyfillIndex !== -1 && polyfillIndex < popupIndex);
 });
 
-test("content-script allowlist and permissions match the Chrome build", () => {
+test("content-script scope, order, permissions, and commands match the Chrome build", () => {
   const chromeMatches = chrome.content_scripts.flatMap((cs) => cs.matches);
   const firefoxMatches = firefox.content_scripts.flatMap((cs) => cs.matches);
   assert.deepEqual(firefoxMatches.sort(), chromeMatches.sort());
+  assert.deepEqual(
+    firefox.content_scripts.flatMap((cs) => cs.js),
+    chrome.content_scripts.flatMap((cs) => cs.js),
+  );
   assert.deepEqual(firefox.permissions.sort(), chrome.permissions.sort());
   assert.deepEqual(firefox.optional_host_permissions, chrome.optional_host_permissions);
+  assert.deepEqual(firefox.commands, chrome.commands);
 });
 
 test("every referenced file exists in the staged dist", () => {
