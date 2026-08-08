@@ -14,7 +14,7 @@
   &nbsp;&middot;&nbsp;
   <a href="https://github.com/AashishH15/Lexicon/releases/latest">Download release</a>
   &nbsp;&middot;&nbsp;
-  <a href="https://github.com/AashishH15/Lexicon/issues">Report an issue</a>
+  <a href="https://tally.so/r/LZq8vy">Report an issue</a>
 </p>
 
 <p align="center">

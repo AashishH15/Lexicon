@@ -24,6 +24,13 @@ function formatBackendDiagnostic(error) {
   if (rawError.includes("Failed to fetch") || rawError.includes("NetworkError")) {
     hint = "The local engine is offline or still starting up. Lexicon will automatically re-connect once ready.";
   } else if (
+    /can't find java|no java install|javaerror|grammar_engine_unavailable/i.test(
+      rawError,
+    )
+  ) {
+    hint =
+      "The bundled Java runtime was not found on PATH. Reinstall Lexicon, or confirm the installer included the JRE under resources/jre.";
+  } else if (
     rawError.includes("Permission denied") ||
     rawError.includes("Access is denied") ||
     rawError.includes("os error 5") ||

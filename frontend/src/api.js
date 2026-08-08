@@ -51,7 +51,10 @@ export async function checkGrammar(
     signal,
   });
   if (!response.ok) {
-    throw new Error(`Grammar check failed: ${response.status}`);
+    const data = await response.json().catch(() => ({}));
+    throw new Error(
+      data.detail || data.error || `Grammar check failed: ${response.status}`,
+    );
   }
   const data = await response.json();
   return data.matches;

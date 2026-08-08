@@ -20,6 +20,36 @@ JVM_MEMORY_FLAGS = [
 ]
 
 
+def _java_executable(home: str) -> str | None:
+    if not home:
+        return None
+    name = "java.exe" if os.name == "nt" else "java"
+    candidate = os.path.join(home, "bin", name)
+    return candidate if os.path.isfile(candidate) else None
+
+
+def _ensure_bundled_java_on_path() -> None:
+    """Make the bundled JRE visible to language_tool_python.
+
+    That package resolves Java with ``shutil.which("java")`` (PATH lookup).
+    Setting JAVA_HOME alone is not enough on a machine with no system Java.
+    """
+    for key in ("LEXICON_JAVA_HOME", "JAVA_HOME"):
+        home = os.environ.get(key, "").strip()
+        java_exe = _java_executable(home)
+        if not java_exe:
+            continue
+        java_bin = os.path.dirname(java_exe)
+        current = os.environ.get("PATH", "")
+        parts = [p for p in current.split(os.pathsep) if p]
+        if parts and os.path.normcase(parts[0]) == os.path.normcase(java_bin):
+            return
+        parts = [p for p in parts if os.path.normcase(p) != os.path.normcase(java_bin)]
+        os.environ["PATH"] = os.pathsep.join([java_bin, *parts])
+        os.environ.setdefault("JAVA_HOME", home)
+        return
+
+
 def _get_tool(language="en-US"):
     global _tool
     if _tool is None:
@@ -27,6 +57,8 @@ def _get_tool(language="en-US"):
 
         import language_tool_python
         import language_tool_python.server as language_tool_server
+
+        _ensure_bundled_java_on_path()
 
         orig_popen = subprocess.Popen
 

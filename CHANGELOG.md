@@ -32,6 +32,9 @@ are listed so the release reads honestly about what works today.
 
 #### 🔧 Desktop Dev / Sidecar Reliability:
 - **Tauri Always Uses Port 18000**: `api.js` now routes Tauri runtime (including `tauri dev`) to the sidecar on `127.0.0.1:18000`, so a website preview or other process on port 8000 can no longer steal `/ai/status` and produce false CORS/404 failures. Bare browser Vite still expects uvicorn on 8000.
+- **Bundled JRE on PATH (Windows grammar-engine fix)**: Fixed “Grammar engine unreachable” with `/grammar/check` returning HTTP 500 on Windows installs that have no system Java. LanguageTool is launched by `language_tool_python`, which resolves Java through `PATH` (`shutil.which("java")`) rather than `JAVA_HOME` — so the bundled JRE was present but never used, and no Java process was ever spawned. Lexicon now prepends the bundled `jre/bin` to `PATH` in three places: the Tauri sidecar spawn, the frozen sidecar launcher, and immediately before LanguageTool initialization.
+- **Correct Bundled JRE Lookup**: The sidecar launcher previously looked for `jre` *inside* its own folder, but the installer ships `jre` as a sibling resource of `lexicon-backend`, so the bundled runtime was never detected by the backend itself. It now resolves either layout and verifies the `java` binary actually exists.
+- **Actionable Engine Errors**: `/grammar/check` now returns a `503` with a JSON `detail` (e.g. `can't find Java`) instead of an unhandled `500`, and the Review panel surfaces a Java-runtime hint for that case rather than a generic offline message.
 
 #### ↩️ Rollback Catalog:
 - **Fallback Releases**: Previous Releases & Rollback offline fallback list is now **v0.10.1**, **v0.9.1**, and **v0.8.5**.

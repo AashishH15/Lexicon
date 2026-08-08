@@ -127,8 +127,19 @@ def languagetool_unload():
 
 @app.post("/grammar/check")
 def grammar_check(request: GrammarRequest):
-    matches = check_text(request.text, request.language, request.ignore)
-    return {"matches": matches}
+    try:
+        matches = check_text(request.text, request.language, request.ignore)
+        return {"matches": matches}
+    except Exception as exc:
+        # Surface a clear message (e.g. "can't find Java") instead of a bare
+        # unhandled 500 so Review can show a useful diagnostic.
+        return JSONResponse(
+            status_code=503,
+            content={
+                "error": "grammar_engine_unavailable",
+                "detail": str(exc) or exc.__class__.__name__,
+            },
+        )
 
 
 @app.get("/model/status")
