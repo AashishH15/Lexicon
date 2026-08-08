@@ -12,7 +12,7 @@ import {
   buildTransformRequest,
   formatMatches,
   isValidPing,
-} from "../chrome/api.js";
+} from "../shared/api.js";
 
 test("backend ports probe 18000 (packaged) before 8000 (dev launcher)", () => {
   assert.deepEqual(BACKEND_PORTS, [18000, 8000]);

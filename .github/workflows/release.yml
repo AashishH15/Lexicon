@@ -334,6 +334,51 @@ jobs:
           path: extension/dist/lexicon-chrome-*.zip
           if-no-files-found: error
 
+  extension-firefox:
+    name: Build Firefox extension (xpi)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Run extension tests
+        working-directory: extension
+        run: node --test
+
+      - name: Build and package Firefox extension
+        working-directory: extension/firefox
+        run: node build.mjs
+
+      - name: Validate with web-ext (AMO linter)
+        working-directory: extension/firefox
+        run: npx --yes web-ext@10.6.0 lint --source-dir dist
+
+      - name: Sign with AMO (when credentials are configured)
+        if: env.AMO_API_KEY != ''
+        env:
+          AMO_API_KEY: ${{ secrets.AMO_API_KEY }}
+          AMO_API_SECRET: ${{ secrets.AMO_API_SECRET }}
+        working-directory: extension/firefox
+        run: |
+          npx --yes web-ext@10.6.0 sign \
+            --source-dir dist \
+            --artifacts-dir ../../dist \
+            --api-key "$AMO_API_KEY" \
+            --api-secret "$AMO_API_SECRET"
+
+      - name: Upload Firefox extension xpi
+        uses: actions/upload-artifact@v4
+        with:
+          name: lexicon-firefox-extension
+          path: extension/dist/lexicon-firefox-*.xpi
+          if-no-files-found: error
+
   release:
     needs: [desktop]
     runs-on: ubuntu-latest

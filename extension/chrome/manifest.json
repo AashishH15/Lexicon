@@ -18,7 +18,7 @@
         "https://*.slack.com/*",
         "https://discord.com/*"
       ],
-      "js": ["content.js"],
+      "js": ["vendor/browser-polyfill.min.js", "content.js"],
       "run_at": "document_idle"
     }
   ],

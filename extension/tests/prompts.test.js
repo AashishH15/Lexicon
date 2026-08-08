@@ -11,7 +11,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { REWRITE_PROMPT } from "../chrome/prompts.js";
+import { REWRITE_PROMPT } from "../shared/prompts.js";
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const DESKTOP_PROMPTS = readFileSync(

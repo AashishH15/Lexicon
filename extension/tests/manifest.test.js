@@ -1,5 +1,6 @@
-// Manifest invariants for the Chrome build (C48.2): MV3 shape, pinned ID,
-// allowlist-scoped permissions, and no dangling file references.
+// Chrome manifest invariants (C48.2): MV3 shape, pinned ID, allowlist-scoped
+// permissions, no dangling file references. Runs the build first and validates
+// the staged dist — that's what Load unpacked and the store zip contain.
 //
 // Run: node --test extension/tests/
 
@@ -10,8 +11,16 @@ import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { spawnSync } from "node:child_process";
 
-const CHROME_DIR = join(dirname(fileURLToPath(import.meta.url)), "..", "chrome");
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
+const EXTENSION_DIR = join(dirname(fileURLToPath(import.meta.url)), "..");
+const CHROME_DIR = join(EXTENSION_DIR, "chrome");
+const DIST_DIR = join(CHROME_DIR, "dist");
+
+const build = spawnSync("node", ["build.mjs"], { cwd: CHROME_DIR });
+assert.equal(build.status, 0, "chrome build.mjs failed:\n" + build.stderr);
+
 const manifest = JSON.parse(
   readFileSync(join(CHROME_DIR, "manifest.json"), "utf-8"),
 );
@@ -70,29 +79,35 @@ test("required permissions stay minimal; everything else is optional", () => {
   assert.deepEqual(manifest.optional_host_permissions, ["http://*/*", "https://*/*"]);
 });
 
-test("every referenced file exists (no dangling refs)", () => {
+test("every referenced file exists in the staged dist", () => {
   const referenced = [
     manifest.action.default_popup,
     manifest.background.service_worker,
     ...manifest.content_scripts.flatMap((cs) => cs.js),
   ];
   for (const file of referenced) {
-    assert.ok(existsSync(join(CHROME_DIR, file)), `missing referenced file: ${file}`);
+    assert.ok(existsSync(join(DIST_DIR, file)), `missing dist file: ${file}`);
   }
-  // The popup's module imports api.js and popup.js — the build whitelist
-  // must include every one of them or the store zip breaks.
-  const popupSource = readFileSync(join(CHROME_DIR, "popup.html"), "utf-8");
+});
+
+test("build whitelist covers every popup asset and the vendored polyfill", () => {
+  const popupSource = readFileSync(join(EXTENSION_DIR, "shared", "popup.html"), "utf-8");
   const imports = [...popupSource.matchAll(/src="([^"]+)"/g)].map((m) => m[1]);
-  // Static imports of the popup module itself (e.g. prompts.js) ship too.
-  const popupModule = readFileSync(join(CHROME_DIR, "popup.js"), "utf-8");
+  const popupModule = readFileSync(
+    join(EXTENSION_DIR, "shared", "popup.js"),
+    "utf-8",
+  );
   for (const m of popupModule.matchAll(/from "\.\/([^"]+)"/g)) {
     imports.push(m[1]);
   }
-  for (const src of imports) {
-    assert.ok(existsSync(join(CHROME_DIR, src)), `missing popup asset: ${src}`);
-  }
   const shipList = readFileSync(join(CHROME_DIR, "build.mjs"), "utf-8");
   for (const src of imports) {
+    assert.ok(existsSync(join(DIST_DIR, src)), `missing dist asset: ${src}`);
     assert.ok(shipList.includes(`"${src}"`), `build.mjs whitelist misses popup asset: ${src}`);
   }
+});
+
+test("store zip exists and contains the dist contents", () => {
+  const zipPath = join(EXTENSION_DIR, "dist", `lexicon-chrome-${manifest.version}.zip`);
+  assert.ok(existsSync(zipPath), "chrome zip was not produced");
 });

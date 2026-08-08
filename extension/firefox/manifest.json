@@ -5,7 +5,31 @@
   "description": "Grammar, spelling, and rewrite suggestions from Lexicon's local engine (desktop app required).",
   "browser_specific_settings": {
     "gecko": {
-      "id": "lexicon@lexicon.app"
+      "id": "lexicon@lexicon.app",
+      "strict_min_version": "142.0",
+      "data_collection_permissions": {
+        "required": ["none"]
+      }
     }
-  }
+  },
+  "action": {
+    "default_title": "Lexicon",
+    "default_popup": "popup.html"
+  },
+  "background": {
+    "scripts": ["vendor/browser-polyfill.min.js", "background.js"]
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://mail.google.com/*",
+        "https://*.slack.com/*",
+        "https://discord.com/*"
+      ],
+      "js": ["vendor/browser-polyfill.min.js", "content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "permissions": ["scripting", "activeTab"],
+  "optional_host_permissions": ["http://*/*", "https://*/*"]
 }
