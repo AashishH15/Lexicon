@@ -1,0 +1,11 @@
+{
+  "manifest_version": 3,
+  "name": "Lexicon",
+  "version": "0.1.0",
+  "description": "Grammar, spelling, and rewrite suggestions from Lexicon's local engine (desktop app required).",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "lexicon@lexicon.app"
+    }
+  }
+}

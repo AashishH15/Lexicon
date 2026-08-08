@@ -56,22 +56,59 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
+# Pinned extension origins so the local API is not open to arbitrary
+# extensions (C48.1).
+# Chrome: the dev-loaded build's ID is derived from the `key` field in
+# extension/chrome/manifest.json and is stable across machines — regenerate
+# with extension/tools/extension_id.py. The Web Store build's ID is derived
+# from the key shipped in the submitted zip and should match; if it ever
+# differs, add the store ID here or via LEXICON_EXTENSION_ORIGINS.
+# Firefox: moz-extension:// origins are random per profile by design
+# (anti-fingerprinting), so they cannot be pinned per ID — the regex admits
+# only well-formed moz-extension UUID origins and nothing else.
+EXTENSION_ORIGINS = [
+    "chrome-extension://egcfmlgpcidpanppnampkkdknogccpjg",
+]
+EXTENSION_ORIGIN_REGEX = (
+    r"^moz-extension://[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+)
+
+
+def _cors_origins() -> list[str]:
+    """Fixed dev/Tauri origins plus pinned extension origins.
+
+    LEXICON_EXTENSION_ORIGINS (comma-separated full origins) appends extra
+    origins without editing this file — e.g. a second Chrome ID the day the
+    Web Store build publishes with a different one.
+    """
+    override = os.environ.get("LEXICON_EXTENSION_ORIGINS", "")
+    extra = [origin.strip() for origin in override.split(",") if origin.strip()]
+    return list(
+        dict.fromkeys(
+            [
+                "http://localhost:5173",
+                "http://127.0.0.1:5173",
+                # Tauri's bundled WebView origin, so the desktop app can call
+                # the sidecar API on localhost without a CORS block.
+                "tauri://localhost",
+                "http://tauri.localhost",
+                "https://tauri.localhost",
+                "http://localhost",
+                "http://localhost:8000",
+                "http://127.0.0.1:8000",
+                "http://localhost:18000",
+                "http://127.0.0.1:18000",
+                *EXTENSION_ORIGINS,
+                *extra,
+            ]
+        )
+    )
+
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        # Tauri's bundled WebView origin, so the desktop app can call the
-        # sidecar API on localhost without a CORS block.
-        "tauri://localhost",
-        "http://tauri.localhost",
-        "https://tauri.localhost",
-        "http://localhost",
-        "http://localhost:8000",
-        "http://127.0.0.1:8000",
-        "http://localhost:18000",
-        "http://127.0.0.1:18000",
-    ],
+    allow_origins=_cors_origins(),
+    allow_origin_regex=EXTENSION_ORIGIN_REGEX,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -97,6 +134,17 @@ class TransformRequest(BaseModel):
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+
+@app.get("/extension/ping")
+def extension_ping():
+    """Health probe for the browser extension (C48.1).
+
+    Deliberately free of LanguageTool/model dependencies — its only job is
+    proving the caller is talking to Lexicon's backend and not some other
+    process squatting on the port.
+    """
+    return {"ok": True, "app": "lexicon"}
 
 
 @app.post("/shutdown")
