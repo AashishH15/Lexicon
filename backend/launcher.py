@@ -18,9 +18,23 @@ def _prepend_path(entry: str) -> None:
     """Put ``entry`` at the front of PATH if it exists and is not already first."""
     if not entry or not os.path.isdir(entry):
         return
+    # Strip Windows extended-length prefixes — they break OpenJDK argv[0].
+    if entry.startswith("\\\\?\\"):
+        entry = entry[4:]
+    elif entry.startswith("//?/"):
+        entry = entry[4:]
     current = os.environ.get("PATH", "")
-    parts = [p for p in current.split(os.pathsep) if p]
+    parts = []
+    for p in current.split(os.pathsep):
+        if not p:
+            continue
+        if p.startswith("\\\\?\\"):
+            p = p[4:]
+        elif p.startswith("//?/"):
+            p = p[4:]
+        parts.append(p)
     if parts and os.path.normcase(parts[0]) == os.path.normcase(entry):
+        os.environ["PATH"] = os.pathsep.join(parts)
         return
     parts = [p for p in parts if os.path.normcase(p) != os.path.normcase(entry)]
     os.environ["PATH"] = os.pathsep.join([entry, *parts])
@@ -32,6 +46,10 @@ def _resolve_jre_dir(base_dir: str) -> str | None:
     tauri.conf.json ships ``jre`` and ``lexicon-backend`` as sibling resources,
     so the JRE normally sits one level *above* this executable, not beside it.
     """
+    if base_dir.startswith("\\\\?\\"):
+        base_dir = base_dir[4:]
+    elif base_dir.startswith("//?/"):
+        base_dir = base_dir[4:]
     java_name = "java.exe" if os.name == "nt" else "java"
     candidates = (
         os.path.join(base_dir, "jre"),

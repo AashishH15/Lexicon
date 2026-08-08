@@ -7,6 +7,24 @@ This changelog tracks what is **live** in each release and what is still
 **stubbed** (shown in the interface but not yet functional). Stubbed features
 are listed so the release reads honestly about what works today.
 
+## v0.10.3 — Hotfix: Windows Bundled JRE Path Crash
+
+### Quick Downloads:
+
+- 🪟 **[Windows x64 Setup](https://github.com/AashishH15/Lexicon/releases/download/v0.10.3/Lexicon_0.10.3_x64-setup.exe)**: Standard installer for modern 64-bit Windows PCs (Intel / AMD).
+- 🍏 **[macOS Apple Silicon DMG](https://github.com/AashishH15/Lexicon/releases/download/v0.10.3/Lexicon_0.10.3_aarch64.dmg)**: For modern Apple Silicon Macs (M1, M2, M3, M4 chips).
+- 🐧 **[Linux x64 DEB](https://github.com/AashishH15/Lexicon/releases/tag/v0.10.3)**: Debian package (`.deb`) for 64-bit Linux distributions (Ubuntu, Debian, Mint, Pop!_OS).
+- 📦 **[View All Assets & Checksums](https://github.com/AashishH15/Lexicon/releases/tag/v0.10.3)**: Complete list of installers including ARM64 Windows, x86 Windows, Intel macOS, and Linux x64 DEB.
+
+### What's Fixed in v0.10.3:
+
+- **Windows `\\?\` Java Path Crash**: v0.10.2 correctly put the bundled JRE on `PATH`, but some packaged launches then invoked Temurin as `\\?\C:\…\java.EXE`. OpenJDK treats that argv[0] as fatal (`jimage file name is null`, exit 1) during `java -version`, so proofreading never started and Review showed a grammar-engine error. Lexicon now strips Windows extended-length prefixes before spawning Java.
+- **JVM Flags Scoped to LanguageTool Server**: Memory/GC flags (`-Xms` / `-Xmx` / G1) are only injected into the LanguageTool HTTP server process — no longer into `java -version` compatibility probes.
+- **Cross-platform Safe**: Path-prefix stripping is a no-op on macOS/Linux; PATH wiring and server-only flag injection remain valid on all platforms.
+- **Rollback Fallbacks**: Offline Previous Releases list is now **v0.10.2**, **v0.10.1**, and **v0.9.1**.
+
+---
+
 ## v0.10.2 — Multi-Language Proofreading, Onboarding Polish & Dev API Fix
 
 ### Quick Downloads:

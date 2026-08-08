@@ -24,8 +24,33 @@ def _java_executable(home: str) -> str | None:
     if not home:
         return None
     name = "java.exe" if os.name == "nt" else "java"
-    candidate = os.path.join(home, "bin", name)
+    candidate = os.path.join(_strip_extended_path(home), "bin", name)
     return candidate if os.path.isfile(candidate) else None
+
+
+def _strip_extended_path(path: str) -> str:
+    """Remove Windows ``\\\\?\\`` prefixes that crash OpenJDK/Temurin.
+
+    Frozen/PyInstaller paths and ``GetFinalPathNameByHandle`` often yield
+    ``\\\\?\\C:\\...``. Passing that as argv[0] makes ``java -version`` exit 1
+    with ``guarantee(name != nullptr) failed: jimage file name is null``.
+    """
+    if not path:
+        return path
+    if path.startswith("\\\\?\\"):
+        return path[4:]
+    if path.startswith("//?/"):
+        return path[4:]
+    return path
+
+
+def _should_inject_jvm_flags(cmd: list) -> bool:
+    """Only tune heap flags for the LanguageTool HTTP server process.
+
+    Injecting ``-Xmx…`` into ``java -version`` (used for compatibility checks)
+    is unnecessary and has caused opaque failures when combined with bad paths.
+    """
+    return any(str(part) == "org.languagetool.server.HTTPServer" for part in cmd)
 
 
 def _ensure_bundled_java_on_path() -> None:
@@ -35,18 +60,22 @@ def _ensure_bundled_java_on_path() -> None:
     Setting JAVA_HOME alone is not enough on a machine with no system Java.
     """
     for key in ("LEXICON_JAVA_HOME", "JAVA_HOME"):
-        home = os.environ.get(key, "").strip()
+        home = _strip_extended_path(os.environ.get(key, "").strip())
         java_exe = _java_executable(home)
         if not java_exe:
             continue
         java_bin = os.path.dirname(java_exe)
         current = os.environ.get("PATH", "")
-        parts = [p for p in current.split(os.pathsep) if p]
+        parts = [_strip_extended_path(p) for p in current.split(os.pathsep) if p]
         if parts and os.path.normcase(parts[0]) == os.path.normcase(java_bin):
+            os.environ["PATH"] = os.pathsep.join(parts)
+            os.environ.setdefault("JAVA_HOME", home)
+            os.environ.setdefault("LEXICON_JAVA_HOME", home)
             return
         parts = [p for p in parts if os.path.normcase(p) != os.path.normcase(java_bin)]
         os.environ["PATH"] = os.pathsep.join([java_bin, *parts])
-        os.environ.setdefault("JAVA_HOME", home)
+        os.environ["JAVA_HOME"] = home
+        os.environ["LEXICON_JAVA_HOME"] = home
         return
 
 
@@ -65,20 +94,21 @@ def _get_tool(language="en-US"):
         def _is_java_executable(cmd0):
             if not cmd0:
                 return False
-            name = os.path.basename(str(cmd0)).lower()
-            return "java" in name or name in ("java.exe", "javaw.exe")
+            name = os.path.basename(_strip_extended_path(str(cmd0))).lower()
+            return name in ("java", "java.exe", "javaw", "javaw.exe")
 
         def tuned_popen(*args, **kwargs):
             cmd = list(args[0]) if args else kwargs.get("args", [])
             if cmd and isinstance(cmd, (list, tuple)) and len(cmd) > 0:
-                first_arg = str(cmd[0])
-                if _is_java_executable(first_arg):
+                cmd = list(cmd)
+                cmd[0] = _strip_extended_path(str(cmd[0]))
+                if _is_java_executable(cmd[0]) and _should_inject_jvm_flags(cmd):
                     if "-Xmx384M" not in cmd:
                         cmd = [cmd[0]] + JVM_MEMORY_FLAGS + list(cmd[1:])
-                        if args:
-                            args = (cmd,) + args[1:]
-                        else:
-                            kwargs["args"] = cmd
+                if args:
+                    args = (cmd,) + args[1:]
+                else:
+                    kwargs["args"] = cmd
 
             if os.name == "nt":
                 create_no_window = getattr(subprocess, "CREATE_NO_WINDOW", 0x08000000)

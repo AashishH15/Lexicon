@@ -19,7 +19,12 @@ if str(BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(BACKEND_DIR))
 
 import launcher  # noqa: E402
-from languagetool import _ensure_bundled_java_on_path, _java_executable  # noqa: E402
+from languagetool import (  # noqa: E402
+    _ensure_bundled_java_on_path,
+    _java_executable,
+    _should_inject_jvm_flags,
+    _strip_extended_path,
+)
 
 JAVA_NAME = "java.exe" if os.name == "nt" else "java"
 
@@ -126,3 +131,20 @@ def test_grammar_check_reports_engine_failure_as_503(monkeypatch):
     assert response.status_code == 503
     assert body["error"] == "grammar_engine_unavailable"
     assert "java" in body["detail"].lower()
+
+
+def test_jvm_flags_only_for_languagetool_server():
+    assert _should_inject_jvm_flags(["java", "-version"]) is False
+    assert (
+        _should_inject_jvm_flags(
+            ["java", "-cp", "languagetool.jar", "org.languagetool.server.HTTPServer"]
+        )
+        is True
+    )
+
+
+def test_java_executable_strips_extended_home(tmp_path):
+    home = tmp_path / "jre"
+    java = _make_jre(home)
+    extended = "\\\\?\\" + str(home)
+    assert _java_executable(extended) == str(java)
