@@ -1,14 +1,19 @@
 import { invoke } from "@tauri-apps/api/core";
 import { openUrl } from "@tauri-apps/plugin-opener";
 
-const API_URL =
-  import.meta.env.VITE_API_URL ||
-  (import.meta.env.DEV
-    ? "http://127.0.0.1:8000"
-    : "http://127.0.0.1:18000");
-
 function isTauriRuntime() {
   return typeof window !== "undefined" && Boolean(window.__TAURI_INTERNALS__);
+}
+
+// Tauri always talks to the sidecar on 18000 (dev and packaged). Browser Vite
+// dev expects a separate uvicorn on 8000 — do not put other servers on that port.
+function getApiUrl() {
+  return (
+    import.meta.env.VITE_API_URL ||
+    (isTauriRuntime() || !import.meta.env.DEV
+      ? "http://127.0.0.1:18000"
+      : "http://127.0.0.1:8000")
+  );
 }
 
 export async function ensureBackend() {
@@ -19,8 +24,9 @@ export async function ensureBackend() {
 
 async function request(path, options) {
   await ensureBackend();
+  const apiUrl = getApiUrl();
   try {
-    return await fetch(`${API_URL}${path}`, options);
+    return await fetch(`${apiUrl}${path}`, options);
   } catch (error) {
     if (error?.name === "AbortError") {
       throw error;
@@ -28,7 +34,7 @@ async function request(path, options) {
     // The idle monitor may have stopped the sidecar between the first
     // lifecycle check and the HTTP request. Start it once and retry.
     await ensureBackend();
-    return fetch(`${API_URL}${path}`, options);
+    return fetch(`${apiUrl}${path}`, options);
   }
 }
 
