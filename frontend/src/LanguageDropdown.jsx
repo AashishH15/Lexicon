@@ -1,5 +1,31 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { CaretDown, MagnifyingGlass } from "@phosphor-icons/react";
+
+/** Lower score = better match. null = no match. */
+function scoreLanguageMatch(item, query) {
+  const q = query.trim().toLowerCase();
+  if (!q) return 0;
+
+  const label = (item.label || item.name || "").toLowerCase();
+  const name = (item.name || "").toLowerCase();
+  const code = (item.code || "").toLowerCase();
+  const primary = code.split("-")[0];
+
+  // Exact language code (es → Spanish, ta → Tamil)
+  if (code === q || primary === q) return 0;
+  // Code prefix (es → es-AR, pt → pt-BR)
+  if (code.startsWith(q) || primary.startsWith(q)) return 1;
+  // Display name / label starts with query
+  if (label.startsWith(q) || name.startsWith(q)) return 2;
+  // Any word in the label starts with query (e.g. "united" in English (United States))
+  if (label.split(/[^a-z0-9]+/).some((word) => word.startsWith(q))) return 3;
+  // Substring in code (less common)
+  if (code.includes(q)) return 4;
+  // Substring in label/name — last resort (catches "nese" noise for "es")
+  if (label.includes(q) || name.includes(q)) return 5;
+
+  return null;
+}
 
 export default function LanguageDropdown({ options, value, onChange }) {
   const [open, setOpen] = useState(false);
@@ -25,13 +51,16 @@ export default function LanguageDropdown({ options, value, onChange }) {
     return () => document.removeEventListener("mousedown", handleClick);
   }, [open]);
 
-  const filteredOptions = options.filter((item) => {
+  const filteredOptions = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return true;
-    const name = (item.label || item.name || "").toLowerCase();
-    const code = (item.code || "").toLowerCase();
-    return name.includes(q) || code.includes(q);
-  });
+    if (!q) return options;
+
+    return options
+      .map((item, index) => ({ item, index, score: scoreLanguageMatch(item, q) }))
+      .filter((row) => row.score !== null)
+      .sort((a, b) => a.score - b.score || a.index - b.index)
+      .map((row) => row.item);
+  }, [options, search]);
 
   return (
     <div ref={containerRef} className="relative w-full">
