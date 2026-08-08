@@ -40,6 +40,14 @@ are listed so the release reads honestly about what works today.
 - Trust strip **0 Ads** → **45+ Languages**.
 - Removed the outdated “Appearance presets arrive in v0.10.0…” disclaimer (and its unused CSS).
 
+#### 🔤 Typography & Paper Engine (v0.10 Feature Suite):
+- **Typography Presets**: Switch between Default (System Sans), Editorial (Newsreader Serif), Modern (Inter Sans), and Monospace (JetBrains Mono) with instant live rendering.
+- **Paper Surface Textures**: 5 canvas textures with customizable page colors and surround chrome.
+- **Accessibility & Reading Modes**: Built-in Bionic Reading mode and OpenDyslexic font support.
+- **Previous Releases & Rollback**: Dynamic version history list in Settings -> About & Feedback.
+- **Automated Beta Distribution**: Built-in `beta.json` manifest support for beta release channels.
+- **Onboarding Studio Overhaul**: Added v0.10.0 related customization options.
+
 ---
 
 ## v0.10.1 — Typography, Paper Textures, Accessibility & Onboarding Studio
