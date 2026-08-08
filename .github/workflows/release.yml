@@ -306,6 +306,34 @@ jobs:
           path: release-assets/${{ matrix.artifact_name }}/*
           if-no-files-found: error
 
+  extension-chrome:
+    name: Build Chrome extension (zip)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Run extension tests
+        working-directory: extension
+        run: node --test
+
+      - name: Build and package Chrome extension
+        working-directory: extension/chrome
+        run: node build.mjs
+
+      - name: Upload Chrome extension zip
+        uses: actions/upload-artifact@v4
+        with:
+          name: lexicon-chrome-extension
+          path: extension/dist/lexicon-chrome-*.zip
+          if-no-files-found: error
+
   release:
     needs: [desktop]
     runs-on: ubuntu-latest

@@ -1,0 +1,132 @@
+/* Popup styling follows the desktop app's cream/ink design system
+   (canvas #F7F6F3 / ink #111111 / muted #5F5E5B / accent #1F6C9F). */
+
+:root {
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  width: 360px;
+  margin: 0;
+  padding: 12px;
+  background: #f7f6f3;
+  color: #111111;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial,
+    sans-serif;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.bar {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+h1 {
+  margin: 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.status {
+  margin: 0;
+  font-size: 11px;
+  color: #346538;
+}
+
+.status.offline {
+  color: #9f2f2d;
+}
+
+textarea {
+  width: 100%;
+  min-height: 96px;
+  resize: vertical;
+  padding: 8px 10px;
+  border: 1px solid #eaeaea;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #111111;
+  font: inherit;
+}
+
+textarea:focus {
+  outline: 2px solid #1f6c9f;
+  outline-offset: 1px;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  margin: 10px 0;
+}
+
+button {
+  flex: 1;
+  padding: 7px 12px;
+  border: 1px solid #1f6c9f;
+  border-radius: 6px;
+  background: #1f6c9f;
+  color: #ffffff;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+button:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.results {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.results .empty {
+  color: #5f5e5b;
+}
+
+.results .match {
+  padding: 7px 9px;
+  border-left: 3px solid #956400;
+  border-radius: 0 6px 6px 0;
+  background: #fbf3db;
+}
+
+.results .match .message {
+  margin: 0 0 2px;
+}
+
+.results .match .suggestion {
+  margin: 0;
+  color: #5f5e5b;
+  font-size: 12px;
+}
+
+.results .rewrite {
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: #e1f3fe;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.results .hint {
+  color: #5f5e5b;
+  font-size: 12px;
+}

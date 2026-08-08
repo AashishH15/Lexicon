@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Lexicon</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <header class="bar">
+      <h1>Lexicon</h1>
+      <p id="status" class="status">Checking for Lexicon…</p>
+    </header>
+
+    <textarea
+      id="input"
+      placeholder="Paste text to proofread or rewrite…"
+      spellcheck="false"
+    ></textarea>
+
+    <div class="actions">
+      <button id="proofread" type="button">Proofread</button>
+      <button id="rewrite" type="button">Rewrite</button>
+    </div>
+
+    <div id="results" class="results" role="status" aria-live="polite"></div>
+
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>
