@@ -2359,13 +2359,6 @@ section[id] {
   border-top: 1px solid var(--border-color);
 }
 
-/* v0.10.0 RELEASE CLEANUP: remove with the disclaimer element */
-.appearance-disclaimer {
-  margin-top: 14px;
-  font-size: 0.9rem;
-  color: var(--text-muted);
-}
-
 .appearance-zone {
   width: 100%;
   margin: 0 auto;
