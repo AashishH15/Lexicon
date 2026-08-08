@@ -16,6 +16,7 @@ import {
 } from "@phosphor-icons/react";
 import ModelManager from "./ModelManager.jsx";
 import Toggle from "./Toggle.jsx";
+import LanguageDropdown from "./LanguageDropdown.jsx";
 import { SETTINGS_DEFAULTS } from "./Settings.jsx";
 import { TYPOGRAPHY_PRESETS } from "./typographyPresets.js";
 import { PAPER_TEXTURES } from "./paperTextures.js";
@@ -28,16 +29,7 @@ import {
   paperTextureKey,
   readingModeKey,
 } from "./appearanceSettings.js";
-
-const LANGUAGES = [
-  { code: "en-US", name: "English (US)" },
-  { code: "en-GB", name: "English (UK)" },
-  { code: "en-CA", name: "English (Canada)" },
-  { code: "en-AU", name: "English (Australia)" },
-  { code: "de-DE", name: "German" },
-  { code: "fr-FR", name: "French" },
-  { code: "es-ES", name: "Spanish" },
-];
+import { LANGUAGES } from "./languages.js";
 
 export default function OnboardingModal({
   onClose,
@@ -265,17 +257,11 @@ export default function OnboardingModal({
                   <label className="flex items-center gap-1.5 font-sans text-xs font-semibold text-ink uppercase tracking-wider">
                     <SlidersHorizontal size={14} weight="bold" /> Primary Language
                   </label>
-                  <select
+                  <LanguageDropdown
+                    options={LANGUAGES}
                     value={language}
-                    onChange={(e) => handleLanguageChange(e.target.value)}
-                    className="w-full rounded-xl border border-hairline bg-canvas px-3.5 py-2.5 font-sans text-sm text-ink outline-none transition-colors focus:border-ink"
-                  >
-                    {LANGUAGES.map((l) => (
-                      <option key={l.code} value={l.code}>
-                        {l.name} ({l.code})
-                      </option>
-                    ))}
-                  </select>
+                    onChange={handleLanguageChange}
+                  />
                 </div>
 
                 {/* Typography Preset */}

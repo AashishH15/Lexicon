@@ -99,14 +99,8 @@ LexiconLogo.displayName = "LexiconLogo";
 
 const GITHUB_URL = "https://github.com/AashishH15/Lexicon";
 
-export const LANGUAGES = [
-  { code: "en-US", label: "English (United States)" },
-  { code: "en-GB", label: "English (United Kingdom)" },
-  { code: "en-CA", label: "English (Canada)" },
-  { code: "en-AU", label: "English (Australia)" },
-  { code: "en-NZ", label: "English (New Zealand)" },
-  { code: "en-ZA", label: "English (South Africa)" },
-];
+import { LANGUAGES } from "./languages.js";
+export { LANGUAGES };
 
 export const FONT_SIZES = [14, 16, 18];
 
