@@ -136,9 +136,11 @@
  const response = await fetch(API_RELEASES_URL);
  if (!response.ok) throw new Error(`GitHub API HTTP ${response.status}`);
 
- const releases = await response.json();
- const latestRelease = Array.isArray(releases) && releases.length > 0 ? releases[0] : releases;
- const tagName = latestRelease.tag_name || 'v0.9.0';
+    const releases = await response.json();
+    const latestRelease = Array.isArray(releases) && releases.length > 0
+      ? (releases.find((r) => !r.prerelease && !r.draft) || releases[0])
+      : releases;
+    const tagName = latestRelease.tag_name || 'v0.9.0';
  const latestAssets = latestRelease.assets || [];
 
  if (releaseVersionText) {
