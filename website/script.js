@@ -5,6 +5,7 @@
 
  const GITHUB_REPO = 'AashishH15/Lexicon';
  const API_RELEASES_URL = `https://api.github.com/repos/${GITHUB_REPO}/releases`;
+ const API_LATEST_RELEASE_URL = `https://api.github.com/repos/${GITHUB_REPO}/releases/latest`;
  const API_REPO_URL = `https://api.github.com/repos/${GITHUB_REPO}`;
  const FALLBACK_RELEASE_PAGE = `https://github.com/${GITHUB_REPO}/releases/latest`;
 
@@ -126,22 +127,35 @@
 
  
  async function initReleaseInfo() {
- const env = await detectEnvironment();
+    const env = await detectEnvironment();
 
- if (primaryDownloadText) {
- primaryDownloadText.textContent = env.label;
- }
+    if (primaryDownloadText) {
+      primaryDownloadText.textContent = env.label;
+    }
 
- try {
- const response = await fetch(API_RELEASES_URL);
- if (!response.ok) throw new Error(`GitHub API HTTP ${response.status}`);
+    try {
+      const [latestRes, allRes] = await Promise.all([
+        fetch(API_LATEST_RELEASE_URL).catch(() => null),
+        fetch(API_RELEASES_URL).catch(() => null),
+      ]);
 
-    const releases = await response.json();
-    const latestRelease = Array.isArray(releases) && releases.length > 0
-      ? (releases.find((r) => !r.prerelease && !r.draft) || releases[0])
-      : releases;
-    const tagName = latestRelease.tag_name || 'v0.9.0';
- const latestAssets = latestRelease.assets || [];
+      let latestRelease = null;
+      if (latestRes && latestRes.ok) {
+        latestRelease = await latestRes.json();
+      }
+
+      let releases = [];
+      if (allRes && allRes.ok) {
+        releases = await allRes.json();
+      }
+
+      if (!latestRelease && Array.isArray(releases) && releases.length > 0) {
+        latestRelease = releases.find((r) => !r.prerelease && !r.draft) || releases[0];
+      }
+      if (!latestRelease) throw new Error("Could not fetch release info from GitHub API");
+
+      const tagName = latestRelease.tag_name || 'v0.9.0';
+      const latestAssets = latestRelease.assets || [];
 
  if (releaseVersionText) {
  releaseVersionText.textContent = `Latest version: ${tagName}`;
