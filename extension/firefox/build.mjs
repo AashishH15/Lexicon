@@ -20,6 +20,7 @@ const SHIP_FILES = [
   "background.js",
   "detectEditable.js",
   "squiggle.js",
+  "suggestions.js",
   "content.js",
   "api.js",
   "backendStatus.js",

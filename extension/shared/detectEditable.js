@@ -127,6 +127,139 @@
     return { kind: "contenteditable", ...normalizeSegments(text, segments) };
   }
 
+  // Rebuild a contenteditable as uniform block elements.
+  // Match the existing block tag (p on Slack, div on Gmail).
+  // Never use this on Slate (Discord) — it desyncs the React model from the DOM.
+  function replaceContentBlocks(field, text) {
+    const doc = field.ownerDocument;
+    const first = field.firstElementChild;
+    const blockTag = first && first.tagName === "P" ? "P" : "DIV";
+    const blocks = [];
+    for (const line of normalizeText(text).split("\n")) {
+      const block = doc.createElement(blockTag);
+      if (line === "") {
+        block.appendChild(doc.createElement("BR"));
+      } else {
+        block.textContent = line;
+      }
+      blocks.push(block);
+    }
+    field.replaceChildren(...blocks);
+  }
+
+  function isSlateEditor(field) {
+    if (!field || field.nodeType !== 1) return false;
+    if (field.getAttribute("data-slate-editor") === "true") return true;
+    return Boolean(field.closest && field.closest('[data-slate-editor="true"]'));
+  }
+
+  // Slate (Discord) listens to beforeinput. Dispatch it with targetRanges, then
+  // execCommand only if the editor did not already handle the event.
+  function dispatchInsertText(field, range, text) {
+    const doc = field.ownerDocument;
+    const view = doc && doc.defaultView;
+    if (!doc || !view) return false;
+    try {
+      field.focus();
+      const sel = (view.getSelection && view.getSelection()) || doc.getSelection();
+      if (!sel) return false;
+      sel.removeAllRanges();
+      sel.addRange(range);
+
+      const evInit = {
+        bubbles: true,
+        cancelable: true,
+        inputType: "insertText",
+        data: text,
+      };
+      if (typeof view.StaticRange === "function") {
+        evInit.targetRanges = [
+          new view.StaticRange({
+            startContainer: range.startContainer,
+            startOffset: range.startOffset,
+            endContainer: range.endContainer,
+            endOffset: range.endOffset,
+          }),
+        ];
+      }
+      const InputEventCtor = view.InputEvent || globalThis.InputEvent;
+      if (typeof InputEventCtor === "function") {
+        const beforeEvt = new InputEventCtor("beforeinput", evInit);
+        field.dispatchEvent(beforeEvt);
+        // Firefox Slate prevents default and applies itself — skip execCommand
+        // or the replacement is inserted twice.
+        if (beforeEvt.defaultPrevented) return true;
+      }
+      if (typeof doc.execCommand === "function") {
+        return doc.execCommand("insertText", false, text);
+      }
+    } catch {
+      return false;
+    }
+    return false;
+  }
+
+  function replaceViaInsertText(field, text) {
+    const doc = field.ownerDocument;
+    if (!doc) return false;
+    try {
+      const range = doc.createRange();
+      range.selectNodeContents(field);
+      return dispatchInsertText(field, range, normalizeText(text));
+    } catch {
+      return false;
+    }
+  }
+
+  // Replace one mapped DOM range with text via beforeinput + insertText.
+  function replaceRangeViaInsertText(field, mapped, text) {
+    if (!mapped || !mapped.startNode) return false;
+    const doc = field.ownerDocument;
+    try {
+      const range = doc.createRange();
+      range.setStart(mapped.startNode, mapped.startOffset);
+      range.setEnd(mapped.endNode, mapped.endOffset);
+      return dispatchInsertText(field, range, text);
+    } catch {
+      return false;
+    }
+  }
+
+  // Set a textarea's value without tripping React's value tracking.
+  function setTextareaValue(field, value) {
+    const view = field.ownerDocument && field.ownerDocument.defaultView;
+    const proto =
+      view &&
+      view.HTMLTextAreaElement &&
+      view.HTMLTextAreaElement.prototype;
+    const setter =
+      proto && Object.getOwnPropertyDescriptor(proto, "value").set;
+    if (setter) {
+      setter.call(field, value);
+    } else {
+      field.value = value;
+    }
+  }
+
+  // Replace the field content. Fire input so the site sees the change.
+  function replaceEditableText(field, kind, text) {
+    if (kind === "textarea") {
+      setTextareaValue(field, normalizeText(text));
+      const view = field.ownerDocument && field.ownerDocument.defaultView;
+      const EventCtor = (view && view.Event) || globalThis.Event;
+      field.dispatchEvent(new EventCtor("input", { bubbles: true }));
+      return;
+    }
+    if (replaceViaInsertText(field, text)) return;
+    // Slate owns its DOM. Rewriting children leaves React state updated but
+    // the visible editor stuck (can't caret/backspace until refresh).
+    if (isSlateEditor(field)) return;
+    replaceContentBlocks(field, text);
+    const view = field.ownerDocument && field.ownerDocument.defaultView;
+    const EventCtor = (view && view.Event) || globalThis.Event;
+    field.dispatchEvent(new EventCtor("input", { bubbles: true }));
+  }
+
   // Map matches to DOM ranges. Drop unmappable matches.
   function matchRanges(matches, segments) {
     const out = [];
@@ -171,6 +304,9 @@
     textSegments,
     normalizeSegments,
     extractEditableText,
+    isSlateEditor,
+    replaceEditableText,
+    replaceRangeViaInsertText,
     matchRanges,
   };
 })();

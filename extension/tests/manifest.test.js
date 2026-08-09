@@ -77,6 +77,7 @@ test("content scripts are scoped to the allowlist only", () => {
     "vendor/browser-polyfill.min.js",
     "detectEditable.js",
     "squiggle.js",
+    "suggestions.js",
     "content.js",
   ]);
 });

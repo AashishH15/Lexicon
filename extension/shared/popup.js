@@ -1,36 +1,60 @@
-// Popup actions: proofread and rewrite.
-// The request shapes match the desktop app.
+// Popup actions: proofread and rewrite, scoped to the focused field.
+// The popup sends commands to the content script; it never touches the
+// page DOM. The request shapes match the desktop app.
 
 import {
   discoverBackend,
   checkGrammar,
   transformText,
 } from "./api.js";
-import { REWRITE_PROMPT } from "./prompts.js";
+import { getTransformPrompt, TRANSFORM_TOOLS } from "./prompts.js";
 import { createBackendStatus } from "./backendStatus.js";
 
 const statusEl = document.getElementById("status");
 const inputEl = document.getElementById("input");
 const proofreadBtn = document.getElementById("proofread");
+const rewriteToolEl = document.getElementById("rewrite-tool");
 const rewriteBtn = document.getElementById("rewrite");
 const resultsEl = document.getElementById("results");
+
+let fieldText = "";
+let fieldReady = false;
+
+for (const tool of TRANSFORM_TOOLS) {
+  const option = document.createElement("option");
+  option.value = tool;
+  option.textContent = tool;
+  rewriteToolEl.appendChild(option);
+}
+
+rewriteToolEl.addEventListener("change", () => {
+  rewriteBtn.textContent = rewriteToolEl.value;
+});
+
+function setActionsEnabled(enabled) {
+  proofreadBtn.disabled = !enabled;
+  rewriteBtn.disabled = !enabled;
+}
+
+function refreshActions() {
+  setActionsEnabled(
+    monitor.state === "connected" && fieldReady && fieldText.trim().length > 0,
+  );
+}
 
 function renderStatus(state) {
   if (state === "connected") {
     statusEl.textContent = "Connected to Lexicon";
     statusEl.classList.remove("offline");
-    proofreadBtn.disabled = false;
-    rewriteBtn.disabled = false;
+    refreshField();
   } else if (state === "checking") {
     statusEl.textContent = "Checking for Lexicon…";
     statusEl.classList.remove("offline");
-    proofreadBtn.disabled = true;
-    rewriteBtn.disabled = true;
+    refreshActions();
   } else {
     statusEl.textContent = "Open Lexicon to use grammar checking here";
     statusEl.classList.add("offline");
-    proofreadBtn.disabled = true;
-    rewriteBtn.disabled = true;
+    refreshActions();
   }
 }
 
@@ -38,6 +62,30 @@ const monitor = createBackendStatus({
   ping: async () => (await discoverBackend()) !== null,
   onChange: renderStatus,
 });
+
+async function sendToContent(msg) {
+  const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
+  if (!tab?.id) throw new Error("no-tab");
+  return browser.tabs.sendMessage(tab.id, msg);
+}
+
+async function refreshField() {
+  fieldReady = false;
+  fieldText = "";
+  inputEl.value = "";
+  inputEl.placeholder = "Focus a text field on this page to proofread or rewrite it.";
+  try {
+    const response = await sendToContent({ type: "lexicon:get-text" });
+    if (!response?.ok) return;
+    fieldText = response.text;
+    fieldReady = true;
+    inputEl.value = response.text;
+  } catch {
+    inputEl.placeholder = "Lexicon works on Gmail, Slack, and Discord.";
+  } finally {
+    refreshActions();
+  }
+}
 
 function clearResults() {
   resultsEl.replaceChildren();
@@ -50,41 +98,36 @@ function showEmpty(message) {
   resultsEl.appendChild(el);
 }
 
-function showMatches(matches) {
-  for (const match of matches) {
-    const card = document.createElement("div");
-    card.className = "match";
-
-    const message = document.createElement("p");
-    message.className = "message";
-    message.textContent = match.message;
-    card.appendChild(message);
-
-    if (match.replacements.length > 0) {
-      const suggestion = document.createElement("p");
-      suggestion.className = "suggestion";
-      suggestion.textContent = `Suggestion: ${match.replacements[0]}`;
-      card.appendChild(suggestion);
-    }
-
-    resultsEl.appendChild(card);
-  }
-}
-
 function showRewrite(text) {
-  const el = document.createElement("div");
-  el.className = "rewrite";
-  el.textContent = text;
-  el.addEventListener("click", () => {
-    inputEl.value = text;
-    clearResults();
-  });
-  resultsEl.appendChild(el);
+  const box = document.createElement("div");
+  box.className = "rewrite";
+  box.textContent = text;
+  resultsEl.appendChild(box);
 
-  const hint = document.createElement("p");
-  hint.className = "hint";
-  hint.textContent = "Click the rewrite to put it back in the text box.";
-  resultsEl.appendChild(hint);
+  const replaceBtn = document.createElement("button");
+  replaceBtn.type = "button";
+  replaceBtn.textContent = "Replace in field";
+  replaceBtn.addEventListener("click", async () => {
+    replaceBtn.disabled = true;
+    try {
+      const response = await sendToContent({
+        type: "lexicon:replace-text",
+        text,
+      });
+      if (!response?.ok) {
+        showEmpty("The field changed. Proofread it again, then rewrite.");
+        return;
+      }
+      clearResults();
+      showEmpty("Replaced in the field.");
+      refreshField();
+    } catch (error) {
+      showError(error.message);
+    } finally {
+      replaceBtn.disabled = false;
+    }
+  });
+  resultsEl.appendChild(replaceBtn);
 }
 
 function showError(message) {
@@ -95,44 +138,47 @@ function showError(message) {
   }
 }
 
-async function refreshStatus() {
-  await discoverBackend();
-  renderStatus();
-}
-
 async function onProofread() {
-  const text = inputEl.value.trim();
+  const text = fieldText.trim();
   if (!text) return;
-  proofreadBtn.disabled = true;
+  setActionsEnabled(false);
   clearResults();
   try {
     const matches = await checkGrammar(text);
+    await sendToContent({ type: "lexicon:highlight", matches });
+    // Suggestions live on the in-page badge/panel — the popup only triggers
+    // the check. Rewrite/transform results still render below.
     if (matches.length === 0) {
       showEmpty("No issues found.");
+    } else if (matches.length === 1) {
+      showEmpty("1 issue marked in the field. Open the badge to review.");
     } else {
-      showMatches(matches);
+      showEmpty(
+        `${matches.length} issues marked in the field. Open the badge to review.`,
+      );
     }
-    renderStatus(monitor.state);
   } catch (error) {
     showError(error.message);
   } finally {
-    proofreadBtn.disabled = false;
+    refreshActions();
   }
 }
 
 async function onRewrite() {
-  const text = inputEl.value.trim();
+  const text = fieldText.trim();
   if (!text) return;
-  rewriteBtn.disabled = true;
+  setActionsEnabled(false);
   clearResults();
   try {
-    const rewritten = await transformText(REWRITE_PROMPT, text);
+    const rewritten = await transformText(
+      getTransformPrompt(rewriteToolEl.value),
+      text,
+    );
     showRewrite(rewritten);
-    renderStatus(monitor.state);
   } catch (error) {
     showError(error.message);
   } finally {
-    rewriteBtn.disabled = false;
+    refreshActions();
   }
 }
 

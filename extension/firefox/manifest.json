@@ -39,6 +39,7 @@
         "vendor/browser-polyfill.min.js",
         "detectEditable.js",
         "squiggle.js",
+        "suggestions.js",
         "content.js"
       ],
       "run_at": "document_idle"

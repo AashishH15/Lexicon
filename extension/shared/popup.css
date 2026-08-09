@@ -90,6 +90,16 @@ button:disabled {
   cursor: default;
 }
 
+select {
+  flex: 1;
+  padding: 7px 10px;
+  border: 1px solid #d8d7d3;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #111111;
+  font: inherit;
+}
+
 .results {
   display: flex;
   flex-direction: column;
@@ -123,6 +133,13 @@ button:disabled {
   background: #e1f3fe;
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+.results button {
+  flex: none;
+  align-self: flex-start;
+  background: #ffffff;
+  color: #1f6c9f;
 }
 
 .results .hint {

@@ -14,6 +14,12 @@ const source = readFileSync(
   "utf-8",
 );
 const sandbox = {};
+sandbox.Event = class {
+  constructor(type, options = {}) {
+    this.type = type;
+    this.bubbles = options.bubbles ?? false;
+  }
+};
 vm.createContext(sandbox);
 vm.runInContext(source, sandbox);
 const {
@@ -21,6 +27,8 @@ const {
   selectorsForHost,
   normalizeText,
   normalizeSegments,
+  extractEditableText,
+  replaceEditableText,
   matchRanges,
 } = sandbox.__lexiconEditable;
 
@@ -126,4 +134,95 @@ test("matchRanges maps multiple matches independently", () => {
   assert.equal(ranges.length, 2);
   assert.equal(ranges[0].startNode, "n1");
   assert.equal(ranges[1].startNode, "n2");
+});
+
+// Minimal fake DOM for the replace helpers.
+function makeElement(tag) {
+  return {
+    tagName: tag,
+    children: [],
+    textContent: "",
+    appendChild(child) {
+      this.children.push(child);
+      return child;
+    },
+  };
+}
+
+function makeField({ tag = "DIV", children = [], ownerDocument = null } = {}) {
+  return {
+    tagName: tag,
+    children,
+    firstElementChild: children[0] ?? null,
+    value: "",
+    ownerDocument,
+    events: [],
+    replaceChildren(...kids) {
+      this.children = kids;
+      this.firstElementChild = kids[0] ?? null;
+    },
+    dispatchEvent(event) {
+      this.events.push(event);
+    },
+  };
+}
+
+const fakeDoc = { createElement: (tag) => makeElement(tag) };
+
+test("replaceEditableText sets a textarea value and fires input", () => {
+  const field = makeField({ ownerDocument: { defaultView: null } });
+  replaceEditableText(field, "textarea", "Hello world.");
+  assert.equal(field.value, "Hello world.");
+  assert.equal(field.events.length, 1);
+  assert.equal(field.events[0].type, "input");
+  assert.equal(field.events[0].bubbles, true);
+});
+
+test("replaceEditableText uses the native setter when the view provides one", () => {
+  const proto = {};
+  Object.defineProperty(proto, "value", {
+    set(value) {
+      this._value = value;
+    },
+  });
+  const field = makeField({
+    ownerDocument: {
+      defaultView: { HTMLTextAreaElement: { prototype: proto } },
+    },
+  });
+  replaceEditableText(field, "textarea", "Native setter.");
+  assert.equal(field._value, "Native setter.");
+});
+
+test("replaceEditableText normalizes CRLF before writing", () => {
+  const field = makeField({ ownerDocument: { defaultView: null } });
+  replaceEditableText(field, "textarea", "a\r\nb");
+  assert.equal(field.value, "a\nb");
+});
+
+test("replaceEditableText rebuilds a contenteditable as block elements", () => {
+  const field = makeField({ children: [makeElement("DIV")], ownerDocument: fakeDoc });
+  replaceEditableText(field, "contenteditable", "Line one\n\nLine three");
+  assert.equal(field.children.length, 3);
+  assert.equal(field.children[0].tagName, "DIV");
+  assert.equal(field.children[0].textContent, "Line one");
+  assert.equal(field.children[1].children[0].tagName, "BR");
+  assert.equal(field.children[2].textContent, "Line three");
+  assert.equal(field.events.length, 1);
+});
+
+test("replaceEditableText matches the block tag on Slack-style editors", () => {
+  const field = makeField({ children: [makeElement("P")], ownerDocument: fakeDoc });
+  replaceEditableText(field, "contenteditable", "A\nB");
+  assert.equal(field.children[0].tagName, "P");
+  assert.equal(field.children[1].tagName, "P");
+});
+
+test("extractEditableText reads a textarea value", () => {
+  const field = makeField({ tag: "TEXTAREA", ownerDocument: fakeDoc });
+  field.value = "Teh cat.";
+  const result = extractEditableText(field);
+  assert.equal(result.kind, "textarea");
+  assert.equal(result.text, "Teh cat.");
+  assert.equal(result.segments, null);
 });

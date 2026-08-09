@@ -3,6 +3,8 @@
 // contenteditable: use DOM ranges.
 // textarea: use a hidden mirror with the same font and width.
 // Recompute positions on scroll and resize.
+// Hit-test hover/click without stealing pointer events from the field
+// (document listeners + rect list), so typing still works.
 
 (function () {
   "use strict";
@@ -11,12 +13,16 @@
   const STYLE_ID = "lexicon-squiggle-style";
   const MIRROR_ID = "lexicon-squiggle-mirror";
 
-  const STYLE = `#${LAYER_ID}{position:fixed;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:2147483647;overflow:hidden}` +
+  const STYLE =
+    `#${LAYER_ID}{position:fixed;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:2147483645;overflow:hidden}` +
     `#${LAYER_ID} .lexicon-squiggle{position:absolute;height:4px;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='9' height='4'><path d='M0 3 Q 2.25 1 4.5 3 T 9 3' fill='none' stroke='%23e5484d' stroke-width='1.4'/></svg>");background-repeat:repeat-x;background-size:9px 4px}` +
     `#${MIRROR_ID}{position:absolute;visibility:hidden;white-space:pre-wrap;overflow:hidden;pointer-events:none}`;
 
-  let state = null; // { field, ranges, text, spans?, mirror? }
-  let boundField = null; // the textarea that has the scroll listener
+  let state = null; // { field, ranges, text, spans?, mirror?, onActivate, onDeactivate }
+  let boundField = null;
+  let hitRegions = []; // { index, left, top, right, bottom, rect }
+  let activeIndex = null;
+  let listenersBound = false;
 
   function ensureLayer() {
     if (!document.getElementById(STYLE_ID)) {
@@ -34,16 +40,34 @@
     return layer;
   }
 
-  function addSquiggle(layer, rect) {
+  function addSquiggle(layer, rect, matchIndex) {
     const el = document.createElement("div");
     el.className = "lexicon-squiggle";
     el.style.left = `${rect.left}px`;
     el.style.top = `${rect.bottom - 3}px`;
     el.style.width = `${Math.max(2, rect.width)}px`;
     layer.appendChild(el);
+
+    if (typeof matchIndex === "number" && rect.width > 0 && rect.height > 0) {
+      hitRegions.push({
+        index: matchIndex,
+        left: rect.left,
+        top: rect.top,
+        right: rect.right,
+        bottom: rect.bottom,
+        rect: {
+          left: rect.left,
+          top: rect.top,
+          right: rect.right,
+          bottom: rect.bottom,
+          width: rect.width,
+          height: rect.height,
+        },
+      });
+    }
   }
 
-  // Merge overlapping ranges.
+  // Merge overlapping ranges for drawing only when indices are not needed.
   function mergeRanges(ranges) {
     const sorted = [...ranges].sort((a, b) => a.start - b.start);
     const out = [];
@@ -58,39 +82,39 @@
     return out;
   }
 
-function mirrorStyle(field, computed) {
-  const fontSize = parseFloat(computed.fontSize) || 12;
-  const lineHeight =
-    computed.lineHeight === "normal"
-      ? `${Math.round(fontSize * 1.2)}px`
-      : computed.lineHeight;
-  const borderL = parseFloat(computed.borderLeftWidth) || 0;
-  const borderR = parseFloat(computed.borderRightWidth) || 0;
-  const scrollbar = field.offsetWidth - field.clientWidth - borderL - borderR;
-  const contentWidth = field.clientWidth - Math.max(0, scrollbar);
-  return {
-    fontSize: computed.fontSize,
-    fontFamily: computed.fontFamily,
-    fontStyle: computed.fontStyle,
-    fontWeight: computed.fontWeight,
-    letterSpacing: computed.letterSpacing,
-    lineHeight,
-    // Copy the textarea wrap rules. Wrapping must match exactly.
-    whiteSpace: computed.whiteSpace || "pre-wrap",
-    overflowWrap: computed.overflowWrap || "break-word",
-    wordBreak: computed.wordBreak || "normal",
-    paddingTop: computed.paddingTop,
-    paddingRight: computed.paddingRight,
-    paddingBottom: computed.paddingBottom,
-    paddingLeft: computed.paddingLeft,
-    borderTopWidth: computed.borderTopWidth,
-    borderRightWidth: computed.borderRightWidth,
-    borderBottomWidth: computed.borderBottomWidth,
-    borderLeftWidth: computed.borderLeftWidth,
-    contentWidth,
-  };
-}
+  function mirrorStyle(field, computed) {
+    const fontSize = parseFloat(computed.fontSize) || 12;
+    const lineHeight =
+      computed.lineHeight === "normal"
+        ? `${Math.round(fontSize * 1.2)}px`
+        : computed.lineHeight;
+    const borderL = parseFloat(computed.borderLeftWidth) || 0;
+    const borderR = parseFloat(computed.borderRightWidth) || 0;
+    const scrollbar = field.offsetWidth - field.clientWidth - borderL - borderR;
+    const contentWidth = field.clientWidth - Math.max(0, scrollbar);
+    return {
+      fontSize: computed.fontSize,
+      fontFamily: computed.fontFamily,
+      fontStyle: computed.fontStyle,
+      fontWeight: computed.fontWeight,
+      letterSpacing: computed.letterSpacing,
+      lineHeight,
+      whiteSpace: computed.whiteSpace || "pre-wrap",
+      overflowWrap: computed.overflowWrap || "break-word",
+      wordBreak: computed.wordBreak || "normal",
+      paddingTop: computed.paddingTop,
+      paddingRight: computed.paddingRight,
+      paddingBottom: computed.paddingBottom,
+      paddingLeft: computed.paddingLeft,
+      borderTopWidth: computed.borderTopWidth,
+      borderRightWidth: computed.borderRightWidth,
+      borderBottomWidth: computed.borderBottomWidth,
+      borderLeftWidth: computed.borderLeftWidth,
+      contentWidth,
+    };
+  }
 
+  // Build a mirror with one span per match range (preserve index mapping).
   function buildMirror(field, ranges, text) {
     const computed = getComputedStyle(field);
     const style = mirrorStyle(field, computed);
@@ -121,10 +145,14 @@ function mirrorStyle(field, computed) {
       wordBreak: style.wordBreak,
     });
 
-    const merged = mergeRanges(ranges);
+    const indexed = ranges
+      .map((r, index) => ({ ...r, index }))
+      .filter((r) => Number.isInteger(r.start) && Number.isInteger(r.end) && r.end > r.start)
+      .sort((a, b) => a.start - b.start);
+
     const spans = [];
     let cursor = 0;
-    for (const r of merged) {
+    for (const r of indexed) {
       if (r.start < cursor) continue;
       if (r.start > cursor) {
         mirror.appendChild(document.createTextNode(text.slice(cursor, r.start)));
@@ -132,7 +160,7 @@ function mirrorStyle(field, computed) {
       const span = document.createElement("span");
       span.textContent = text.slice(r.start, r.end);
       mirror.appendChild(span);
-      spans.push(span);
+      spans.push({ el: span, index: r.index });
       cursor = r.end;
     }
     if (cursor < text.length) {
@@ -142,31 +170,37 @@ function mirrorStyle(field, computed) {
   }
 
   function positionTextarea(layer) {
-    const { field, text, ranges, mirror, spans } = state;
+    const { field, mirror, spans } = state;
     const rect = field.getBoundingClientRect();
     mirror.style.left = `${rect.left}px`;
     mirror.style.top = `${rect.top - field.scrollTop}px`;
-    for (const span of spans) {
-      const spanRect = span.getBoundingClientRect();
-      addSquiggle(layer, spanRect);
+    for (const item of spans) {
+      const spanRect = item.el.getBoundingClientRect();
+      addSquiggle(layer, spanRect, item.index);
     }
   }
 
   function positionContenteditable(layer) {
-    for (const r of state.ranges) {
+    state.ranges.forEach((r, index) => {
+      if (!r || !r.startNode || !r.endNode) return;
       const range = document.createRange();
-      range.setStart(r.startNode, r.startOffset);
-      range.setEnd(r.endNode, r.endOffset);
-      for (const rect of range.getClientRects()) {
-        addSquiggle(layer, rect);
+      try {
+        range.setStart(r.startNode, r.startOffset);
+        range.setEnd(r.endNode, r.endOffset);
+      } catch {
+        return;
       }
-    }
+      for (const rect of range.getClientRects()) {
+        addSquiggle(layer, rect, index);
+      }
+    });
   }
 
   function render() {
     if (!state) return;
     const layer = ensureLayer();
     layer.replaceChildren();
+    hitRegions = [];
     if (state.kind === "textarea") positionTextarea(layer);
     else positionContenteditable(layer);
   }
@@ -181,7 +215,52 @@ function mirrorStyle(field, computed) {
     });
   }
 
-  // Bind at apply. Unbind at clear.
+  function findHit(x, y) {
+    for (let i = hitRegions.length - 1; i >= 0; i--) {
+      const h = hitRegions[i];
+      if (x >= h.left && x <= h.right && y >= h.top && y <= h.bottom) {
+        return h;
+      }
+    }
+    return null;
+  }
+
+  function activate(hit, pinned) {
+    if (!state || !hit) return;
+    activeIndex = hit.index;
+    if (typeof state.onActivate === "function") {
+      state.onActivate(hit.index, hit.rect, { pinned: Boolean(pinned) });
+    }
+  }
+
+  function onPointerMove(event) {
+    if (!state) return;
+    const hit = findHit(event.clientX, event.clientY);
+    // Match the desktop app: opening is hover-driven; leaving the word does
+    // not dismiss (the tooltip dismisses on its own mouseleave).
+    if (hit && activeIndex !== hit.index) activate(hit, false);
+  }
+
+  function onPointerDown(event) {
+    if (!state) return;
+    const hit = findHit(event.clientX, event.clientY);
+    if (hit) activate(hit, true);
+  }
+
+  function bindHitListeners() {
+    if (listenersBound) return;
+    document.addEventListener("mousemove", onPointerMove, true);
+    document.addEventListener("mousedown", onPointerDown, true);
+    listenersBound = true;
+  }
+
+  function unbindHitListeners() {
+    if (!listenersBound) return;
+    document.removeEventListener("mousemove", onPointerMove, true);
+    document.removeEventListener("mousedown", onPointerDown, true);
+    listenersBound = false;
+  }
+
   function bindReposition() {
     window.addEventListener("scroll", scheduleRender, {
       capture: true,
@@ -203,24 +282,50 @@ function mirrorStyle(field, computed) {
     }
   }
 
-  // field: the editable element. ranges: DOM or char ranges.
+  // field: the editable element. ranges: DOM or char ranges (1:1 with matches).
   // text: the normalized text that the offsets refer to.
-  function applySquiggles(field, ranges, text) {
+  // options.onActivate(index, rect, { pinned })
+  // options.onDeactivate()
+  function applySquiggles(field, ranges, text, options) {
     clearSquiggles();
     if (!field || !ranges || ranges.length === 0 || text == null) return;
+    const opts = options || {};
     if (field.tagName === "TEXTAREA") {
       const { mirror, spans } = buildMirror(field, ranges, text);
-      state = { kind: "textarea", field, ranges, text, mirror, spans };
+      state = {
+        kind: "textarea",
+        field,
+        ranges,
+        text,
+        mirror,
+        spans,
+        onActivate: opts.onActivate || null,
+        onDeactivate: opts.onDeactivate || null,
+      };
       document.documentElement.appendChild(mirror);
     } else {
-      state = { kind: "contenteditable", field, ranges, text };
+      state = {
+        kind: "contenteditable",
+        field,
+        ranges,
+        text,
+        onActivate: opts.onActivate || null,
+        onDeactivate: opts.onDeactivate || null,
+      };
     }
     bindReposition();
+    bindHitListeners();
     render();
   }
 
   function clearSquiggles() {
     unbindReposition();
+    unbindHitListeners();
+    if (state && typeof state.onDeactivate === "function") {
+      state.onDeactivate();
+    }
+    activeIndex = null;
+    hitRegions = [];
     const layer = document.getElementById(LAYER_ID);
     if (layer) layer.remove();
     const style = document.getElementById(STYLE_ID);

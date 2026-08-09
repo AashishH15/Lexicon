@@ -14,12 +14,14 @@
 
     <textarea
       id="input"
-      placeholder="Paste text to proofread or rewrite…"
+      readonly
+      placeholder="Focus a text field on this page to proofread or rewrite it."
       spellcheck="false"
     ></textarea>
 
     <div class="actions">
       <button id="proofread" type="button">Proofread</button>
+      <select id="rewrite-tool" aria-label="Rewrite style"></select>
       <button id="rewrite" type="button">Rewrite</button>
     </div>
 
