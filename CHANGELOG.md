@@ -7,6 +7,28 @@ This changelog tracks what is **live** in each release and what is still
 **stubbed** (shown in the interface but not yet functional). Stubbed features
 are listed so the release reads honestly about what works today.
 
+## v0.11.0-beta.1 — Browser Extension Beta
+
+### Browser extension beta (Might be unstable!)
+
+This pre-release includes the desktop backend support the extension needs.
+Do **not** use stable v0.10.3 with this extension.
+Please rollback to v0.10.3 if this version doesnt work properly!
+
+### Install order
+1. Install this desktop build (`v0.11.0-beta.1`)
+2. Open Lexicon
+3. Chrome: unzip `lexicon-chrome-0.1.0.zip` → chrome://extensions → Developer mode → Load unpacked
+4. Go to `chrome://extensions/shortcuts` and make sure that `Proofread the focused text field` has the shortcut `Alt + Shift + L` if it does not please click the pencil icon and create the shortcut.
+5. Firefox: temporary load of the unsigned `.xpi` via about:debugging
+
+### Known limits
+- Google Docs not supported
+- Firefox package is unsigned (temporary install only)
+- Desktop app must be running!
+
+---
+
 ## v0.10.3 — Hotfix: Windows Bundled JRE Path Crash
 
 ### Quick Downloads:
