@@ -21,7 +21,7 @@ Please rollback to v0.10.3 if this version doesnt work properly!
 3. On the same release page, download `lexicon-chrome-0.1.0.zip` and (if you want FireFox) `lexicon-firefox-0.1.0.xpi`
 4. Chrome: unzip `lexicon-chrome-0.1.0.zip` → chrome://extensions → Developer mode → Load unpacked → select the unzipped folder. (*NOTE: There might be another zip within that folder)
 5. Go to `chrome://extensions/shortcuts` and make sure that `Proofread the focused text field` has the shortcut `Alt + Shift + L` if it does not please click the pencil icon and create the shortcut.
-6. Firefox: temporary load of the unsigned `.xpi` via about:debugging (This Firefox → Load Temporary Add-on → choose the `.xpi`)
+6. Firefox: temporary load of the unsigned `.xpi` via `about:debugging` (This Firefox → Load Temporary Add-on → choose the `.xpi` in the unzipped `lexicon-firefox-extension`)
 
 ### Known limits
 - Google Docs not supported
