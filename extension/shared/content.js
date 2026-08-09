@@ -1,14 +1,6 @@
-// Content script.
-// It detects editable fields, extracts text, draws squiggles, and runs the
-// suggestion UI (count badge + panel with apply buttons).
-// The background and the popup use these messages:
-//   lexicon:get-text          -> { ok, text, kind }
-//   lexicon:highlight         -> { ok, count }
-//   lexicon:clear-highlights  -> { ok }
-//   lexicon:replace-text      -> { ok }
-// On focus, and after the user stops typing, it asks the background to
-// proofread. A green badge means no issues; a black badge shows the count.
-// This file runs as a classic script.
+// Content script: detect fields, draw squiggles, show suggestions.
+// Messages: lexicon:get-text, lexicon:highlight, lexicon:clear-highlights,
+// lexicon:replace-text.
 
 (function () {
   "use strict";
@@ -31,9 +23,36 @@
   let mutationObserver = null;
   let programmaticClearTimer = null;
   let scheduledForText = null;
-  // Same idea as the desktop app: advisory issues with no fix are dismissed
-  // by signature so they stay gone across idle re-checks.
+  // Dismissed issues stay dismissed across idle re-checks.
   const dismissedKeys = new Set();
+
+  function fieldIsAttached(field) {
+    return Boolean(
+      field &&
+        (field.isConnected === true ||
+          (document.contains && document.contains(field))),
+    );
+  }
+
+  function notifyActiveField() {
+    browser.runtime
+      .sendMessage({ type: "lexicon:active-field" })
+      .catch(() => {});
+  }
+
+  function fieldOwnsFocus(field) {
+    if (!field) return false;
+    if (typeof document.hasFocus === "function" && !document.hasFocus()) {
+      return false;
+    }
+    const active = editable.deepActiveElement(document);
+    if (!active) return false;
+    return (
+      active === field ||
+      Boolean(field.contains && field.contains(active)) ||
+      editable.editableFromNode(active) === field
+    );
+  }
 
   function matchKey(match, text) {
     const original =
@@ -42,7 +61,6 @@
       Number.isInteger(match.length)
         ? text.slice(match.offset, match.offset + match.length)
         : match.original) || "";
-    // Include offset so identical advisory issues can be dismissed one-by-one.
     const offset = Number.isInteger(match.offset) ? match.offset : "";
     return `${match.message || ""}::${original}::${offset}`;
   }
@@ -60,8 +78,7 @@
     }
   }
 
-  // Gmail often applies DOM writes a tick after our replace; keep the
-  // suppress window open briefly so those mutations do not re-proofread.
+  // Ignore site input events for a short time after we edit the field.
   function beginProgrammaticChange() {
     programmaticChange = true;
     if (programmaticClearTimer) {
@@ -70,12 +87,13 @@
     }
   }
 
-  function endProgrammaticChange() {
+  function endProgrammaticChange(holdMs) {
     if (programmaticClearTimer) clearTimeout(programmaticClearTimer);
+    const ms = Number.isFinite(holdMs) ? holdMs : 50;
     programmaticClearTimer = setTimeout(() => {
       programmaticClearTimer = null;
       programmaticChange = false;
-    }, 50);
+    }, ms);
   }
 
   function detachInputWatch() {
@@ -98,11 +116,10 @@
     field.addEventListener("input", onFieldInput);
     field.addEventListener("beforeinput", onFieldBeforeInput);
     field.addEventListener("keydown", onFieldKeydown);
-    // Gmail undo often skips `input`. Discord's Slate already fires `input`,
-    // and a MutationObserver after our edits can fight its document model.
+    // Watch DOM mutations only on Gmail.
     const host = String(location.hostname || "");
     const watchMutations =
-      field.isContentEditable && !host.endsWith("discord.com");
+      field.isContentEditable && host === "mail.google.com";
     if (watchMutations) {
       mutationObserver = new MutationObserver(onFieldMutation);
       mutationObserver.observe(field, {
@@ -125,7 +142,6 @@
     suggestions.hide();
   }
 
-  // Keep the field session. Clear squiggles while a new check is pending.
   function clearIssueVisuals() {
     lastMatches = null;
     squiggle.clearSquiggles();
@@ -136,11 +152,9 @@
     const field = lastField;
     if (!field) return;
     const { text } = editable.extractEditableText(field);
-    // Gmail can emit many mutations for one undo; only reschedule when text changes.
     if (text === scheduledForText && reproofreadTimer) return;
     scheduledForText = text;
     clearIssueVisuals();
-    // Drop stale green/black immediately so undo never leaves a lie on screen.
     suggestions.show(field, [], {
       ...suggestionHandlers(),
       checking: true,
@@ -151,14 +165,15 @@
   function onFieldBeforeInput(event) {
     const type = event && event.inputType;
     if (type !== "historyUndo" && type !== "historyRedo") return;
-    // DOM updates after beforeinput; re-check on the next task.
     setTimeout(onFieldInput, 0);
   }
 
   function onFieldKeydown(event) {
-    if (!(event.ctrlKey || event.metaKey)) return;
     const key = String(event.key || "").toLowerCase();
-    if (key !== "z" && key !== "y") return;
+    const history =
+      (event.ctrlKey || event.metaKey) && (key === "z" || key === "y");
+    const deletion = key === "backspace" || key === "delete";
+    if (!history && !deletion) return;
     setTimeout(onFieldInput, 0);
   }
 
@@ -169,13 +184,14 @@
     onFieldInput();
   }
 
-  function adoptField(field) {
+  function adoptField(field, notify = true) {
     const { kind, text, segments } = editable.extractEditableText(field);
     lastField = field;
     lastKind = kind;
     lastText = text;
     lastSegments = segments;
     attachInputWatch(field);
+    if (notify) notifyActiveField();
   }
 
   function rememberField(field, kind, text, segments) {
@@ -185,6 +201,7 @@
     lastText = text;
     lastSegments = segments;
     attachInputWatch(field);
+    notifyActiveField();
   }
 
   function validMatches(matches) {
@@ -256,7 +273,6 @@
     };
   }
 
-  // Always show the badge. Empty matches => green "clean" state.
   function applyHighlight(matches) {
     if (!lastField) return 0;
     const cleaned = filterDismissed(validMatches(matches), lastText);
@@ -304,9 +320,9 @@
   async function reproofreadField(field, token) {
     if (token !== reproofreadToken) return;
     const active =
-      (field && document.contains(field) && field) ||
+      (fieldIsAttached(field) && field) ||
       editable.detectEditableField(document);
-    if (!active || !document.contains(active)) {
+    if (!active || !fieldIsAttached(active)) {
       forgetField();
       return;
     }
@@ -351,70 +367,106 @@
       chosenReplacement != null
         ? chosenReplacement
         : match.replacements && match.replacements[0];
-    let delta = 0;
+    if (!replacement) return;
+
+    const expected =
+      lastText.slice(0, match.offset) +
+      replacement +
+      lastText.slice(match.offset + match.length);
+    let applied = false;
     cancelReproofread();
     suggestions.hideMatchTooltip();
     beginProgrammaticChange();
     try {
-      if (replacement) {
-        let applied = false;
-        if (lastKind !== "textarea" && lastSegments) {
-          const mapped = editable.matchRanges([match], lastSegments);
-          if (mapped.length > 0) {
-            applied = editable.replaceRangeViaInsertText(
-              lastField,
-              mapped[0],
-              replacement,
-            );
+      const wholeBlockEditor =
+        editable.isNotionEditor(lastField) ||
+        editable.isYoutubeEditor(lastField);
+      if (lastKind === "textarea" || wholeBlockEditor) {
+        applied =
+          editable.replaceEditableText(lastField, lastKind, expected) &&
+          editable.extractEditableText(lastField).text === expected;
+      } else if (lastSegments) {
+        const mapped = editable.matchRanges([match], lastSegments);
+        if (mapped.length > 0) {
+          const replaced = editable.replaceRangeViaInsertText(
+            lastField,
+            mapped[0],
+            replacement,
+          );
+          if (replaced) {
+            const { text: afterText } = editable.extractEditableText(lastField);
+            applied = afterText === expected;
+          }
+          // Direct DOM rewrite is safe only for plain contenteditables.
+          if (!applied && !editable.isFrameworkEditor(lastField)) {
+            if (
+              editable.replaceRangeDirect(lastField, mapped[0], replacement) &&
+              editable.replaceContentDirect(lastField, lastKind, expected)
+            ) {
+              const { text: afterText } = editable.extractEditableText(
+                lastField,
+              );
+              applied = afterText === expected;
+            }
           }
         }
-        if (!applied) {
-          const next =
-            lastText.slice(0, match.offset) +
-            replacement +
-            lastText.slice(match.offset + match.length);
-          editable.replaceEditableText(lastField, lastKind, next);
+        if (!applied && !editable.isFrameworkEditor(lastField)) {
+          if (editable.replaceEditableText(lastField, lastKind, expected)) {
+            const { text: afterText } = editable.extractEditableText(lastField);
+            applied = afterText === expected;
+          }
         }
-        delta = replacement.length - match.length;
       }
     } finally {
-      endProgrammaticChange();
+      endProgrammaticChange(150);
     }
-    const remaining = shiftRemaining(lastMatches, match, delta);
-    // Let Slate finish reconciling before we re-read the DOM / redraw.
+
+    const delta = applied ? replacement.length - match.length : 0;
+    const remaining = applied
+      ? shiftRemaining(lastMatches, match, delta)
+      : lastMatches.slice();
+
     setTimeout(() => {
-      if (!lastField) return;
-      const extracted = editable.extractEditableText(lastField);
+      const active =
+        (fieldIsAttached(lastField) && lastField) ||
+        editable.detectEditableField(document);
+      if (!active || !fieldIsAttached(active)) return;
+      if (active !== lastField) adoptField(active);
+      const extracted = editable.extractEditableText(active);
+      lastField = active;
       lastKind = extracted.kind;
       lastText = extracted.text;
       lastSegments = extracted.segments;
-      attachInputWatch(lastField);
-      redrawMatches(remaining);
+      attachInputWatch(active);
+      if (applied && remaining.length > 0 && extracted.text === expected) {
+        redrawMatches(remaining);
+      }
+      scheduleReproofread(active);
     }, 0);
   }
 
   function isWatchedEditable(el) {
-    if (!el || el.nodeType !== 1) return false;
-    if (el.tagName === "TEXTAREA") return true;
-    if (el.isContentEditable) return true;
-    return false;
+    return editable.isEditableElement(el);
   }
 
-  // Auto-start a session when the user focuses an editable on this page.
   function onFocusIn(event) {
-    const target = event.target;
-    if (!isWatchedEditable(target)) return;
-    if (lastField === target) return;
+    const target =
+      editable.editableFromNode(event.target) ||
+      editable.detectEditableField(document);
+    if (!target) return;
+    if (lastField === target) {
+      notifyActiveField();
+      return;
+    }
     adoptField(target);
     scheduleReproofread(target);
   }
 
   document.addEventListener("focusin", onFocusIn, true);
 
-  // If a field is already focused when the script loads, start watching it.
   const initial = editable.detectEditableField(document);
   if (initial) {
-    adoptField(initial);
+    adoptField(initial, fieldOwnsFocus(initial));
     scheduleReproofread(initial);
   }
 
@@ -422,7 +474,10 @@
     try {
       switch (msg?.type) {
         case "lexicon:get-text": {
-          const field = editable.detectEditableField(document);
+          // Prefer the last focused field; the popup can steal focus.
+          const field =
+            (fieldIsAttached(lastField) && lastField) ||
+            editable.detectEditableField(document);
           if (!field) return { ok: false, error: "no-editable-field" };
           const { kind, text, segments } = editable.extractEditableText(field);
           rememberField(field, kind, text, segments);
@@ -430,7 +485,7 @@
         }
 
         case "lexicon:highlight": {
-          if (!lastField) {
+          if (!fieldIsAttached(lastField)) {
             const field = editable.detectEditableField(document);
             if (!field) return { ok: false, error: "no-editable-field" };
             adoptField(field);
@@ -447,13 +502,20 @@
           if (!lastField || typeof msg.text !== "string") {
             return { ok: false, error: "no-field" };
           }
+          const expected = editable.normalizeText(msg.text);
           cancelReproofread();
           beginProgrammaticChange();
+          let replaced = false;
           try {
-            editable.replaceEditableText(lastField, lastKind, msg.text);
+            replaced =
+              editable.replaceEditableText(lastField, lastKind, expected) &&
+              editable.extractEditableText(lastField).text === expected;
             adoptField(lastField);
           } finally {
             endProgrammaticChange();
+          }
+          if (!replaced) {
+            return { ok: false, error: "editor-rejected-replacement" };
           }
           scheduleReproofread(lastField);
           return { ok: true };

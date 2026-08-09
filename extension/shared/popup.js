@@ -1,6 +1,4 @@
-// Popup actions: proofread and rewrite, scoped to the focused field.
-// The popup sends commands to the content script; it never touches the
-// page DOM. The request shapes match the desktop app.
+// Popup: proofread and rewrite the focused field.
 
 import {
   discoverBackend,
@@ -66,7 +64,11 @@ const monitor = createBackendStatus({
 async function sendToContent(msg) {
   const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
   if (!tab?.id) throw new Error("no-tab");
-  return browser.tabs.sendMessage(tab.id, msg);
+  return browser.runtime.sendMessage({
+    type: "lexicon:content-command",
+    tabId: tab.id,
+    message: msg,
+  });
 }
 
 async function refreshField() {
@@ -81,7 +83,7 @@ async function refreshField() {
     fieldReady = true;
     inputEl.value = response.text;
   } catch {
-    inputEl.placeholder = "Lexicon works on Gmail, Slack, and Discord.";
+    inputEl.placeholder = "Lexicon can't run on this page.";
   } finally {
     refreshActions();
   }
@@ -146,8 +148,6 @@ async function onProofread() {
   try {
     const matches = await checkGrammar(text);
     await sendToContent({ type: "lexicon:highlight", matches });
-    // Suggestions live on the in-page badge/panel — the popup only triggers
-    // the check. Rewrite/transform results still render below.
     if (matches.length === 0) {
       showEmpty("No issues found.");
     } else if (matches.length === 1) {

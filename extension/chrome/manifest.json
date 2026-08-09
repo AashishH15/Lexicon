@@ -23,10 +23,11 @@
   "content_scripts": [
     {
       "matches": [
-        "https://mail.google.com/*",
-        "https://*.slack.com/*",
-        "https://discord.com/*"
+        "<all_urls>"
       ],
+      "all_frames": true,
+      "match_about_blank": true,
+      "match_origin_as_fallback": true,
       "js": [
         "vendor/browser-polyfill.min.js",
         "detectEditable.js",

@@ -107,3 +107,11 @@ test("panelPosition flips below the badge when there is no room above", () => {
   const panel = api.panelPosition(badge, 200);
   assert.equal(panel.top, 40 + 26 + 8);
 });
+
+test("panelPosition lifts above a short editor instead of covering it", () => {
+  const api = loadSuggestions({ innerWidth: 1000, innerHeight: 800 });
+  const badge = { left: 700, top: 534 };
+  const field = { left: 200, right: 700, top: 500, bottom: 560, height: 60 };
+  const panel = api.panelPosition(badge, 200, field);
+  assert.ok(panel.top + 200 <= field.top - 8);
+});

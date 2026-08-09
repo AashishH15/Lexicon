@@ -29,30 +29,71 @@ const {
   normalizeSegments,
   extractEditableText,
   replaceEditableText,
+  replaceRangeDirect,
+  replaceContentDirect,
   matchRanges,
+  isNotionEditor,
+  isYoutubeEditor,
 } = sandbox.__lexiconEditable;
 
 // JSON round-trip avoids cross-realm prototype mismatches.
 const plain = (value) => JSON.parse(JSON.stringify(value));
 
-test("siteForHost matches the allowlist", () => {
+test("siteForHost matches known reliability fallbacks", () => {
   assert.equal(siteForHost("mail.google.com"), "mail.google.com");
   assert.equal(siteForHost("sub.slack.com"), "*.slack.com");
   assert.equal(siteForHost("slack.com"), "*.slack.com");
   assert.equal(siteForHost("discord.com"), "discord.com");
   assert.equal(siteForHost("canary.discord.com"), null);
+  assert.equal(siteForHost("www.reddit.com"), null);
   assert.equal(siteForHost("example.com"), null);
   assert.equal(siteForHost("gmail.com"), null);
   assert.equal(siteForHost("docs.google.com"), null);
+  assert.equal(siteForHost("github.com"), null);
 });
 
-test("selectorsForHost returns site selectors only for allowlisted hosts", () => {
-  assert.deepEqual(plain(selectorsForHost("mail.google.com")), [
-    "div[aria-label='Message Body'][contenteditable='true']",
-    ".Am.Al.editable",
-  ]);
+test("selectorsForHost includes generic editors on unknown hosts", () => {
+  const selectors = selectorsForHost("www.quora.com");
+  assert.ok(selectors.some((s) => s.includes("role='textbox'")));
+  assert.ok(selectors.some((s) => s.includes("DraftEditor")));
+  assert.ok(selectors.some((s) => s.includes("lexical-editor")));
+  assert.ok(selectors.includes("textarea"));
+  assert.ok(selectors.includes("[contenteditable='true']"));
+});
+
+test("selectorsForHost keeps Gmail selectors and adds generics", () => {
+  const selectors = selectorsForHost("mail.google.com");
+  assert.ok(selectors.some((s) => s.includes("Message Body")));
+  assert.ok(selectors.some((s) => s.includes("role='textbox'")));
+});
+
+test("selectorsForHost returns site selectors plus generics", () => {
+  const gmail = plain(selectorsForHost("mail.google.com"));
+  assert.ok(gmail.includes("div[aria-label='Message Body'][contenteditable='true']"));
+  assert.ok(gmail.includes(".Am.Al.editable"));
+  assert.ok(gmail.includes("div[role='textbox'][contenteditable='true']"));
   assert.ok(plain(selectorsForHost("sub.slack.com")).length > 0);
-  assert.deepEqual(plain(selectorsForHost("example.com")), []);
+  // Unknown hosts still get the generic editor selectors.
+  assert.ok(plain(selectorsForHost("example.com")).length > 0);
+  assert.ok(plain(selectorsForHost("github.com")).includes("textarea"));
+});
+
+test("recognizes Notion and YouTube managed editors", () => {
+  const notion = {
+    nodeType: 1,
+    isContentEditable: true,
+    getAttribute: (name) =>
+      name === "data-content-editable-leaf" ? "true" : null,
+    closest: () => notion,
+  };
+  const youtube = {
+    nodeType: 1,
+    isContentEditable: true,
+    id: "contenteditable-root",
+    getAttribute: () => null,
+  };
+  assert.equal(isNotionEditor(notion), true);
+  assert.equal(isYoutubeEditor(youtube), true);
 });
 
 test("normalizeText collapses \\r\\n and lone \\r to \\n", () => {
@@ -225,4 +266,112 @@ test("extractEditableText reads a textarea value", () => {
   assert.equal(result.kind, "textarea");
   assert.equal(result.text, "Teh cat.");
   assert.equal(result.segments, null);
+});
+
+test("replaceRangeDirect replaces a mapped range and fires input", () => {
+  const node = { nodeType: 3, data: "Teh algoritm works." };
+  const field = makeField({
+    children: [makeElement("DIV")],
+    ownerDocument: {
+      defaultView: null,
+      createTextNode: (data) => ({ nodeType: 3, data }),
+      createRange() {
+        return {
+          startOffset: 0,
+          setStart(node, offset) {
+            this.startNode = node;
+            this.startOffset = offset;
+          },
+          setEnd(node, offset) {
+            this.endNode = node;
+            this.endOffset = offset;
+          },
+          deleteContents() {
+            this.startNode.data =
+              this.startNode.data.slice(0, this.startOffset) +
+              this.endNode.data.slice(this.endOffset);
+          },
+          insertNode(textNode) {
+            const pos = this.startOffset;
+            this.startNode.data =
+              this.startNode.data.slice(0, pos) +
+              textNode.data +
+              this.startNode.data.slice(pos);
+          },
+        };
+      },
+    },
+  });
+  const mapped = {
+    startNode: node,
+    startOffset: 0,
+    endNode: node,
+    endOffset: 3,
+  };
+  assert.equal(replaceRangeDirect(field, mapped, "The"), true);
+  assert.equal(node.data, "The algoritm works.");
+  assert.equal(field.events.length, 1);
+  assert.equal(field.events[0].type, "input");
+  assert.equal(field.events[0].bubbles, true);
+});
+
+test("replaceRangeDirect fails safely on a missing mapping", () => {
+  const field = makeField({ ownerDocument: { defaultView: null } });
+  assert.equal(replaceRangeDirect(field, null, "The"), false);
+  assert.equal(field.events.length, 0);
+});
+
+test("replaceRangeDirect fails safely without an owner document", () => {
+  const field = makeField();
+  assert.equal(
+    replaceRangeDirect(
+      field,
+      { startNode: { nodeType: 3 }, startOffset: 0 },
+      "The",
+    ),
+    false,
+  );
+});
+
+test("replaceContentDirect sets a textarea value and fires input", () => {
+  const field = makeField({ ownerDocument: { defaultView: null } });
+  assert.equal(replaceContentDirect(field, "textarea", "Hello world."), true);
+  assert.equal(field.value, "Hello world.");
+  assert.equal(field.events.length, 1);
+  assert.equal(field.events[0].type, "input");
+});
+
+test("replaceContentDirect rebuilds a contenteditable without execCommand", () => {
+  const field = makeField({ children: [makeElement("DIV")], ownerDocument: fakeDoc });
+  assert.equal(replaceContentDirect(field, "contenteditable", "Line one\nLine two"), true);
+  assert.equal(field.children.length, 2);
+  assert.equal(field.children[0].tagName, "DIV");
+  assert.equal(field.children[0].textContent, "Line one");
+  assert.equal(field.children[1].textContent, "Line two");
+  assert.equal(field.events.length, 1);
+});
+
+test("replaceContentDirect refuses Slate editors", () => {
+  const field = makeField({ children: [makeElement("DIV")], ownerDocument: fakeDoc });
+  field.nodeType = 1;
+  field.getAttribute = () => "true";
+  assert.equal(replaceContentDirect(field, "contenteditable", "Ignored."), false);
+  assert.equal(field.children.length, 1);
+  assert.equal(field.events.length, 0);
+});
+
+test("replaceContentDirect refuses Draft.js editors", () => {
+  const field = makeField({ children: [makeElement("DIV")], ownerDocument: fakeDoc });
+  field.nodeType = 1;
+  field.getAttribute = () => null;
+  field.classList = { contains: (name) => name === "public-DraftEditor-content" };
+  field.closest = () => null;
+  assert.equal(replaceContentDirect(field, "contenteditable", "Ignored."), false);
+  assert.equal(field.events.length, 0);
+});
+
+test("replaceRangeDirect and replaceContentDirect are exported", () => {
+  assert.equal(typeof sandbox.__lexiconEditable.replaceRangeDirect, "function");
+  assert.equal(typeof sandbox.__lexiconEditable.replaceContentDirect, "function");
+  assert.equal(typeof sandbox.__lexiconEditable.isFrameworkEditor, "function");
 });

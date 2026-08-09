@@ -1,10 +1,4 @@
-// Squiggle overlay rendering.
 // Draw red underlines for grammar matches.
-// contenteditable: use DOM ranges.
-// textarea: use a hidden mirror with the same font and width.
-// Recompute positions on scroll and resize.
-// Hit-test hover/click without stealing pointer events from the field
-// (document listeners + rect list), so typing still works.
 
 (function () {
   "use strict";
@@ -67,7 +61,6 @@
     }
   }
 
-  // Merge overlapping ranges for drawing only when indices are not needed.
   function mergeRanges(ranges) {
     const sorted = [...ranges].sort((a, b) => a.start - b.start);
     const out = [];
@@ -114,7 +107,6 @@
     };
   }
 
-  // Build a mirror with one span per match range (preserve index mapping).
   function buildMirror(field, ranges, text) {
     const computed = getComputedStyle(field);
     const style = mirrorStyle(field, computed);
@@ -236,8 +228,6 @@
   function onPointerMove(event) {
     if (!state) return;
     const hit = findHit(event.clientX, event.clientY);
-    // Match the desktop app: opening is hover-driven; leaving the word does
-    // not dismiss (the tooltip dismisses on its own mouseleave).
     if (hit && activeIndex !== hit.index) activate(hit, false);
   }
 
@@ -282,10 +272,6 @@
     }
   }
 
-  // field: the editable element. ranges: DOM or char ranges (1:1 with matches).
-  // text: the normalized text that the offsets refer to.
-  // options.onActivate(index, rect, { pinned })
-  // options.onDeactivate()
   function applySquiggles(field, ranges, text, options) {
     clearSquiggles();
     if (!field || !ranges || ranges.length === 0 || text == null) return;

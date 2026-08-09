@@ -33,12 +33,6 @@ function extensionIdFromKey(spkiB64) {
   return id;
 }
 
-const ALLOWLIST_PATTERNS = [
-  "https://mail.google.com/*",
-  "https://*.slack.com/*",
-  "https://discord.com/*",
-];
-
 test("manifest is MV3 with semver version and pinned key", () => {
   assert.equal(manifest.manifest_version, 3);
   assert.match(manifest.version, /^\d+\.\d+\.\d+$/);
@@ -66,13 +60,12 @@ test("proofread shortcut command is declared", () => {
   assert.ok(manifest.commands["lexicon-proofread"].suggested_key.default);
 });
 
-test("content scripts are scoped to the allowlist only", () => {
+test("content scripts run on all sites and matching editor frames", () => {
   const matches = manifest.content_scripts.flatMap((cs) => cs.matches);
-  assert.deepEqual(matches, ALLOWLIST_PATTERNS);
-  for (const pattern of matches) {
-    assert.ok(pattern.startsWith("https://"), `non-https match pattern: ${pattern}`);
-    assert.ok(!pattern.includes("all_urls"), "all_urls must never ship");
-  }
+  assert.deepEqual(matches, ["<all_urls>"]);
+  assert.equal(manifest.content_scripts[0].all_frames, true);
+  assert.equal(manifest.content_scripts[0].match_about_blank, true);
+  assert.equal(manifest.content_scripts[0].match_origin_as_fallback, true);
   assert.deepEqual(manifest.content_scripts.flatMap((cs) => cs.js), [
     "vendor/browser-polyfill.min.js",
     "detectEditable.js",

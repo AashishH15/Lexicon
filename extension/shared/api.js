@@ -1,6 +1,4 @@
-// Client for the Lexicon backend.
-// Ports: 18000 (packaged app), 8000 (dev launcher).
-// The request shapes match the desktop app.
+// Lexicon backend client. Ports: 18000 (app), 8000 (dev).
 
 export const BACKEND_PORTS = [18000, 8000];
 
@@ -14,7 +12,6 @@ export function getBackendBaseUrl() {
   return baseUrl;
 }
 
-// Confirm that the backend is Lexicon's.
 export function isValidPing(body) {
   return (
     body !== null &&
@@ -29,7 +26,6 @@ export function buildGrammarRequest(text, language = "en-US", ignore = []) {
 }
 
 export function buildTransformRequest(prompt, text) {
-  // The backend selects the model itself.
   return { prompt, text };
 }
 
@@ -52,7 +48,6 @@ async function jsonRequest(path, options) {
   return response.json();
 }
 
-// Probe both ports. Return the first live backend, or null.
 export async function discoverBackend() {
   for (const port of BACKEND_PORTS) {
     try {
@@ -65,7 +60,7 @@ export async function discoverBackend() {
       baseUrl = `http://127.0.0.1:${port}`;
       return baseUrl;
     } catch {
-      // The port is closed. Try the next port.
+      // Port not available.
     }
   }
   baseUrl = null;

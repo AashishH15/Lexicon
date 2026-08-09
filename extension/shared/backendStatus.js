@@ -1,7 +1,4 @@
-// Popup backend monitor.
-// Poll the backend ping. Show connected or offline.
-// While offline, keep polling: the state flips to connected as soon as
-// the desktop app is opened.
+// Poll the Lexicon backend and report connected or offline.
 
 export function createBackendStatus({ ping, onChange, intervalMs = 1000 }) {
   const CHECKING = "checking";

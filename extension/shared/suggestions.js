@@ -1,10 +1,4 @@
-// Suggestion UI overlay.
-// A count badge near the focused field opens a panel listing the grammar
-// matches. The panel is anchored to the badge (opens as an extension of it).
-// Hover/click on a squiggle opens a match popover (desktop GrammarTooltip).
-// Black badge = issues found. Green badge = no issues.
-// Hide the badge and panel when the field leaves the viewport.
-// This file runs as a classic script. It exposes __lexiconSuggestions.
+// Suggestion badge and panel UI.
 
 (function () {
   "use strict";
@@ -64,12 +58,9 @@
     const path = typeof event.composedPath === "function" ? event.composedPath() : [];
     if (path.includes(state.tooltipEl) || path.includes(state.badgeEl)) return;
     if (path.includes(state.host)) {
-      // Clicks inside the shadow host (panel/tooltip) are fine; only tip chips
-      // and badge are in the path as retargeted host sometimes — check target.
       const tip = state.tooltipEl;
       if (tip.contains(event.target)) return;
     }
-    // composedPath includes shadow nodes; if the tooltip is in the path, keep it.
     for (const node of path) {
       if (node === state.tooltipEl) return;
     }
@@ -122,8 +113,8 @@
     };
   }
 
-  // Anchor the panel to the badge: prefer opening upward, right-aligned to the badge.
-  function panelPosition(badge, panelHeight) {
+  // Place the panel next to the badge. Prefer above the badge.
+  function panelPosition(badge, panelHeight, fieldRect) {
     const height = Math.min(
       panelHeight || PANEL_MAX_HEIGHT,
       PANEL_MAX_HEIGHT,
@@ -132,13 +123,38 @@
     left = Math.max(8, Math.min(left, window.innerWidth - PANEL_WIDTH - 8));
 
     let top = badge.top - PANEL_GAP - height;
+    let bottom = window.innerHeight - badge.top + PANEL_GAP;
     if (top < 8) {
       top = badge.top + BADGE_SIZE + PANEL_GAP;
+      bottom = null;
       if (top + height > window.innerHeight - 8) {
         top = Math.max(8, window.innerHeight - 8 - height);
       }
     }
-    return { left, top };
+
+    // For short fields, move the panel so it does not cover the text.
+    if (fieldRect && fieldRect.height < PANEL_MAX_HEIGHT) {
+      const overlapsField =
+        top < fieldRect.bottom && top + height > fieldRect.top;
+      if (overlapsField) {
+        const aboveField = fieldRect.top - PANEL_GAP - height;
+        if (aboveField >= 8) {
+          top = aboveField;
+          bottom = window.innerHeight - fieldRect.top + PANEL_GAP;
+        } else {
+          const rightOfField = fieldRect.right + PANEL_GAP;
+          const leftOfField = fieldRect.left - PANEL_GAP - PANEL_WIDTH;
+          if (rightOfField + PANEL_WIDTH <= window.innerWidth - 8) {
+            left = rightOfField;
+            bottom = null;
+          } else if (leftOfField >= 8) {
+            left = leftOfField;
+            bottom = null;
+          }
+        }
+      }
+    }
+    return { left, top, bottom };
   }
 
   function tooltipPosition(anchorRect) {
@@ -164,11 +180,24 @@
     state.badgeEl.style.left = `${badge.left}px`;
     state.badgeEl.style.top = `${badge.top}px`;
     if (state.panelOpen) {
+      state.panelEl.style.maxHeight = `${Math.max(
+        80,
+        Math.min(PANEL_MAX_HEIGHT, window.innerHeight - 16),
+      )}px`;
       state.panelEl.hidden = false;
-      // Measure after unhiding so height is accurate.
-      const panel = panelPosition(badge, state.panelEl.offsetHeight);
+      const panel = panelPosition(
+        badge,
+        state.panelEl.offsetHeight,
+        state.field.getBoundingClientRect(),
+      );
       state.panelEl.style.left = `${panel.left}px`;
-      state.panelEl.style.top = `${panel.top}px`;
+      if (Number.isFinite(panel.bottom)) {
+        state.panelEl.style.top = "auto";
+        state.panelEl.style.bottom = `${panel.bottom}px`;
+      } else {
+        state.panelEl.style.bottom = "auto";
+        state.panelEl.style.top = `${panel.top}px`;
+      }
     }
   }
 
@@ -383,12 +412,6 @@
     else unbindTooltipOutside();
   }
 
-  // field: the editable element. matches: array of match objects (may be empty).
-  // options.onApply: called with the match index when Apply is clicked.
-  // options.onDismiss: called with the match index when Dismiss is clicked.
-  // options.onApplyReplacement: (match, replacement) from squiggle tooltip chips.
-  // options.onDismissMatch: (match) from squiggle tooltip dismiss.
-  // options.checking: true while a proofread is in flight (stale green/black avoided).
   function show(field, matches, options) {
     const opts = options || {};
     const keepOpen = Boolean(state && state.field === field && state.panelOpen);

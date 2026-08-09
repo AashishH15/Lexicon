@@ -1,7 +1,5 @@
-// Editable-field detection and text extraction.
-// This file runs as a classic script. It exposes __lexiconEditable.
-// Use the focused field first. Fall back to site selectors.
-// Normalize newlines to \n so offsets stay aligned.
+// Detect editable fields and extract/replace text.
+// Prefer the focused field. Fall back to known selectors when needed.
 
 (function () {
   "use strict";
@@ -13,7 +11,7 @@
     "PRE", "SECTION", "TABLE", "UL",
   ]);
 
-  // Site-specific selectors. Keep them narrow.
+  // Site selectors used when focus is not on an editor.
   const SITE_SELECTORS = {
     "mail.google.com": [
       "div[aria-label='Message Body'][contenteditable='true']",
@@ -29,9 +27,17 @@
     ],
   };
 
+  const GENERIC_SELECTORS = [
+    "textarea",
+    "div[role='textbox'][contenteditable='true']",
+    "[contenteditable='true']",
+    "div.public-DraftEditor-content[contenteditable='true']",
+    "[data-lexical-editor='true'][contenteditable='true']",
+    "div.ql-editor[contenteditable='true']",
+  ];
+
   function siteForHost(host) {
     if (host === "mail.google.com") return "mail.google.com";
-    // Keep in sync with the content-script matches.
     if (host === "discord.com") return "discord.com";
     if (host === "slack.com" || host.endsWith(".slack.com")) return "*.slack.com";
     return null;
@@ -39,31 +45,99 @@
 
   function selectorsForHost(host) {
     const site = siteForHost(host);
-    return site ? SITE_SELECTORS[site] : [];
+    const siteSelectors = site ? SITE_SELECTORS[site] || [] : [];
+    return [...siteSelectors, ...GENERIC_SELECTORS];
   }
 
   function isVisible(el) {
-    return el.getClientRects().length > 0;
+    return Boolean(el && el.getClientRects && el.getClientRects().length > 0);
+  }
+
+  function isEditableElement(el) {
+    if (!el || el.nodeType !== 1) return false;
+    if (el.tagName === "TEXTAREA") return true;
+    const attribute = el.getAttribute("contenteditable");
+    if (attribute !== null && attribute.toLowerCase() !== "false") return true;
+    // Use the editable root, not a focused child.
+    return Boolean(
+      el.isContentEditable &&
+        (!el.parentElement || !el.parentElement.isContentEditable),
+    );
+  }
+
+  // Follow focus into open shadow roots.
+  function deepActiveElement(doc) {
+    let el = doc.activeElement;
+    while (el && el.shadowRoot && el.shadowRoot.activeElement) {
+      el = el.shadowRoot.activeElement;
+    }
+    return el;
+  }
+
+  // Walk up from the focused node to the editable root.
+  function editableFromNode(node) {
+    let el = node;
+    if (el && el.nodeType === 3) el = el.parentElement;
+    while (el && el.nodeType === 1) {
+      if (isEditableElement(el)) return el;
+      if (el.shadowRoot) {
+        const nested = findEditableDescendant(el);
+        if (nested) return nested;
+      }
+      el = el.parentElement || (el.getRootNode && el.getRootNode().host) || null;
+    }
+    return null;
+  }
+
+  function findEditableDescendant(root) {
+    if (!root || root.nodeType !== 1) return null;
+    const stack = [root];
+    while (stack.length) {
+      const el = stack.pop();
+      if (!el || el.nodeType !== 1) continue;
+      if (el.tagName === "TEXTAREA" && isVisible(el)) return el;
+      if (isEditableElement(el) && isVisible(el)) return el;
+      if (el.shadowRoot) {
+        for (const child of el.shadowRoot.children) stack.push(child);
+      }
+      for (const child of el.children) stack.push(child);
+    }
+    return null;
+  }
+
+  function queryFirstVisible(root, selectors) {
+    for (const selector of selectors) {
+      let list;
+      try {
+        list = root.querySelectorAll(selector);
+      } catch {
+        continue;
+      }
+      for (const el of list) {
+        if (!isEditableElement(el)) continue;
+        if (isVisible(el)) return el;
+      }
+    }
+    return null;
   }
 
   function detectEditableField(doc) {
-    const active = doc.activeElement;
+    const active = deepActiveElement(doc);
     if (active && active !== doc.body) {
-      if (active.tagName === "TEXTAREA") return active;
-      if (active.isContentEditable) return active;
+      const fromActive = editableFromNode(active);
+      if (fromActive) return fromActive;
+      const nested = findEditableDescendant(active);
+      if (nested) return nested;
     }
-    for (const selector of selectorsForHost(doc.location.hostname)) {
-      const el = doc.querySelector(selector);
-      if (el && isVisible(el)) return el;
-    }
-    return null;
+    const host = doc.location && doc.location.hostname;
+    return queryFirstVisible(doc, selectorsForHost(host || ""));
   }
 
   function normalizeText(text) {
     return text.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
   }
 
-  // Map each text node to offsets. A line break has no node.
+  // Map text nodes to character offsets. Line breaks have no node.
   function textSegments(root) {
     const segments = [];
     let text = "";
@@ -74,7 +148,7 @@
       text += "\n";
     }
 
-    function walk(node, atBlockStart) {
+    function walk(node) {
       for (const child of node.childNodes) {
         if (child.nodeType === 3) {
           if (!child.data) continue;
@@ -97,11 +171,10 @@
       }
     }
 
-    walk(root, true);
+    walk(root);
     return { text, segments };
   }
 
-  // Rebuild offsets over normalized text.
   function normalizeSegments(text, segments) {
     let out = "";
     const outSegments = [];
@@ -127,9 +200,8 @@
     return { kind: "contenteditable", ...normalizeSegments(text, segments) };
   }
 
-  // Rebuild a contenteditable as uniform block elements.
-  // Match the existing block tag (p on Slack, div on Gmail).
-  // Never use this on Slate (Discord) — it desyncs the React model from the DOM.
+  // Rebuild contenteditable children as block elements.
+  // Do not use this on framework editors.
   function replaceContentBlocks(field, text) {
     const doc = field.ownerDocument;
     const first = field.firstElementChild;
@@ -153,9 +225,76 @@
     return Boolean(field.closest && field.closest('[data-slate-editor="true"]'));
   }
 
-  // Slate (Discord) listens to beforeinput. Dispatch it with targetRanges, then
-  // execCommand only if the editor did not already handle the event.
-  function dispatchInsertText(field, range, text) {
+  function isDraftEditor(field) {
+    if (!field || field.nodeType !== 1) return false;
+    if (field.classList && field.classList.contains("public-DraftEditor-content")) {
+      return true;
+    }
+    return Boolean(
+      field.closest && field.closest(".public-DraftEditor-content"),
+    );
+  }
+
+  function isLexicalEditor(field) {
+    if (!field || field.nodeType !== 1) return false;
+    if (field.getAttribute("data-lexical-editor") === "true") return true;
+    return Boolean(
+      field.closest && field.closest('[data-lexical-editor="true"]'),
+    );
+  }
+
+  function isProseMirrorEditor(field) {
+    if (!field || field.nodeType !== 1) return false;
+    if (field.classList && field.classList.contains("ProseMirror")) {
+      return true;
+    }
+    return Boolean(field.closest && field.closest(".ProseMirror"));
+  }
+
+  function isNotionEditor(field) {
+    if (!field || field.nodeType !== 1) return false;
+    if (
+      field.getAttribute("data-content-editable-leaf") === "true" &&
+      field.isContentEditable
+    ) {
+      return true;
+    }
+    return Boolean(
+      field.closest &&
+        field.closest('[data-content-editable-leaf="true"]') === field,
+    );
+  }
+
+  function isYoutubeEditor(field) {
+    if (!field || field.nodeType !== 1 || !field.isContentEditable) {
+      return false;
+    }
+    return (
+      field.id === "contenteditable-root" ||
+      field.id === "contenteditable-textarea"
+    );
+  }
+
+  // Detect React-owned nodes so we do not rebuild their DOM.
+  function hasReactFiber(field) {
+    if (!field || field.nodeType !== 1) return false;
+    return Object.keys(field).some((key) => key.startsWith("__react"));
+  }
+
+  // Editors that own their own model. Do not rewrite their children.
+  function isFrameworkEditor(field) {
+    return (
+      isSlateEditor(field) ||
+      isDraftEditor(field) ||
+      isLexicalEditor(field) ||
+      isProseMirrorEditor(field) ||
+      isNotionEditor(field) ||
+      isYoutubeEditor(field) ||
+      hasReactFiber(field)
+    );
+  }
+
+  function selectRange(field, range) {
     const doc = field.ownerDocument;
     const view = doc && doc.defaultView;
     if (!doc || !view) return false;
@@ -165,30 +304,46 @@
       if (!sel) return false;
       sel.removeAllRanges();
       sel.addRange(range);
+      return true;
+    } catch {
+      return false;
+    }
+  }
 
-      const evInit = {
-        bubbles: true,
-        cancelable: true,
-        inputType: "insertText",
-        data: text,
-      };
-      if (typeof view.StaticRange === "function") {
-        evInit.targetRanges = [
-          new view.StaticRange({
-            startContainer: range.startContainer,
-            startOffset: range.startOffset,
-            endContainer: range.endContainer,
-            endOffset: range.endOffset,
-          }),
-        ];
-      }
-      const InputEventCtor = view.InputEvent || globalThis.InputEvent;
-      if (typeof InputEventCtor === "function") {
-        const beforeEvt = new InputEventCtor("beforeinput", evInit);
-        field.dispatchEvent(beforeEvt);
-        // Firefox Slate prevents default and applies itself — skip execCommand
-        // or the replacement is inserted twice.
-        if (beforeEvt.defaultPrevented) return true;
+  // Some editors need a beforeinput event before insertText.
+  function dispatchInsertText(field, range, text) {
+    const doc = field.ownerDocument;
+    const view = doc && doc.defaultView;
+    if (!doc || !view || !selectRange(field, range)) return false;
+    try {
+      const needsBeforeInput =
+        isSlateEditor(field) ||
+        isNotionEditor(field) ||
+        isYoutubeEditor(field);
+      if (needsBeforeInput) {
+        const evInit = {
+          bubbles: true,
+          cancelable: true,
+          inputType: "insertText",
+          data: text,
+          composed: true,
+        };
+        if (typeof view.StaticRange === "function") {
+          evInit.targetRanges = [
+            new view.StaticRange({
+              startContainer: range.startContainer,
+              startOffset: range.startOffset,
+              endContainer: range.endContainer,
+              endOffset: range.endOffset,
+            }),
+          ];
+        }
+        const InputEventCtor = view.InputEvent || globalThis.InputEvent;
+        if (typeof InputEventCtor === "function") {
+          const beforeEvt = new InputEventCtor("beforeinput", evInit);
+          field.dispatchEvent(beforeEvt);
+          if (beforeEvt.defaultPrevented) return true;
+        }
       }
       if (typeof doc.execCommand === "function") {
         return doc.execCommand("insertText", false, text);
@@ -211,7 +366,6 @@
     }
   }
 
-  // Replace one mapped DOM range with text via beforeinput + insertText.
   function replaceRangeViaInsertText(field, mapped, text) {
     if (!mapped || !mapped.startNode) return false;
     const doc = field.ownerDocument;
@@ -225,7 +379,25 @@
     }
   }
 
-  // Set a textarea's value without tripping React's value tracking.
+  // Replace a mapped range by editing the DOM directly.
+  function replaceRangeDirect(field, mapped, text) {
+    if (!mapped || !mapped.startNode) return false;
+    const doc = field.ownerDocument;
+    try {
+      const range = doc.createRange();
+      range.setStart(mapped.startNode, mapped.startOffset);
+      range.setEnd(mapped.endNode, mapped.endOffset);
+      range.deleteContents();
+      range.insertNode(doc.createTextNode(text));
+      const view = doc && doc.defaultView;
+      const EventCtor = (view && view.Event) || globalThis.Event;
+      field.dispatchEvent(new EventCtor("input", { bubbles: true }));
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   function setTextareaValue(field, value) {
     const view = field.ownerDocument && field.ownerDocument.defaultView;
     const proto =
@@ -241,26 +413,39 @@
     }
   }
 
-  // Replace the field content. Fire input so the site sees the change.
+  // Replace field text and fire an input event.
   function replaceEditableText(field, kind, text) {
     if (kind === "textarea") {
       setTextareaValue(field, normalizeText(text));
       const view = field.ownerDocument && field.ownerDocument.defaultView;
       const EventCtor = (view && view.Event) || globalThis.Event;
       field.dispatchEvent(new EventCtor("input", { bubbles: true }));
-      return;
+      return true;
     }
-    if (replaceViaInsertText(field, text)) return;
-    // Slate owns its DOM. Rewriting children leaves React state updated but
-    // the visible editor stuck (can't caret/backspace until refresh).
-    if (isSlateEditor(field)) return;
+    if (replaceViaInsertText(field, text)) return true;
+    if (isFrameworkEditor(field)) return false;
     replaceContentBlocks(field, text);
     const view = field.ownerDocument && field.ownerDocument.defaultView;
     const EventCtor = (view && view.Event) || globalThis.Event;
     field.dispatchEvent(new EventCtor("input", { bubbles: true }));
+    return true;
   }
 
-  // Map matches to DOM ranges. Drop unmappable matches.
+  // Rebuild field text without execCommand.
+  function replaceContentDirect(field, kind, text) {
+    if (kind === "textarea") {
+      setTextareaValue(field, normalizeText(text));
+    } else {
+      if (isFrameworkEditor(field)) return false;
+      replaceContentBlocks(field, text);
+    }
+    const view = field.ownerDocument && field.ownerDocument.defaultView;
+    const EventCtor = (view && view.Event) || globalThis.Event;
+    field.dispatchEvent(new EventCtor("input", { bubbles: true }));
+    return true;
+  }
+
+  // Map matches to DOM ranges. Drop matches that cannot be mapped.
   function matchRanges(matches, segments) {
     const out = [];
     for (const match of matches) {
@@ -296,17 +481,28 @@
   globalThis.__lexiconEditable = {
     BLOCK_TAGS,
     SITE_SELECTORS,
+    GENERIC_SELECTORS,
     siteForHost,
     selectorsForHost,
     isVisible,
+    isEditableElement,
+    deepActiveElement,
+    editableFromNode,
     detectEditableField,
     normalizeText,
     textSegments,
     normalizeSegments,
     extractEditableText,
     isSlateEditor,
+    isDraftEditor,
+    isLexicalEditor,
+    isNotionEditor,
+    isFrameworkEditor,
+    isYoutubeEditor,
     replaceEditableText,
     replaceRangeViaInsertText,
+    replaceRangeDirect,
+    replaceContentDirect,
     matchRanges,
   };
 })();

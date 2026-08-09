@@ -1,5 +1,4 @@
 // Rewrite and tone prompts for the popup.
-// Keep their structure identical to the desktop app prompts.
 
 const OUTPUT_RULES =
   " Output only the result and nothing else. No preamble, no headings, no explanation, and do not wrap it in quotation marks.";
