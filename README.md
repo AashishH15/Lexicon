@@ -53,12 +53,43 @@ Download the installer for your device from the
 The Windows installer bundles the app backend and its runtime. You do not need
 Python, Node.js, or Java to use the installed application.
 
+Windows builds are not yet Authenticode code-signed. That can trigger
+**SmartScreen** and occasional **antivirus false positives** (Windows Defender,
+AVG, and similar). Lexicon is open source and MIT-licensed; only download
+installers from this repository’s
+[Releases](https://github.com/AashishH15/Lexicon/releases) page.
+
+**SmartScreen (“Windows protected your PC”):**
+
+1. Click **More info**
+2. Click **Run anyway**
+
+**Antivirus quarantine / “malicious code” warnings:** these are usually
+reputation heuristics on new or unsigned indie installers, not a confirmed
+infection. If Defender or another AV blocks the file, restore/allow it from
+quarantine after you have confirmed the download came from the GitHub Releases
+URL above. If you are unsure, compare the release asset name and checksums on
+the release page before allowing.
+
 ### macOS
 
 - **Apple Silicon / arm64** - M-series Macs
 - **Intel / x64** - Intel Macs
 
-The macOS build is currently pre-release (unsigned). If macOS Gatekeeper blocks launch or prevents the background engine from spawning, run `xattr -cr /Applications/Lexicon.app` in Terminal to clear the download quarantine flag, or follow [Apple's guide for unidentified developer apps](https://support.apple.com/guide/mac-help/open-a-mac-app-from-an-unidentified-developer-mh40616/mac) via **System Settings > Privacy & Security > Open Anyway**. Only download builds from this repository's releases page.
+The macOS build is currently pre-release (**unsigned**). Gatekeeper may block
+launch or prevent the background engine from spawning because the app is not
+notarized by Apple. That is an unsigned-developer warning, not a claim that the
+build contains malware. Only download builds from this repository’s releases
+page.
+
+If Gatekeeper blocks Lexicon:
+
+- **GUI:** Control-click (right-click) `Lexicon.app` → **Open** → **Open**
+- **System Settings:** **Privacy & Security** → **Open Anyway**
+  ([Apple’s guide](https://support.apple.com/guide/mac-help/open-a-mac-app-from-an-unidentified-developer-mh40616/mac))
+- **Terminal:** `xattr -cr /Applications/Lexicon.app` to clear the download
+  quarantine flag
+
 
 ### Linux
 

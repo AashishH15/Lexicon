@@ -125,6 +125,14 @@
       },
       {
         "@type": "Question",
+        "name": "Why does Windows or macOS warn that Lexicon is unsigned or unsafe?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Desktop builds are not yet code-signed or notarized. Windows SmartScreen and macOS Gatekeeper warn on new or unsigned indie apps; antivirus tools may also false-positive. Only download from the official GitHub Releases page, then use More info → Run anyway (Windows) or Open Anyway / xattr (macOS). See Setup & Support on this site for steps."
+        }
+      },
+      {
+        "@type": "Question",
         "name": "Why use Lexicon instead of a cloud grammar checker?",
         "acceptedAnswer": {
           "@type": "Answer",
@@ -857,6 +865,26 @@
           </details>
           <details class="faq-item">
             <summary>
+              <span>Why does Windows or macOS warn that Lexicon is unsigned or unsafe?</span>
+              <span class="faq-icon" aria-hidden="true">
+                <svg class="faq-icon-plus" width="18" height="18" viewBox="0 0 256 256" fill="currentColor"><path d="M224,128a8,8,0,0,1-8,8H136v80a8,8,0,0,1-16,0V136H40a8,8,0,0,1,0-16h80V40a8,8,0,0,1,16,0v80h80A8,8,0,0,1,224,128Z"></path></svg>
+                <svg class="faq-icon-x" width="18" height="18" viewBox="0 0 256 256" fill="currentColor"><path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z"></path></svg>
+              </span>
+            </summary>
+            <div class="faq-answer">
+              <div class="faq-answer-inner">
+                <p>
+                Desktop builds are not yet code-signed (Windows) or notarized (macOS). SmartScreen, Gatekeeper, and some
+                antivirus tools warn on new or unsigned indie installers. That is a reputation / signing gap, not proof
+                the file is malware. Only download from
+                <a href="https://github.com/AashishH15/Lexicon/releases" target="_blank" rel="noopener">GitHub Releases</a>,
+                then follow the SmartScreen / Gatekeeper steps under <a href="#support">Setup &amp; Support</a>.
+              </p>
+              </div>
+            </div>
+          </details>
+          <details class="faq-item">
+            <summary>
               <span>Why use Lexicon instead of a cloud grammar checker?</span>
               <span class="faq-icon" aria-hidden="true">
                 <svg class="faq-icon-plus" width="18" height="18" viewBox="0 0 256 256" fill="currentColor"><path d="M224,128a8,8,0,0,1-8,8H136v80a8,8,0,0,1-16,0V136H40a8,8,0,0,1,0-16h80V40a8,8,0,0,1,16,0v80h80A8,8,0,0,1,224,128Z"></path></svg>
@@ -903,8 +931,8 @@
             <div class="setup-step-box">
               <span class="step-number">2. VERIFY</span>
               <h4>First Launch Pass</h4>
-              <p>Run the installer. If your OS displays a SmartScreen or Gatekeeper warning, follow the quick 1-click
-                override steps below.</p>
+              <p>Run the installer. Builds are not yet code-signed, so Windows SmartScreen or macOS Gatekeeper may warn.
+                Follow the steps below (and allow antivirus false positives only if you downloaded from GitHub Releases).</p>
             </div>
             <div class="setup-step-box">
               <span class="step-number">3. START WRITING</span>
@@ -919,16 +947,25 @@
           <!-- Windows SmartScreen Setup Card -->
           <div class="support-card">
             <div class="support-card-header">
-              <h3>Windows (SmartScreen)</h3>
+              <h3>Windows (SmartScreen &amp; antivirus)</h3>
               <span class="badge-pill badge-blue">Windows</span>
             </div>
             <p>
-              If Windows SmartScreen shows <em>"Windows protected your PC"</em> during initial installation:
+              Windows builds are <strong>not yet Authenticode code-signed</strong>. SmartScreen often shows
+              <em>"Windows protected your PC"</em> for new or unsigned indie installers. That is a reputation warning,
+              not proof the file is malware. Only install builds from
+              <a href="https://github.com/AashishH15/Lexicon/releases" target="_blank" rel="noopener">GitHub Releases</a>.
             </p>
+            <p><strong>SmartScreen:</strong></p>
             <ol>
               <li>Click <strong>More info</strong> under the warning prompt.</li>
               <li>Click <strong>Run anyway</strong> to complete installation.</li>
             </ol>
+            <p>
+              <strong>Antivirus (Defender, AVG, etc.):</strong> some tools may quarantine the installer or flag
+              “malicious code” as a false positive on unsigned NSIS installers. Confirm the file came from the official
+              Releases page (check asset name / checksums), then restore or allow it in your AV quarantine settings.
+            </p>
           </div>
 
           <!-- macOS Gatekeeper Setup Card -->
@@ -938,7 +975,10 @@
               <span class="badge-pill badge-blue">macOS</span>
             </div>
             <p>
-              If macOS shows <em>"Lexicon cannot be opened because it is from an unidentified developer"</em>:
+              macOS builds are currently <strong>unsigned / not notarized</strong>. Gatekeeper may show
+              <em>"Lexicon cannot be opened because it is from an unidentified developer"</em>, or block the background
+              engine. That is an unsigned-developer warning. Only download from
+              <a href="https://github.com/AashishH15/Lexicon/releases" target="_blank" rel="noopener">GitHub Releases</a>.
             </p>
             <ul style="padding-left: 20px; list-style: none;">
               <li style="margin-bottom: 8px;"><strong>Option 1 (GUI):</strong> Control-click (right-click)
@@ -947,7 +987,7 @@
               <li style="margin-bottom: 8px;"><strong>Option 2 (System Settings):</strong> Open <strong>System Settings
                   &gt; Privacy &amp; Security</strong> &rarr; scroll down and click <strong>Open Anyway</strong>.</li>
               <li style="margin-bottom: 8px;"><strong>Option 3 (Terminal):</strong> Run <kbd>xattr -cr
-                  /Applications/Lexicon.app</kbd> in Terminal.</li>
+                  /Applications/Lexicon.app</kbd> in Terminal to clear the quarantine flag.</li>
             </ul>
           </div>
 
