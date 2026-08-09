@@ -2073,7 +2073,7 @@ export default function Settings({
                       <button
                         type="button"
                         onClick={() =>
-                          openExternalUrl("https://tally.so/r/LZq8vy")
+                          openExternalUrl("https://discord.gg/nDCedWH3SV")
                         }
                         className={
                           betaOptIn

@@ -7,8 +7,11 @@
 - [Website & Downloads](https://lexicon-writer.pages.dev/)
 - [GitHub Repository](https://github.com/AashishH15/Lexicon)
 - [Releases & Changelog](https://github.com/AashishH15/Lexicon/releases)
+- [Privacy Policy](https://lexicon-writer.pages.dev/privacy.html)
+- [Terms of Service](https://lexicon-writer.pages.dev/terms.html)
 - [License (MIT)](https://github.com/AashishH15/Lexicon/blob/master/LICENSE)
 - [Product Launch Video](https://www.youtube.com/watch?v=LGL-8wP_CAY)
+- [Discord](https://discord.gg/nDCedWH3SV)
 
 ## What Lexicon Is
 
