@@ -27,6 +27,8 @@ Please rollback to v0.10.3 if this version doesnt work properly!
 - Google Docs not supported
 - Firefox package is unsigned (temporary install only)
 - Desktop app must be running!
+- The badge will always show up green if the app isn't running
+> Doesn't need to be open you can X out the app it will stay running (will show up in the system tray chevron icons.)
 
 ---
 
