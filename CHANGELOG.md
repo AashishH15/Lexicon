@@ -16,11 +16,12 @@ Do **not** use stable v0.10.3 with this extension.
 Please rollback to v0.10.3 if this version doesnt work properly!
 
 ### Install order
-1. Install this desktop build (`v0.11.0-beta.1`)
+1. Install this desktop build (`v0.11.0-beta.1`) from the [release assets](https://github.com/AashishH15/Lexicon/releases/tag/v0.11.0-beta.1)
 2. Open Lexicon
-3. Chrome: unzip `lexicon-chrome-0.1.0.zip` → chrome://extensions → Developer mode → Load unpacked
-4. Go to `chrome://extensions/shortcuts` and make sure that `Proofread the focused text field` has the shortcut `Alt + Shift + L` if it does not please click the pencil icon and create the shortcut.
-5. Firefox: temporary load of the unsigned `.xpi` via about:debugging
+3. On the same release page, download `lexicon-chrome-0.1.0.zip` and (if you want FireFox) `lexicon-firefox-0.1.0.xpi`
+4. Chrome: unzip `lexicon-chrome-0.1.0.zip` → chrome://extensions → Developer mode → Load unpacked → select the unzipped folder
+5. Go to `chrome://extensions/shortcuts` and make sure that `Proofread the focused text field` has the shortcut `Alt + Shift + L` if it does not please click the pencil icon and create the shortcut.
+6. Firefox: temporary load of the unsigned `.xpi` via about:debugging (This Firefox → Load Temporary Add-on → choose the `.xpi`)
 
 ### Known limits
 - Google Docs not supported
