@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Privacy Policy | Lexicon</title>
   <meta name="description"
-    content="Lexicon’s privacy policy: local-first writing, no accounts, and what limited network activity may occur." />
+    content="Lexicon’s privacy policy: local-first writing, no accounts, browser extension data handling, and limited network activity." />
   <link rel="canonical" href="https://lexicon-writer.pages.dev/privacy.html" />
   <link rel="icon" type="image/png" href="assets/lexicon-logo-windows.png" />
 
@@ -39,10 +39,11 @@
     <div class="container legal-container">
       <p class="legal-eyebrow">Legal</p>
       <h1>Privacy Policy</h1>
-      <p class="legal-meta">Last updated: August 9, 2026</p>
+      <p class="legal-meta">Last updated: August 12, 2026</p>
 
       <p>
-        Lexicon is a local-first desktop writing app operated by
+        Lexicon is a local-first desktop writing app, with an optional browser
+        extension beta, operated by
         <strong>Aashish Harishchandre</strong> (“I,” “me,” or “Lexicon”).
         This policy explains what data stays on your device, what limited
         network activity can happen, and how to delete local data.
@@ -57,6 +58,11 @@
         <li>No accounts. No cloud sync of your documents.</li>
         <li>Your drafts, settings, dictionaries, and history stay on your computer.</li>
         <li>Proofreading and optional local AI run on your machine.</li>
+        <li>
+          The browser extension sends supported page text to the Lexicon desktop
+          app on the same device for local proofreading; it does not send that
+          text to a Lexicon-operated cloud service.
+        </li>
         <li>I do not operate a cloud backend that stores your writing.</li>
         <li>
           The desktop app may automatically check for updates. Installing an
@@ -80,6 +86,11 @@
           local app-data directory (for example under Application Support / AppData)
         </li>
         <li><strong>Import/export files</strong> you choose to open or save elsewhere on disk</li>
+        <li>
+          <strong>Browser-extension settings or temporary state</strong> that the
+          browser stores for the extension. Browser sync settings, if enabled,
+          are controlled by your browser provider rather than Lexicon.
+        </li>
       </ul>
       <p>
         I do not receive copies of this content in the normal course of using
@@ -111,6 +122,14 @@
         or AI transforms. Limited outbound connections may occur as follows:
       </p>
       <ul>
+        <li>
+          <strong>Browser extension connection:</strong> when you run the beta
+          extension on a supported page, it may read text from an enabled text
+          field and send that text over a local connection to the Lexicon
+          desktop app running on the same device. The app returns proofreading
+          results to the extension. This local exchange is not a transmission
+          to a Lexicon-operated cloud service.
+        </li>
         <li>
           <strong>Automatic update checks:</strong> the packaged desktop app may contact
           GitHub-hosted update manifests shortly after launch (stable channel by default;
@@ -158,7 +177,16 @@
         process technical logs (such as IP address, user agent, and request timing). The site
         may load fonts from Google Fonts, a scrolling library from a public CDN (unpkg), and
         public repository metadata from GitHub’s API (for example release or star counts).
-        I do not run a first-party analytics product that profiles your writing inside Lexicon.
+        I do not run a first-party analytics product that profiles your writing
+        inside Lexicon. The browser extension packages are distributed through
+        GitHub Releases, so GitHub may process download connection metadata
+        under its own policies.
+      </p>
+      <p>
+        The extension can interact with text fields on websites where you enable
+        it. Those websites, your browser, and any other browser extensions you
+        install may separately collect or process page content under their own
+        terms and privacy policies. Lexicon does not control that processing.
       </p>
 
       <h2>6. Community, bug reports, and email</h2>
