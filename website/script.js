@@ -213,7 +213,10 @@
   const chromeExtensionBtn = document.getElementById('dl-extension-chrome');
   const firefoxExtensionBtn = document.getElementById('dl-extension-firefox');
   const chromeExtensionAsset = extensionAssets.find(a => /^lexicon-chrome-.*\.zip$/i.test(a.name));
-  const firefoxExtensionAsset = extensionAssets.find(a => /^lexicon-firefox-.*\.xpi$/i.test(a.name));
+  // Prefer a signed/temp .xpi when present; current beta ships lexicon-firefox-extension.zip.
+  const firefoxExtensionAsset =
+  extensionAssets.find(a => /^lexicon-firefox-.*\.xpi$/i.test(a.name)) ||
+  extensionAssets.find(a => /^lexicon-firefox-.*\.zip$/i.test(a.name));
   if (chromeExtensionBtn) {
   chromeExtensionBtn.href = (chromeExtensionAsset && chromeExtensionAsset.browser_download_url)
   || FALLBACK_EXTENSION_RELEASES_PAGE;
@@ -221,6 +224,12 @@
   if (firefoxExtensionBtn) {
   firefoxExtensionBtn.href = (firefoxExtensionAsset && firefoxExtensionAsset.browser_download_url)
   || FALLBACK_EXTENSION_RELEASES_PAGE;
+  const firefoxTag = firefoxExtensionBtn.querySelector('.extension-dl-tag');
+  if (firefoxTag && firefoxExtensionAsset) {
+  firefoxTag.textContent = /\.xpi$/i.test(firefoxExtensionAsset.name)
+  ? '.xpi · temporary add-on'
+  : '.zip · temporary add-on';
+  }
   }
 
  } catch (err) {
