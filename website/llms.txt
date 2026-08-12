@@ -32,6 +32,7 @@ Lexicon runs 100% offline with zero cloud server communication. Grammar checking
 
 ## Core Features
 
+- Browser extension (beta) for Chrome and Firefox that proofreads text fields on any website using the desktop app's local engine. Google Docs is not supported yet; the desktop app must be running. Install via load-unpacked (Chrome) or temporary add-on (Firefox) from GitHub Releases.
 - Real-time LanguageTool grammar, spelling, punctuation, and style proofreading with inline squiggles and synchronized suggestion cards, plus a deterministic prose engine flagging passive voice (with one-click AI active-voice rewrites), 30+ clichés and filler phrases, and repetitive sentence openers.
 - Readability metrics: Clarity score, Flesch-Kincaid grade level and reading ease, estimated reading/speaking time, word counts, and a visual tone distribution chart.
 - 10+ offline AI writing tools: Rewrite, Concise, Summaries, Key Points, Lists & Tables, 9 Tone Shifts (Professional, Academic, Friendly, Casual, Formal, Empathetic, Persuasive, Humorous, Playful), plus user-defined Custom Tools with saved prompts.

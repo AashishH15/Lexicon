@@ -125,6 +125,14 @@
       },
       {
         "@type": "Question",
+        "name": "Is there a browser extension?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes. A beta browser extension for Chrome and Firefox proofreads text fields on any website, powered by the desktop app's local engine. It is a beta: Google Docs is not supported yet, the Firefox package is unsigned, and the desktop app must be running."
+        }
+      },
+      {
+        "@type": "Question",
         "name": "Why does Windows or macOS warn that Lexicon is unsigned or unsafe?",
         "acceptedAnswer": {
           "@type": "Answer",
@@ -156,8 +164,8 @@
 
       <ul class="nav-links" id="nav-links">
         <li><a href="#features">Features</a></li>
+        <li><a href="#extension">Extension</a></li>
         <li><a href="#manifesto">Why Lexicon</a></li>
-        <li><a href="#privacy">Privacy</a></li>
         <li><a href="#faq">FAQ</a></li>
         <li><a href="#support">Setup &amp; Support</a></li>
         <li><a href="https://discord.gg/nDCedWH3SV" target="_blank" rel="noopener">Discord</a></li>
@@ -555,6 +563,205 @@
       </div>
     </section>
 
+    <!-- Browser Extension Section -->
+    <section class="extension-section" id="extension">
+      <div class="container">
+        <div class="section-header">
+          <div class="section-tag">The Browser Extension <span class="badge-pill badge-blue">Beta</span></div>
+          <h2 class="section-title">Proofread anywhere you type on the web.</h2>
+          <p class="section-subtitle">
+            Lexicon for Chrome &amp; Firefox checks emails, forum posts, and text fields on any
+            website. Powered by the same local engine already running in your desktop app.
+          </p>
+        </div>
+
+        <div class="extension-zone">
+          <div class="extension-live-card" id="extension-demo-card" aria-hidden="true">
+            <div class="proofread-live-bar">
+              <span>
+                <span class="proofread-live-dot"></span>
+                <span class="proofread-live-label">Browser Extension</span>
+              </span>
+              <span class="proofread-live-metrics" id="extension-metrics">Connected &middot; Local engine</span>
+            </div>
+
+            <div class="extension-live-body">
+              <div class="extension-context-row">
+                <div class="extension-tabs" role="tablist" aria-label="Demo site contexts">
+                  <button type="button" class="extension-tab active" data-scene="email" role="tab"
+                    aria-selected="true">Email</button>
+                  <button type="button" class="extension-tab" data-scene="social" role="tab"
+                    aria-selected="false">Social</button>
+                  <button type="button" class="extension-tab" data-scene="forum" role="tab"
+                    aria-selected="false">Forum</button>
+                </div>
+                <span class="extension-shortcut-hint">
+                  <kbd>Alt</kbd><span>+</span><kbd>Shift</kbd><span>+</span><kbd>L</kbd>
+                </span>
+              </div>
+
+              <div class="extension-browser-shell">
+                <div class="extension-browser-chrome">
+                  <span class="window-dot"></span>
+                  <span class="window-dot"></span>
+                  <span class="window-dot"></span>
+                  <div class="extension-url-bar">
+                    <svg class="extension-url-lock" width="11" height="11" viewBox="0 0 24 24" fill="none"
+                      stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"
+                      aria-hidden="true">
+                      <rect x="3" y="11" width="18" height="11" rx="2"></rect>
+                      <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                    </svg>
+                    <span id="extension-url">mail.example.com/compose</span>
+                  </div>
+                  <span class="extension-status-pill" id="extension-status-pill">
+                    <span class="extension-status-dot"></span>
+                    Lexicon on
+                  </span>
+                </div>
+
+                <div class="extension-compose">
+                  <div class="extension-compose-meta" id="extension-compose-meta">
+                    To: sam@example.com &middot; Subject: Quick follow-up
+                  </div>
+                  <p class="extension-compose-body">
+                    <span id="extension-type"></span><span class="pl-caret" id="extension-caret"></span>
+                  </p>
+                  <div class="extension-chip-slot">
+                    <div class="proofread-chip" id="extension-chip">
+                      <span class="proofread-chip-label" id="extension-chip-label">Grammar</span>
+                      <span class="proofread-chip-fix" id="extension-chip-fix">receive &rarr; received</span>
+                      <span class="chip-apply" id="extension-chip-apply">Apply Fix</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="extension-downloads">
+          <a id="dl-extension-chrome" href="https://github.com/AashishH15/Lexicon/releases"
+            target="_blank" rel="noopener" class="btn-primary-cta">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+            <span>Get for Chrome</span>
+            <span class="extension-dl-tag">.zip &middot; load unpacked</span>
+          </a>
+          <a id="dl-extension-firefox" href="https://github.com/AashishH15/Lexicon/releases"
+            target="_blank" rel="noopener" class="btn-secondary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="2" y1="12" x2="22" y2="12"></line>
+              <path
+                d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+            </svg>
+            <span>Get for Firefox</span>
+            <span class="extension-dl-tag">.xpi &middot; temporary add-on</span>
+          </a>
+          <p class="extension-dl-note">
+            Beta build. Pairs with the desktop app (v0.11.0-beta.1+). It does not work with stable
+            v0.10.3, and the desktop app must be running.
+          </p>
+        </div>
+
+        <div class="extension-grid">
+          <div class="extension-card">
+            <h4>Proofread any text field</h4>
+            <p>Emails, tweets, forum posts, blog editors. Squiggles appear wherever you type, on any
+              website the extension is enabled for.</p>
+          </div>
+          <div class="extension-card">
+            <h4>Your prose stays local</h4>
+            <p>The extension talks only to Lexicon on your own machine. Nothing you type is uploaded or
+              stored anywhere else.</p>
+          </div>
+          <div class="extension-card">
+            <h4>One-click fixes</h4>
+            <p>Suggestion chips pop up over the flagged word with an <strong>Apply Fix</strong> button. No
+              copying text back and forth.</p>
+          </div>
+          <div class="extension-card">
+            <h4>Alt + Shift + L</h4>
+            <p>Press the shortcut in any page to proofread the focused text field, or use the popup to run a
+              manual check.</p>
+          </div>
+        </div>
+
+        <div class="faq-list content-accordion extension-install-accordion">
+          <details class="faq-item">
+            <summary>
+              <span>Install in Chrome</span>
+              <span class="faq-icon" aria-hidden="true">
+                <svg class="faq-icon-plus" width="18" height="18" viewBox="0 0 256 256" fill="currentColor"><path d="M224,128a8,8,0,0,1-8,8H136v80a8,8,0,0,1-16,0V136H40a8,8,0,0,1,0-16h80V40a8,8,0,0,1,16,0v80h80A8,8,0,0,1,224,128Z"></path></svg>
+                <svg class="faq-icon-x" width="18" height="18" viewBox="0 0 256 256" fill="currentColor"><path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z"></path></svg>
+              </span>
+            </summary>
+            <div class="faq-answer">
+              <div class="faq-answer-inner">
+                <ol>
+                  <li>Download the <strong>Chrome extension .zip</strong> from the button above (or GitHub Releases).</li>
+                  <li>Unzip it to a folder you will keep. Loaded unpacked extensions must stay on disk.</li>
+                  <li>Open <kbd>chrome://extensions</kbd>, enable <strong>Developer mode</strong> (top-right).</li>
+                  <li>Click <strong>Load unpacked</strong> and select the unzipped folder (open the inner zip folder
+                    if you see one).</li>
+                  <li>Open <kbd>chrome://extensions/shortcuts</kbd> and make sure <em>Proofread the focused text
+                      field</em> is set to <kbd>Alt + Shift + L</kbd>.</li>
+                </ol>
+              </div>
+            </div>
+          </details>
+
+          <details class="faq-item">
+            <summary>
+              <span>Install in Firefox</span>
+              <span class="faq-icon" aria-hidden="true">
+                <svg class="faq-icon-plus" width="18" height="18" viewBox="0 0 256 256" fill="currentColor"><path d="M224,128a8,8,0,0,1-8,8H136v80a8,8,0,0,1-16,0V136H40a8,8,0,0,1,0-16h80V40a8,8,0,0,1,16,0v80h80A8,8,0,0,1,224,128Z"></path></svg>
+                <svg class="faq-icon-x" width="18" height="18" viewBox="0 0 256 256" fill="currentColor"><path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z"></path></svg>
+              </span>
+            </summary>
+            <div class="faq-answer">
+              <div class="faq-answer-inner">
+                <ol>
+                  <li>Download the <strong>Firefox extension .xpi</strong> from the button above (or GitHub Releases).</li>
+                  <li>Open <kbd>about:debugging</kbd> &rarr; <strong>This Firefox</strong>.</li>
+                  <li>Click <strong>Load Temporary Add-on</strong> and pick the downloaded <code>.xpi</code>.</li>
+                  <li>The add-on stays active until you close Firefox. The package is unsigned for now.</li>
+                </ol>
+              </div>
+            </div>
+          </details>
+
+          <details class="faq-item">
+            <summary>
+              <span>Known limits (beta)</span>
+              <span class="faq-icon" aria-hidden="true">
+                <svg class="faq-icon-plus" width="18" height="18" viewBox="0 0 256 256" fill="currentColor"><path d="M224,128a8,8,0,0,1-8,8H136v80a8,8,0,0,1-16,0V136H40a8,8,0,0,1,0-16h80V40a8,8,0,0,1,16,0v80h80A8,8,0,0,1,224,128Z"></path></svg>
+                <svg class="faq-icon-x" width="18" height="18" viewBox="0 0 256 256" fill="currentColor"><path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z"></path></svg>
+              </span>
+            </summary>
+            <div class="faq-answer">
+              <div class="faq-answer-inner">
+                <ul>
+                  <li><strong>Google Docs is not supported</strong> yet.</li>
+                  <li>The Firefox package is unsigned. Temporary install only.</li>
+                  <li>The desktop app must be running (it can stay in the system tray).</li>
+                  <li>The status badge can show green even when the app is not running.</li>
+                  <li>Beta builds may be unstable. Report issues on <a href="https://discord.gg/nDCedWH3SV"
+                      target="_blank" rel="noopener">Discord</a>.</li>
+                </ul>
+              </div>
+            </div>
+          </details>
+        </div>
+      </div>
+    </section>
+
     <!-- Appearance Studio: Typography, Paper Textures & Reading Modes -->
     <section class="appearance-section" id="appearance">
       <div class="container">
@@ -865,6 +1072,25 @@
           </details>
           <details class="faq-item">
             <summary>
+              <span>Is there a browser extension?</span>
+              <span class="faq-icon" aria-hidden="true">
+                <svg class="faq-icon-plus" width="18" height="18" viewBox="0 0 256 256" fill="currentColor"><path d="M224,128a8,8,0,0,1-8,8H136v80a8,8,0,0,1-16,0V136H40a8,8,0,0,1,0-16h80V40a8,8,0,0,1,16,0v80h80A8,8,0,0,1,224,128Z"></path></svg>
+                <svg class="faq-icon-x" width="18" height="18" viewBox="0 0 256 256" fill="currentColor"><path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z"></path></svg>
+              </span>
+            </summary>
+            <div class="faq-answer">
+              <div class="faq-answer-inner">
+                <p>
+                Yes. A beta browser extension for Chrome and Firefox proofreads text fields on any website,
+                powered by the desktop app's local engine. It is a beta: Google Docs is not supported yet,
+                the Firefox package is unsigned (temporary install only), and the desktop app must be running.
+                See the <a href="#extension">Extension section</a> for downloads and install steps.
+              </p>
+              </div>
+            </div>
+          </details>
+          <details class="faq-item">
+            <summary>
               <span>Why does Windows or macOS warn that Lexicon is unsigned or unsafe?</span>
               <span class="faq-icon" aria-hidden="true">
                 <svg class="faq-icon-plus" width="18" height="18" viewBox="0 0 256 256" fill="currentColor"><path d="M224,128a8,8,0,0,1-8,8H136v80a8,8,0,0,1-16,0V136H40a8,8,0,0,1,0-16h80V40a8,8,0,0,1,16,0v80h80A8,8,0,0,1,224,128Z"></path></svg>
@@ -943,69 +1169,90 @@
           </div>
         </div>
 
-        <div class="support-grid">
-          <!-- Windows SmartScreen Setup Card -->
-          <div class="support-card">
-            <div class="support-card-header">
-              <h3>Windows (SmartScreen &amp; antivirus)</h3>
-              <span class="badge-pill badge-blue">Windows</span>
+        <div class="faq-list content-accordion">
+          <!-- Windows SmartScreen Setup Accordion -->
+          <details class="faq-item">
+            <summary>
+              <span>Windows (SmartScreen &amp; antivirus)</span>
+              <span class="faq-icon" aria-hidden="true">
+                <svg class="faq-icon-plus" width="18" height="18" viewBox="0 0 256 256" fill="currentColor"><path d="M224,128a8,8,0,0,1-8,8H136v80a8,8,0,0,1-16,0V136H40a8,8,0,0,1,0-16h80V40a8,8,0,0,1,16,0v80h80A8,8,0,0,1,224,128Z"></path></svg>
+                <svg class="faq-icon-x" width="18" height="18" viewBox="0 0 256 256" fill="currentColor"><path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z"></path></svg>
+              </span>
+            </summary>
+            <div class="faq-answer">
+              <div class="faq-answer-inner">
+                <p>
+                  Windows builds are <strong>not yet Authenticode code-signed</strong>. SmartScreen often shows
+                  <em>"Windows protected your PC"</em> for new or unsigned indie installers. That is a reputation warning,
+                  not proof the file is malware. Only install builds from
+                  <a href="https://github.com/AashishH15/Lexicon/releases" target="_blank" rel="noopener">GitHub Releases</a>.
+                </p>
+                <p><strong>SmartScreen:</strong></p>
+                <ol>
+                  <li>Click <strong>More info</strong> under the warning prompt.</li>
+                  <li>Click <strong>Run anyway</strong> to complete installation.</li>
+                </ol>
+                <p>
+                  <strong>Antivirus (Defender, AVG, etc.):</strong> some tools may quarantine the installer or flag
+                  &ldquo;malicious code&rdquo; as a false positive on unsigned NSIS installers. Confirm the file came from the official
+                  Releases page (check asset name / checksums), then restore or allow it in your AV quarantine settings.
+                </p>
+              </div>
             </div>
-            <p>
-              Windows builds are <strong>not yet Authenticode code-signed</strong>. SmartScreen often shows
-              <em>"Windows protected your PC"</em> for new or unsigned indie installers. That is a reputation warning,
-              not proof the file is malware. Only install builds from
-              <a href="https://github.com/AashishH15/Lexicon/releases" target="_blank" rel="noopener">GitHub Releases</a>.
-            </p>
-            <p><strong>SmartScreen:</strong></p>
-            <ol>
-              <li>Click <strong>More info</strong> under the warning prompt.</li>
-              <li>Click <strong>Run anyway</strong> to complete installation.</li>
-            </ol>
-            <p>
-              <strong>Antivirus (Defender, AVG, etc.):</strong> some tools may quarantine the installer or flag
-              “malicious code” as a false positive on unsigned NSIS installers. Confirm the file came from the official
-              Releases page (check asset name / checksums), then restore or allow it in your AV quarantine settings.
-            </p>
-          </div>
+          </details>
 
-          <!-- macOS Gatekeeper Setup Card -->
-          <div class="support-card">
-            <div class="support-card-header">
-              <h3>macOS (Gatekeeper)</h3>
-              <span class="badge-pill badge-blue">macOS</span>
+          <!-- macOS Gatekeeper Setup Accordion -->
+          <details class="faq-item">
+            <summary>
+              <span>macOS (Gatekeeper)</span>
+              <span class="faq-icon" aria-hidden="true">
+                <svg class="faq-icon-plus" width="18" height="18" viewBox="0 0 256 256" fill="currentColor"><path d="M224,128a8,8,0,0,1-8,8H136v80a8,8,0,0,1-16,0V136H40a8,8,0,0,1,0-16h80V40a8,8,0,0,1,16,0v80h80A8,8,0,0,1,224,128Z"></path></svg>
+                <svg class="faq-icon-x" width="18" height="18" viewBox="0 0 256 256" fill="currentColor"><path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z"></path></svg>
+              </span>
+            </summary>
+            <div class="faq-answer">
+              <div class="faq-answer-inner">
+                <p>
+                  macOS builds are currently <strong>unsigned / not notarized</strong>. Gatekeeper may show
+                  <em>"Lexicon cannot be opened because it is from an unidentified developer"</em>, or block the background
+                  engine. That is an unsigned-developer warning. Only download from
+                  <a href="https://github.com/AashishH15/Lexicon/releases" target="_blank" rel="noopener">GitHub Releases</a>.
+                </p>
+                <ul style="padding-left: 20px; list-style: none;">
+                  <li style="margin-bottom: 8px;"><strong>Option 1 (GUI):</strong> Control-click (right-click)
+                    <strong>Lexicon.app</strong> &rarr; select <strong>Open</strong> &rarr; click <strong>Open</strong>.
+                  </li>
+                  <li style="margin-bottom: 8px;"><strong>Option 2 (System Settings):</strong> Open <strong>System Settings
+                      &gt; Privacy &amp; Security</strong> &rarr; scroll down and click <strong>Open Anyway</strong>.</li>
+                  <li style="margin-bottom: 8px;"><strong>Option 3 (Terminal):</strong> Run <kbd>xattr -cr
+                      /Applications/Lexicon.app</kbd> in Terminal to clear the quarantine flag.</li>
+                </ul>
+              </div>
             </div>
-            <p>
-              macOS builds are currently <strong>unsigned / not notarized</strong>. Gatekeeper may show
-              <em>"Lexicon cannot be opened because it is from an unidentified developer"</em>, or block the background
-              engine. That is an unsigned-developer warning. Only download from
-              <a href="https://github.com/AashishH15/Lexicon/releases" target="_blank" rel="noopener">GitHub Releases</a>.
-            </p>
-            <ul style="padding-left: 20px; list-style: none;">
-              <li style="margin-bottom: 8px;"><strong>Option 1 (GUI):</strong> Control-click (right-click)
-                <strong>Lexicon.app</strong> &rarr; select <strong>Open</strong> &rarr; click <strong>Open</strong>.
-              </li>
-              <li style="margin-bottom: 8px;"><strong>Option 2 (System Settings):</strong> Open <strong>System Settings
-                  &gt; Privacy &amp; Security</strong> &rarr; scroll down and click <strong>Open Anyway</strong>.</li>
-              <li style="margin-bottom: 8px;"><strong>Option 3 (Terminal):</strong> Run <kbd>xattr -cr
-                  /Applications/Lexicon.app</kbd> in Terminal to clear the quarantine flag.</li>
-            </ul>
-          </div>
+          </details>
 
-          <!-- Linux (Debian/Ubuntu) Setup Card -->
-          <div class="support-card">
-            <div class="support-card-header">
-              <h3>Linux (Debian / Ubuntu)</h3>
-              <span class="badge-pill badge-blue">Linux</span>
+          <!-- Linux (Debian/Ubuntu) Setup Accordion -->
+          <details class="faq-item">
+            <summary>
+              <span>Linux (Debian / Ubuntu)</span>
+              <span class="faq-icon" aria-hidden="true">
+                <svg class="faq-icon-plus" width="18" height="18" viewBox="0 0 256 256" fill="currentColor"><path d="M224,128a8,8,0,0,1-8,8H136v80a8,8,0,0,1-16,0V136H40a8,8,0,0,1,0-16h80V40a8,8,0,0,1,16,0v80h80A8,8,0,0,1,224,128Z"></path></svg>
+                <svg class="faq-icon-x" width="18" height="18" viewBox="0 0 256 256" fill="currentColor"><path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z"></path></svg>
+              </span>
+            </summary>
+            <div class="faq-answer">
+              <div class="faq-answer-inner">
+                <p>
+                  To install the <code>.deb</code> package on Ubuntu, Debian, Linux Mint, or Pop!_OS:
+                </p>
+                <ol>
+                  <li>Double-click the downloaded <code>.deb</code> file to install via Software Center.</li>
+                  <li>Or run <kbd>sudo dpkg -i Lexicon_*.deb</kbd> (or <kbd>sudo apt install ./Lexicon_*.deb</kbd>) in
+                    Terminal.</li>
+                </ol>
+              </div>
             </div>
-            <p>
-              To install the <code>.deb</code> package on Ubuntu, Debian, Linux Mint, or Pop!_OS:
-            </p>
-            <ol>
-              <li>Double-click the downloaded <code>.deb</code> file to install via Software Center.</li>
-              <li>Or run <kbd>sudo dpkg -i Lexicon_*.deb</kbd> (or <kbd>sudo apt install ./Lexicon_*.deb</kbd>) in
-                Terminal.</li>
-            </ol>
-          </div>
+          </details>
         </div>
 
         <!-- Feedback & Support Bar -->
