@@ -14,6 +14,7 @@
     "border-radius:50%;background:#111111;color:#ffffff;font:600 12px/1 -apple-system,BlinkMacSystemFont,\"Segoe UI\",Helvetica,Arial,sans-serif;" +
     "display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.25);user-select:none;z-index:2}" +
     ".badge.clean{background:#346538}" +
+    ".badge.offline{background:#71706c}" +
     `.panel{position:fixed;width:${PANEL_WIDTH}px;max-height:${PANEL_MAX_HEIGHT}px;` +
     "display:flex;flex-direction:column;background:#f7f6f3;border:1px solid #d8d7d3;border-radius:8px;box-shadow:0 6px 24px rgba(0,0,0,0.18);" +
     "font:13px/1.45 -apple-system,BlinkMacSystemFont,\"Segoe UI\",Helvetica,Arial,sans-serif;color:#111111;overflow:hidden;z-index:3}" +
@@ -213,11 +214,19 @@
 
   function updateBadge() {
     if (state.checking) {
-      state.badgeEl.classList.remove("clean");
+      state.badgeEl.classList.remove("clean", "offline");
       state.badgeEl.textContent = "…";
       state.badgeEl.title = "Checking…";
       return;
     }
+    if (state.offline) {
+      state.badgeEl.classList.remove("clean");
+      state.badgeEl.classList.add("offline");
+      state.badgeEl.textContent = "!";
+      state.badgeEl.title = "Lexicon isn't running — open Lexicon to check";
+      return;
+    }
+    state.badgeEl.classList.remove("offline");
     const count = state.matches.length;
     const clean = count === 0;
     state.badgeEl.classList.toggle("clean", clean);
@@ -234,10 +243,12 @@
     const title = document.createElement("span");
     title.textContent = state.checking
       ? "Checking…"
-      : state.matches.length === 0
-        ? "No issues found"
-        : `${state.matches.length} ` +
-          `${state.matches.length === 1 ? "issue" : "issues"} found`;
+      : state.offline
+        ? "Lexicon isn't running"
+        : state.matches.length === 0
+          ? "No issues found"
+          : `${state.matches.length} ` +
+            `${state.matches.length === 1 ? "issue" : "issues"} found`;
     const close = document.createElement("button");
     close.className = "close";
     close.textContent = "✕";
@@ -256,6 +267,11 @@
       const empty = document.createElement("p");
       empty.className = "empty";
       empty.textContent = "Checking…";
+      list.appendChild(empty);
+    } else if (state.offline) {
+      const empty = document.createElement("p");
+      empty.className = "empty";
+      empty.textContent = "Open Lexicon to use grammar checking here.";
       list.appendChild(empty);
     } else if (state.matches.length === 0) {
       const empty = document.createElement("p");
@@ -421,6 +437,7 @@
       field,
       matches: matches || [],
       checking: Boolean(opts.checking),
+      offline: Boolean(opts.offline),
       onApply: opts.onApply || (() => {}),
       onDismiss: opts.onDismiss || (() => {}),
       onApplyReplacement: opts.onApplyReplacement || null,
@@ -499,5 +516,6 @@
     fieldInViewport,
     badgePosition,
     panelPosition,
+    state: () => state,
   };
 })();

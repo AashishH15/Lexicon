@@ -96,9 +96,22 @@ browser.runtime.onMessage.addListener((msg, sender) => {
 
   if (msg?.type !== "lexicon:check-text") return undefined;
   return (async () => {
-    if (typeof msg.text !== "string" || !msg.text.trim()) return [];
+    if (typeof msg.text !== "string" || !msg.text.trim()) {
+      return { ok: true, matches: [] };
+    }
     await discoverBackend();
-    if (!getBackendBaseUrl()) return [];
-    return checkGrammar(msg.text);
+    if (!getBackendBaseUrl()) {
+      return { ok: false, error: "backend_unreachable", matches: [] };
+    }
+    try {
+      const matches = await checkGrammar(msg.text);
+      return { ok: true, matches };
+    } catch (error) {
+      return {
+        ok: false,
+        error: error?.message || "check_failed",
+        matches: [],
+      };
+    }
   })();
 });

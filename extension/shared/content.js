@@ -340,9 +340,9 @@
       return;
     }
 
-    let matches;
+    let res;
     try {
-      matches = await browser.runtime.sendMessage({
+      res = await browser.runtime.sendMessage({
         type: "lexicon:check-text",
         text,
       });
@@ -350,7 +350,20 @@
       return;
     }
     if (token !== reproofreadToken || lastField !== active) return;
-    applyHighlight(Array.isArray(matches) ? matches : []);
+    if (res && res.ok === false) {
+      clearIssueVisuals();
+      suggestions.show(active, [], {
+        ...suggestionHandlers(),
+        offline: true,
+      });
+      return;
+    }
+    const matches = Array.isArray(res?.matches)
+      ? res.matches
+      : Array.isArray(res)
+        ? res
+        : [];
+    applyHighlight(matches);
   }
 
   function dismissMatch(match) {

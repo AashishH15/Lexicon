@@ -115,3 +115,67 @@ test("panelPosition lifts above a short editor instead of covering it", () => {
   const panel = api.panelPosition(badge, 200, field);
   assert.ok(panel.top + 200 <= field.top - 8);
 });
+
+test("shows offline badge and messaging when backend is offline", () => {
+  let rootEl = null;
+  const sandbox = {
+    document: {
+      documentElement: { appendChild() {} },
+      createElement(tag) {
+        const el = {
+          tagName: tag.toUpperCase(),
+          className: "",
+          classList: {
+            classes: new Set(),
+            add(...cls) { cls.forEach((c) => this.classes.add(c)); },
+            remove(...cls) { cls.forEach((c) => this.classes.delete(c)); },
+            toggle(cls, val) { if (val) this.classes.add(cls); else this.classes.delete(cls); },
+            contains(cls) { return this.classes.has(cls); },
+          },
+          style: {},
+          children: [],
+          textContent: "",
+          title: "",
+          hidden: false,
+          appendChild(child) { this.children.push(child); return child; },
+          replaceChildren(...nodes) { this.children = nodes; },
+          addEventListener() {},
+          removeEventListener() {},
+          setAttribute() {},
+          attachShadow() {
+            rootEl = {
+              children: [],
+              appendChild(c) { this.children.push(c); return c; },
+            };
+            return rootEl;
+          },
+        };
+        return el;
+      },
+    },
+    window: {
+      innerWidth: 1000,
+      innerHeight: 800,
+      addEventListener() {},
+      removeEventListener() {},
+    },
+    globalThis: {},
+  };
+  sandbox.globalThis = sandbox;
+  vm.createContext(sandbox);
+  vm.runInContext(source, sandbox);
+  const api = sandbox.__lexiconSuggestions;
+
+  const field = {
+    getBoundingClientRect: () => ({ top: 100, bottom: 200, left: 50, right: 400 }),
+  };
+
+  api.show(field, [], { offline: true });
+  const state = api.state();
+  const badgeEl = state.badgeEl;
+  assert.equal(badgeEl.textContent, "!");
+  assert.equal(badgeEl.classList.contains("offline"), true);
+  assert.equal(badgeEl.classList.contains("clean"), false);
+  assert.equal(badgeEl.title, "Lexicon isn't running — open Lexicon to check");
+});
+
