@@ -430,6 +430,10 @@ function TransformView({ tool, status, error, results, progress, running, onAppl
   }
 
   if (status === "error") {
+    const isContextOverflow =
+      Boolean(error) &&
+      /context\s*window|exceed(s|ed|ing)?|too long|n_ctx/i.test(error);
+
     return (
       <div className="rounded-xl border border-pale-red bg-pale-red/40 px-4 py-4 lex-card-enter">
         <div className="flex items-start gap-2.5">
@@ -443,12 +447,14 @@ function TransformView({ tool, status, error, results, progress, running, onAppl
             </p>
           </div>
         </div>
-        <div className="mt-3 flex items-start gap-2 rounded-lg border border-hairline bg-canvas px-3 py-2.5">
-          <Lightbulb size={14} weight="bold" className="mt-0.5 shrink-0 text-pale-yellow-text" />
-          <p className="font-sans text-xs leading-relaxed text-muted">
-            Tip: very large or unbroken blocks of text can exceed the model&rsquo;s context window. Try selecting a section to transform, or add paragraph breaks so Lexicon can process it in parts.
-          </p>
-        </div>
+        {isContextOverflow && (
+          <div className="mt-3 flex items-start gap-2 rounded-lg border border-hairline bg-canvas px-3 py-2.5">
+            <Lightbulb size={14} weight="bold" className="mt-0.5 shrink-0 text-pale-yellow-text" />
+            <p className="font-sans text-xs leading-relaxed text-muted">
+              Tip: very large or unbroken blocks of text can exceed the model&rsquo;s context window. Try selecting a section to transform, or add paragraph breaks so Lexicon can process it in parts.
+            </p>
+          </div>
+        )}
       </div>
     );
   }

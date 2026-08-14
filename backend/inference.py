@@ -19,6 +19,7 @@ No HTTP endpoint is exposed here; that arrives with /transform.
 
 import os
 import re
+import sys
 
 import requests
 
@@ -196,12 +197,42 @@ class BundledBackend(InferenceBackend):
                 "The bundled model isn't downloaded yet. Run the model "
                 "download before using the local backend."
             )
-        self._llm = Llama(
-            model_path=self._path(),
-            n_ctx=self.n_ctx,
-            use_mmap=True,
-            verbose=False,
-        )
+        try:
+            self._llm = Llama(
+                model_path=self._path(),
+                n_ctx=self.n_ctx,
+                use_mmap=True,
+                verbose=False,
+            )
+        except Exception as load_exc:
+            # If the error is an mmap error or a permission error, load the
+            # model again with mmap off.
+            # On macOS, load the model again if the error is a load failure.
+            # The Python error does not always include the word mmap.
+            err_str = str(load_exc).lower()
+            mmap_markers = ("mmap", "permission", "not permitted", "map view")
+            is_mmap_issue = any(k in err_str for k in mmap_markers)
+            is_macos_load_fail = (
+                sys.platform == "darwin" and "failed to load" in err_str
+            )
+            if is_mmap_issue or is_macos_load_fail:
+                try:
+                    self._llm = Llama(
+                        model_path=self._path(),
+                        n_ctx=self.n_ctx,
+                        use_mmap=False,
+                        verbose=False,
+                    )
+                    return
+                except Exception as retry_exc:
+                    load_exc = retry_exc
+            self._llm = None
+            import gc
+
+            gc.collect()
+            raise InferenceUnavailable(
+                f"Engine failed to load model: {load_exc}"
+            ) from load_exc
 
     def unload(self):
         """Free GGUF model memory and force garbage collection."""

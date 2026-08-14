@@ -283,14 +283,16 @@ def transform(request: TransformRequest):
     """Generic transform endpoint: prompt in, text out, routed through
     whichever backend is active (Ollama preferred, else bundled). The request
     may force a backend or pick a bundled model size."""
-    if request.backend == "bundled":
-        backend = BundledBackend(model_key=request.model_key or "2b")
-    elif request.backend == "ollama":
-        backend = OllamaBackend()
-    else:
-        backend = get_backend()
     try:
+        if request.backend == "bundled":
+            backend = BundledBackend(model_key=request.model_key or "2b")
+        elif request.backend == "ollama":
+            backend = OllamaBackend()
+        else:
+            backend = get_backend()
         result = backend.complete(request.prompt, request.text)
     except InferenceUnavailable as exc:
-        return JSONResponse(status_code=503, content={"error": str(exc)})
+        return JSONResponse(status_code=503, content={"error": str(exc), "detail": str(exc)})
+    except Exception as exc:
+        return JSONResponse(status_code=500, content={"error": str(exc), "detail": str(exc)})
     return {"text": result}

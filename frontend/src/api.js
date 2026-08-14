@@ -161,7 +161,9 @@ export async function transformText({ prompt, text, modelKey, backend, signal })
   });
   if (!response.ok) {
     const data = await response.json().catch(() => ({}));
-    throw new Error(data.error || `Transform failed: ${response.status}`);
+    throw new Error(
+      data.error || data.detail || `Transform failed: ${response.status}`,
+    );
   }
   return response.json();
 }
