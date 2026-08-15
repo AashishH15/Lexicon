@@ -146,3 +146,29 @@ select {
   color: #5f5e5b;
   font-size: 12px;
 }
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px solid #e5e4e0;
+}
+
+.footer-dot {
+  color: #a8a7a3;
+  font-size: 11px;
+}
+
+.footer-link {
+  color: #71706c;
+  font-size: 11px;
+  text-decoration: none;
+}
+
+.footer-link:hover {
+  color: #111111;
+  text-decoration: underline;
+}
