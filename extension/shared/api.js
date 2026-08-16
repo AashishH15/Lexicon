@@ -5,6 +5,8 @@ export const BACKEND_PORTS = [18000, 8000];
 const PING_PATH = "/extension/ping";
 const GRAMMAR_PATH = "/grammar/check";
 const TRANSFORM_PATH = "/transform";
+const PROBE_TIMEOUT_MS = 2000;
+const REQUEST_TIMEOUT_MS = 30000;
 
 let baseUrl = null;
 
@@ -39,8 +41,32 @@ export function formatMatches(matches) {
   }));
 }
 
+async function fetchWithTimeout(
+  url,
+  options = {},
+  timeoutMs = REQUEST_TIMEOUT_MS,
+) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  const externalSignal = options.signal;
+  const abort = () => controller.abort();
+  if (externalSignal) {
+    if (externalSignal.aborted) {
+      controller.abort();
+    } else {
+      externalSignal.addEventListener("abort", abort, { once: true });
+    }
+  }
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(timeout);
+    externalSignal?.removeEventListener("abort", abort);
+  }
+}
+
 async function jsonRequest(path, options) {
-  const response = await fetch(`${baseUrl}${path}`, options);
+  const response = await fetchWithTimeout(`${baseUrl}${path}`, options);
   if (!response.ok) {
     const data = await response.json().catch(() => ({}));
     throw new Error(data.detail || data.error || `Request failed: ${response.status}`);
@@ -51,9 +77,11 @@ async function jsonRequest(path, options) {
 export async function discoverBackend() {
   for (const port of BACKEND_PORTS) {
     try {
-      const response = await fetch(`http://127.0.0.1:${port}${PING_PATH}`, {
-        cache: "no-store",
-      });
+      const response = await fetchWithTimeout(
+        `http://127.0.0.1:${port}${PING_PATH}`,
+        { cache: "no-store" },
+        PROBE_TIMEOUT_MS,
+      );
       if (!response.ok) continue;
       const body = await response.json();
       if (!isValidPing(body)) continue;

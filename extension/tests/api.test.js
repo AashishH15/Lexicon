@@ -7,7 +7,9 @@ import {
   BACKEND_PORTS,
   buildGrammarRequest,
   buildTransformRequest,
+  discoverBackend,
   formatMatches,
+  getBackendBaseUrl,
   isValidPing,
 } from "../shared/api.js";
 
@@ -22,6 +24,19 @@ test("isValidPing only accepts Lexicon's own ping payload", () => {
   assert.equal(isValidPing({ status: "ok" }), false);
   assert.equal(isValidPing(null), false);
   assert.equal(isValidPing("ok"), false);
+});
+
+test("discoverBackend clears a stale connection after both probes fail", async () => {
+  const previousFetch = globalThis.fetch;
+  globalThis.fetch = async () => {
+    throw new Error("connection refused");
+  };
+  try {
+    assert.equal(await discoverBackend(), null);
+    assert.equal(getBackendBaseUrl(), null);
+  } finally {
+    globalThis.fetch = previousFetch;
+  }
 });
 
 test("grammar request matches the desktop app shape", () => {

@@ -7,6 +7,7 @@ export function createBackendStatus({ ping, onChange, intervalMs = 1000 }) {
 
   let state = CHECKING;
   let timer = null;
+  let pollGeneration = 0;
 
   function setState(next) {
     if (next === state) return;
@@ -14,23 +15,27 @@ export function createBackendStatus({ ping, onChange, intervalMs = 1000 }) {
     onChange(state);
   }
 
-  async function poll() {
-    if (await ping()) {
-      setState(CONNECTED);
-      stop();
-      return;
+  async function poll(generation) {
+    let connected = false;
+    try {
+      connected = await ping();
+    } catch {
+      connected = false;
     }
-    setState(OFFLINE);
-    timer = setTimeout(poll, intervalMs);
+    if (generation !== pollGeneration) return;
+    setState(connected ? CONNECTED : OFFLINE);
+    timer = setTimeout(() => poll(generation), intervalMs);
   }
 
   function start() {
     stop();
+    const generation = ++pollGeneration;
     setState(CHECKING);
-    poll();
+    poll(generation);
   }
 
   function stop() {
+    pollGeneration += 1;
     if (timer) {
       clearTimeout(timer);
       timer = null;

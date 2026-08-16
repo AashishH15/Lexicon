@@ -11,9 +11,12 @@ Backend selection is also delayed until the app needs a backend.
 The HTTP endpoint is defined in ``main.py``.
 """
 
+import json
 import os
 import re
 import sys
+from collections.abc import Callable
+from threading import Event
 
 import requests
 
@@ -43,11 +46,10 @@ SYSTEM_PROMPT = (
     "explain. Do not think aloud."
 )
 
-# Qwen3.5 is a reasoning-capable model. For short text transforms, chain-of-
-# thought is pure overhead (~10x slower, no quality gain). We disable
-# thinking on both backends. Ollama honors a `think: false` flag; llama.cpp
-# has no equivalent API in 0.3.x, so we both instruct it off in the prompt and
-# strip any leaked think block as a safety net.
+# Reasoning adds time without improving short transforms. Ollama disables it
+# with `think: false`, and LM Studio disables it with `reasoning_effort: "none"`.
+# llama.cpp 0.3.x has no equivalent setting. The prompt asks the model not to
+# expose reasoning, and the cleanup removes any reasoning block that it returns.
 THINK_TAG_RE = re.compile(r"<think>.*?</think>\s*", re.DOTALL)
 
 
@@ -58,6 +60,32 @@ def strip_think(text: str) -> str:
 
 class InferenceUnavailable(RuntimeError):
     """Raised when an inference backend is asked to run but can't."""
+
+
+class InferenceCancelled(InferenceUnavailable):
+    """Raise this exception when the caller cancels a transform."""
+
+
+def _take_cancellation_opts(opts: dict) -> tuple[Event | None, Callable | None]:
+    """Remove the internal cancellation hooks before sending model options."""
+    return opts.pop("cancel_event", None), opts.pop("on_response", None)
+
+
+def _raise_if_cancelled(cancel_event: Event | None) -> None:
+    if cancel_event is not None and cancel_event.is_set():
+        raise InferenceCancelled("Transform cancelled.")
+
+
+def _clean_completion(text: str, backend_name: str) -> str:
+    if not isinstance(text, str):
+        raise InferenceUnavailable(f"{backend_name} returned non-text content.")
+    cleaned = strip_think(text)
+    if cleaned:
+        return cleaned
+    raise InferenceUnavailable(
+        f"{backend_name} returned no final text. The model may have spent "
+        "the output budget on reasoning; thinking is disabled for transforms."
+    )
 
 
 class InferenceBackend:
@@ -135,6 +163,8 @@ class OllamaBackend(InferenceBackend):
         return models[0]
 
     def complete(self, prompt: str, text: str, **opts) -> str:
+        cancel_event, on_response = _take_cancellation_opts(opts)
+        _raise_if_cancelled(cancel_event)
         model = opts.pop("model", None) or self._resolve_model()
         # Disable thinking for transform workloads. Pin max_tokens so Ollama
         # output isn't silently capped by the server default (often 128/2048
@@ -143,23 +173,54 @@ class OllamaBackend(InferenceBackend):
             "model": model,
             "system": SYSTEM_PROMPT,
             "prompt": f"{prompt}\n\n{text}",
-            "stream": False,
+            "stream": True,
             "think": False,
             "max_tokens": int(opts.pop("max_tokens", TRANSFORM_MAX_TOKENS)),
             **opts,
         }
+        response = None
         try:
             response = requests.post(
                 f"{self.base_url}/api/generate",
                 json=payload,
+                stream=True,
                 timeout=GENERATE_TIMEOUT,
             )
+            if on_response:
+                on_response(response)
+            _raise_if_cancelled(cancel_event)
             response.raise_for_status()
+            parts = []
+            for line in response.iter_lines(decode_unicode=True):
+                _raise_if_cancelled(cancel_event)
+                if not line:
+                    continue
+                try:
+                    data = json.loads(line)
+                except (TypeError, ValueError) as exc:
+                    raise InferenceUnavailable(
+                        f"Ollama at {self.base_url} returned invalid stream data."
+                    ) from exc
+                part = data.get("response", "")
+                if isinstance(part, str):
+                    parts.append(part)
+                if data.get("done"):
+                    break
+            _raise_if_cancelled(cancel_event)
+        except InferenceCancelled:
+            raise
         except requests.RequestException as exc:
+            if cancel_event is not None and cancel_event.is_set():
+                raise InferenceCancelled("Transform cancelled.") from exc
             raise InferenceUnavailable(
                 f"Ollama request to {self.base_url} failed: {exc}"
             ) from exc
-        return strip_think(response.json().get("response", ""))
+        finally:
+            if response is not None:
+                response.close()
+            if on_response:
+                on_response(None)
+        return _clean_completion("".join(parts), "Ollama")
 
 
 class LMStudioBackend(InferenceBackend):
@@ -225,6 +286,8 @@ class LMStudioBackend(InferenceBackend):
         return models[0]
 
     def complete(self, prompt: str, text: str, **opts) -> str:
+        cancel_event, on_response = _take_cancellation_opts(opts)
+        _raise_if_cancelled(cancel_event)
         model = opts.pop("model", None) or self._resolve_model()
         payload = {
             "model": model,
@@ -232,33 +295,70 @@ class LMStudioBackend(InferenceBackend):
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": f"{prompt}\n\n{text}"},
             ],
-            "stream": False,
+            "stream": True,
+            # Disable reasoning so it cannot use the complete output budget.
+            "reasoning_effort": "none",
             "max_tokens": int(opts.pop("max_tokens", TRANSFORM_MAX_TOKENS)),
             "temperature": 0.3,
             **opts,
         }
+        response = None
         try:
             response = requests.post(
                 f"{self.api_url}/chat/completions",
                 json=payload,
+                stream=True,
                 timeout=GENERATE_TIMEOUT,
             )
+            if on_response:
+                on_response(response)
+            _raise_if_cancelled(cancel_event)
             response.raise_for_status()
-            data = response.json()
-            content = data["choices"][0]["message"]["content"]
+            parts = []
+            for raw_line in response.iter_lines(decode_unicode=True):
+                _raise_if_cancelled(cancel_event)
+                if not raw_line:
+                    continue
+                if isinstance(raw_line, bytes):
+                    raw_line = raw_line.decode("utf-8", errors="replace")
+                line = raw_line.strip()
+                if line.startswith("data:"):
+                    line = line[5:].strip()
+                if line == "[DONE]":
+                    break
+                try:
+                    data = json.loads(line)
+                except (TypeError, ValueError) as exc:
+                    raise InferenceUnavailable(
+                        f"LM Studio at {self.base_url} returned invalid stream data."
+                    ) from exc
+                choices = data.get("choices")
+                if not isinstance(choices, list) or not choices:
+                    continue
+                choice = choices[0]
+                if not isinstance(choice, dict):
+                    continue
+                delta = choice.get("delta") or {}
+                if not isinstance(delta, dict):
+                    continue
+                content = delta.get("content")
+                if isinstance(content, str):
+                    parts.append(content)
+            _raise_if_cancelled(cancel_event)
+        except InferenceCancelled:
+            raise
         except requests.RequestException as exc:
+            if cancel_event is not None and cancel_event.is_set():
+                raise InferenceCancelled("Transform cancelled.") from exc
             raise InferenceUnavailable(
                 f"LM Studio request to {self.base_url} failed: {exc}"
             ) from exc
-        except (KeyError, IndexError, TypeError, ValueError) as exc:
-            raise InferenceUnavailable(
-                f"LM Studio at {self.base_url} returned an invalid response."
-            ) from exc
-        if not isinstance(content, str):
-            raise InferenceUnavailable(
-                f"LM Studio at {self.base_url} returned non-text content."
-            )
-        return strip_think(content)
+        finally:
+            if response is not None:
+                response.close()
+            if on_response:
+                on_response(None)
+        return _clean_completion("".join(parts), "LM Studio")
 
 
 class BundledBackend(InferenceBackend):
@@ -345,6 +445,8 @@ class BundledBackend(InferenceBackend):
             gc.collect()
 
     def complete(self, prompt: str, text: str, **opts) -> str:
+        cancel_event, _ = _take_cancellation_opts(opts)
+        _raise_if_cancelled(cancel_event)
         self._ensure_loaded()
         max_tokens = int(opts.pop("max_tokens", TRANSFORM_MAX_TOKENS))
         messages = [
@@ -374,7 +476,7 @@ class BundledBackend(InferenceBackend):
             except Exception as exc2:
                 raise InferenceUnavailable(f"Bundled model failed: {exc2}") from exc2
         content = out["choices"][0]["message"]["content"]
-        return strip_think(content)
+        return _clean_completion(content, "The bundled model")
 
 
 _backend = None

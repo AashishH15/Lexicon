@@ -7,7 +7,7 @@ import {
   buildExportHtml,
 } from "./exportThemes.js";
 import { downloadBlob } from "./download.js";
-import { transformText } from "./api.js";
+import { cancelTransform, transformText } from "./api.js";
 
 const AI_PRESET_PROMPTS = [
   { label: "Navy Headings", prompt: "Make headings dark navy blue with a subtle bottom border." },
@@ -25,6 +25,14 @@ export default function ExportOptionsModal({ editor, mode, onClose }) {
   const [aiError, setAiError] = useState("");
   const [generationTime, setGenerationTime] = useState(0);
   const abortRef = useRef(null);
+  const requestIdRef = useRef(null);
+
+  function newRequestId() {
+    if (globalThis.crypto?.randomUUID) {
+      return globalThis.crypto.randomUUID();
+    }
+    return `style-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  }
 
   useEffect(() => {
     let interval;
@@ -52,6 +60,11 @@ export default function ExportOptionsModal({ editor, mode, onClose }) {
   }, [onClose, aiGenerating]);
 
   const handleCancelAiGenerateCss = () => {
+    const requestId = requestIdRef.current;
+    requestIdRef.current = null;
+    if (requestId) {
+      cancelTransform(requestId).catch(() => {});
+    }
     if (abortRef.current) {
       abortRef.current.abort();
       abortRef.current = null;
@@ -98,7 +111,9 @@ export default function ExportOptionsModal({ editor, mode, onClose }) {
     setAiError("");
 
     const controller = new AbortController();
+    const requestId = newRequestId();
     abortRef.current = controller;
+    requestIdRef.current = requestId;
 
     try {
       const systemInstruction =
@@ -107,6 +122,7 @@ export default function ExportOptionsModal({ editor, mode, onClose }) {
       const res = await transformText({
         prompt: systemInstruction,
         text: targetPrompt.trim(),
+        requestId,
         signal: controller.signal,
       });
 
@@ -121,12 +137,17 @@ export default function ExportOptionsModal({ editor, mode, onClose }) {
       if (generated) {
         setCustomCss((prev) => (prev ? `${prev}\n\n/* Lex Style: ${targetPrompt} */\n${generated}` : generated));
         if (!userPromptOverride) setAiPrompt("");
+      } else {
+        setAiError("The model returned no CSS. Try again with thinking disabled.");
       }
     } catch (err) {
       if (err?.name === "AbortError") return;
       setAiError(err?.message || "Could not generate CSS. Ensure Lex's engine is running or type custom CSS below.");
     } finally {
-      abortRef.current = null;
+      if (requestIdRef.current === requestId) {
+        requestIdRef.current = null;
+        abortRef.current = null;
+      }
       setAiGenerating(false);
     }
   }

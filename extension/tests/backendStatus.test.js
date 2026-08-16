@@ -18,6 +18,7 @@ test("reports connected when the ping succeeds", async () => {
   await sleep(20);
   assert.deepEqual(seen, ["connected"]);
   assert.equal(monitor.state, "connected");
+  monitor.stop();
 });
 
 test("reports offline and keeps polling until connected", async () => {
@@ -35,6 +36,7 @@ test("reports offline and keeps polling until connected", async () => {
   await sleep(15);
   assert.equal(monitor.state, "connected");
   assert.deepEqual(seen, ["offline", "connected"]);
+  monitor.stop();
 });
 
 test("does not repeat the same state", async () => {
@@ -47,6 +49,25 @@ test("does not repeat the same state", async () => {
   monitor.start();
   await sleep(20);
   assert.deepEqual(seen, ["connected"]);
+  monitor.stop();
+});
+
+test("reports offline when a connected backend stops", async () => {
+  let reachable = true;
+  const seen = [];
+  const monitor = createBackendStatus({
+    ping: async () => reachable,
+    intervalMs: 5,
+    onChange: (state) => seen.push(state),
+  });
+  monitor.start();
+  await sleep(10);
+  reachable = false;
+  await sleep(10);
+
+  assert.equal(monitor.state, "offline");
+  assert.deepEqual(seen, ["connected", "offline"]);
+  monitor.stop();
 });
 
 test("stop ends polling", async () => {

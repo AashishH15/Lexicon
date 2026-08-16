@@ -8,6 +8,8 @@ The extension uses the same FastAPI sidecar as the desktop app.
 
 import re
 import sys
+import threading
+import time
 from pathlib import Path
 
 import pytest
@@ -85,6 +87,76 @@ def test_extension_origin_regex_matches_firefox_uuid_only():
 
 def test_extension_ping_reports_lexicon():
     assert main.extension_ping() == {"ok": True, "app": "lexicon"}
+
+
+def test_transform_job_cancel_closes_active_response():
+    class Response:
+        def __init__(self):
+            self.closed = False
+
+        def close(self):
+            self.closed = True
+
+    job = main._TransformJob()
+    response = Response()
+    job.set_response(response)
+    job.cancel()
+
+    assert job.cancel_event.is_set()
+    assert response.closed is True
+
+
+def test_transform_job_closes_response_attached_after_cancel():
+    class Response:
+        def __init__(self):
+            self.closed = False
+
+        def close(self):
+            self.closed = True
+
+    job = main._TransformJob()
+    job.cancel()
+    response = Response()
+    job.set_response(response)
+
+    assert response.closed is True
+
+
+def test_transform_cancel_endpoint_signals_active_job(monkeypatch):
+    started = threading.Event()
+    result = {}
+
+    class Backend:
+        def complete(self, prompt, text, **opts):
+            started.set()
+            while not opts["cancel_event"].is_set():
+                time.sleep(0.001)
+            raise main.InferenceCancelled("Transform cancelled.")
+
+    monkeypatch.setattr(main, "get_backend", lambda: Backend())
+    request_id = "cancel-test"
+    thread = threading.Thread(
+        target=lambda: result.setdefault(
+            "response",
+            main.transform(
+                main.TransformRequest(
+                    prompt="Rewrite.",
+                    text="Text.",
+                    request_id=request_id,
+                )
+            ),
+        )
+    )
+    thread.start()
+    assert started.wait(1)
+
+    assert main.transform_cancel(
+        main.TransformCancelRequest(request_id=request_id)
+    ) == {"cancelled": True, "request_id": request_id}
+    thread.join(1)
+
+    assert not thread.is_alive()
+    assert result["response"].status_code == 499
 
 
 def test_extension_id_shape_and_stability():

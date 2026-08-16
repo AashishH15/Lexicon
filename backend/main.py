@@ -1,5 +1,7 @@
 import os
 import subprocess
+import threading
+import uuid
 
 if os.name == "nt":
     _CREATE_NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0x08000000)
@@ -27,6 +29,7 @@ from ai_prefs import load_prefs, save_prefs
 from inference import (
     LM_STUDIO_SERVER,
     BundledBackend,
+    InferenceCancelled,
     InferenceUnavailable,
     LMStudioBackend,
     OllamaBackend,
@@ -128,6 +131,61 @@ class TransformRequest(BaseModel):
     text: str
     model_key: str | None = None
     backend: str | None = None  # Backend name, or None for automatic selection.
+    request_id: str | None = None
+
+
+class TransformCancelRequest(BaseModel):
+    request_id: str
+
+
+class _TransformJob:
+    """Manage the cancellation signal and active model response for one run."""
+
+    def __init__(self):
+        self.cancel_event = threading.Event()
+        self._response = None
+        self._lock = threading.Lock()
+
+    def set_response(self, response):
+        close_now = False
+        with self._lock:
+            if response is None:
+                self._response = None
+            elif self.cancel_event.is_set():
+                close_now = True
+            else:
+                self._response = response
+        if close_now:
+            response.close()
+
+    def cancel(self):
+        self.cancel_event.set()
+        with self._lock:
+            response = self._response
+            self._response = None
+        if response is not None:
+            response.close()
+
+
+_transform_jobs = {}
+_transform_jobs_lock = threading.Lock()
+
+
+def _start_transform_job(request_id: str | None) -> tuple[str, _TransformJob]:
+    job_id = request_id or uuid.uuid4().hex
+    job = _TransformJob()
+    with _transform_jobs_lock:
+        previous = _transform_jobs.get(job_id)
+        _transform_jobs[job_id] = job
+    if previous is not None:
+        previous.cancel()
+    return job_id, job
+
+
+def _remove_transform_job(job_id: str, job: _TransformJob) -> None:
+    with _transform_jobs_lock:
+        if _transform_jobs.get(job_id) is job:
+            _transform_jobs.pop(job_id, None)
 
 
 @app.get("/health")
@@ -274,6 +332,17 @@ def model_cancel(request: ModelDownloadRequest | None = None):
     return {"cancelled": True, "model_key": model_key}
 
 
+@app.post("/transform/cancel")
+def transform_cancel(request: TransformCancelRequest):
+    """Cancel an active transform and close its active model response."""
+    with _transform_jobs_lock:
+        job = _transform_jobs.get(request.request_id)
+    if job is None:
+        return {"cancelled": False, "request_id": request.request_id}
+    job.cancel()
+    return {"cancelled": True, "request_id": request.request_id}
+
+
 @app.post("/model/delete")
 def model_delete(request: ModelDownloadRequest):
     """Remove a downloaded GGUF (user switched models / freed space)."""
@@ -319,6 +388,7 @@ def transform(request: TransformRequest):
 
     The request can select a backend or a bundled model tier.
     """
+    job_id, job = _start_transform_job(request.request_id)
     try:
         if request.backend == "bundled":
             backend = BundledBackend(model_key=request.model_key or "2b")
@@ -332,9 +402,27 @@ def transform(request: TransformRequest):
             )
         else:
             backend = get_backend()
-        result = backend.complete(request.prompt, request.text)
+        result = backend.complete(
+            request.prompt,
+            request.text,
+            cancel_event=job.cancel_event,
+            on_response=job.set_response,
+        )
+    except InferenceCancelled as exc:
+        return JSONResponse(
+            status_code=499,
+            content={"error": str(exc), "detail": str(exc)},
+        )
     except InferenceUnavailable as exc:
-        return JSONResponse(status_code=503, content={"error": str(exc), "detail": str(exc)})
+        return JSONResponse(
+            status_code=503,
+            content={"error": str(exc), "detail": str(exc)},
+        )
     except Exception as exc:
-        return JSONResponse(status_code=500, content={"error": str(exc), "detail": str(exc)})
+        return JSONResponse(
+            status_code=500,
+            content={"error": str(exc), "detail": str(exc)},
+        )
+    finally:
+        _remove_transform_job(job_id, job)
     return {"text": result}

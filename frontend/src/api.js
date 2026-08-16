@@ -164,17 +164,47 @@ export async function openExternalUrl(url) {
 }
 
 // Run an AI transform (Rewrite, Tone, Summary, …) via the backend.
-export async function transformText({ prompt, text, modelKey, backend, signal }) {
+export async function transformText({
+  prompt,
+  text,
+  modelKey,
+  backend,
+  requestId,
+  signal,
+}) {
   const response = await request("/transform", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ prompt, text, model_key: modelKey, backend }),
+    body: JSON.stringify({
+      prompt,
+      text,
+      model_key: modelKey,
+      backend,
+      request_id: requestId || null,
+    }),
     signal,
   });
   if (!response.ok) {
     const data = await response.json().catch(() => ({}));
     throw new Error(
       data.error || data.detail || `Transform failed: ${response.status}`,
+    );
+  }
+  return response.json();
+}
+
+// Ask the backend to close the active model request.
+export async function cancelTransform(requestId) {
+  if (!requestId) return { cancelled: false };
+  const response = await request("/transform/cancel", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ request_id: requestId }),
+  });
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(
+      data.error || data.detail || `Transform cancel failed: ${response.status}`,
     );
   }
   return response.json();

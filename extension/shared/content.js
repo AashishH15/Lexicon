@@ -147,6 +147,15 @@
     squiggle.clearSquiggles();
   }
 
+  function showOffline(field) {
+    if (!field || !fieldIsAttached(field)) return;
+    clearIssueVisuals();
+    suggestions.show(field, [], {
+      ...suggestionHandlers(),
+      offline: true,
+    });
+  }
+
   function onFieldInput() {
     if (programmaticChange) return;
     const field = lastField;
@@ -347,23 +356,27 @@
         text,
       });
     } catch {
+      if (token === reproofreadToken && lastField === active) {
+        showOffline(active);
+      }
       return;
     }
     if (token !== reproofreadToken || lastField !== active) return;
     if (res && res.ok === false) {
-      clearIssueVisuals();
-      suggestions.show(active, [], {
-        ...suggestionHandlers(),
-        offline: true,
-      });
+      showOffline(active);
       return;
     }
-    const matches = Array.isArray(res?.matches)
-      ? res.matches
-      : Array.isArray(res)
-        ? res
-        : [];
-    applyHighlight(matches);
+    if (res && res.ok === true && Array.isArray(res.matches)) {
+      applyHighlight(res.matches);
+      return;
+    }
+    // Accept an array from an older extension build. Treat a missing or
+    // invalid response as an offline state.
+    if (Array.isArray(res)) {
+      applyHighlight(res);
+      return;
+    }
+    showOffline(active);
   }
 
   function dismissMatch(match) {
@@ -469,6 +482,7 @@
     if (!target) return;
     if (lastField === target) {
       notifyActiveField();
+      scheduleReproofread(target);
       return;
     }
     adoptField(target);
