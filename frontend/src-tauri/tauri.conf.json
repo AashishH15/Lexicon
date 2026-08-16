@@ -26,7 +26,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' asset: https://asset.localhost data: https:; connect-src 'self' http://localhost:8000 http://127.0.0.1:8000 http://localhost:18000 http://127.0.0.1:18000 http://localhost:11434",
+      "csp": "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' asset: https://asset.localhost data: https:; connect-src 'self' https://api.github.com http://localhost:8000 http://127.0.0.1:8000 http://localhost:18000 http://127.0.0.1:18000 http://localhost:11434 http://localhost:1234 http://127.0.0.1:1234",
       "assetProtocol": {
         "enable": true,
         "scope": [

@@ -887,12 +887,12 @@ export default function Settings({
           </nav>
 
           {/* Right pane */}
-          <div className="flex min-h-0 flex-1 flex-col">
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col">
             {/* Active Panel */}
             <div
               ref={panelRef}
               className={
-                "lex-scroll min-h-0 flex-1 pt-6 px-8 pb-8 " +
+                "lex-scroll min-h-0 min-w-0 flex-1 pt-6 px-8 pb-8 " +
                 (activeTab === "actions"
                   ? "flex flex-col overflow-hidden"
                   : "overflow-y-auto")
@@ -1912,7 +1912,7 @@ export default function Settings({
                       data-setting-key="beta-releases"
                       className={`mt-4 flex items-start justify-between gap-4 border-t border-hairline pt-3.5 ${getHighlightClass("beta-releases")}`}
                     >
-                      <div>
+                      <div className="min-w-0">
                         <p className="font-mono text-[10px] uppercase tracking-widest text-muted">
                           Beta Releases
                         </p>
@@ -1937,7 +1937,7 @@ export default function Settings({
                       className={`mt-4 border-t border-hairline pt-3.5 ${getHighlightClass("rollback-version")}`}
                     >
                       <div className="flex items-start justify-between gap-4">
-                        <div>
+                        <div className="min-w-0">
                           <p className="font-mono text-[10px] uppercase tracking-widest text-muted">
                             Previous Releases & Rollback
                           </p>
