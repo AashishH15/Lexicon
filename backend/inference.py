@@ -83,9 +83,15 @@ class OllamaBackend(InferenceBackend):
     # picking a model from the tags list.
     _EMBED_ONLY = ("nomic-embed-text", "mxbai-embed-large", "all-minilm")
 
-    def __init__(self, base_url: str = OLLAMA_SERVER, model: str | None = None):
+    def __init__(
+        self,
+        base_url: str = OLLAMA_SERVER,
+        model: str | None = None,
+        chat_models: list[str] | None = None,
+    ):
         self.base_url = base_url.rstrip("/")
         self._model = model
+        self._cached_chat_models = chat_models
 
     def _tags(self) -> list[str]:
         try:
@@ -98,6 +104,8 @@ class OllamaBackend(InferenceBackend):
             return []
 
     def _chat_models(self) -> list[str]:
+        if self._cached_chat_models is not None:
+            return list(self._cached_chat_models)
         return [
             m for m in self._tags()
             if not any(e in m for e in self._EMBED_ONLY)
@@ -159,13 +167,22 @@ class LMStudioBackend(InferenceBackend):
 
     name = "lmstudio"
 
-    def __init__(self, base_url: str = LM_STUDIO_SERVER, model: str | None = None):
+    def __init__(
+        self,
+        base_url: str = LM_STUDIO_SERVER,
+        model: str | None = None,
+        models: list[str] | None = None,
+    ):
         base_url = base_url.rstrip("/")
         self.base_url = base_url[:-3] if base_url.endswith("/v1") else base_url
         self.api_url = f"{self.base_url}/v1"
         self._model = model
+        self._cached_models = models
+        self._server_reachable = models is not None
 
     def _models(self) -> list[str]:
+        if self._cached_models is not None:
+            return list(self._cached_models)
         try:
             response = requests.get(
                 f"{self.api_url}/models",
@@ -174,14 +191,24 @@ class LMStudioBackend(InferenceBackend):
             response.raise_for_status()
             data = response.json()
         except (requests.RequestException, ValueError):
+            self._server_reachable = False
             return []
         if not isinstance(data, dict):
+            self._server_reachable = False
+            return []
+        self._server_reachable = True
+        items = data.get("data", [])
+        if not isinstance(items, list):
             return []
         return [
             item["id"]
-            for item in data.get("data", [])
+            for item in items
             if isinstance(item, dict) and isinstance(item.get("id"), str)
         ]
+
+    def server_reachable(self) -> bool:
+        """Return whether the last models probe reached LM Studio."""
+        return self._server_reachable
 
     def available(self) -> bool:
         """Return true if LM Studio has a loaded model."""
@@ -353,7 +380,10 @@ class BundledBackend(InferenceBackend):
 _backend = None
 
 
-def get_backend(force_refresh: bool = False) -> InferenceBackend:
+def get_backend(
+    force_refresh: bool = False,
+    probe_results: dict[str, list[str]] | None = None,
+) -> InferenceBackend:
     """Select and cache an inference backend.
 
     The environment variable has priority over the saved preference.
@@ -378,9 +408,25 @@ def get_backend(force_refresh: bool = False) -> InferenceBackend:
     key = prefs["model_key"]
     ollama_model = prefs.get("ollama_model", "")
     lmstudio_model = prefs.get("lmstudio_model", "")
+    lmstudio_url = prefs.get("lmstudio_url") or LM_STUDIO_SERVER
+    cached_ollama_models = (probe_results or {}).get("ollama")
+    cached_lmstudio_models = (probe_results or {}).get("lmstudio")
+
+    def make_ollama(model: str | None = None) -> OllamaBackend:
+        return OllamaBackend(
+            model=model,
+            chat_models=cached_ollama_models,
+        )
+
+    def make_lmstudio(model: str | None = None) -> LMStudioBackend:
+        return LMStudioBackend(
+            base_url=lmstudio_url,
+            model=model,
+            models=cached_lmstudio_models,
+        )
 
     if choice == "ollama":
-        ollama = OllamaBackend(model=ollama_model or None)
+        ollama = make_ollama(ollama_model or None)
         if ollama.available():
             _backend = ollama
             return _backend
@@ -389,12 +435,12 @@ def get_backend(force_refresh: bool = False) -> InferenceBackend:
         if bundled.available():
             _backend = bundled
             return _backend
-        lmstudio = LMStudioBackend(model=lmstudio_model or None)
+        lmstudio = make_lmstudio(lmstudio_model or None)
         _backend = lmstudio if lmstudio.available() else ollama
         return _backend
 
     if choice == "lmstudio":
-        lmstudio = LMStudioBackend(model=lmstudio_model or None)
+        lmstudio = make_lmstudio(lmstudio_model or None)
         if lmstudio.available():
             _backend = lmstudio
             return _backend
@@ -403,7 +449,7 @@ def get_backend(force_refresh: bool = False) -> InferenceBackend:
         if bundled.available():
             _backend = bundled
             return _backend
-        ollama = OllamaBackend(model=ollama_model or None)
+        ollama = make_ollama(ollama_model or None)
         _backend = ollama if ollama.available() else lmstudio
         return _backend
 
@@ -418,20 +464,20 @@ def get_backend(force_refresh: bool = False) -> InferenceBackend:
         if alt.available():
             _backend = alt
             return _backend
-        ollama = OllamaBackend()
+        ollama = make_ollama()
         if ollama.available():
             _backend = ollama
             return _backend
-        lmstudio = LMStudioBackend(model=lmstudio_model or None)
+        lmstudio = make_lmstudio(lmstudio_model or None)
         _backend = lmstudio if lmstudio.available() else bundled
         return _backend
 
     # In auto mode, try Ollama, then LM Studio, then the bundled model.
-    ollama = OllamaBackend()
+    ollama = make_ollama()
     if ollama.available():
         _backend = ollama
         return _backend
-    lmstudio = LMStudioBackend(model=lmstudio_model or None)
+    lmstudio = make_lmstudio(lmstudio_model or None)
     if lmstudio.available():
         _backend = lmstudio
         return _backend

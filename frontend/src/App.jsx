@@ -2616,7 +2616,8 @@ export default function App() {
                 pref.backend,
                 pref.model_key,
                 pref.ollama_model || "",
-                pref.lmstudio_model || ""
+                pref.lmstudio_model || "",
+                pref.lmstudio_url || ""
               ).catch(() => {})
             }
             onClose={() => {

@@ -1789,11 +1789,12 @@ export default function Settings({
                     <ModelManager
                       mode="settings"
                       onPreferenceChange={(pref) => {
-                        setAiPreference(
+                        return setAiPreference(
                           pref.backend,
                           pref.model_key,
                           pref.ollama_model || "",
-                          pref.lmstudio_model || ""
+                          pref.lmstudio_model || "",
+                          pref.lmstudio_url || ""
                         ).catch(() => { });
                       }}
                       onConfigured={() =>

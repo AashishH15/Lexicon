@@ -75,44 +75,82 @@ fn terminate_backend_tree(child: &mut Child) {
     let _ = child.wait();
 }
 
-fn start_backend(app_handle: &tauri::AppHandle) -> Result<Child, String> {
-    let resource_dir = app_handle
-        .path()
-        .resource_dir()
-        .map_err(|error| format!("failed to resolve resource dir: {error}"))?;
+fn start_backend(_app_handle: &tauri::AppHandle) -> Result<Child, String> {
+    #[cfg(not(debug_assertions))]
+    let java_home = {
+        let resource_dir = _app_handle
+            .path()
+            .resource_dir()
+            .map_err(|error| format!("failed to resolve resource dir: {error}"))?;
 
-    // Bundled JRE (resources/jre) so LanguageTool needs no Java install.
-    let jre_dir = resource_dir.join("jre");
-    let java_home = if jre_dir.is_dir() {
-        jre_dir.to_string_lossy().to_string()
-    } else {
-        String::new()
+        let jre_dir = resource_dir.join("jre");
+        if jre_dir.is_dir() {
+            jre_dir.to_string_lossy().to_string()
+        } else {
+            String::new()
+        }
     };
+    #[cfg(debug_assertions)]
+    let java_home = String::new();
 
-    // Onedir sidecar: resources/lexicon-backend/lexicon-backend[.exe]
-    // (the `_internal` folder sits beside it and is required at runtime).
-    // PyInstaller adds `.exe` only on Windows; the macOS bundle uses
-    // the extensionless executable name.
-    let sidecar_name = if cfg!(target_os = "windows") {
-        "lexicon-backend.exe"
-    } else {
-        "lexicon-backend"
-    };
-    let sidecar_exe: PathBuf = resource_dir.join("lexicon-backend").join(sidecar_name);
-
-    #[cfg(unix)]
+    #[cfg(all(unix, not(debug_assertions)))]
     {
         use std::os::unix::fs::PermissionsExt;
-        if let Ok(metadata) = std::fs::metadata(&sidecar_exe) {
+        let executable = _app_handle
+            .path()
+            .resource_dir()
+            .map_err(|error| format!("failed to resolve resource dir: {error}"))?
+            .join("lexicon-backend")
+            .join(if cfg!(target_os = "windows") {
+                "lexicon-backend.exe"
+            } else {
+                "lexicon-backend"
+            });
+        if let Ok(metadata) = std::fs::metadata(&executable) {
             let mut perms = metadata.permissions();
             if perms.mode() & 0o111 == 0 {
                 perms.set_mode(0o755);
-                let _ = std::fs::set_permissions(&sidecar_exe, perms);
+                let _ = std::fs::set_permissions(&executable, perms);
             }
         }
     }
 
-    let mut cmd = Command::new(&sidecar_exe);
+    #[cfg(debug_assertions)]
+    let mut cmd = {
+        let backend_script =
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../backend/launcher.py");
+        if !backend_script.is_file() {
+            return Err(format!(
+                "development backend not found at {}",
+                backend_script.display()
+            ));
+        }
+        let python = env::var_os("LEXICON_PYTHON").unwrap_or_else(|| "python".into());
+        let mut command = Command::new(python);
+        command.arg(&backend_script).current_dir(
+            backend_script
+                .parent()
+                .ok_or_else(|| "development backend path has no parent".to_string())?,
+        );
+        command
+    };
+
+    #[cfg(not(debug_assertions))]
+    let mut cmd = {
+        let resource_dir = _app_handle
+            .path()
+            .resource_dir()
+            .map_err(|error| format!("failed to resolve resource dir: {error}"))?;
+        let sidecar_name = if cfg!(target_os = "windows") {
+            "lexicon-backend.exe"
+        } else {
+            "lexicon-backend"
+        };
+        let sidecar_exe: PathBuf = resource_dir.join("lexicon-backend").join(sidecar_name);
+        let mut command = Command::new(&sidecar_exe);
+        command
+    };
+
     // Production uses a dedicated port so a running development backend on
     // 8000 cannot steal the desktop app's requests.
     cmd.env("LEXICON_PORT", BACKEND_PORT.to_string());
@@ -144,7 +182,7 @@ fn start_backend(app_handle: &tauri::AppHandle) -> Result<Child, String> {
 
     let mut child = cmd
         .spawn()
-        .map_err(|error| format!("failed to spawn backend sidecar {:?}: {error}", sidecar_exe))?;
+        .map_err(|error| format!("failed to spawn backend: {error}"))?;
 
     #[cfg(target_os = "windows")]
     {

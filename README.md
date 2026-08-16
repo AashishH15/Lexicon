@@ -75,7 +75,9 @@ The macOS build is currently pre-release (unsigned). If macOS Gatekeeper blocks 
 The editor and proofreading tools work without downloading an AI model. The AI
 tools can also use an existing local Ollama or LM Studio server when one is
 available. LM Studio's local server uses its default `http://localhost:1234`
-endpoint.
+endpoint. If LM Studio serves on the local network, enter the address displayed
+in LM Studio under Settings → Lex's Engine → Advanced. LM Studio must also
+have a model loaded before Lexicon can use the server.
 
 ## Updates
 

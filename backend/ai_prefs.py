@@ -18,6 +18,7 @@ DEFAULT_PREFS = {
     "model_key": "2b",
     "ollama_model": "",
     "lmstudio_model": "",
+    "lmstudio_url": "",
 }
 
 _VALID_BACKENDS = ("auto", "ollama", "lmstudio", "bundled")
@@ -35,6 +36,9 @@ def load_prefs() -> dict:
     model_key = data.get("model_key", DEFAULT_PREFS["model_key"])
     ollama_model = data.get("ollama_model", DEFAULT_PREFS["ollama_model"])
     lmstudio_model = data.get("lmstudio_model", DEFAULT_PREFS["lmstudio_model"])
+    lmstudio_url = data.get("lmstudio_url", DEFAULT_PREFS["lmstudio_url"])
+    if not isinstance(lmstudio_url, str):
+        lmstudio_url = DEFAULT_PREFS["lmstudio_url"]
     if backend not in _VALID_BACKENDS:
         backend = DEFAULT_PREFS["backend"]
     if model_key not in _VALID_KEYS:
@@ -44,6 +48,7 @@ def load_prefs() -> dict:
         "model_key": model_key,
         "ollama_model": ollama_model,
         "lmstudio_model": lmstudio_model,
+        "lmstudio_url": lmstudio_url,
     }
 
 
@@ -52,6 +57,7 @@ def save_prefs(
     model_key: str,
     ollama_model: str = "",
     lmstudio_model: str = "",
+    lmstudio_url: str = "",
 ) -> dict:
     """Persist a choice. Unknown values are coerced to defaults."""
     if backend not in _VALID_BACKENDS:
@@ -63,6 +69,7 @@ def save_prefs(
         "model_key": model_key,
         "ollama_model": ollama_model,
         "lmstudio_model": lmstudio_model,
+        "lmstudio_url": lmstudio_url,
     }
     try:
         with open(PREFS_PATH, "w", encoding="utf-8") as fh:

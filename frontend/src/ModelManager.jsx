@@ -16,8 +16,13 @@ const MODEL_TIERS = [
 ];
 
 const OLLAMA_URL = "http://localhost:11434";
-const LM_STUDIO_URL = "http://localhost:1234";
+const DEFAULT_LM_STUDIO_URL = "http://localhost:1234";
 const _EMBED_ONLY = ["nomic-embed-text", "mxbai-embed-large", "all-minilm"];
+
+function normalizeLmStudioUrl(value) {
+  const trimmed = String(value || "").trim().replace(/\/+$/, "");
+  return trimmed || DEFAULT_LM_STUDIO_URL;
+}
 
 async function probeOllamaDirect() {
   try {
@@ -47,6 +52,7 @@ function describeActive(status) {
     model_key: "2b",
     ollama_model: "",
     lmstudio_model: "",
+    lmstudio_url: "",
   };
   if (pref.backend === "ollama") {
     const modelLabel = pref.ollama_model || "auto-detected";
@@ -63,7 +69,9 @@ function describeActive(status) {
       tone: "lmstudio",
       text: status.lmstudio_available
         ? `Using LM Studio · ${modelLabel}`
-        : "Using your LM Studio server (not detected — will fall back)",
+        : status.lmstudio_server_available
+          ? "LM Studio server found · load a model to use it"
+          : "Using your LM Studio server (not detected — will fall back)",
     };
   }
   if (pref.backend === "bundled") {
@@ -131,6 +139,7 @@ export default function ModelManager({
   const [status, setStatus] = useState({
     ollama_available: false,
     lmstudio_available: false,
+    lmstudio_server_available: false,
     lmstudio_models: [],
     models_ready: {},
     model_key: "2b",
@@ -140,6 +149,7 @@ export default function ModelManager({
       model_key: "2b",
       ollama_model: "",
       lmstudio_model: "",
+      lmstudio_url: "",
     },
   });
   const [probeDone, setProbeDone] = useState(false);
@@ -153,6 +163,8 @@ export default function ModelManager({
   const [lmStudioModels, setLmStudioModels] = useState([]);
   const [lmStudioProbing, setLmStudioProbing] = useState(true);
   const [selectedLmStudioModel, setSelectedLmStudioModel] = useState("");
+  const [lmStudioUrl, setLmStudioUrl] = useState(DEFAULT_LM_STUDIO_URL);
+  const [lmStudioUrlDraft, setLmStudioUrlDraft] = useState(DEFAULT_LM_STUDIO_URL);
   const [modelKey, setModelKey] = useState(adviseModelKey());
   const [phase, setPhase] = useState("choose"); // choose | downloading | done | error
   const [progress, setProgress] = useState(null);
@@ -180,12 +192,16 @@ export default function ModelManager({
         if (s.preference?.lmstudio_model) {
           setSelectedLmStudioModel(s.preference.lmstudio_model);
         }
+        const savedLmStudioUrl = normalizeLmStudioUrl(s.preference?.lmstudio_url || "");
+        setLmStudioUrl(savedLmStudioUrl);
+        setLmStudioUrlDraft(savedLmStudioUrl);
       })
       .catch(() => {
         if (!cancelled)
           setStatus({
             ollama_available: false,
             lmstudio_available: false,
+            lmstudio_server_available: false,
             lmstudio_models: [],
             models_ready: {},
             model_key: "2b",
@@ -195,6 +211,7 @@ export default function ModelManager({
               model_key: "2b",
               ollama_model: "",
               lmstudio_model: "",
+              lmstudio_url: "",
             },
           });
       })
@@ -240,7 +257,13 @@ export default function ModelManager({
           stopPolling();
           refreshStatus();
           setPhase("done");
-          if (onPreferenceChange) onPreferenceChange({ backend: "bundled", model_key: modelKey });
+          if (onPreferenceChange) {
+            onPreferenceChange({
+              backend: "bundled",
+              model_key: modelKey,
+              lmstudio_url: lmStudioUrl,
+            });
+          }
         } else if (st.state === "error") {
           stopPolling();
           setPhase("error");
@@ -261,6 +284,11 @@ export default function ModelManager({
       setStatus(s);
       if (s.ollama_models) setOllamaModels(s.ollama_models);
       if (s.lmstudio_models) setLmStudioModels(s.lmstudio_models);
+      if (s.preference?.lmstudio_url) {
+        const savedLmStudioUrl = normalizeLmStudioUrl(s.preference.lmstudio_url);
+        setLmStudioUrl(savedLmStudioUrl);
+        setLmStudioUrlDraft(savedLmStudioUrl);
+      }
       // Let the parent know a usable backend now exists (e.g. App can
       // un-grey the AI tools immediately, without waiting for modal close).
       const ready =
@@ -340,6 +368,36 @@ export default function ModelManager({
     }
   }
 
+  async function checkLmStudio() {
+    const nextUrl = normalizeLmStudioUrl(lmStudioUrlDraft);
+    setLmStudioUrl(nextUrl);
+    setLmStudioUrlDraft(nextUrl);
+    setLmStudioProbing(true);
+    setStatus((s) => ({
+      ...s,
+      lmstudio_available: false,
+      lmstudio_server_available: false,
+      lmstudio_models: [],
+      preference: { ...s.preference, lmstudio_url: nextUrl },
+    }));
+    try {
+      if (onPreferenceChange) {
+        await onPreferenceChange({
+          backend: status.preference?.backend || "auto",
+          model_key: modelKey,
+          ollama_model: selectedOllamaModel,
+          lmstudio_model: selectedLmStudioModel,
+          lmstudio_url: nextUrl,
+        });
+      }
+      await refreshStatus();
+    } catch {
+      // The status message shows that the server is not available.
+    } finally {
+      setLmStudioProbing(false);
+    }
+  }
+
   async function commitOllama(on) {
     if (on) {
       setWantBundle(false);
@@ -359,6 +417,7 @@ export default function ModelManager({
           model_key: modelKey,
           ollama_model: selectedOllamaModel,
           lmstudio_model: selectedLmStudioModel,
+          lmstudio_url: lmStudioUrl,
         });
       }
     } else {
@@ -372,6 +431,7 @@ export default function ModelManager({
           model_key: modelKey,
           ollama_model: "",
           lmstudio_model: selectedLmStudioModel,
+          lmstudio_url: lmStudioUrl,
         });
       }
     }
@@ -394,6 +454,7 @@ export default function ModelManager({
           model_key: modelKey,
           ollama_model: selectedOllamaModel,
           lmstudio_model: selectedLmStudioModel,
+          lmstudio_url: lmStudioUrl,
         });
       }
     } else {
@@ -407,6 +468,7 @@ export default function ModelManager({
           model_key: modelKey,
           ollama_model: selectedOllamaModel,
           lmstudio_model: "",
+          lmstudio_url: lmStudioUrl,
         });
       }
     }
@@ -414,6 +476,7 @@ export default function ModelManager({
 
   const ollamaAvailable = status.ollama_available || ollamaModels.length > 0;
   const lmStudioAvailable = status.lmstudio_available || lmStudioModels.length > 0;
+  const lmStudioServerAvailable = status.lmstudio_server_available;
 
   return (
     <div>
@@ -492,7 +555,11 @@ export default function ModelManager({
                   // In settings, selecting an installed tier makes it active.
                   if (mode === "settings" && status.models_ready?.[tier.key]) {
                     if (onPreferenceChange)
-                      onPreferenceChange({ backend: "bundled", model_key: tier.key });
+                      onPreferenceChange({
+                        backend: "bundled",
+                        model_key: tier.key,
+                        lmstudio_url: lmStudioUrl,
+                      });
                     refreshStatus();
                   }
                 }}
@@ -504,7 +571,11 @@ export default function ModelManager({
                     setModelKey(tier.key);
                     if (mode === "settings" && status.models_ready?.[tier.key]) {
                       if (onPreferenceChange)
-                        onPreferenceChange({ backend: "bundled", model_key: tier.key });
+                        onPreferenceChange({
+                          backend: "bundled",
+                          model_key: tier.key,
+                          lmstudio_url: lmStudioUrl,
+                        });
                       refreshStatus();
                     }
                   }
@@ -686,6 +757,7 @@ export default function ModelManager({
                                 model_key: modelKey,
                                 ollama_model: name,
                                 lmstudio_model: selectedLmStudioModel,
+                                lmstudio_url: lmStudioUrl,
                               });
                             }
                           }}
@@ -721,7 +793,9 @@ export default function ModelManager({
                       ? "Checking for LM Studio…"
                       : lmStudioAvailable
                         ? "Detected and ready. AI tools will use your loaded LM Studio models."
-                        : "No LM Studio server was detected. Start the local server in LM Studio."}
+                        : lmStudioServerAvailable
+                          ? "Server detected, but no model is loaded. Load a model in LM Studio."
+                          : "No LM Studio server was detected. Start the local server in LM Studio."}
                   </span>
                   {lmStudioAvailable && lmStudioModels.length > 0 && (
                     <span className="mt-2 flex flex-wrap gap-1.5">
@@ -744,6 +818,7 @@ export default function ModelManager({
                                 model_key: modelKey,
                                 ollama_model: selectedOllamaModel,
                                 lmstudio_model: name,
+                                lmstudio_url: lmStudioUrl,
                               });
                             }
                           }}
@@ -760,6 +835,41 @@ export default function ModelManager({
                   )}
                 </span>
               </label>
+              <div className="mt-3 border-t border-hairline/60 pt-3">
+                <label
+                  htmlFor="lmstudio-server-url"
+                  className="font-mono text-[10px] uppercase tracking-widest text-muted"
+                >
+                  Server URL
+                </label>
+                <div className="mt-1.5 flex items-center gap-2">
+                  <input
+                    id="lmstudio-server-url"
+                    type="url"
+                    value={lmStudioUrlDraft}
+                    onChange={(event) => setLmStudioUrlDraft(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        event.preventDefault();
+                        checkLmStudio();
+                      }
+                    }}
+                    placeholder={DEFAULT_LM_STUDIO_URL}
+                    className="min-w-0 flex-1 rounded border border-hairline bg-white px-2 py-1.5 font-mono text-[11px] text-ink outline-none focus:border-pale-yellow-text"
+                  />
+                  <button
+                    type="button"
+                    onClick={checkLmStudio}
+                    disabled={!probeDone || lmStudioProbing}
+                    className="shrink-0 rounded border border-hairline bg-white px-2.5 py-1.5 font-sans text-[11px] font-medium text-ink transition-colors hover:border-muted disabled:cursor-wait disabled:opacity-50"
+                  >
+                    {lmStudioProbing ? "Checking…" : "Check"}
+                  </button>
+                </div>
+                <p className="mt-1 font-sans text-[10px] text-muted">
+                  Use the address shown in LM Studio. The default is {DEFAULT_LM_STUDIO_URL}.
+                </p>
+              </div>
             </div>
           </div>
         </div>

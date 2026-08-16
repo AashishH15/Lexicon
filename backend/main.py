@@ -25,6 +25,7 @@ from pydantic import BaseModel
 
 from ai_prefs import load_prefs, save_prefs
 from inference import (
+    LM_STUDIO_SERVER,
     BundledBackend,
     InferenceUnavailable,
     LMStudioBackend,
@@ -201,20 +202,33 @@ def ai_status():
     preference. Drives the first-run setup flow and the settings
     surface."""
     prefs = load_prefs()
-    # Probe both local servers even when the user selected the bundled model.
-    # This lets the UI show available models.
+    # Probe both local servers at the same time.
+    from concurrent.futures import ThreadPoolExecutor
+
     ollama = OllamaBackend()
-    ollama_available = ollama.available()
-    ollama_models = ollama._chat_models() if ollama_available else []
-    lmstudio = LMStudioBackend()
-    lmstudio_available = lmstudio.available()
-    lmstudio_models = lmstudio._models() if lmstudio_available else []
-    active = get_backend()
+    lmstudio = LMStudioBackend(
+        base_url=prefs.get("lmstudio_url") or LM_STUDIO_SERVER,
+        model=prefs.get("lmstudio_model") or None,
+    )
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        ollama_probe = executor.submit(ollama._chat_models)
+        lmstudio_probe = executor.submit(lmstudio._models)
+        ollama_models = ollama_probe.result()
+        lmstudio_models = lmstudio_probe.result()
+    ollama_available = bool(ollama_models)
+    lmstudio_available = bool(lmstudio_models)
+    active = get_backend(
+        probe_results={
+            "ollama": ollama_models,
+            "lmstudio": lmstudio_models,
+        }
+    )
     return {
         "ollama_available": ollama_available,
         "ollama_models": ollama_models,
         "lmstudio_available": lmstudio_available,
         "lmstudio_models": lmstudio_models,
+        "lmstudio_server_available": lmstudio.server_reachable(),
         "models_ready": models_ready(),
         "model_key": prefs["model_key"],
         "preference": prefs,
@@ -233,6 +247,7 @@ class AiPreferenceRequest(BaseModel):
     model_key: str = "2b"  # Bundled model tier: 2b or 0.8b.
     ollama_model: str = ""  # Selected Ollama model name.
     lmstudio_model: str = ""  # Selected LM Studio model name.
+    lmstudio_url: str = ""  # LM Studio server URL.
 
 
 @app.post("/ai/preference")
@@ -244,6 +259,7 @@ def ai_preference_set(request: AiPreferenceRequest):
         request.model_key,
         request.ollama_model,
         request.lmstudio_model,
+        request.lmstudio_url,
     )
     # Force the cached backend to re-resolve against the new preference.
     get_backend(force_refresh=True)
@@ -285,7 +301,14 @@ def model_download(request: ModelDownloadRequest):
             return {"state": "cancelled", "error": None}
         return JSONResponse(status_code=500, content={"error": str(exc)})
     if status.get("state") == "ready":
-        save_prefs("bundled", request.model_key)
+        current = load_prefs()
+        save_prefs(
+            "bundled",
+            request.model_key,
+            current.get("ollama_model", ""),
+            current.get("lmstudio_model", ""),
+            current.get("lmstudio_url", ""),
+        )
         get_backend(force_refresh=True)
     return status
 
@@ -302,7 +325,11 @@ def transform(request: TransformRequest):
         elif request.backend == "ollama":
             backend = OllamaBackend()
         elif request.backend == "lmstudio":
-            backend = LMStudioBackend()
+            prefs = load_prefs()
+            backend = LMStudioBackend(
+                base_url=prefs.get("lmstudio_url") or LM_STUDIO_SERVER,
+                model=prefs.get("lmstudio_model") or None,
+            )
         else:
             backend = get_backend()
         result = backend.complete(request.prompt, request.text)

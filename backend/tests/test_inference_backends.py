@@ -84,19 +84,44 @@ def test_lmstudio_requires_a_loaded_model(monkeypatch):
         LMStudioBackend().complete("Rewrite.", "Text.")
 
 
+def test_lmstudio_reports_a_reachable_server_without_a_loaded_model(monkeypatch):
+    monkeypatch.setattr(
+        "inference.requests.get",
+        lambda url, timeout: FakeResponse({"data": []}),
+    )
+
+    backend = LMStudioBackend()
+
+    assert not backend.available()
+    assert backend.server_reachable()
+
+
 def test_lmstudio_model_preference_round_trips(tmp_path, monkeypatch):
     monkeypatch.setattr(ai_prefs, "PREFS_PATH", str(tmp_path / "ai_prefs.json"))
 
-    saved = ai_prefs.save_prefs("lmstudio", "2b", "", "qwen/qwen3-4b")
+    saved = ai_prefs.save_prefs(
+        "lmstudio",
+        "2b",
+        "",
+        "qwen/qwen3-4b",
+        "http://192.168.1.25:1234",
+    )
 
     assert saved["backend"] == "lmstudio"
     assert saved["lmstudio_model"] == "qwen/qwen3-4b"
+    assert saved["lmstudio_url"] == "http://192.168.1.25:1234"
     assert ai_prefs.load_prefs() == saved
 
 
 def test_saved_lmstudio_preference_selects_lmstudio_backend(tmp_path, monkeypatch):
     monkeypatch.setattr(ai_prefs, "PREFS_PATH", str(tmp_path / "ai_prefs.json"))
-    ai_prefs.save_prefs("lmstudio", "2b", "", "qwen/qwen3-4b")
+    ai_prefs.save_prefs(
+        "lmstudio",
+        "2b",
+        "",
+        "qwen/qwen3-4b",
+        "http://192.168.1.25:1234",
+    )
     monkeypatch.setattr(inference, "_backend", None)
     monkeypatch.setattr(inference, "FORCE_BACKEND", "")
 
@@ -108,3 +133,4 @@ def test_saved_lmstudio_preference_selects_lmstudio_backend(tmp_path, monkeypatc
     backend = inference.get_backend(force_refresh=True)
 
     assert isinstance(backend, LMStudioBackend)
+    assert backend.base_url == "http://192.168.1.25:1234"
