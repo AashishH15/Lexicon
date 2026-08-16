@@ -2,6 +2,8 @@ import os
 
 import requests
 
+from grammar_enhancements import enhance_matches
+
 SERVER_URL = os.environ.get("LANGUAGETOOL_SERVER")
 CHECK_URL = f"{SERVER_URL}/v2/check" if SERVER_URL else None
 REQUEST_TIMEOUT = 30
@@ -194,6 +196,7 @@ def check_text(text, language="en-US", ignore=None):
         matches = _check_remote(text, language)
     else:
         matches = _check_local(text, language)
+    matches = enhance_matches(text, matches, language)
     return _filter_ignored(matches, text, ignore)
 
 
