@@ -2226,7 +2226,11 @@ export default function App() {
     <div
       className="lex-app-shell flex flex-col h-screen overflow-hidden bg-canvas text-ink"
       data-paper-texture={shellTexture.id}
-      style={{ backgroundColor: shellTexture.surroundColor }}
+      style={{
+        backgroundColor: shellTexture.surroundColor,
+        "--lex-page-color": shellTexture.pageColor,
+        "--lex-surround-color": shellTexture.surroundColor,
+      }}
     >
       <header className="lex-no-print flex items-center justify-between px-6 h-14 border-b border-hairline">
         <div className="leading-tight">

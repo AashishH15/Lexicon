@@ -254,7 +254,7 @@ export default function ReviewPanel({
               })()}
             </div>
           ) : checking ? (
-            <div className="rounded-xl border border-hairline bg-white p-6 pb-4 lex-card-enter">
+            <div className="lex-paper-surface rounded-xl border border-hairline p-6 pb-4 lex-card-enter">
               <div className="h-3 w-full rounded lex-shimmer" />
               <div className="mt-3 h-3 w-[90%] rounded lex-shimmer" />
               <div className="mt-3 h-3 w-[75%] rounded lex-shimmer" />
@@ -322,7 +322,7 @@ export default function ReviewPanel({
                   <Info size={12} weight="bold" />
                   <span>Legend</span>
                 </button>
-                <div className="pointer-events-none absolute left-0 top-full mt-1.5 z-30 w-52 rounded-xl border border-hairline bg-white p-2.5 shadow-lg opacity-0 transition-opacity duration-150 group-hover:pointer-events-auto group-hover:opacity-100">
+                <div className="lex-paper-surface pointer-events-none absolute left-0 top-full mt-1.5 z-30 w-52 rounded-xl border border-hairline p-2.5 shadow-lg opacity-0 transition-opacity duration-150 group-hover:pointer-events-auto group-hover:opacity-100">
                   <div className="flex flex-col gap-1.5 font-sans text-xs">
                     <div className="flex items-center gap-2">
                       <span className="h-2 w-2 rounded-full bg-[#9F2F2D]" />
@@ -399,7 +399,7 @@ function TransformView({ tool, status, error, results, progress, running, onAppl
             ))}
           </ul>
         )}
-        <div className="mt-3 rounded-xl border border-hairline bg-white p-6 pb-4 lex-card-enter">
+        <div className="lex-paper-surface mt-3 rounded-xl border border-hairline p-6 pb-4 lex-card-enter">
           <div className="h-3 w-full rounded lex-shimmer" />
           <div className="mt-3 h-3 w-[90%] rounded lex-shimmer" />
           <div className="mt-3 h-3 w-[75%] rounded lex-shimmer" />
@@ -472,7 +472,7 @@ function TransformView({ tool, status, error, results, progress, running, onAppl
             <Info size={12} weight="bold" />
             <span>Legend</span>
           </button>
-          <div className="pointer-events-none absolute left-0 top-full mt-1.5 z-30 w-52 rounded-xl border border-hairline bg-white p-2.5 shadow-lg opacity-0 transition-opacity duration-150 group-hover:pointer-events-auto group-hover:opacity-100">
+          <div className="lex-paper-surface pointer-events-none absolute left-0 top-full mt-1.5 z-30 w-52 rounded-xl border border-hairline p-2.5 shadow-lg opacity-0 transition-opacity duration-150 group-hover:pointer-events-auto group-hover:opacity-100">
             <div className="flex flex-col gap-1.5 font-sans text-xs">
               <div className="flex items-center gap-2">
                 <span className="h-2 w-2 rounded-full bg-[#9F2F2D]" />
@@ -512,7 +512,7 @@ function TransformView({ tool, status, error, results, progress, running, onAppl
 function TransformCard({ card, index, onApply, onDismiss }) {
   return (
     <li
-      className="rounded-xl border border-hairline bg-white p-6 pb-4 lex-card-enter"
+      className="lex-paper-surface rounded-xl border border-hairline p-6 pb-4 lex-card-enter"
       style={{ animationDelay: `${index * 80}ms` }}
     >
       <span className="inline-block rounded bg-pale-blue px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.08em] text-pale-blue-text">

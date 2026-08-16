@@ -50,7 +50,7 @@ function SelectionBubbleMenu({ editor }) {
         from !== to && !e.isActive("codeBlock") && e.isEditable
       }
     >
-      <div className="lex-pop flex items-center gap-0.5 rounded-lg border border-hairline bg-white p-1 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
+      <div className="lex-pop lex-paper-surface flex items-center gap-0.5 rounded-lg border border-hairline p-1 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
         {BUBBLE_ACTIONS.map(({ id, label, icon: Icon, isActive, run }) => {
           const active = isActive(editor);
           return (
@@ -426,7 +426,7 @@ export default function Editor({
 
       {collapsed ? (
         <div className="lex-no-print mt-4 grid grid-cols-2 gap-4 mb-6">
-          <div className="lex-card-enter flex items-center justify-between rounded border border-hairline bg-white px-4 py-3">
+          <div className="lex-card-enter lex-paper-surface flex items-center justify-between rounded border border-hairline px-4 py-3">
             <span className="font-mono text-xs uppercase leading-none tracking-widest text-muted">
               Clarity Score
             </span>
@@ -434,7 +434,7 @@ export default function Editor({
               {hasMetrics ? clarityScore : "-"}
             </span>
           </div>
-          <div className="lex-card-enter flex items-center justify-between rounded border border-hairline bg-white px-4 py-3">
+          <div className="lex-card-enter lex-paper-surface flex items-center justify-between rounded border border-hairline px-4 py-3">
             <span className="font-mono text-xs uppercase leading-none tracking-widest text-muted">
               Tone
             </span>
@@ -449,7 +449,7 @@ export default function Editor({
           onMouseEnter={() => setShowBreakdown(true)}
           onMouseLeave={() => setShowBreakdown(false)}
         >
-          <div className="lex-card-enter flex h-full flex-col justify-between rounded border border-hairline bg-white p-6">
+          <div className="lex-card-enter lex-paper-surface flex h-full flex-col justify-between rounded border border-hairline p-6">
             <div className="flex flex-col">
               <div className="mb-4 flex items-center gap-1.5">
                 <span className="font-mono text-xs uppercase leading-none tracking-widest text-muted">
@@ -457,7 +457,7 @@ export default function Editor({
                 </span>
                 <span className="group relative inline-flex">
                   <Info size={13} weight="bold" className="-mt-px text-muted" />
-                  <span className="pointer-events-none absolute left-0 top-5 z-10 w-60 rounded-md border border-hairline bg-white p-3 font-sans text-[11px] leading-relaxed text-muted opacity-0 shadow-sm transition-opacity duration-150 group-hover:opacity-100">
+                  <span className="lex-paper-surface pointer-events-none absolute left-0 top-5 z-10 w-60 rounded-md border border-hairline p-3 font-sans text-[11px] leading-relaxed text-muted opacity-0 shadow-sm transition-opacity duration-150 group-hover:opacity-100">
                     A readbility score from 0 to 100. It uses an error density
                     ratio, not a raw count: Clarity = 100 minus (active
                     suggestions divided by total word count, times 100, times a
@@ -529,7 +529,7 @@ export default function Editor({
               />
             </div>
           </div>
-          <div className="lex-card-enter flex h-full flex-col justify-between rounded border border-hairline bg-white p-6">
+          <div className="lex-card-enter lex-paper-surface flex h-full flex-col justify-between rounded border border-hairline p-6">
             <div className="flex flex-col">
               <div className="mb-2 flex items-center gap-1.5">
                 <span className="font-mono text-xs uppercase leading-none tracking-widest text-muted">
@@ -537,7 +537,7 @@ export default function Editor({
                 </span>
                 <span className="group relative inline-flex">
                   <Info size={13} weight="bold" className="-mt-px text-muted" />
-                  <span className="pointer-events-none absolute left-0 top-5 z-10 w-60 rounded-md border border-hairline bg-white p-3 font-sans text-[11px] leading-relaxed text-muted opacity-0 shadow-sm transition-opacity duration-150 group-hover:opacity-100">
+                  <span className="lex-paper-surface pointer-events-none absolute left-0 top-5 z-10 w-60 rounded-md border border-hairline p-3 font-sans text-[11px] leading-relaxed text-muted opacity-0 shadow-sm transition-opacity duration-150 group-hover:opacity-100">
                     Automatically detects the dominant tone of your text. It scans
                     for tone signals (formal transitions, pronouns, sentence
                     length) and scores alignment from 0 to 100. No server calls,
@@ -694,7 +694,7 @@ const LinkPopover = forwardRef(function LinkPopover(
     <div
       ref={ref}
       style={style}
-      className="lex-pop flex w-72 items-center gap-2 rounded-lg border border-hairline bg-white p-2 shadow-[0_2px_8px_rgba(0,0,0,0.04)]"
+      className="lex-pop lex-paper-surface flex w-72 items-center gap-2 rounded-lg border border-hairline p-2 shadow-[0_2px_8px_rgba(0,0,0,0.04)]"
     >
       <input
         ref={inputRef}
@@ -823,7 +823,7 @@ const MathPopover = forwardRef(function MathPopover({ data, onApply, onClose, on
     <div
       ref={ref}
       style={popoverStyle}
-      className="lex-pop w-80 rounded-lg border border-hairline bg-white p-2 shadow-[0_2px_8px_rgba(0,0,0,0.04)]"
+      className="lex-pop lex-paper-surface w-80 rounded-lg border border-hairline p-2 shadow-[0_2px_8px_rgba(0,0,0,0.04)]"
     >
       <input
         ref={inputRef}

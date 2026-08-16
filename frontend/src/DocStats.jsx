@@ -110,7 +110,7 @@ export default function DocStats({ editor }) {
       {showPopover && (
         <div
           ref={popoverRef}
-          className="lex-pop absolute bottom-10 right-0 z-50 w-56 rounded-lg border border-hairline bg-white p-3 shadow-md"
+          className="lex-pop lex-paper-surface absolute bottom-10 right-0 z-50 w-56 rounded-lg border border-hairline p-3 shadow-md"
         >
           <p className="mb-2 font-mono text-[10px] font-semibold uppercase tracking-wider text-ink">
             Display Stats (Pick 2)

@@ -726,6 +726,10 @@
       background-color: var(--lex-surround-color);
     }
 
+    .lex-paper-surface {
+      background-color: var(--lex-page-color, #ffffff);
+    }
+
     /* C47.4: Typography presets. Screen-only like the textures above, so a
        Serif/Editorial preset never leaks into a Minimalist print export.
        Consumers (C47.4) set --lex-font-* on the editor root; the defaults

@@ -70,11 +70,11 @@ export default function SuggestionCard({
       onClick={handleClick}
       data-match-id={match.id}
       className={
-        "cursor-pointer rounded-xl border bg-white p-6 pb-4 transition-colors duration-200 " +
+        "lex-paper-surface cursor-pointer rounded-xl border p-6 pb-4 transition-colors duration-200 " +
         (exiting ? "lex-card-slide-out" : folding ? "lex-card-fold overflow-hidden" : entered ? "" : "lex-card-enter") +
         " " +
         (active
-          ? "border-ink ring-1 ring-ink/10 bg-canvas"
+          ? "border-ink ring-1 ring-ink/10"
           : "border-hairline hover:border-muted")
       }
       style={{ animationDelay: exiting ? "0ms" : folding ? `${foldDelay}ms` : `${index * 80}ms` }}
