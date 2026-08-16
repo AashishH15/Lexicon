@@ -1,10 +1,8 @@
-"""Persisted AI backend preference.
+"""Save the selected AI backend.
 
-The user's chosen backend (Ollama vs bundled) and, for the bundled path, which
-model tier (2B / 0.8B) is the *active* one. This is the single source of truth
-that drives `inference.get_backend()` and survives restarts — without it, the
-editor would re-probe Ollama on every launch and silently forget the user's
-pick. Stored as a tiny JSON file in the same app-data dir as the models.
+The backend can be Ollama, LM Studio, or the bundled model. The file also
+stores the bundled model tier and the selected server models. The inference
+module reads this file after the application restarts.
 """
 
 import json
@@ -15,9 +13,14 @@ from model_manager import models_dir
 PREFS_PATH = os.path.join(models_dir(), "ai_prefs.json")
 
 # Sentinel meaning "no explicit choice yet — auto-detect (prefer Ollama)."
-DEFAULT_PREFS = {"backend": "auto", "model_key": "2b", "ollama_model": ""}
+DEFAULT_PREFS = {
+    "backend": "auto",
+    "model_key": "2b",
+    "ollama_model": "",
+    "lmstudio_model": "",
+}
 
-_VALID_BACKENDS = ("auto", "ollama", "bundled")
+_VALID_BACKENDS = ("auto", "ollama", "lmstudio", "bundled")
 _VALID_KEYS = ("2b", "0.8b")
 
 
@@ -31,20 +34,36 @@ def load_prefs() -> dict:
     backend = data.get("backend", DEFAULT_PREFS["backend"])
     model_key = data.get("model_key", DEFAULT_PREFS["model_key"])
     ollama_model = data.get("ollama_model", DEFAULT_PREFS["ollama_model"])
+    lmstudio_model = data.get("lmstudio_model", DEFAULT_PREFS["lmstudio_model"])
     if backend not in _VALID_BACKENDS:
         backend = DEFAULT_PREFS["backend"]
     if model_key not in _VALID_KEYS:
         model_key = DEFAULT_PREFS["model_key"]
-    return {"backend": backend, "model_key": model_key, "ollama_model": ollama_model}
+    return {
+        "backend": backend,
+        "model_key": model_key,
+        "ollama_model": ollama_model,
+        "lmstudio_model": lmstudio_model,
+    }
 
 
-def save_prefs(backend: str, model_key: str, ollama_model: str = "") -> dict:
+def save_prefs(
+    backend: str,
+    model_key: str,
+    ollama_model: str = "",
+    lmstudio_model: str = "",
+) -> dict:
     """Persist a choice. Unknown values are coerced to defaults."""
     if backend not in _VALID_BACKENDS:
         backend = DEFAULT_PREFS["backend"]
     if model_key not in _VALID_KEYS:
         model_key = DEFAULT_PREFS["model_key"]
-    prefs = {"backend": backend, "model_key": model_key, "ollama_model": ollama_model}
+    prefs = {
+        "backend": backend,
+        "model_key": model_key,
+        "ollama_model": ollama_model,
+        "lmstudio_model": lmstudio_model,
+    }
     try:
         with open(PREFS_PATH, "w", encoding="utf-8") as fh:
             json.dump(prefs, fh)

@@ -56,6 +56,7 @@ import {
 import {
   checkGrammar,
   getAiStatus,
+  setAiPreference,
   ensureBackend,
   openExternalUrl,
   transformText,
@@ -492,7 +493,9 @@ export default function App() {
       const configured =
         s.preference?.backend === "ollama"
           ? s.ollama_available
-          : Boolean(s.models_ready?.[s.preference?.model_key || s.model_key]);
+          : s.preference?.backend === "lmstudio"
+            ? s.lmstudio_available
+            : Boolean(s.models_ready?.[s.preference?.model_key || s.model_key]);
       setAiConfigured(configured);
     } catch {
       setAiConfigured(false);
@@ -2604,6 +2607,14 @@ export default function App() {
             betaOptIn={betaOptIn}
             onBetaOptInChange={handleBetaOptInChange}
             onConfigured={refreshAiConfigured}
+            onPreferenceChange={(pref) =>
+              setAiPreference(
+                pref.backend,
+                pref.model_key,
+                pref.ollama_model || "",
+                pref.lmstudio_model || ""
+              ).catch(() => {})
+            }
             onClose={() => {
               setAiSetupOpen(false);
               refreshAiConfigured();

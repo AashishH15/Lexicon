@@ -16,6 +16,7 @@ const MODEL_TIERS = [
 ];
 
 const OLLAMA_URL = "http://localhost:11434";
+const LM_STUDIO_URL = "http://localhost:1234";
 const _EMBED_ONLY = ["nomic-embed-text", "mxbai-embed-large", "all-minilm"];
 
 async function probeOllamaDirect() {
@@ -41,7 +42,12 @@ function adviseModelKey() {
 }
 
 function describeActive(status) {
-  const pref = status.preference || { backend: "auto", model_key: "2b", ollama_model: "" };
+  const pref = status.preference || {
+    backend: "auto",
+    model_key: "2b",
+    ollama_model: "",
+    lmstudio_model: "",
+  };
   if (pref.backend === "ollama") {
     const modelLabel = pref.ollama_model || "auto-detected";
     return {
@@ -51,19 +57,40 @@ function describeActive(status) {
         : "Using your Ollama server (not detected — will fall back)",
     };
   }
+  if (pref.backend === "lmstudio") {
+    const modelLabel = pref.lmstudio_model || "auto-detected";
+    return {
+      tone: "lmstudio",
+      text: status.lmstudio_available
+        ? `Using LM Studio · ${modelLabel}`
+        : "Using your LM Studio server (not detected — will fall back)",
+    };
+  }
   if (pref.backend === "bundled") {
     const label = MODEL_TIERS.find((t) => t.key === pref.model_key)?.label;
     if (label && status.models_ready?.[pref.model_key]) {
       return { tone: "bundled", text: `Using local model · ${label}` };
     }
-    return { tone: "none", text: "Not configured — download a model or connect Ollama" };
+    return {
+      tone: "none",
+      text: "Not configured — download a model or connect a local server",
+    };
+  }
+  if (status.active_backend === "ollama") {
+    return { tone: "ollama", text: "Using Ollama · auto-detected model" };
+  }
+  if (status.active_backend === "lmstudio") {
+    return { tone: "lmstudio", text: "Using LM Studio · auto-detected model" };
   }
   const autoKey = status.model_key;
   const autoLabel = MODEL_TIERS.find((t) => t.key === autoKey)?.label;
   if (autoLabel && status.models_ready?.[autoKey]) {
     return { tone: "bundled", text: `Using local model · ${autoLabel}` };
   }
-  return { tone: "none", text: "Not configured — download a model or connect Ollama" };
+  return {
+    tone: "none",
+    text: "Not configured — download a model or connect a local server",
+  };
 }
 
 function ActiveStatus({ status }) {
@@ -71,9 +98,11 @@ function ActiveStatus({ status }) {
   const dot =
     tone === "ollama"
       ? "bg-pale-blue-text"
-      : tone === "bundled"
-        ? "bg-pale-green-text"
-        : "bg-muted";
+      : tone === "lmstudio"
+        ? "bg-pale-yellow-text"
+        : tone === "bundled"
+          ? "bg-pale-green-text"
+          : "bg-muted";
   return (
     <div className="mt-4 flex items-center gap-2 rounded-lg border border-hairline bg-canvas px-3 py-2">
       <span className={`h-2 w-2 shrink-0 rounded-full ${dot}`} />
@@ -83,15 +112,15 @@ function ActiveStatus({ status }) {
 }
 
 /**
- * Shared AI-model management surface used by both the first-run onboarding
- * modal and the Settings "AI Model" section. Owns all download/delete/cancel
- * state and the Ollama toggle, and persists the user's choice via
- * onPreferenceChange (so it survives restart and drives get_backend()).
+ * Manage AI models in onboarding and Settings.
+ *
+ * This component manages model downloads, deletes, cancellations, and local
+ * server choices. It saves each choice through onPreferenceChange.
  *
  * Props:
- *  - mode: "onboarding" | "settings"
- *  - onPreferenceChange(pref): called when a choice is committed
- *  - renderFooter(api): returns the action buttons (parent-owned chrome)
+ *  - mode: "onboarding" or "settings"
+ *  - onPreferenceChange(pref): called after a choice is saved
+ *  - renderFooter(api): returns the action buttons
  */
 export default function ModelManager({
   mode = "onboarding",
@@ -101,10 +130,17 @@ export default function ModelManager({
 }) {
   const [status, setStatus] = useState({
     ollama_available: false,
+    lmstudio_available: false,
+    lmstudio_models: [],
     models_ready: {},
     model_key: "2b",
     active_backend: "bundled",
-    preference: { backend: "auto", model_key: "2b" },
+    preference: {
+      backend: "auto",
+      model_key: "2b",
+      ollama_model: "",
+      lmstudio_model: "",
+    },
   });
   const [probeDone, setProbeDone] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(
@@ -114,6 +150,9 @@ export default function ModelManager({
   const [ollamaModels, setOllamaModels] = useState([]);
   const [ollamaProbing, setOllamaProbing] = useState(true);
   const [selectedOllamaModel, setSelectedOllamaModel] = useState("");
+  const [lmStudioModels, setLmStudioModels] = useState([]);
+  const [lmStudioProbing, setLmStudioProbing] = useState(true);
+  const [selectedLmStudioModel, setSelectedLmStudioModel] = useState("");
   const [modelKey, setModelKey] = useState(adviseModelKey());
   const [phase, setPhase] = useState("choose"); // choose | downloading | done | error
   const [progress, setProgress] = useState(null);
@@ -132,21 +171,38 @@ export default function ModelManager({
           setOllamaModels(s.ollama_models);
           if (!selectedOllamaModel) setSelectedOllamaModel(s.ollama_models[0]);
         }
+        if (s.lmstudio_models && s.lmstudio_models.length > 0) {
+          setLmStudioModels(s.lmstudio_models);
+          if (!selectedLmStudioModel) setSelectedLmStudioModel(s.lmstudio_models[0]);
+        }
         if (!userPickedRef.current && s.model_key) setModelKey(s.model_key);
         if (s.preference?.ollama_model) setSelectedOllamaModel(s.preference.ollama_model);
+        if (s.preference?.lmstudio_model) {
+          setSelectedLmStudioModel(s.preference.lmstudio_model);
+        }
       })
       .catch(() => {
         if (!cancelled)
           setStatus({
             ollama_available: false,
+            lmstudio_available: false,
+            lmstudio_models: [],
             models_ready: {},
             model_key: "2b",
             active_backend: "bundled",
-            preference: { backend: "auto", model_key: "2b" },
+            preference: {
+              backend: "auto",
+              model_key: "2b",
+              ollama_model: "",
+              lmstudio_model: "",
+            },
           });
       })
       .finally(() => {
-        if (!cancelled) setProbeDone(true);
+        if (!cancelled) {
+          setProbeDone(true);
+          setLmStudioProbing(false);
+        }
       });
 
     probeOllamaDirect().then((result) => {
@@ -203,12 +259,16 @@ export default function ModelManager({
     try {
       const s = await getAiStatus();
       setStatus(s);
+      if (s.ollama_models) setOllamaModels(s.ollama_models);
+      if (s.lmstudio_models) setLmStudioModels(s.lmstudio_models);
       // Let the parent know a usable backend now exists (e.g. App can
       // un-grey the AI tools immediately, without waiting for modal close).
       const ready =
         s.preference?.backend === "ollama"
           ? s.ollama_available
-          : Boolean(s.models_ready?.[s.preference?.model_key || s.model_key]);
+          : s.preference?.backend === "lmstudio"
+            ? s.lmstudio_available
+            : Boolean(s.models_ready?.[s.preference?.model_key || s.model_key]);
       if (ready && onConfigured) onConfigured();
     } catch {
       /* best-effort */
@@ -287,16 +347,73 @@ export default function ModelManager({
       // click immediately, before the backend round-trip completes.
       setStatus((s) => ({
         ...s,
-        preference: { ...s.preference, backend: "ollama", ollama_model: selectedOllamaModel },
+        preference: {
+          ...s.preference,
+          backend: "ollama",
+          ollama_model: selectedOllamaModel,
+        },
       }));
-      if (onPreferenceChange) await onPreferenceChange({ backend: "ollama", model_key: modelKey, ollama_model: selectedOllamaModel });
+      if (onPreferenceChange) {
+        await onPreferenceChange({
+          backend: "ollama",
+          model_key: modelKey,
+          ollama_model: selectedOllamaModel,
+          lmstudio_model: selectedLmStudioModel,
+        });
+      }
     } else {
-      setStatus((s) => ({ ...s, preference: { ...s.preference, backend: "bundled", ollama_model: "" } }));
-      if (onPreferenceChange) await onPreferenceChange({ backend: "bundled", model_key: modelKey, ollama_model: "" });
+      setStatus((s) => ({
+        ...s,
+        preference: { ...s.preference, backend: "bundled", ollama_model: "" },
+      }));
+      if (onPreferenceChange) {
+        await onPreferenceChange({
+          backend: "bundled",
+          model_key: modelKey,
+          ollama_model: "",
+          lmstudio_model: selectedLmStudioModel,
+        });
+      }
+    }
+  }
+
+  async function commitLmStudio(on) {
+    if (on) {
+      setWantBundle(false);
+      setStatus((s) => ({
+        ...s,
+        preference: {
+          ...s.preference,
+          backend: "lmstudio",
+          lmstudio_model: selectedLmStudioModel,
+        },
+      }));
+      if (onPreferenceChange) {
+        await onPreferenceChange({
+          backend: "lmstudio",
+          model_key: modelKey,
+          ollama_model: selectedOllamaModel,
+          lmstudio_model: selectedLmStudioModel,
+        });
+      }
+    } else {
+      setStatus((s) => ({
+        ...s,
+        preference: { ...s.preference, backend: "bundled", lmstudio_model: "" },
+      }));
+      if (onPreferenceChange) {
+        await onPreferenceChange({
+          backend: "bundled",
+          model_key: modelKey,
+          ollama_model: selectedOllamaModel,
+          lmstudio_model: "",
+        });
+      }
     }
   }
 
   const ollamaAvailable = status.ollama_available || ollamaModels.length > 0;
+  const lmStudioAvailable = status.lmstudio_available || lmStudioModels.length > 0;
 
   return (
     <div>
@@ -507,7 +624,7 @@ export default function ModelManager({
         </p>
       )}
 
-      {/* Advanced: bring your own Ollama */}
+      {/* Advanced: connect a local server. */}
       <div className="mt-6 border-t border-hairline pt-4">
         <button
           type="button"
@@ -564,12 +681,75 @@ export default function ModelManager({
                             }));
                             // Persist to backend if Ollama is already active
                             if (status.preference?.backend === "ollama" && onPreferenceChange) {
-                              onPreferenceChange({ backend: "ollama", model_key: modelKey, ollama_model: name });
+                              onPreferenceChange({
+                                backend: "ollama",
+                                model_key: modelKey,
+                                ollama_model: name,
+                                lmstudio_model: selectedLmStudioModel,
+                              });
                             }
                           }}
                           className={`inline-flex items-center rounded-md border px-2 py-0.5 font-mono text-[11px] transition-colors ${
                             selectedOllamaModel === name
                               ? "border-pale-blue-text bg-pale-blue/20 text-ink"
+                              : "border-hairline bg-white text-muted hover:border-muted hover:text-ink"
+                          }`}
+                        >
+                          {name}
+                        </button>
+                      ))}
+                    </span>
+                  )}
+                </span>
+              </label>
+            </div>
+            <div className="mt-2 rounded-lg border border-hairline bg-canvas px-4 py-3">
+              <label className="flex cursor-pointer items-center gap-3">
+                <input
+                  type="checkbox"
+                  checked={status.preference?.backend === "lmstudio"}
+                  disabled={!probeDone || !lmStudioAvailable}
+                  onChange={(e) => commitLmStudio(e.target.checked)}
+                  className="h-4 w-4 shrink-0 cursor-pointer accent-pale-yellow-text"
+                />
+                <span>
+                  <span className="font-sans text-sm font-medium text-ink">
+                    Use my LM Studio server
+                  </span>
+                  <span className="mt-0.5 block font-sans text-xs text-muted">
+                    {lmStudioProbing
+                      ? "Checking for LM Studio…"
+                      : lmStudioAvailable
+                        ? "Detected and ready. AI tools will use your loaded LM Studio models."
+                        : "No LM Studio server was detected. Start the local server in LM Studio."}
+                  </span>
+                  {lmStudioAvailable && lmStudioModels.length > 0 && (
+                    <span className="mt-2 flex flex-wrap gap-1.5">
+                      {lmStudioModels.map((name) => (
+                        <button
+                          key={name}
+                          type="button"
+                          onClick={() => {
+                            setSelectedLmStudioModel(name);
+                            setStatus((s) => ({
+                              ...s,
+                              preference: { ...s.preference, lmstudio_model: name },
+                            }));
+                            if (
+                              status.preference?.backend === "lmstudio" &&
+                              onPreferenceChange
+                            ) {
+                              onPreferenceChange({
+                                backend: "lmstudio",
+                                model_key: modelKey,
+                                ollama_model: selectedOllamaModel,
+                                lmstudio_model: name,
+                              });
+                            }
+                          }}
+                          className={`inline-flex items-center rounded-md border px-2 py-0.5 font-mono text-[11px] transition-colors ${
+                            selectedLmStudioModel === name
+                              ? "border-pale-yellow-text bg-pale-yellow/40 text-ink"
                               : "border-hairline bg-white text-muted hover:border-muted hover:text-ink"
                           }`}
                         >

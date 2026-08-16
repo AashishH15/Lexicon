@@ -73,7 +73,9 @@ The macOS build is currently pre-release (unsigned). If macOS Gatekeeper blocks 
    separate LanguageTool engine and does not require the AI model.
 
 The editor and proofreading tools work without downloading an AI model. The AI
-tools can also use an existing local Ollama server when one is available.
+tools can also use an existing local Ollama or LM Studio server when one is
+available. LM Studio's local server uses its default `http://localhost:1234`
+endpoint.
 
 ## Updates
 
@@ -112,8 +114,9 @@ With a downloaded bundled model, Lexicon provides:
 - Summary, Key Points, List, and Table transforms
 - Whole-document transforms with chunk progress for longer drafts
 
-AI transforms run locally through the bundled llama.cpp backend. Ollama is an
-optional alternative for users who already run it on their machine.
+AI transforms run locally through the bundled llama.cpp backend. Ollama and LM
+Studio are optional alternatives for users who already run them on their
+machine.
 
 ### Import and export
 

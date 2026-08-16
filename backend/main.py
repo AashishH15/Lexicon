@@ -27,6 +27,7 @@ from ai_prefs import load_prefs, save_prefs
 from inference import (
     BundledBackend,
     InferenceUnavailable,
+    LMStudioBackend,
     OllamaBackend,
     get_backend,
     unload_active_backend,
@@ -125,7 +126,7 @@ class TransformRequest(BaseModel):
     prompt: str
     text: str
     model_key: str | None = None
-    backend: str | None = None  # "bundled" | "ollama" | None (auto)
+    backend: str | None = None  # Backend name, or None for automatic selection.
 
 
 @app.get("/health")
@@ -200,15 +201,20 @@ def ai_status():
     preference. Drives the first-run setup flow and the settings
     surface."""
     prefs = load_prefs()
-    # Always probe Ollama — even if the user chose "bundled" — so the frontend
-    # can detect a running server and show available models.
+    # Probe both local servers even when the user selected the bundled model.
+    # This lets the UI show available models.
     ollama = OllamaBackend()
     ollama_available = ollama.available()
     ollama_models = ollama._chat_models() if ollama_available else []
+    lmstudio = LMStudioBackend()
+    lmstudio_available = lmstudio.available()
+    lmstudio_models = lmstudio._models() if lmstudio_available else []
     active = get_backend()
     return {
         "ollama_available": ollama_available,
         "ollama_models": ollama_models,
+        "lmstudio_available": lmstudio_available,
+        "lmstudio_models": lmstudio_models,
         "models_ready": models_ready(),
         "model_key": prefs["model_key"],
         "preference": prefs,
@@ -223,16 +229,22 @@ def ai_preference_get():
 
 
 class AiPreferenceRequest(BaseModel):
-    backend: str  # "auto" | "ollama" | "bundled"
-    model_key: str = "2b"  # "2b" | "0.8b"
-    ollama_model: str = ""  # selected Ollama model name, e.g. "granite4.1:3b"
+    backend: str  # Backend name: auto, ollama, lmstudio, or bundled.
+    model_key: str = "2b"  # Bundled model tier: 2b or 0.8b.
+    ollama_model: str = ""  # Selected Ollama model name.
+    lmstudio_model: str = ""  # Selected LM Studio model name.
 
 
 @app.post("/ai/preference")
 def ai_preference_set(request: AiPreferenceRequest):
     """Persist the user's backend choice so it survives restarts and drives
     get_backend(). The editor's AI tools read this via get_backend()."""
-    prefs = save_prefs(request.backend, request.model_key, request.ollama_model)
+    prefs = save_prefs(
+        request.backend,
+        request.model_key,
+        request.ollama_model,
+        request.lmstudio_model,
+    )
     # Force the cached backend to re-resolve against the new preference.
     get_backend(force_refresh=True)
     return prefs
@@ -280,14 +292,17 @@ def model_download(request: ModelDownloadRequest):
 
 @app.post("/transform")
 def transform(request: TransformRequest):
-    """Generic transform endpoint: prompt in, text out, routed through
-    whichever backend is active (Ollama preferred, else bundled). The request
-    may force a backend or pick a bundled model size."""
+    """Run a text transform with the active backend.
+
+    The request can select a backend or a bundled model tier.
+    """
     try:
         if request.backend == "bundled":
             backend = BundledBackend(model_key=request.model_key or "2b")
         elif request.backend == "ollama":
             backend = OllamaBackend()
+        elif request.backend == "lmstudio":
+            backend = LMStudioBackend()
         else:
             backend = get_backend()
         result = backend.complete(request.prompt, request.text)

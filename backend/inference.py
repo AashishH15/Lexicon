@@ -1,20 +1,14 @@
-"""Local inference abstraction layer.
+"""Provide one interface for local AI backends.
 
-A single interface the rest of the app calls, with two implementations behind
-it:
+The app can use:
 
-- OllamaBackend: talks to a user's already-running Ollama server,
-  auto-detected on startup and preferred when present.
-- BundledBackend: runs one packaged quantized GGUF via llama-cpp-python when
-  no Ollama server is found. The model is downloaded by the pipeline and
-  loaded lazily on first use. llama-cpp-python is intentionally NOT a
-  hard dependency yet, so it is imported lazily and guarded here.
+- Ollama with an existing local Ollama server.
+- LM Studio with its local OpenAI-compatible server.
+- A bundled GGUF model loaded by llama-cpp-python.
 
-Mirrors the "optional remote, local by default" shape of the LanguageTool
-client (languagetool.py): env-overridable server URL, lazy resolution, and a
-failure that never crashes the app.
-
-No HTTP endpoint is exposed here; that arrives with /transform.
+The bundled engine is optional. The code imports it only when the app needs it.
+Backend selection is also delayed until the app needs a backend.
+The HTTP endpoint is defined in ``main.py``.
 """
 
 import os
@@ -27,7 +21,8 @@ from ai_prefs import load_prefs
 from model_manager import model_path
 
 OLLAMA_SERVER = os.environ.get("OLLAMA_SERVER", "http://localhost:11434")
-# Optional hard override of auto-detection: "ollama" or "bundled".
+LM_STUDIO_SERVER = os.environ.get("LM_STUDIO_SERVER", "http://localhost:1234")
+# Override automatic selection with "ollama", "lmstudio", or "bundled".
 FORCE_BACKEND = os.environ.get("LEXICON_INFERENCE", "").strip().lower()
 
 # Probe timeout: a warm local Ollama answers near-instantly, but a cold server
@@ -159,6 +154,86 @@ class OllamaBackend(InferenceBackend):
         return strip_think(response.json().get("response", ""))
 
 
+class LMStudioBackend(InferenceBackend):
+    """Use the LM Studio local server."""
+
+    name = "lmstudio"
+
+    def __init__(self, base_url: str = LM_STUDIO_SERVER, model: str | None = None):
+        base_url = base_url.rstrip("/")
+        self.base_url = base_url[:-3] if base_url.endswith("/v1") else base_url
+        self.api_url = f"{self.base_url}/v1"
+        self._model = model
+
+    def _models(self) -> list[str]:
+        try:
+            response = requests.get(
+                f"{self.api_url}/models",
+                timeout=PROBE_TIMEOUT,
+            )
+            response.raise_for_status()
+            data = response.json()
+        except (requests.RequestException, ValueError):
+            return []
+        if not isinstance(data, dict):
+            return []
+        return [
+            item["id"]
+            for item in data.get("data", [])
+            if isinstance(item, dict) and isinstance(item.get("id"), str)
+        ]
+
+    def available(self) -> bool:
+        """Return true if LM Studio has a loaded model."""
+        return bool(self._models())
+
+    def _resolve_model(self) -> str:
+        if self._model:
+            return self._model
+        models = self._models()
+        if not models:
+            raise InferenceUnavailable(
+                f"LM Studio at {self.base_url} has no loaded model."
+            )
+        return models[0]
+
+    def complete(self, prompt: str, text: str, **opts) -> str:
+        model = opts.pop("model", None) or self._resolve_model()
+        payload = {
+            "model": model,
+            "messages": [
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": f"{prompt}\n\n{text}"},
+            ],
+            "stream": False,
+            "max_tokens": int(opts.pop("max_tokens", TRANSFORM_MAX_TOKENS)),
+            "temperature": 0.3,
+            **opts,
+        }
+        try:
+            response = requests.post(
+                f"{self.api_url}/chat/completions",
+                json=payload,
+                timeout=GENERATE_TIMEOUT,
+            )
+            response.raise_for_status()
+            data = response.json()
+            content = data["choices"][0]["message"]["content"]
+        except requests.RequestException as exc:
+            raise InferenceUnavailable(
+                f"LM Studio request to {self.base_url} failed: {exc}"
+            ) from exc
+        except (KeyError, IndexError, TypeError, ValueError) as exc:
+            raise InferenceUnavailable(
+                f"LM Studio at {self.base_url} returned an invalid response."
+            ) from exc
+        if not isinstance(content, str):
+            raise InferenceUnavailable(
+                f"LM Studio at {self.base_url} returned non-text content."
+            )
+        return strip_think(content)
+
+
 class BundledBackend(InferenceBackend):
     """Bundled llama.cpp model loaded from the downloaded GGUF.
 
@@ -279,39 +354,57 @@ _backend = None
 
 
 def get_backend(force_refresh: bool = False) -> InferenceBackend:
-    """Pick a backend once and cache it.
+    """Select and cache an inference backend.
 
-    Resolution order:
-      1. `LEXICON_INFERENCE` env override (highest priority, dev/CI use).
-      2. The user's persisted preference (ai_prefs.json): "ollama" or
-         "bundled" (with a model_key). "auto" means prefer Ollama if present.
-      3. Fallback: Ollama when reachable, else the bundled backend.
-
-    When the preferred backend isn't actually usable (Ollama down, or the
-    chosen bundled tier isn't downloaded), we fall back gracefully so a saved
-    preference can never wedge the app into a broken state.
+    The environment variable has priority over the saved preference.
+    Automatic selection tries Ollama, LM Studio, and then the bundled model.
+    If the selected backend is not available, the function uses a fallback.
     """
     global _backend
     if _backend is not None and not force_refresh:
         return _backend
 
-    if FORCE_BACKEND in ("ollama", "bundled"):
-        _backend = OllamaBackend() if FORCE_BACKEND == "ollama" else BundledBackend()
+    if FORCE_BACKEND in ("ollama", "lmstudio", "bundled"):
+        if FORCE_BACKEND == "ollama":
+            _backend = OllamaBackend()
+        elif FORCE_BACKEND == "lmstudio":
+            _backend = LMStudioBackend()
+        else:
+            _backend = BundledBackend()
         return _backend
 
     prefs = load_prefs()
     choice = prefs["backend"]
     key = prefs["model_key"]
     ollama_model = prefs.get("ollama_model", "")
+    lmstudio_model = prefs.get("lmstudio_model", "")
 
     if choice == "ollama":
         ollama = OllamaBackend(model=ollama_model or None)
         if ollama.available():
             _backend = ollama
             return _backend
-        # Ollama preferred but unavailable — fall back to bundled if we can.
+        # If Ollama is not available, try the bundled model and then LM Studio.
         bundled = BundledBackend(model_key=key)
-        _backend = bundled if bundled.available() else ollama
+        if bundled.available():
+            _backend = bundled
+            return _backend
+        lmstudio = LMStudioBackend(model=lmstudio_model or None)
+        _backend = lmstudio if lmstudio.available() else ollama
+        return _backend
+
+    if choice == "lmstudio":
+        lmstudio = LMStudioBackend(model=lmstudio_model or None)
+        if lmstudio.available():
+            _backend = lmstudio
+            return _backend
+        # If LM Studio is not available, try the bundled model and then Ollama.
+        bundled = BundledBackend(model_key=key)
+        if bundled.available():
+            _backend = bundled
+            return _backend
+        ollama = OllamaBackend(model=ollama_model or None)
+        _backend = ollama if ollama.available() else lmstudio
         return _backend
 
     if choice == "bundled":
@@ -326,12 +419,23 @@ def get_backend(force_refresh: bool = False) -> InferenceBackend:
             _backend = alt
             return _backend
         ollama = OllamaBackend()
-        _backend = ollama if ollama.available() else bundled
+        if ollama.available():
+            _backend = ollama
+            return _backend
+        lmstudio = LMStudioBackend(model=lmstudio_model or None)
+        _backend = lmstudio if lmstudio.available() else bundled
         return _backend
 
-    # "auto": prefer Ollama when reachable, else bundled.
+    # In auto mode, try Ollama, then LM Studio, then the bundled model.
     ollama = OllamaBackend()
-    _backend = ollama if ollama.available() else BundledBackend(model_key=key)
+    if ollama.available():
+        _backend = ollama
+        return _backend
+    lmstudio = LMStudioBackend(model=lmstudio_model or None)
+    if lmstudio.available():
+        _backend = lmstudio
+        return _backend
+    _backend = BundledBackend(model_key=key)
     return _backend
 
 

@@ -35,6 +35,7 @@ import { LANGUAGES } from "./languages.js";
 export default function OnboardingModal({
   onClose,
   onConfigured,
+  onPreferenceChange,
   onFinish,
   typographyPreset: activePresetProp,
   onTypographyPresetChange,
@@ -459,6 +460,7 @@ export default function OnboardingModal({
                 <ModelManager
                   mode="onboarding"
                   onConfigured={onConfigured}
+                  onPreferenceChange={onPreferenceChange}
                   renderFooter={renderStep3Footer}
                 />
               </div>
@@ -565,6 +567,7 @@ export default function OnboardingModal({
 
   function renderStep3Footer({ phase, wantBundle, modelKey, status, handleDownload }) {
     const ollamaActive = status?.preference?.backend === "ollama";
+    const lmStudioActive = status?.preference?.backend === "lmstudio";
     return (
       <div className="mt-4 flex items-center justify-between border-t border-hairline pt-4">
         <button
@@ -584,7 +587,10 @@ export default function OnboardingModal({
             Skip AI Setup
           </button>
 
-          {phase === "done" || (wantBundle && status?.models_ready?.[modelKey]) || ollamaActive ? (
+          {phase === "done" ||
+          (wantBundle && status?.models_ready?.[modelKey]) ||
+          ollamaActive ||
+          lmStudioActive ? (
             <button
               type="button"
               onClick={() => setStep(5)}

@@ -1782,8 +1782,8 @@ export default function Settings({
                   </p>
                   <p className="mt-1 font-sans text-xs text-muted">
                     Runs entirely on your device. Download a local AI model or
-                    use your own Ollama server. Your selection is saved and used
-                    until changed.
+                    use your own Ollama or LM Studio server. Your selection is
+                    saved and used until changed.
                   </p>
                   <div className="mt-3">
                     <ModelManager
@@ -1792,7 +1792,8 @@ export default function Settings({
                         setAiPreference(
                           pref.backend,
                           pref.model_key,
-                          pref.ollama_model || ""
+                          pref.ollama_model || "",
+                          pref.lmstudio_model || ""
                         ).catch(() => { });
                       }}
                       onConfigured={() =>
