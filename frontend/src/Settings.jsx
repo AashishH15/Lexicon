@@ -780,7 +780,7 @@ export default function Settings({
       onClick={onClose}
     >
       <div
-        className="flex h-[646px] max-h-[85vh] w-full max-w-2xl flex-col overflow-hidden rounded-xl border border-hairline bg-white lex-card-enter"
+        className="lex-settings-dialog flex h-[646px] max-h-[85vh] w-full max-w-2xl flex-col overflow-hidden rounded-xl border border-hairline bg-white lex-card-enter"
         onClick={(event) => event.stopPropagation()}
         role="dialog"
         aria-modal="true"

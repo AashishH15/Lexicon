@@ -150,7 +150,7 @@ export default function ImportExportMenu({
   }
 
   const itemClass =
-    "flex w-full items-center gap-2 rounded px-2.5 py-1.5 text-left text-sm text-ink transition-colors hover:bg-hairline/60";
+    "lex-import-export-item flex w-full items-center gap-2 rounded px-2.5 py-1.5 text-left text-sm text-ink transition-colors hover:bg-hairline/60";
 
   const sectionClass =
     "px-2.5 pb-1 pt-2 font-mono text-[10px] font-semibold uppercase tracking-[0.08em] text-muted";
@@ -171,7 +171,7 @@ export default function ImportExportMenu({
         <Export size={16} weight="bold" />
       </button>
       {open && (
-        <div className="absolute right-0 z-30 mt-1 w-56 rounded border border-hairline bg-canvas p-1 shadow-lg">
+        <div className="lex-import-export-menu absolute right-0 z-30 mt-1 w-56 rounded border border-hairline bg-canvas p-1 shadow-lg">
           <button type="button" className={itemClass} onClick={triggerImport}>
             <DownloadSimple size={16} weight="bold" className="text-muted" />
             Import File…

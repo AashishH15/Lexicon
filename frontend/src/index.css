@@ -4,7 +4,10 @@
 
 @layer base {
   body {
-    @apply bg-canvas text-ink font-sans;
+    background-color: #f7f6f3;
+    color: #111111;
+    font-family: "Geist Sans", -apple-system, BlinkMacSystemFont, "Segoe UI",
+      "Helvetica Neue", Arial, sans-serif;
     line-height: 1.6;
   }
 }
@@ -800,6 +803,268 @@
       color: #5f5e5b;
     }
 
+    /* Keep Plain White and Dark Slate unchanged.
+       Use the page and surround colors for the three light paper textures. */
+    .lex-app-shell[data-paper-texture="warm-cream"] .lex-import-export-menu,
+    .lex-app-shell[data-paper-texture="linen"] .lex-import-export-menu,
+    .lex-app-shell[data-paper-texture="newsprint"] .lex-import-export-menu {
+      background-color: var(--lex-page-color);
+      border-color: var(--lex-surround-color);
+    }
+
+    .lex-app-shell[data-paper-texture="warm-cream"] .lex-import-export-item:hover,
+    .lex-app-shell[data-paper-texture="linen"] .lex-import-export-item:hover,
+    .lex-app-shell[data-paper-texture="newsprint"] .lex-import-export-item:hover {
+      background-color: var(--lex-surround-color);
+    }
+
+    /* Keep Plain White and Dark Slate unchanged.
+       Use the selected light texture for the modal surface, controls, cards, and borders. */
+    .lex-app-shell[data-paper-texture="warm-cream"] .lex-settings-dialog,
+    .lex-app-shell[data-paper-texture="linen"] .lex-settings-dialog,
+    .lex-app-shell[data-paper-texture="newsprint"] .lex-settings-dialog {
+      background-color: var(--lex-page-color);
+      border-color: var(--lex-surround-color);
+    }
+
+    .lex-app-shell[data-paper-texture="warm-cream"] .lex-settings-dialog .bg-white,
+    .lex-app-shell[data-paper-texture="linen"] .lex-settings-dialog .bg-white,
+    .lex-app-shell[data-paper-texture="newsprint"] .lex-settings-dialog .bg-white {
+      background-color: var(--lex-page-color);
+    }
+
+    .lex-app-shell[data-paper-texture="warm-cream"] .lex-settings-dialog .bg-canvas,
+    .lex-app-shell[data-paper-texture="linen"] .lex-settings-dialog .bg-canvas,
+    .lex-app-shell[data-paper-texture="newsprint"] .lex-settings-dialog .bg-canvas {
+      background-color: var(--lex-surround-color);
+    }
+
+    .lex-app-shell[data-paper-texture="warm-cream"] .lex-settings-dialog .bg-hairline,
+    .lex-app-shell[data-paper-texture="linen"] .lex-settings-dialog .bg-hairline,
+    .lex-app-shell[data-paper-texture="newsprint"] .lex-settings-dialog .bg-hairline {
+      background-color: var(--lex-surround-color);
+    }
+
+    .lex-app-shell[data-paper-texture="warm-cream"] .lex-settings-dialog .border-hairline,
+    .lex-app-shell[data-paper-texture="linen"] .lex-settings-dialog .border-hairline,
+    .lex-app-shell[data-paper-texture="newsprint"] .lex-settings-dialog .border-hairline {
+      border-color: var(--lex-surround-color);
+    }
+
+    .lex-app-shell[data-paper-texture="warm-cream"] .lex-settings-dialog .hover\:bg-hairline\/40:hover,
+    .lex-app-shell[data-paper-texture="warm-cream"] .lex-settings-dialog .hover\:bg-hairline\/50:hover,
+    .lex-app-shell[data-paper-texture="warm-cream"] .lex-settings-dialog .hover\:bg-hairline\/60:hover,
+    .lex-app-shell[data-paper-texture="linen"] .lex-settings-dialog .hover\:bg-hairline\/40:hover,
+    .lex-app-shell[data-paper-texture="linen"] .lex-settings-dialog .hover\:bg-hairline\/50:hover,
+    .lex-app-shell[data-paper-texture="linen"] .lex-settings-dialog .hover\:bg-hairline\/60:hover,
+    .lex-app-shell[data-paper-texture="newsprint"] .lex-settings-dialog .hover\:bg-hairline\/40:hover,
+    .lex-app-shell[data-paper-texture="newsprint"] .lex-settings-dialog .hover\:bg-hairline\/50:hover,
+    .lex-app-shell[data-paper-texture="newsprint"] .lex-settings-dialog .hover\:bg-hairline\/60:hover {
+      background-color: var(--lex-surround-color);
+    }
+
+    /* These classes style dialogs, popovers, onboarding, history, and provider cards.
+       Use the active paper texture instead of the Plain White colors.
+       Keep the existing surface hierarchy. */
+    .lex-app-shell[data-paper-texture="warm-cream"] .bg-white,
+    .lex-app-shell[data-paper-texture="linen"] .bg-white,
+    .lex-app-shell[data-paper-texture="newsprint"] .bg-white,
+    .lex-app-shell[data-paper-texture="warm-cream"] .bg-white\/90,
+    .lex-app-shell[data-paper-texture="linen"] .bg-white\/90,
+    .lex-app-shell[data-paper-texture="newsprint"] .bg-white\/90 {
+      background-color: var(--lex-page-color);
+    }
+
+    .lex-app-shell[data-paper-texture="warm-cream"] .bg-canvas,
+    .lex-app-shell[data-paper-texture="linen"] .bg-canvas,
+    .lex-app-shell[data-paper-texture="newsprint"] .bg-canvas {
+      background-color: var(--lex-surround-color);
+    }
+
+    /* Use the page color for modal roots.
+       Use the surround color for nested bg-canvas controls. */
+    .lex-app-shell[data-paper-texture="warm-cream"] div[role="dialog"].bg-white,
+    .lex-app-shell[data-paper-texture="linen"] div[role="dialog"].bg-white,
+    .lex-app-shell[data-paper-texture="newsprint"] div[role="dialog"].bg-white,
+    .lex-app-shell[data-paper-texture="warm-cream"] div[role="dialog"].bg-canvas,
+    .lex-app-shell[data-paper-texture="linen"] div[role="dialog"].bg-canvas,
+    .lex-app-shell[data-paper-texture="newsprint"] div[role="dialog"].bg-canvas {
+      background-color: var(--lex-page-color);
+    }
+
+    .lex-app-shell[data-paper-texture="warm-cream"] .bg-hairline,
+    .lex-app-shell[data-paper-texture="linen"] .bg-hairline,
+    .lex-app-shell[data-paper-texture="newsprint"] .bg-hairline,
+    .lex-app-shell[data-paper-texture="warm-cream"] .bg-hairline\/10,
+    .lex-app-shell[data-paper-texture="linen"] .bg-hairline\/10,
+    .lex-app-shell[data-paper-texture="newsprint"] .bg-hairline\/10,
+    .lex-app-shell[data-paper-texture="warm-cream"] .bg-hairline\/20,
+    .lex-app-shell[data-paper-texture="linen"] .bg-hairline\/20,
+    .lex-app-shell[data-paper-texture="newsprint"] .bg-hairline\/20,
+    .lex-app-shell[data-paper-texture="warm-cream"] .bg-hairline\/30,
+    .lex-app-shell[data-paper-texture="linen"] .bg-hairline\/30,
+    .lex-app-shell[data-paper-texture="newsprint"] .bg-hairline\/30,
+    .lex-app-shell[data-paper-texture="warm-cream"] .bg-hairline\/40,
+    .lex-app-shell[data-paper-texture="linen"] .bg-hairline\/40,
+    .lex-app-shell[data-paper-texture="newsprint"] .bg-hairline\/40,
+    .lex-app-shell[data-paper-texture="warm-cream"] .bg-hairline\/50,
+    .lex-app-shell[data-paper-texture="linen"] .bg-hairline\/50,
+    .lex-app-shell[data-paper-texture="newsprint"] .bg-hairline\/50,
+    .lex-app-shell[data-paper-texture="warm-cream"] .bg-hairline\/60,
+    .lex-app-shell[data-paper-texture="linen"] .bg-hairline\/60,
+    .lex-app-shell[data-paper-texture="newsprint"] .bg-hairline\/60,
+    .lex-app-shell[data-paper-texture="warm-cream"] .bg-hairline\/70,
+    .lex-app-shell[data-paper-texture="linen"] .bg-hairline\/70,
+    .lex-app-shell[data-paper-texture="newsprint"] .bg-hairline\/70,
+    .lex-app-shell[data-paper-texture="warm-cream"] .bg-hairline\/80,
+    .lex-app-shell[data-paper-texture="linen"] .bg-hairline\/80,
+    .lex-app-shell[data-paper-texture="newsprint"] .bg-hairline\/80 {
+      background-color: var(--lex-surround-color);
+    }
+
+    .lex-app-shell[data-paper-texture="warm-cream"] .border-hairline,
+    .lex-app-shell[data-paper-texture="linen"] .border-hairline,
+    .lex-app-shell[data-paper-texture="newsprint"] .border-hairline,
+    .lex-app-shell[data-paper-texture="warm-cream"] .border-hairline\/50,
+    .lex-app-shell[data-paper-texture="linen"] .border-hairline\/50,
+    .lex-app-shell[data-paper-texture="newsprint"] .border-hairline\/50,
+    .lex-app-shell[data-paper-texture="warm-cream"] .border-hairline\/60,
+    .lex-app-shell[data-paper-texture="linen"] .border-hairline\/60,
+    .lex-app-shell[data-paper-texture="newsprint"] .border-hairline\/60,
+    .lex-app-shell[data-paper-texture="warm-cream"] .border-hairline\/80,
+    .lex-app-shell[data-paper-texture="linen"] .border-hairline\/80,
+    .lex-app-shell[data-paper-texture="newsprint"] .border-hairline\/80 {
+      border-color: var(--lex-surround-color);
+    }
+
+    .lex-app-shell[data-paper-texture="warm-cream"] .hover\:bg-hairline:hover,
+    .lex-app-shell[data-paper-texture="linen"] .hover\:bg-hairline:hover,
+    .lex-app-shell[data-paper-texture="newsprint"] .hover\:bg-hairline:hover,
+    .lex-app-shell[data-paper-texture="warm-cream"] .hover\:bg-hairline\/40:hover,
+    .lex-app-shell[data-paper-texture="linen"] .hover\:bg-hairline\/40:hover,
+    .lex-app-shell[data-paper-texture="newsprint"] .hover\:bg-hairline\/40:hover,
+    .lex-app-shell[data-paper-texture="warm-cream"] .hover\:bg-hairline\/50:hover,
+    .lex-app-shell[data-paper-texture="linen"] .hover\:bg-hairline\/50:hover,
+    .lex-app-shell[data-paper-texture="newsprint"] .hover\:bg-hairline\/50:hover,
+    .lex-app-shell[data-paper-texture="warm-cream"] .hover\:bg-hairline\/60:hover,
+    .lex-app-shell[data-paper-texture="linen"] .hover\:bg-hairline\/60:hover,
+    .lex-app-shell[data-paper-texture="newsprint"] .hover\:bg-hairline\/60:hover {
+      background-color: var(--lex-surround-color);
+    }
+
+    .lex-app-shell[data-paper-texture="warm-cream"] .hover\:bg-canvas:hover,
+    .lex-app-shell[data-paper-texture="linen"] .hover\:bg-canvas:hover,
+    .lex-app-shell[data-paper-texture="newsprint"] .hover\:bg-canvas:hover {
+      background-color: var(--lex-surround-color);
+    }
+
+    /* Use paper colors for editor controls and loading placeholders.
+       Keep error, warning, and accent colors unchanged. */
+    .lex-app-shell[data-paper-texture="warm-cream"] .ProseMirror code:not(pre code),
+    .lex-app-shell[data-paper-texture="linen"] .ProseMirror code:not(pre code),
+    .lex-app-shell[data-paper-texture="newsprint"] .ProseMirror code:not(pre code),
+    .lex-app-shell[data-paper-texture="warm-cream"] .ProseMirror pre,
+    .lex-app-shell[data-paper-texture="linen"] .ProseMirror pre,
+    .lex-app-shell[data-paper-texture="newsprint"] .ProseMirror pre,
+    .lex-app-shell[data-paper-texture="warm-cream"] .ProseMirror .tiptap-mathematics-render,
+    .lex-app-shell[data-paper-texture="linen"] .ProseMirror .tiptap-mathematics-render,
+    .lex-app-shell[data-paper-texture="newsprint"] .ProseMirror .tiptap-mathematics-render,
+    .lex-app-shell[data-paper-texture="warm-cream"] .ProseMirror th,
+    .lex-app-shell[data-paper-texture="linen"] .ProseMirror th,
+    .lex-app-shell[data-paper-texture="newsprint"] .ProseMirror th,
+    .lex-app-shell[data-paper-texture="warm-cream"] .ProseMirror ul[data-type="taskList"] input[type="checkbox"],
+    .lex-app-shell[data-paper-texture="linen"] .ProseMirror ul[data-type="taskList"] input[type="checkbox"],
+    .lex-app-shell[data-paper-texture="newsprint"] .ProseMirror ul[data-type="taskList"] input[type="checkbox"],
+    .lex-app-shell[data-paper-texture="warm-cream"] .lex-kbd,
+    .lex-app-shell[data-paper-texture="linen"] .lex-kbd,
+    .lex-app-shell[data-paper-texture="newsprint"] .lex-kbd {
+      background-color: var(--lex-surround-color);
+    }
+
+    .lex-app-shell[data-paper-texture="warm-cream"] .ProseMirror code:not(pre code),
+    .lex-app-shell[data-paper-texture="linen"] .ProseMirror code:not(pre code),
+    .lex-app-shell[data-paper-texture="newsprint"] .ProseMirror code:not(pre code),
+    .lex-app-shell[data-paper-texture="warm-cream"] .ProseMirror pre,
+    .lex-app-shell[data-paper-texture="linen"] .ProseMirror pre,
+    .lex-app-shell[data-paper-texture="newsprint"] .ProseMirror pre,
+    .lex-app-shell[data-paper-texture="warm-cream"] .ProseMirror .tiptap-mathematics-render,
+    .lex-app-shell[data-paper-texture="linen"] .ProseMirror .tiptap-mathematics-render,
+    .lex-app-shell[data-paper-texture="newsprint"] .ProseMirror .tiptap-mathematics-render,
+    .lex-app-shell[data-paper-texture="warm-cream"] .ProseMirror img,
+    .lex-app-shell[data-paper-texture="linen"] .ProseMirror img,
+    .lex-app-shell[data-paper-texture="newsprint"] .ProseMirror img,
+    .lex-app-shell[data-paper-texture="warm-cream"] .ProseMirror td,
+    .lex-app-shell[data-paper-texture="linen"] .ProseMirror td,
+    .lex-app-shell[data-paper-texture="newsprint"] .ProseMirror td,
+    .lex-app-shell[data-paper-texture="warm-cream"] .ProseMirror th,
+    .lex-app-shell[data-paper-texture="linen"] .ProseMirror th,
+    .lex-app-shell[data-paper-texture="newsprint"] .ProseMirror th,
+    .lex-app-shell[data-paper-texture="warm-cream"] .ProseMirror ul[data-type="taskList"] input[type="checkbox"],
+    .lex-app-shell[data-paper-texture="linen"] .ProseMirror ul[data-type="taskList"] input[type="checkbox"],
+    .lex-app-shell[data-paper-texture="newsprint"] .ProseMirror ul[data-type="taskList"] input[type="checkbox"],
+    .lex-app-shell[data-paper-texture="warm-cream"] .lex-kbd,
+    .lex-app-shell[data-paper-texture="linen"] .lex-kbd,
+    .lex-app-shell[data-paper-texture="newsprint"] .lex-kbd {
+      border-color: var(--lex-surround-color);
+    }
+
+    .lex-app-shell[data-paper-texture="warm-cream"] .ProseMirror pre code,
+    .lex-app-shell[data-paper-texture="linen"] .ProseMirror pre code,
+    .lex-app-shell[data-paper-texture="newsprint"] .ProseMirror pre code {
+      background: none;
+      border: none;
+    }
+
+    .lex-app-shell[data-paper-texture="warm-cream"] .lex-drag-handle:hover,
+    .lex-app-shell[data-paper-texture="linen"] .lex-drag-handle:hover,
+    .lex-app-shell[data-paper-texture="newsprint"] .lex-drag-handle:hover {
+      background: var(--lex-surround-color);
+    }
+
+    .lex-app-shell[data-paper-texture="warm-cream"] .lex-shimmer,
+    .lex-app-shell[data-paper-texture="linen"] .lex-shimmer,
+    .lex-app-shell[data-paper-texture="newsprint"] .lex-shimmer {
+      background: linear-gradient(
+        90deg,
+        var(--lex-page-color) 0%,
+        var(--lex-surround-color) 20%,
+        var(--lex-page-color) 40%,
+        var(--lex-page-color) 100%
+      );
+      /* Restore the size that the animation needs. */
+      background-size: 200% 100%;
+    }
+
+    /* Tiptap mounts slash-command suggestions on <body>.
+       App.jsx sets the active texture on <body>.
+       These rules apply the texture to the popup. */
+    body[data-paper-texture="warm-cream"] .lex-pop,
+    body[data-paper-texture="linen"] .lex-pop,
+    body[data-paper-texture="newsprint"] .lex-pop {
+      background-color: var(--lex-page-color);
+      border-color: var(--lex-surround-color);
+    }
+
+    body[data-paper-texture="warm-cream"] .lex-pop .hover\:bg-hairline\/60:hover,
+    body[data-paper-texture="linen"] .lex-pop .hover\:bg-hairline\/60:hover,
+    body[data-paper-texture="newsprint"] .lex-pop .hover\:bg-hairline\/60:hover {
+      background-color: var(--lex-surround-color);
+    }
+
+    body[data-paper-texture="warm-cream"] .lex-kbd,
+    body[data-paper-texture="linen"] .lex-kbd,
+    body[data-paper-texture="newsprint"] .lex-kbd {
+      background-color: var(--lex-surround-color);
+      border-color: var(--lex-surround-color);
+    }
+
+    .lex-app-shell[data-paper-texture="warm-cream"] button[role="switch"]:not([aria-checked="true"]),
+    .lex-app-shell[data-paper-texture="linen"] button[role="switch"]:not([aria-checked="true"]),
+    .lex-app-shell[data-paper-texture="newsprint"] button[role="switch"]:not([aria-checked="true"]) {
+      background-color: var(--lex-surround-color);
+      border-color: var(--lex-surround-color);
+    }
+
     /* Dark Slate only: light ink on the dark page, dark code chips, and
        solid elevated surfaces on the dark surround. Screen-scoped so print
        stays light-on-white. Does not rewrite the design tokens globally. */
@@ -835,6 +1100,14 @@
       background-color: #3a3a3a;
     }
 
+    .lex-app-shell[data-paper-texture="dark-slate"] .bg-hairline\/10 {
+      background-color: rgb(58 58 58 / 0.1);
+    }
+
+    .lex-app-shell[data-paper-texture="dark-slate"] .bg-hairline\/20 {
+      background-color: rgb(58 58 58 / 0.2);
+    }
+
     .lex-app-shell[data-paper-texture="dark-slate"] .bg-hairline\/40 {
       background-color: rgb(58 58 58 / 0.4);
     }
@@ -843,8 +1116,64 @@
       background-color: rgb(58 58 58 / 0.3);
     }
 
+    .lex-app-shell[data-paper-texture="dark-slate"] .bg-hairline\/50 {
+      background-color: rgb(58 58 58 / 0.5);
+    }
+
+    .lex-app-shell[data-paper-texture="dark-slate"] .bg-hairline\/60 {
+      background-color: rgb(58 58 58 / 0.6);
+    }
+
+    .lex-app-shell[data-paper-texture="dark-slate"] .bg-hairline\/70 {
+      background-color: rgb(58 58 58 / 0.7);
+    }
+
+    .lex-app-shell[data-paper-texture="dark-slate"] .bg-hairline\/80 {
+      background-color: rgb(58 58 58 / 0.8);
+    }
+
+    .lex-app-shell[data-paper-texture="dark-slate"] .border-hairline\/50 {
+      border-color: rgb(58 58 58 / 0.5);
+    }
+
+    .lex-app-shell[data-paper-texture="dark-slate"] .border-hairline\/60 {
+      border-color: rgb(58 58 58 / 0.6);
+    }
+
+    .lex-app-shell[data-paper-texture="dark-slate"] .border-hairline\/80 {
+      border-color: rgb(58 58 58 / 0.8);
+    }
+
     .lex-app-shell[data-paper-texture="dark-slate"] .hover\:bg-hairline:hover {
       background-color: #3a3a3a;
+    }
+
+    .lex-app-shell[data-paper-texture="dark-slate"] .hover\:bg-hairline\/10:hover {
+      background-color: rgb(58 58 58 / 0.1);
+    }
+
+    .lex-app-shell[data-paper-texture="dark-slate"] .hover\:bg-hairline\/20:hover {
+      background-color: rgb(58 58 58 / 0.2);
+    }
+
+    .lex-app-shell[data-paper-texture="dark-slate"] .hover\:bg-hairline\/30:hover {
+      background-color: rgb(58 58 58 / 0.3);
+    }
+
+    .lex-app-shell[data-paper-texture="dark-slate"] .hover\:bg-hairline\/40:hover {
+      background-color: rgb(58 58 58 / 0.4);
+    }
+
+    .lex-app-shell[data-paper-texture="dark-slate"] .hover\:bg-hairline\/70:hover {
+      background-color: rgb(58 58 58 / 0.7);
+    }
+
+    .lex-app-shell[data-paper-texture="dark-slate"] .hover\:bg-hairline\/80:hover {
+      background-color: rgb(58 58 58 / 0.8);
+    }
+
+    .lex-app-shell[data-paper-texture="dark-slate"] .hover\:bg-canvas:hover {
+      background-color: #1b1b1b;
     }
 
     /* Segmented-control chip: pale-blue + light ink was invisible. Use a
@@ -927,6 +1256,10 @@
       background-color: #242424;
     }
 
+    .lex-app-shell[data-paper-texture="dark-slate"] div[role="dialog"] .hover\:bg-canvas:hover {
+      background-color: #242424;
+    }
+
     .lex-app-shell[data-paper-texture="dark-slate"] div[role="dialog"] .bg-hairline\/40 {
       background-color: #333333;
     }
@@ -938,6 +1271,77 @@
 
     .lex-app-shell[data-paper-texture="dark-slate"] .lex-drag-handle:hover {
       background: #3a3a3a;
+    }
+
+    .lex-app-shell[data-paper-texture="dark-slate"] .ProseMirror img,
+    .lex-app-shell[data-paper-texture="dark-slate"] .ProseMirror ul[data-type="taskList"] input[type="checkbox"]:not(:checked) {
+      border-color: #3a3a3a;
+      background-color: #1a1a1a;
+    }
+
+    .lex-app-shell[data-paper-texture="dark-slate"] .lex-kbd {
+      background-color: #383838;
+      border-color: #3a3a3a;
+      color: #edece8;
+    }
+
+    .lex-app-shell[data-paper-texture="dark-slate"] .lex-shimmer {
+      background: linear-gradient(
+        90deg,
+        #242424 0%,
+        #3a3a3a 20%,
+        #242424 40%,
+        #242424 100%
+      );
+      background-size: 200% 100%;
+    }
+
+    .lex-app-shell[data-paper-texture="dark-slate"] .lex-progress-slide-bar::after {
+      background-color: #edece8;
+    }
+
+    .lex-app-shell[data-paper-texture="dark-slate"] .lex-scroll {
+      scrollbar-color: rgba(237, 236, 232, 0.18) transparent;
+    }
+
+    .lex-app-shell[data-paper-texture="dark-slate"] .lex-scroll::-webkit-scrollbar-thumb {
+      background-color: rgba(237, 236, 232, 0.18);
+    }
+
+    .lex-app-shell[data-paper-texture="dark-slate"] .lex-scroll::-webkit-scrollbar-thumb:hover {
+      background-color: rgba(237, 236, 232, 0.3);
+    }
+
+    body[data-paper-texture="dark-slate"] .lex-pop {
+      background-color: #2c2c2c;
+      border-color: #3a3a3a;
+      color: #edece8;
+    }
+
+    body[data-paper-texture="dark-slate"] .lex-pop .text-ink {
+      color: #edece8;
+    }
+
+    body[data-paper-texture="dark-slate"] .lex-pop .text-muted {
+      color: #b0ada6;
+    }
+
+    body[data-paper-texture="dark-slate"] .lex-pop .hover\:bg-hairline\/60:hover {
+      background-color: #3a3a3a;
+    }
+
+    body[data-paper-texture="dark-slate"] .lex-pop .bg-pale-blue {
+      background-color: #2f6f9c;
+    }
+
+    body[data-paper-texture="dark-slate"] .lex-pop .text-pale-blue-text {
+      color: #9ec9e8;
+    }
+
+    body[data-paper-texture="dark-slate"] .lex-kbd {
+      background-color: #383838;
+      border-color: #3a3a3a;
+      color: #edece8;
     }
 
     .lex-editor-surround[data-paper-texture="dark-slate"] .ProseMirror,
@@ -1183,7 +1587,7 @@
     }
   }
 
-  /* Side panels animate their width open/closed
+  /* Animate side panel width. */
 
   /* Tables (TipTap TableKit) */
   .ProseMirror .tableWrapper {

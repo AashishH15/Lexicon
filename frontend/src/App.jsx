@@ -2222,6 +2222,24 @@ export default function App() {
   const shellTexture =
     PAPER_TEXTURES.find((t) => t.id === paperTexture) ?? PAPER_TEXTURES[0];
 
+  // Tiptap mounts slash-command suggestions outside the React shell.
+  // Copy the active paper colors to <body>.
+  // This allows the popup to use the selected paper texture.
+  useEffect(() => {
+    document.body.dataset.paperTexture = shellTexture.id;
+    document.body.style.setProperty("--lex-page-color", shellTexture.pageColor);
+    document.body.style.setProperty(
+      "--lex-surround-color",
+      shellTexture.surroundColor,
+    );
+
+    return () => {
+      delete document.body.dataset.paperTexture;
+      document.body.style.removeProperty("--lex-page-color");
+      document.body.style.removeProperty("--lex-surround-color");
+    };
+  }, [shellTexture]);
+
   return (
     <div
       className="lex-app-shell flex flex-col h-screen overflow-hidden bg-canvas text-ink"
