@@ -274,6 +274,8 @@ Lexicon is built with:
 - [Hugging Face Hub](https://huggingface.co/) and [requests](https://requests.readthedocs.io/) for model downloads and inference
 
 See [LICENSE](LICENSE) for licensing information.
+See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for third-party
+software, LanguageTool, bundled JRE, and dependency notices.
 
 ## Built by
 

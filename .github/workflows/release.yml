@@ -213,6 +213,10 @@ jobs:
           mv jdk-21*/ ../frontend/src-tauri/jre
           rm "${{ matrix.jre_archive }}"
 
+      - name: Include third-party notices
+        run: |
+          cp THIRD_PARTY_NOTICES.md frontend/src-tauri/lexicon-backend/THIRD_PARTY_NOTICES.md
+
       - name: Frontend dependencies
         working-directory: frontend
         run: npm ci
