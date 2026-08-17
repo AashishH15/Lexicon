@@ -10,6 +10,9 @@ license texts or notices shipped by the respective projects.
 Lexicon includes and launches the LanguageTool Java HTTP server as a separate
 process.
 
+Lexicon is an independent project and is not affiliated with, endorsed by, or
+sponsored by LanguageTool or its maintainers.
+
 - **Project:** LanguageTool
 - **Version:** 6.8
 - **Copyright:** LanguageTool community and Daniel Naber
