@@ -213,9 +213,20 @@ jobs:
           mv jdk-21*/ ../frontend/src-tauri/jre
           rm "${{ matrix.jre_archive }}"
 
-      - name: Include third-party notices
+      - name: Include third-party notices and licenses
         run: |
-          cp THIRD_PARTY_NOTICES.md frontend/src-tauri/lexicon-backend/THIRD_PARTY_NOTICES.md
+          mkdir -p frontend/src-tauri/lexicon-backend/licenses
+          cp LICENSE frontend/src-tauri/lexicon-backend/licenses/LICENSE
+          cp THIRD_PARTY_NOTICES.md frontend/src-tauri/lexicon-backend/licenses/THIRD_PARTY_NOTICES.md
+          test -s frontend/src-tauri/lexicon-backend/licenses/LICENSE
+          test -s frontend/src-tauri/lexicon-backend/licenses/THIRD_PARTY_NOTICES.md
+          test -s frontend/src-tauri/lexicon-backend/lt/LanguageTool-6.8/COPYING.txt
+          test -f frontend/src-tauri/lexicon-backend/lt/LanguageTool-6.8/third-party-licenses/README.txt
+          if [[ "${{ matrix.platform }}" == "macos" ]]; then
+            test -d frontend/src-tauri/jre/Contents/Home/legal
+          else
+            test -d frontend/src-tauri/jre/legal
+          fi
 
       - name: Frontend dependencies
         working-directory: frontend
