@@ -160,9 +160,9 @@ const SHORTCUTS = [
 const TABS = [
   { id: "general", label: "General", icon: Sliders },
   { id: "appearance", label: "Appearance", icon: Palette },
+  { id: "ai", label: "Lex's Engine", icon: Cpu },
   { id: "dictionary", label: "Your Dictionary", icon: BookBookmark },
   { id: "history", label: "History & Drafts", icon: ClockCounterClockwise },
-  { id: "ai", label: "Lex's Engine", icon: Cpu },
   { id: "actions", label: "Custom Actions", icon: Lightning },
   { id: "shortcuts", label: "Shortcuts", icon: Keyboard },
   { id: "about", label: "About & Feedback", icon: Info },
