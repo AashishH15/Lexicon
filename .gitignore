@@ -8,6 +8,8 @@ venv/
 # Build output
 dist/
 build/
+backend/lt/*
+!backend/lt/.gitkeep
 
 # Tauri / Rust
 frontend/src-tauri/binaries/

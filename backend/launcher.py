@@ -2,9 +2,9 @@
 
 Tauri launches this frozen executable as a sidecar. It boots the FastAPI/
 uvicorn server on localhost:8000, points LanguageTool at the bundled JRE via
-LEXICON_JAVA_HOME / PATH, and keeps running until the Tauri app exits (which
-kills the sidecar). Unlike the standalone desktop launcher, this does NOT open a
-browser — the Tauri WebView is the UI and loads the built frontend directly.
+LEXICON_JAVA_HOME, and keeps running until the Tauri app exits (which kills the
+sidecar). Unlike the standalone desktop launcher, this does NOT open a browser
+— the Tauri WebView is the UI and loads the built frontend directly.
 """
 
 import os
@@ -12,32 +12,6 @@ import signal
 
 HOST = os.environ.get("LEXICON_HOST", "127.0.0.1")
 PORT = int(os.environ.get("LEXICON_PORT", "8000"))
-
-
-def _prepend_path(entry: str) -> None:
-    """Put ``entry`` at the front of PATH if it exists and is not already first."""
-    if not entry or not os.path.isdir(entry):
-        return
-    # Strip Windows extended-length prefixes — they break OpenJDK argv[0].
-    if entry.startswith("\\\\?\\"):
-        entry = entry[4:]
-    elif entry.startswith("//?/"):
-        entry = entry[4:]
-    current = os.environ.get("PATH", "")
-    parts = []
-    for p in current.split(os.pathsep):
-        if not p:
-            continue
-        if p.startswith("\\\\?\\"):
-            p = p[4:]
-        elif p.startswith("//?/"):
-            p = p[4:]
-        parts.append(p)
-    if parts and os.path.normcase(parts[0]) == os.path.normcase(entry):
-        os.environ["PATH"] = os.pathsep.join(parts)
-        return
-    parts = [p for p in parts if os.path.normcase(p) != os.path.normcase(entry)]
-    os.environ["PATH"] = os.pathsep.join([entry, *parts])
 
 
 def _resolve_jre_dir(base_dir: str) -> str | None:
@@ -67,15 +41,18 @@ if getattr(os.sys, "frozen", False):
     if jre_dir:
         os.environ.setdefault("LEXICON_JAVA_HOME", jre_dir)
         os.environ.setdefault("JAVA_HOME", jre_dir)
-        # language_tool_python resolves Java via shutil.which("java") — PATH,
-        # not JAVA_HOME. Without jre/bin on PATH, clean Windows installs never
-        # spawn a JVM even though the bundled JRE is present.
-        _prepend_path(os.path.join(jre_dir, "bin"))
     lt_dir = os.path.join(BASE_DIR, "lt")
-    if os.path.isdir(lt_dir) and any(
-        name.startswith("LanguageTool-") for name in os.listdir(lt_dir)
-    ):
-        os.environ.setdefault("LTP_PATH", lt_dir)
+    engine_candidates = [lt_dir]
+    if os.path.isdir(lt_dir):
+        engine_candidates.extend(
+            os.path.join(lt_dir, name)
+            for name in sorted(os.listdir(lt_dir))
+            if name.startswith("LanguageTool-")
+        )
+    for candidate in engine_candidates:
+        if os.path.isfile(os.path.join(candidate, "languagetool-server.jar")):
+            os.environ.setdefault("LEXICON_LT_DIR", candidate)
+            break
 
 
 def main():

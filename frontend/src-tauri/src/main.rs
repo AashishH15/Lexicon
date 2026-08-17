@@ -164,18 +164,6 @@ fn start_backend(_app_handle: &tauri::AppHandle) -> Result<Child, String> {
     cmd.env("LEXICON_JAVA_HOME", &java_home);
     if !java_home.is_empty() {
         cmd.env("JAVA_HOME", &java_home);
-        // language_tool_python finds Java with shutil.which("java") (PATH),
-        // not JAVA_HOME. Prepend the bundled JRE bin so Windows installs
-        // without a system Java still spawn LanguageTool.
-        let java_bin = PathBuf::from(&java_home).join("bin");
-        if java_bin.is_dir() {
-            let mut paths = env::split_paths(&env::var_os("PATH").unwrap_or_default())
-                .collect::<Vec<_>>();
-            paths.insert(0, java_bin);
-            if let Ok(joined) = env::join_paths(paths) {
-                cmd.env("PATH", joined);
-            }
-        }
     }
     cmd.stdin(Stdio::null());
     cmd.stdout(Stdio::null());

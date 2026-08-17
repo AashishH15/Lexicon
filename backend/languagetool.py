@@ -1,14 +1,36 @@
 import os
+import shutil
+import socket
+import subprocess
+import threading
+import time
+from pathlib import Path
 
 import requests
 
 from grammar_enhancements import enhance_matches
 
-SERVER_URL = os.environ.get("LANGUAGETOOL_SERVER")
-CHECK_URL = f"{SERVER_URL}/v2/check" if SERVER_URL else None
 REQUEST_TIMEOUT = 30
+READINESS_TIMEOUT = 20
+READINESS_POLL = 0.1
+LANGUAGETOOL_SERVER_CLASS = "org.languagetool.server.HTTPServer"
+LANGUAGETOOL_SERVER_JAR = "languagetool-server.jar"
+LOCAL_SERVER_HOST = "127.0.0.1"
 
-_tool = None
+SERVER_URL = os.environ.get("LANGUAGETOOL_SERVER", "").strip().rstrip("/")
+CHECK_URL = (
+    SERVER_URL
+    if SERVER_URL.endswith("/v2/check")
+    else f"{SERVER_URL}/check"
+    if SERVER_URL.endswith("/v2")
+    else f"{SERVER_URL}/v2/check"
+    if SERVER_URL
+    else None
+)
+
+_server_lock = threading.RLock()
+_server_process = None
+_server_url = None
 _warm = False
 
 
@@ -31,12 +53,7 @@ def _java_executable(home: str) -> str | None:
 
 
 def _strip_extended_path(path: str) -> str:
-    """Remove Windows ``\\\\?\\`` prefixes that crash OpenJDK/Temurin.
-
-    Frozen/PyInstaller paths and ``GetFinalPathNameByHandle`` often yield
-    ``\\\\?\\C:\\...``. Passing that as argv[0] makes ``java -version`` exit 1
-    with ``guarantee(name != nullptr) failed: jimage file name is null``.
-    """
+    """Remove Windows extended-length path prefixes."""
     if not path:
         return path
     if path.startswith("\\\\?\\"):
@@ -47,20 +64,12 @@ def _strip_extended_path(path: str) -> str:
 
 
 def _should_inject_jvm_flags(cmd: list) -> bool:
-    """Only tune heap flags for the LanguageTool HTTP server process.
-
-    Injecting ``-Xmx…`` into ``java -version`` (used for compatibility checks)
-    is unnecessary and has caused opaque failures when combined with bad paths.
-    """
-    return any(str(part) == "org.languagetool.server.HTTPServer" for part in cmd)
+    """Return true when a command starts the LanguageTool HTTP server."""
+    return any(str(part) == LANGUAGETOOL_SERVER_CLASS for part in cmd)
 
 
 def _ensure_bundled_java_on_path() -> None:
-    """Make the bundled JRE visible to language_tool_python.
-
-    That package resolves Java with ``shutil.which("java")`` (PATH lookup).
-    Setting JAVA_HOME alone is not enough on a machine with no system Java.
-    """
+    """Put the configured Java runtime at the front of PATH."""
     for key in ("LEXICON_JAVA_HOME", "JAVA_HOME"):
         home = _strip_extended_path(os.environ.get(key, "").strip())
         java_exe = _java_executable(home)
@@ -69,11 +78,6 @@ def _ensure_bundled_java_on_path() -> None:
         java_bin = os.path.dirname(java_exe)
         current = os.environ.get("PATH", "")
         parts = [_strip_extended_path(p) for p in current.split(os.pathsep) if p]
-        if parts and os.path.normcase(parts[0]) == os.path.normcase(java_bin):
-            os.environ["PATH"] = os.pathsep.join(parts)
-            os.environ.setdefault("JAVA_HOME", home)
-            os.environ.setdefault("LEXICON_JAVA_HOME", home)
-            return
         parts = [p for p in parts if os.path.normcase(p) != os.path.normcase(java_bin)]
         os.environ["PATH"] = os.pathsep.join([java_bin, *parts])
         os.environ["JAVA_HOME"] = home
@@ -81,100 +85,224 @@ def _ensure_bundled_java_on_path() -> None:
         return
 
 
-def _get_tool(language="en-US"):
-    global _tool
-    if _tool is None:
-        import subprocess
+def _resolve_java() -> str:
+    _ensure_bundled_java_on_path()
+    for key in ("LEXICON_JAVA_HOME", "JAVA_HOME"):
+        java_exe = _java_executable(os.environ.get(key, "").strip())
+        if java_exe:
+            return java_exe
+    java_exe = shutil.which("java")
+    if java_exe:
+        return java_exe
+    raise RuntimeError(
+        "LanguageTool requires Java 17 or later. "
+        "Install Java or configure LEXICON_JAVA_HOME."
+    )
 
-        import language_tool_python
-        import language_tool_python.server as language_tool_server
 
-        _ensure_bundled_java_on_path()
+def _engine_dir_from(root: Path) -> Path | None:
+    if (root / LANGUAGETOOL_SERVER_JAR).is_file():
+        return root
+    if not root.is_dir():
+        return None
+    for child in sorted(root.iterdir()):
+        if child.is_dir() and (child / LANGUAGETOOL_SERVER_JAR).is_file():
+            return child
+    return None
 
-        orig_popen = subprocess.Popen
 
-        def _is_java_executable(cmd0):
-            if not cmd0:
-                return False
-            name = os.path.basename(_strip_extended_path(str(cmd0))).lower()
-            return name in ("java", "java.exe", "javaw", "javaw.exe")
+def _language_tool_dir() -> Path:
+    configured = os.environ.get("LEXICON_LT_DIR", "").strip()
+    candidates = []
+    if configured:
+        candidates.append(Path(_strip_extended_path(configured)))
 
-        def tuned_popen(*args, **kwargs):
-            cmd = list(args[0]) if args else kwargs.get("args", [])
-            if cmd and isinstance(cmd, (list, tuple)) and len(cmd) > 0:
-                cmd = list(cmd)
-                cmd[0] = _strip_extended_path(str(cmd[0]))
-                if _is_java_executable(cmd[0]) and _should_inject_jvm_flags(cmd):
-                    if "-Xmx384M" not in cmd:
-                        cmd = [cmd[0]] + JVM_MEMORY_FLAGS + list(cmd[1:])
-                if args:
-                    args = (cmd,) + args[1:]
-                else:
-                    kwargs["args"] = cmd
+    backend_dir = Path(__file__).resolve().parent
+    candidates.extend(
+        [
+            backend_dir / "lt" / "LanguageTool-6.8",
+            backend_dir / "lt",
+        ]
+    )
+    for candidate in candidates:
+        engine_dir = _engine_dir_from(candidate)
+        if engine_dir is not None:
+            return engine_dir
+    raise RuntimeError(
+        "LanguageTool engine not found. From a source checkout, run "
+        "`python backend/install_languagetool.py`, or set LEXICON_LT_DIR to "
+        "the directory that contains languagetool-server.jar."
+    )
 
-            if os.name == "nt":
-                create_no_window = getattr(subprocess, "CREATE_NO_WINDOW", 0x08000000)
-                kwargs["creationflags"] = kwargs.get("creationflags", 0) | create_no_window
-                startupinfo = kwargs.get("startupinfo") or subprocess.STARTUPINFO()
-                startupinfo.dwFlags |= getattr(subprocess, "STARTF_USESHOWWINDOW", 0)
-                startupinfo.wShowWindow = getattr(subprocess, "SW_HIDE", 0)
-                kwargs["startupinfo"] = startupinfo
 
-            return orig_popen(*args, **kwargs)
+def _configured_server_port() -> int:
+    value = os.environ.get("LEXICON_LT_PORT", "").strip()
+    if not value:
+        return 0
+    try:
+        port = int(value)
+    except ValueError as exc:
+        raise RuntimeError("LEXICON_LT_PORT must be a valid TCP port.") from exc
+    if not 0 <= port <= 65535:
+        raise RuntimeError("LEXICON_LT_PORT must be between 0 and 65535.")
+    return port
 
-        tuned_popen.__class_getitem__ = classmethod(lambda cls, item: orig_popen)
 
-        if hasattr(language_tool_server, "subprocess"):
-            language_tool_server.subprocess.Popen = tuned_popen
+def _find_free_port() -> int:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+        probe.bind((LOCAL_SERVER_HOST, 0))
+        return int(probe.getsockname()[1])
 
-        startupinfo_cls = getattr(subprocess, "STARTUPINFO", None)
-        if startupinfo_cls is not None and os.name == "nt":
-            startupinfo = startupinfo_cls()
-            startupinfo.dwFlags |= getattr(subprocess, "STARTF_USESHOWWINDOW", 0)
-            startupinfo.wShowWindow = getattr(subprocess, "SW_HIDE", 0)
-            language_tool_server.startupinfo = startupinfo
 
-        _tool = language_tool_python.LanguageTool(language)
-    return _tool
+def _server_port() -> int:
+    return _configured_server_port() or _find_free_port()
+
+
+def _build_server_command(java_executable: str, engine_dir: Path, port: int) -> list[str]:
+    return [
+        java_executable,
+        *JVM_MEMORY_FLAGS,
+        "-cp",
+        str(engine_dir / LANGUAGETOOL_SERVER_JAR),
+        LANGUAGETOOL_SERVER_CLASS,
+        "--port",
+        str(port),
+    ]
+
+
+def _popen_kwargs(engine_dir: Path) -> dict:
+    options = {
+        "cwd": str(engine_dir),
+        "stdin": subprocess.DEVNULL,
+        "stdout": subprocess.DEVNULL,
+        "stderr": subprocess.DEVNULL,
+    }
+    if os.name == "nt":
+        options["creationflags"] = getattr(subprocess, "CREATE_NO_WINDOW", 0x08000000)
+        startupinfo = subprocess.STARTUPINFO()
+        startupinfo.dwFlags |= getattr(subprocess, "STARTF_USESHOWWINDOW", 0)
+        startupinfo.wShowWindow = getattr(subprocess, "SW_HIDE", 0)
+        options["startupinfo"] = startupinfo
+    return options
+
+
+def _process_running(process) -> bool:
+    try:
+        return process is not None and process.poll() is None
+    except Exception:
+        return False
+
+
+def _wait_for_server(process, base_url: str) -> None:
+    deadline = time.monotonic() + READINESS_TIMEOUT
+    probe_url = f"{base_url}/v2/languages"
+    while time.monotonic() < deadline:
+        if not _process_running(process):
+            raise RuntimeError("LanguageTool server exited before becoming ready.")
+        try:
+            response = requests.get(probe_url, timeout=1)
+            if response.status_code == 200:
+                return
+        except requests.RequestException:
+            pass
+        time.sleep(READINESS_POLL)
+    raise RuntimeError("LanguageTool server did not become ready in time.")
+
+
+def _terminate_process(process) -> None:
+    if not _process_running(process):
+        return
+    if os.name == "nt" and getattr(process, "pid", None):
+        subprocess.run(
+            ["taskkill", "/PID", str(process.pid), "/T", "/F"],
+            check=False,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+    else:
+        process.terminate()
+    try:
+        process.wait(timeout=3)
+    except (subprocess.TimeoutExpired, AttributeError):
+        try:
+            process.kill()
+            process.wait(timeout=3)
+        except (subprocess.TimeoutExpired, AttributeError):
+            pass
+
+
+def _start_local_server() -> str:
+    global _server_process, _server_url, _warm
+    engine_dir = _language_tool_dir()
+    java_executable = _resolve_java()
+    port = _server_port()
+    base_url = f"http://{LOCAL_SERVER_HOST}:{port}"
+    command = _build_server_command(java_executable, engine_dir, port)
+    process = subprocess.Popen(command, **_popen_kwargs(engine_dir))
+    _server_process = process
+    _server_url = base_url
+    try:
+        _wait_for_server(process, base_url)
+    except Exception:
+        _server_process = None
+        _server_url = None
+        _terminate_process(process)
+        raise
+    _warm = True
+    return base_url
+
+
+def _ensure_local_server() -> str:
+    global _server_process, _server_url, _warm
+    with _server_lock:
+        if _process_running(_server_process):
+            return _server_url
+        if _server_process is not None:
+            _terminate_process(_server_process)
+            _server_process = None
+            _server_url = None
+            _warm = False
+        return _start_local_server()
+
+
+def _local_server_failed() -> bool:
+    with _server_lock:
+        return _server_process is not None and not _process_running(_server_process)
+
+
+def _reset_failed_server() -> None:
+    global _server_process, _server_url, _warm
+    with _server_lock:
+        if _server_process is not None and not _process_running(_server_process):
+            _server_process = None
+            _server_url = None
+            _warm = False
 
 
 def warm_up(language="en-US"):
-    """Launch the LanguageTool JVM up front so the first check is fast.
-
-    Safe to call repeatedly; only the first successful launch does work. A
-    failure (missing JVM, etc.) is swallowed so it doesn't crash startup, and
-    the next check will retry lazily.
-    """
+    """Start the local LanguageTool server without checking text."""
+    del language
     global _warm
-    if _warm:
+    if _warm and _process_running(_server_process):
         return
     try:
-        _get_tool(language)
+        if CHECK_URL is None:
+            _ensure_local_server()
         _warm = True
     except Exception:
         _warm = False
 
 
 def close_tool():
-    """Stop the LanguageTool JVM owned by this backend process."""
-    global _tool, _warm
-    if _tool is not None:
-        try:
-            if hasattr(_tool, "_server") and _tool._server:
-                server_proc = getattr(_tool._server, "_process", None)
-                if server_proc and hasattr(server_proc, "pid") and os.name == "nt":
-                    import subprocess
-
-                    subprocess.run(
-                        ["taskkill", "/PID", str(server_proc.pid), "/T", "/F"],
-                        stdout=subprocess.DEVNULL,
-                        stderr=subprocess.DEVNULL,
-                    )
-            _tool.close()
-        except Exception:
-            pass
-    _tool = None
-    _warm = False
+    """Stop the local LanguageTool server owned by this backend."""
+    global _server_process, _server_url, _warm
+    with _server_lock:
+        process = _server_process
+        _server_process = None
+        _server_url = None
+        _warm = False
+        if process is not None:
+            _terminate_process(process)
 
 
 def _filter_ignored(matches, text, ignore):
@@ -184,10 +312,25 @@ def _filter_ignored(matches, text, ignore):
     ignored = {word.lower() for word in ignore}
     kept = []
     for match in matches:
-        word = text[match["offset"] : match["offset"] + match["length"]].strip()
-        if word.lower() not in ignored:
+        words = _match_text_variants(text, match["offset"], match["length"])
+        if not any(word.strip().lower() in ignored for word in words):
             kept.append(match)
     return kept
+
+
+def _match_text_variants(text, offset, length):
+    """Return Python and UTF-16 slices for a match."""
+    words = [text[offset : offset + length]]
+    encoded = text.encode("utf-16-le")
+    start = offset * 2
+    end = (offset + length) * 2
+    try:
+        utf16_word = encoded[start:end].decode("utf-16-le")
+    except UnicodeDecodeError:
+        utf16_word = ""
+    if utf16_word not in words:
+        words.append(utf16_word)
+    return words
 
 
 def check_text(text, language="en-US", ignore=None):
@@ -201,47 +344,74 @@ def check_text(text, language="en-US", ignore=None):
 
 
 def _check_remote(text, language):
+    return _post_check(CHECK_URL, text, language)
+
+
+def _check_local(text, language):
+    base_url = _ensure_local_server()
+    try:
+        return _post_check(f"{base_url}/v2/check", text, language)
+    except requests.RequestException:
+        if not _local_server_failed():
+            raise
+        _reset_failed_server()
+        base_url = _ensure_local_server()
+        return _post_check(f"{base_url}/v2/check", text, language)
+
+
+def _post_check(url, text, language):
+    if not url:
+        raise RuntimeError("LanguageTool check URL is not configured.")
     response = requests.post(
-        CHECK_URL,
+        url,
         data={"text": text, "language": language},
         timeout=REQUEST_TIMEOUT,
     )
     response.raise_for_status()
-    return _normalize(response.json())
-
-
-def _check_local(text, language):
-    tool = _get_tool(language)
-    if language != tool.language:
-        tool.language = language
-    matches = tool.check(text)
-    return [
-        {
-            "offset": m.offset,
-            "length": m.error_length,
-            "message": m.message,
-            "replacements": list(m.replacements),
-            "rule": {
-                "id": m.rule_id,
-                "description": m.category or "",
-            },
-        }
-        for m in matches
-    ]
+    try:
+        result = response.json()
+    except ValueError as exc:
+        raise RuntimeError("LanguageTool returned invalid JSON.") from exc
+    return _normalize(result)
 
 
 def _normalize(result):
+    if not isinstance(result, dict):
+        raise RuntimeError("LanguageTool returned an invalid response.")
     matches = []
-    for match in result.get("matches", []):
+    raw_matches = result.get("matches", [])
+    if not isinstance(raw_matches, list):
+        raise RuntimeError("LanguageTool returned invalid matches.")
+    for match in raw_matches:
+        if not isinstance(match, dict):
+            raise RuntimeError("LanguageTool returned an invalid match.")
+        rule = match.get("rule") or {}
+        if not isinstance(rule, dict):
+            raise RuntimeError("LanguageTool returned an invalid rule.")
+        replacements = match.get("replacements") or []
+        if not isinstance(replacements, list):
+            raise RuntimeError("LanguageTool returned invalid replacements.")
+        try:
+            offset = int(match["offset"])
+            length = int(match["length"])
+            message = str(match["message"])
+        except (KeyError, TypeError, ValueError) as exc:
+            raise RuntimeError("LanguageTool returned an invalid match.") from exc
+        if offset < 0 or length < 0:
+            raise RuntimeError("LanguageTool returned invalid match offsets.")
         matches.append(
             {
-                "offset": match["offset"],
-                "length": match["length"],
-                "message": match["message"],
-                "replacements": [r["value"] for r in match.get("replacements", [])],
+                "offset": offset,
+                "length": length,
+                "message": message,
+                "replacements": [
+                    replacement["value"]
+                    for replacement in replacements
+                    if isinstance(replacement, dict) and "value" in replacement
+                ],
                 "rule": {
-                    "id": match["rule"]["id"],
-                    "description": match["rule"].get("description", ""),
+                    "id": rule.get("id", ""),
+                    "description": rule.get("description", ""),
                 },
             }
         )

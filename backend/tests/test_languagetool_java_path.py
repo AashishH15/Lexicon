@@ -1,9 +1,4 @@
-"""Regression tests for the bundled JRE wiring LanguageTool depends on.
-
-language_tool_python spawns the LanguageTool JVM using ``shutil.which("java")``,
-so the bundled runtime must be on PATH — setting JAVA_HOME alone leaves a clean
-Windows install unable to start the engine.
-"""
+"""Regression tests for the bundled JRE wiring used by LanguageTool."""
 
 import json
 import os

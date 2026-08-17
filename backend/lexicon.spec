@@ -10,9 +10,7 @@ DLLs/modules, which is exactly what Tauri's resource_dir layout expects.
 
 Native gotchas handled:
   * llama-cpp-python ships a compiled C extension; --collect-all pulls it in.
-  * language-tool-python is a pure-Python client; the LanguageTool Java engine
-    is NOT inside the pip package. The release workflow downloads and bundles
-    it into the onedir's lt/ folder, and launcher.py points LTP_PATH at it.
+  * The LanguageTool Java engine is bundled in the onedir's lt/ folder.
     The JRE itself is bundled separately (resources/jre).
 """
 
@@ -44,7 +42,6 @@ hiddenimports = [
     "huggingface_hub",
     "huggingface_hub._snapshot_download",
     "requests",
-    "language_tool_python",
 ]
 
 if include_llama:
@@ -71,14 +68,13 @@ a = Analysis(
     noarchive=False,
 )
 
-# Collect native libs + data (GGUF loader, LT server jar, profiles) into the
-# bundle. Use the standalone collect_all function and merge explicitly into the
-# Analysis -- the Analysis.collect_all method is unreliable here (silently
-# drops llama_cpp's native .dlls). This PyInstaller version's collect_all
-# returns (binaries, datas); errors are surfaced, not swallowed.
+# Collect native libraries and data for optional local AI into the bundle.
+# Use collect_all and merge the results explicitly into Analysis.
+# The Analysis.collect_all method can silently drop native DLLs.
+# This PyInstaller version returns (datas, binaries, hiddenimports).
 from PyInstaller.utils.hooks import collect_all
 
-packages_to_collect = ["language_tool_python"]
+packages_to_collect = []
 if include_llama:
     packages_to_collect.insert(0, "llama_cpp")
 

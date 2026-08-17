@@ -23,6 +23,9 @@ function formatBackendDiagnostic(error) {
 
   if (rawError.includes("Failed to fetch") || rawError.includes("NetworkError")) {
     hint = "The local engine is offline or still starting up. Lexicon will automatically re-connect once ready.";
+  } else if (/languagetool-server\.jar|language.?tool engine not found/i.test(rawError)) {
+    hint =
+      "The LanguageTool engine files are missing. From a source checkout, run `python backend/install_languagetool.py`; for an installed app, reinstall Lexicon so its bundled engine is restored.";
   } else if (
     /can't find java|no java install|javaerror|grammar_engine_unavailable/i.test(
       rawError,

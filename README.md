@@ -143,9 +143,32 @@ Lexicon is local-first:
 ## Developer setup
 
 The packaged desktop app is the recommended experience for regular users. To
-run the project from source, you need Python 3, Node.js with npm, and Java for
-the LanguageTool development backend. The packaged application includes its
-own Java runtime.
+run the project from source, you need Python 3, Node.js with npm, and Java 17
+or later. The packaged application includes its own Java runtime.
+
+The development backend starts the official LanguageTool 6.8 HTTP server on
+the loopback interface. The first run of either quick-start script downloads
+the official standalone artifact from Maven Central, verifies its SHA-256
+checksum, and extracts it to:
+
+```text
+backend/lt/LanguageTool-6.8/languagetool-server.jar
+```
+
+You can also install the engine manually from the project root:
+
+```bash
+python backend/install_languagetool.py
+```
+
+The engine is built from the
+[LanguageTool 6.8 source](https://github.com/languagetool-org/languagetool/tree/v6.8)
+and its standalone distribution includes LanguageTool's notices and license.
+Lexicon communicates with the Java HTTP server directly; it does not use or
+install a Python LanguageTool wrapper.
+
+If the engine is stored elsewhere, set `LEXICON_LT_DIR` to the directory that
+contains `languagetool-server.jar` before starting the backend.
 
 ### Quick start
 
@@ -197,6 +220,29 @@ npm run dev
 
 The development frontend runs at <http://localhost:5173> and the backend API
 runs at <http://localhost:8000>.
+
+### LanguageTool verification
+
+After the backend starts, send a proofreading request:
+
+```bash
+curl -X POST http://127.0.0.1:8000/grammar/check \
+  -H "Content-Type: application/json" \
+  -d '{"text":"Their going to there house.","language":"en-US"}'
+```
+
+The response must contain `matches` with offsets, messages, replacement
+values, and rule IDs. Repeat the request after testing a multiline sentence,
+an emoji before an error, another language, and a word in the ignored-word
+list. To verify unload and restart, run:
+
+```bash
+curl -X POST http://127.0.0.1:8000/languagetool/unload
+```
+
+Then send another proofreading request. The backend must start one new
+LanguageTool server and return the same response shape. A missing Java runtime
+or engine returns HTTP 503 with an actionable error instead of HTTP 500.
 
 ## Platform and release status
 

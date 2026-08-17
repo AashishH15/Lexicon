@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Lexicon quick start — installs both sides (if needed) and launches them.
-# macOS / Linux. Requires: Python 3, pip, Node.js + npm, and Java (for LanguageTool).
+# macOS / Linux. Requires: Python 3, pip, Node.js + npm, and Java 17+.
 set -e
 
 cd "$(dirname "$0")"
@@ -16,6 +16,11 @@ if [ ! -d "backend/venv" ]; then
   pip install -r backend/requirements.txt
 else
   source backend/venv/bin/activate
+fi
+
+if [ ! -f "backend/lt/LanguageTool-6.8/languagetool-server.jar" ]; then
+  echo ">> Installing the official LanguageTool 6.8 engine..."
+  python backend/install_languagetool.py
 fi
 
 echo ">> Starting backend on http://localhost:8000 ..."
@@ -36,7 +41,7 @@ echo ""
 echo "Lexicon is starting:"
 echo "  App:      http://localhost:5173"
 echo "  API:      http://localhost:8000"
-echo "  Note: Java is required for LanguageTool (downloads on first proofread)."
+echo "  LanguageTool: backend/lt/LanguageTool-6.8"
 echo "Press Ctrl+C to stop both."
 
 trap 'kill $BACKEND_PID $FRONTEND_PID 2>/dev/null' EXIT INT TERM
