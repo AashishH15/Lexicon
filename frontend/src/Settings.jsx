@@ -2159,9 +2159,12 @@ export default function Settings({
                           Offline by design
                         </p>
                         <p className="mt-0.5 font-sans text-xs leading-relaxed text-muted">
-                          Your words stay entirely on this machine. Every
-                          proofread, rewrite, and draft is processed locally.
-                          Nothing is uploaded to any cloud server.
+                          Your writing stays on your device when using
+                          Lexicon&apos;s built-in proofreading and local AI
+                          features. The browser extension connects only to the
+                          Lexicon app on this computer. Network access may be
+                          used for model downloads, updates, or an external AI
+                          server you configure.
                         </p>
                       </div>
                     </div>
