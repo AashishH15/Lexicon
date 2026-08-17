@@ -15,6 +15,8 @@ use tauri::ipc::Channel;
 use tauri::menu::{MenuBuilder, MenuItemBuilder};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{Manager, RunEvent, WindowEvent};
+#[cfg(not(debug_assertions))]
+use tauri_plugin_autostart::ManagerExt;
 use tauri_plugin_updater::{Update, UpdaterExt};
 use url::Url;
 
@@ -31,6 +33,7 @@ const TIER1_LLM_IDLE_SECS: u64 = 5 * 60;       // 5 minutes: unload LLM model we
 const TIER2_LT_IDLE_SECS: u64 = 15 * 60;      // 15 minutes: stop LanguageTool JVM
 const TIER3_SIDECAR_IDLE_SECS: u64 = 30 * 60; // 30 minutes: shutdown sidecar
 const BACKEND_IDLE_POLL: Duration = Duration::from_secs(15);
+const AUTOSTART_ARG: &str = "--autostart";
 
 #[cfg(target_os = "windows")]
 const CREATE_NO_WINDOW: u32 = 0x08000000;
@@ -54,6 +57,10 @@ fn post_backend_endpoint(endpoint: &str) -> bool {
     let mut response = Vec::new();
     let _ = stream.read_to_end(&mut response);
     true
+}
+
+fn launched_from_autostart() -> bool {
+    env::args().any(|argument| argument == AUTOSTART_ARG)
 }
 
 fn request_backend_shutdown() -> bool {
@@ -547,11 +554,16 @@ fn start_idle_monitor(app_handle: tauri::AppHandle) {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 fn main() {
+    let launched_from_autostart = launched_from_autostart();
+
     tauri::Builder::default()
         // Keep repeated launches from creating duplicate windows. The plugin
         // must be registered before the other plugins so the second process
         // exits before starting the backend or any other app resources.
-        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+        .plugin(tauri_plugin_single_instance::init(|app, args, _cwd| {
+            if args.iter().any(|argument| argument == AUTOSTART_ARG) {
+                return;
+            }
             if let Some(window) = app.get_webview_window("main") {
                 let _ = window.show();
                 let _ = window.unminimize();
@@ -559,10 +571,32 @@ fn main() {
                 let _ = window.eval("window.dispatchEvent(new Event('resize'));");
             }
         }))
+        .plugin(
+            tauri_plugin_autostart::Builder::new()
+                .args([AUTOSTART_ARG])
+                .app_name("Lexicon")
+                .build(),
+        )
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
-        .setup(|app| {
+        .setup(move |app| {
+            #[cfg(not(debug_assertions))]
+            {
+                let autolaunch = app.autolaunch();
+                match autolaunch.is_enabled() {
+                    Ok(false) => {
+                        if let Err(error) = autolaunch.enable() {
+                            eprintln!("Warning: failed to enable Lexicon startup: {error}");
+                        }
+                    }
+                    Ok(true) => {}
+                    Err(error) => {
+                        eprintln!("Warning: failed to inspect Lexicon startup: {error}");
+                    }
+                }
+            }
+
             app.manage(BackendState {
                 child: Mutex::new(None),
                 last_activity: Mutex::new(Instant::now()),
@@ -638,6 +672,14 @@ fn main() {
                 tray = tray.icon(icon);
             }
             tray.build(app)?;
+
+            if let Some(window) = app.get_webview_window("main") {
+                if launched_from_autostart {
+                    let _ = window.hide();
+                } else {
+                    let _ = window.show();
+                }
+            }
 
             Ok(())
         })

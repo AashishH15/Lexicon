@@ -13,6 +13,7 @@
     "windows": [
       {
         "title": "Lexicon",
+        "visible": false,
         "width": 1200,
         "height": 800,
         "minWidth": 900,
