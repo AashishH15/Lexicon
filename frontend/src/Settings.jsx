@@ -739,10 +739,15 @@ export default function Settings({
     return () => clearTimeout(timer);
   }, [highlightedKey, activeTab]);
 
-  function getHighlightClass(key) {
+  function getHighlightClass(
+    key,
+    { includeSpacing = true, includeRounded = true } = {}
+  ) {
     const isHighlighted = highlightedKey === key;
     return (
-      "px-3 py-2 rounded-lg -mx-3 transition-all duration-1000 " +
+      (includeSpacing ? "px-3 py-2 -mx-3 " : "") +
+      (includeRounded ? "rounded-lg " : "") +
+      "transition-all duration-1000 " +
       (isHighlighted
         ? "bg-[rgba(31,108,159,0.22)] ring-2 ring-[rgba(31,108,159,0.5)] shadow-sm"
         : "bg-transparent ring-0 ring-transparent")
@@ -872,7 +877,7 @@ export default function Settings({
 
             <div
               data-setting-key="reset-defaults"
-              className={`mt-auto border-t border-hairline px-2 py-3 ${getHighlightClass("reset-defaults")}`}
+              className={`mt-auto border-t border-hairline px-2 py-3 ${getHighlightClass("reset-defaults", { includeSpacing: false, includeRounded: false })}`}
             >
               <button
                 type="button"

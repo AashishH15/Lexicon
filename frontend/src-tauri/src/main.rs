@@ -31,7 +31,6 @@ struct BackendState {
 const BACKEND_PORT: u16 = 18000;
 const TIER1_LLM_IDLE_SECS: u64 = 5 * 60;       // 5 minutes: unload LLM model weights
 const TIER2_LT_IDLE_SECS: u64 = 15 * 60;      // 15 minutes: stop LanguageTool JVM
-const TIER3_SIDECAR_IDLE_SECS: u64 = 30 * 60; // 30 minutes: shutdown sidecar
 const BACKEND_IDLE_POLL: Duration = Duration::from_secs(15);
 const AUTOSTART_ARG: &str = "--autostart";
 
@@ -154,7 +153,7 @@ fn start_backend(_app_handle: &tauri::AppHandle) -> Result<Child, String> {
             "lexicon-backend"
         };
         let sidecar_exe: PathBuf = resource_dir.join("lexicon-backend").join(sidecar_name);
-        let mut command = Command::new(&sidecar_exe);
+        let command = Command::new(&sidecar_exe);
         command
     };
 
@@ -512,23 +511,15 @@ fn start_idle_monitor(app_handle: tauri::AppHandle) {
         let Some(state) = app_handle.try_state::<BackendState>() else {
             continue;
         };
-        let Ok(child) = state.child.lock() else {
-            continue;
-        };
-        if child.is_none() {
+        // Keep the sidecar running while the tray app is active. The extension
+        // cannot invoke the Tauri command that starts the sidecar.
+        if state.child.lock().map_or(true, |child| child.is_none()) {
             continue;
         }
         let Ok(last_activity) = state.last_activity.lock() else {
             continue;
         };
         let elapsed = last_activity.elapsed();
-
-        if elapsed >= Duration::from_secs(TIER3_SIDECAR_IDLE_SECS) {
-            drop(child);
-            drop(last_activity);
-            stop_backend(&app_handle);
-            continue;
-        }
 
         if elapsed >= Duration::from_secs(TIER2_LT_IDLE_SECS) {
             if let Ok(mut t2) = state.tier2_offloaded.lock() {
