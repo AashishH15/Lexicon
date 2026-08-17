@@ -233,6 +233,7 @@ class LMStudioBackend(InferenceBackend):
         base_url: str = LM_STUDIO_SERVER,
         model: str | None = None,
         models: list[str] | None = None,
+        loaded_models: list[str] | None = None,
         api_key: str | None = None,
     ):
         base_url = base_url.rstrip("/")
@@ -245,6 +246,13 @@ class LMStudioBackend(InferenceBackend):
         self.native_api_url = f"{self.base_url}/api/v1"
         self._model = model.strip() if isinstance(model, str) and model.strip() else None
         self._cached_models = models
+        self._cached_loaded_models = (
+            loaded_models
+            if loaded_models is not None
+            else models
+        )
+        self._detected_loaded_models = []
+        self._models_probed = models is not None
         self.api_key = api_key.strip() if isinstance(api_key, str) else ""
         self._server_reachable = models is not None
         self._auth_required = False
@@ -260,28 +268,39 @@ class LMStudioBackend(InferenceBackend):
         return getattr(response, "status_code", None)
 
     @staticmethod
-    def _native_model_ids(data: dict) -> list[str]:
+    def _native_model_ids(data: dict) -> tuple[list[str], list[str]]:
         items = data.get("models")
         if not isinstance(items, list):
-            return []
+            return [], []
         model_ids = []
+        loaded_model_ids = []
         for item in items:
             if not isinstance(item, dict) or item.get("type") != "llm":
                 continue
+            model_id = item.get("key")
+            if isinstance(model_id, str):
+                model_ids.append(model_id)
             loaded_instances = item.get("loaded_instances")
             if not isinstance(loaded_instances, list):
                 continue
-            model_ids.extend(
+            loaded_ids = [
                 instance["id"]
                 for instance in loaded_instances
                 if isinstance(instance, dict) and isinstance(instance.get("id"), str)
-            )
-        return list(dict.fromkeys(model_ids))
+            ]
+            if not isinstance(model_id, str):
+                model_ids.extend(loaded_ids)
+            loaded_model_ids.extend(loaded_ids)
+            if isinstance(model_id, str) and loaded_ids:
+                loaded_model_ids.append(model_id)
+        return list(dict.fromkeys(model_ids)), list(dict.fromkeys(loaded_model_ids))
 
     def _models(self) -> list[str]:
         if self._cached_models is not None:
             return list(self._cached_models)
         self._auth_required = False
+        self._detected_loaded_models = []
+        self._models_probed = True
         try:
             response = requests.get(
                 f"{self.native_api_url}/models",
@@ -307,7 +326,9 @@ class LMStudioBackend(InferenceBackend):
         else:
             if isinstance(data, dict) and isinstance(data.get("models"), list):
                 self._server_reachable = True
-                return self._native_model_ids(data)
+                model_ids, loaded_model_ids = self._native_model_ids(data)
+                self._detected_loaded_models = loaded_model_ids
+                return model_ids
 
         try:
             response = requests.get(
@@ -331,13 +352,15 @@ class LMStudioBackend(InferenceBackend):
         items = data.get("data", [])
         if not isinstance(items, list):
             return []
-        return list(
+        model_ids = list(
             dict.fromkeys(
                 item["id"]
                 for item in items
                 if isinstance(item, dict) and isinstance(item.get("id"), str)
             )
         )
+        self._detected_loaded_models = model_ids
+        return model_ids
 
     def server_reachable(self) -> bool:
         """Return whether the last models probe reached LM Studio."""
@@ -347,8 +370,16 @@ class LMStudioBackend(InferenceBackend):
         """Return whether LM Studio rejected the last probe as unauthorized."""
         return self._auth_required
 
+    def loaded_models(self) -> list[str]:
+        """Return the loaded LM Studio models from the last probe."""
+        if self._cached_loaded_models is not None:
+            return list(self._cached_loaded_models)
+        if not self._models_probed:
+            self._models()
+        return list(self._detected_loaded_models)
+
     def available(self) -> bool:
-        """Return true if LM Studio has a loaded model."""
+        """Return true if LM Studio has an available LLM."""
         return bool(self._models())
 
     def _resolve_model(self) -> str:
@@ -357,7 +388,7 @@ class LMStudioBackend(InferenceBackend):
         models = self._models()
         if not models:
             raise InferenceUnavailable(
-                f"LM Studio at {self.base_url} has no loaded model."
+                f"LM Studio at {self.base_url} has no available LLM."
             )
         return models[0]
 
@@ -595,6 +626,7 @@ def get_backend(
     lmstudio_url = prefs.get("lmstudio_url") or LM_STUDIO_SERVER
     cached_ollama_models = (probe_results or {}).get("ollama")
     cached_lmstudio_models = (probe_results or {}).get("lmstudio")
+    cached_lmstudio_loaded_models = (probe_results or {}).get("lmstudio_loaded")
 
     def make_ollama(model: str | None = None) -> OllamaBackend:
         return OllamaBackend(
@@ -607,6 +639,7 @@ def get_backend(
             base_url=lmstudio_url,
             model=model,
             models=cached_lmstudio_models,
+            loaded_models=cached_lmstudio_loaded_models,
             api_key=prefs.get("lmstudio_api_key") or None,
         )
 

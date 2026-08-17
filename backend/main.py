@@ -274,12 +274,14 @@ def ai_status():
         lmstudio_probe = executor.submit(lmstudio._models)
         ollama_models = ollama_probe.result()
         lmstudio_models = lmstudio_probe.result()
+        lmstudio_loaded_models = lmstudio.loaded_models()
     ollama_available = bool(ollama_models)
     lmstudio_available = bool(lmstudio_models)
     active = get_backend(
         probe_results={
             "ollama": ollama_models,
             "lmstudio": lmstudio_models,
+            "lmstudio_loaded": lmstudio_loaded_models,
         }
     )
     return {
@@ -287,6 +289,7 @@ def ai_status():
         "ollama_models": ollama_models,
         "lmstudio_available": lmstudio_available,
         "lmstudio_models": lmstudio_models,
+        "lmstudio_loaded_models": lmstudio_loaded_models,
         "lmstudio_server_available": lmstudio.server_reachable(),
         "lmstudio_auth_required": lmstudio.authentication_required(),
         "models_ready": models_ready(),

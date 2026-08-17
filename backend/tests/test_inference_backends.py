@@ -61,6 +61,11 @@ def test_lmstudio_uses_native_models_endpoint(monkeypatch):
                         "key": "nomic-embed-text",
                         "loaded_instances": [{"id": "nomic-embed-text"}],
                     },
+                    {
+                        "type": "llm",
+                        "key": "llama/llama-3.2-3b",
+                        "loaded_instances": [],
+                    },
                 ]
             }
         )
@@ -70,7 +75,8 @@ def test_lmstudio_uses_native_models_endpoint(monkeypatch):
     backend = LMStudioBackend("http://localhost:1234/v1")
 
     assert backend.available()
-    assert backend._models() == ["qwen/qwen3-4b"]
+    assert backend._models() == ["qwen/qwen3-4b", "llama/llama-3.2-3b"]
+    assert backend.loaded_models() == ["qwen/qwen3-4b"]
     assert requests_seen == [
         ("http://localhost:1234/api/v1/models", 3.0),
         ("http://localhost:1234/api/v1/models", 3.0),
@@ -95,6 +101,29 @@ def test_lmstudio_falls_back_to_openai_models_endpoint(monkeypatch):
         "http://localhost:1234/api/v1/models",
         "http://localhost:1234/v1/models",
     ]
+
+
+def test_lmstudio_allows_jit_model_without_loaded_instance(monkeypatch):
+    monkeypatch.setattr(
+        "inference.requests.get",
+        lambda url, timeout: FakeResponse(
+            {
+                "models": [
+                    {
+                        "type": "llm",
+                        "key": "qwen/qwen3.5-9b",
+                        "loaded_instances": [],
+                    }
+                ]
+            }
+        ),
+    )
+
+    backend = LMStudioBackend()
+
+    assert backend._models() == ["qwen/qwen3.5-9b"]
+    assert backend.loaded_models() == []
+    assert backend.available()
 
 
 def test_lmstudio_reports_authentication_required(monkeypatch):
@@ -271,13 +300,13 @@ def test_ollama_stream_stops_after_cancellation(monkeypatch):
     assert isinstance(errors[0], InferenceCancelled)
 
 
-def test_lmstudio_requires_a_loaded_model(monkeypatch):
+def test_lmstudio_requires_an_available_model(monkeypatch):
     monkeypatch.setattr(
         "inference.requests.get",
         lambda url, timeout: FakeResponse({"data": []}),
     )
 
-    with pytest.raises(InferenceUnavailable, match="no loaded model"):
+    with pytest.raises(InferenceUnavailable, match="no available LLM"):
         LMStudioBackend().complete("Rewrite.", "Text.")
 
 

@@ -74,7 +74,9 @@ function describeActive(status) {
         : status.lmstudio_auth_required
           ? "LM Studio authentication required · enter an API token"
         : status.lmstudio_server_available
-          ? "LM Studio server found · load a model to use it"
+          ? status.lmstudio_models?.length
+            ? "LM Studio server found · selected model loads on first use"
+            : "LM Studio server found · no chat model is available"
           : "Using your LM Studio server (not detected — will fall back)",
     };
   }
@@ -146,6 +148,7 @@ export default function ModelManager({
     lmstudio_server_available: false,
     lmstudio_auth_required: false,
     lmstudio_models: [],
+    lmstudio_loaded_models: [],
     models_ready: {},
     model_key: "2b",
     active_backend: "bundled",
@@ -181,9 +184,20 @@ export default function ModelManager({
   const pollRef = useRef(null);
   const userPickedRef = useRef(false);
   const lmStudioApiKeyChangedRef = useRef(false);
+  const [openProvider, setOpenProvider] = useState(
+    () => localStorage.getItem("lexicon:provider-open") || ""
+  );
 
   function lmStudioApiKeyForSave() {
     return lmStudioApiKeyChangedRef.current ? lmStudioApiKeyDraft : null;
+  }
+
+  function toggleProvider(provider) {
+    setOpenProvider((current) => {
+      const next = current === provider ? "" : provider;
+      localStorage.setItem("lexicon:provider-open", next);
+      return next;
+    });
   }
 
   useEffect(() => {
@@ -221,6 +235,7 @@ export default function ModelManager({
             lmstudio_server_available: false,
             lmstudio_auth_required: false,
             lmstudio_models: [],
+            lmstudio_loaded_models: [],
             models_ready: {},
             model_key: "2b",
             active_backend: "bundled",
@@ -510,9 +525,31 @@ export default function ModelManager({
   }
 
   const ollamaAvailable = status.ollama_available || ollamaModels.length > 0;
-  const lmStudioAvailable = status.lmstudio_available || lmStudioModels.length > 0;
+  const lmStudioAvailable = status.lmstudio_available;
   const lmStudioServerAvailable = status.lmstudio_server_available;
   const lmStudioAuthRequired = status.lmstudio_auth_required;
+  const lmStudioLoadedModels = status.lmstudio_loaded_models || [];
+  const lmStudioModelLabel = selectedLmStudioModel || "auto-select";
+  const lmStudioSelectedModelLoaded =
+    Boolean(selectedLmStudioModel) && lmStudioLoadedModels.includes(selectedLmStudioModel);
+  const ollamaStatusText = ollamaProbing
+    ? "Checking for Ollama…"
+    : ollamaAvailable
+      ? `Detected and ready · ${selectedOllamaModel || "auto-select"}`
+      : "No Ollama server was detected on this machine.";
+  const lmStudioStatusText = lmStudioProbing
+    ? "Checking for LM Studio…"
+    : lmStudioAuthRequired
+      ? "Authentication required · configure an API token"
+      : lmStudioAvailable
+        ? lmStudioSelectedModelLoaded
+          ? `Detected and ready · ${lmStudioModelLabel}`
+          : `Detected · ${lmStudioModelLabel} will load on first use`
+        : lmStudioServerAvailable
+          ? lmStudioModels.length > 0
+            ? `${lmStudioModels.length} models found · ready for JIT loading`
+            : "Server detected, but no chat models were found"
+          : "No LM Studio server was detected";
 
   return (
     <div>
@@ -755,237 +792,298 @@ export default function ModelManager({
           }
         >
           <div className="overflow-hidden">
-            <div className="rounded-lg border border-hairline bg-canvas px-4 py-3">
-              <label className="flex cursor-pointer items-center gap-3">
-                <input
-                  type="checkbox"
-                  checked={status.preference?.backend === "ollama"}
-                  disabled={!probeDone || !ollamaAvailable}
-                  onChange={(e) => commitOllama(e.target.checked)}
-                  className="h-4 w-4 shrink-0 cursor-pointer accent-pale-blue-text"
-                />
-                <span>
-                  <span className="font-sans text-sm font-medium text-ink">
-                    Use my Ollama server
-                  </span>
-                  <span className="mt-0.5 block font-sans text-xs text-muted">
-                    {ollamaProbing
-                      ? "Checking for Ollama…"
-                      : ollamaAvailable
-                        ? "Detected and ready. AI tools will use your existing Ollama models."
-                        : "No Ollama server was detected on this machine."}
-                  </span>
-                  {ollamaAvailable && ollamaModels.length > 0 && (
-                    <span className="mt-2 flex flex-wrap gap-1.5">
-                      {ollamaModels.map((name) => (
-                        <button
-                          key={name}
-                          type="button"
-                          onClick={() => {
-                            setSelectedOllamaModel(name);
-                            // Update local status so the banner reflects the pick immediately
-                            setStatus((s) => ({
-                              ...s,
-                              preference: { ...s.preference, ollama_model: name },
-                            }));
-                            // Persist to backend if Ollama is already active
-                            if (status.preference?.backend === "ollama" && onPreferenceChange) {
-                              onPreferenceChange({
-                                backend: "ollama",
-                                model_key: modelKey,
-                                ollama_model: name,
-                                lmstudio_model: selectedLmStudioModel,
-                                lmstudio_url: lmStudioUrl,
-                              });
-                            }
-                          }}
-                          className={`inline-flex items-center rounded-md border px-2 py-0.5 font-mono text-[11px] transition-colors ${
-                            selectedOllamaModel === name
-                              ? "border-pale-blue-text bg-pale-blue/20 text-ink"
-                              : "border-hairline bg-white text-muted hover:border-muted hover:text-ink"
-                          }`}
-                        >
-                          {name}
-                        </button>
-                      ))}
-                    </span>
-                  )}
-                </span>
-              </label>
-            </div>
-            <div className="mt-2 rounded-lg border border-hairline bg-canvas px-4 py-3">
-              <label className="flex cursor-pointer items-center gap-3">
-                <input
-                  type="checkbox"
-                  checked={status.preference?.backend === "lmstudio"}
-                  disabled={!probeDone || !lmStudioAvailable}
-                  onChange={(e) => commitLmStudio(e.target.checked)}
-                  className="h-4 w-4 shrink-0 cursor-pointer accent-pale-yellow-text"
-                />
-                <span>
-                  <span className="font-sans text-sm font-medium text-ink">
-                    Use my LM Studio server
-                  </span>
-                  <span className="mt-0.5 block font-sans text-xs text-muted">
-                    {lmStudioProbing
-                      ? "Checking for LM Studio…"
-                      : lmStudioAuthRequired
-                        ? "Authentication required. Enter the API token below."
-                      : lmStudioAvailable
-                        ? "Detected and ready. AI tools will use your loaded LM Studio models."
-                        : lmStudioServerAvailable
-                          ? "Server detected, but no model is loaded. Load a model in LM Studio."
-                          : "No LM Studio server was detected. Start the local server in LM Studio."}
-                  </span>
-                  {lmStudioAvailable && lmStudioModels.length > 0 && (
-                    <span className="mt-2 flex flex-wrap gap-1.5">
-                      {lmStudioModels.map((name) => (
-                        <button
-                          key={name}
-                          type="button"
-                          onClick={() => {
-                            setSelectedLmStudioModel(name);
-                            setStatus((s) => ({
-                              ...s,
-                              preference: { ...s.preference, lmstudio_model: name },
-                            }));
-                            if (
-                              status.preference?.backend === "lmstudio" &&
-                              onPreferenceChange
-                            ) {
-                              onPreferenceChange({
-                                backend: "lmstudio",
-                                model_key: modelKey,
-                                ollama_model: selectedOllamaModel,
-                                lmstudio_model: name,
-                                lmstudio_url: lmStudioUrl,
-                                lmstudio_api_key: lmStudioApiKeyForSave(),
-                              });
-                            }
-                          }}
-                          className={`inline-flex items-center rounded-md border px-2 py-0.5 font-mono text-[11px] transition-colors ${
-                            selectedLmStudioModel === name
-                              ? "border-pale-yellow-text bg-pale-yellow/40 text-ink"
-                              : "border-hairline bg-white text-muted hover:border-muted hover:text-ink"
-                          }`}
-                        >
-                          {name}
-                        </button>
-                      ))}
-                    </span>
-                  )}
-                </span>
-              </label>
-              <div className="mt-3 border-t border-hairline/60 pt-3">
-                <label
-                  htmlFor="lmstudio-server-url"
-                  className="font-mono text-[10px] uppercase tracking-widest text-muted"
-                >
-                  Server URL
-                </label>
-                <div className="mt-1.5 flex items-center gap-2">
+            <div className="space-y-2">
+              <div className="rounded-lg border border-hairline bg-canvas">
+                <div className="flex items-start gap-3 px-4 py-3">
                   <input
-                    id="lmstudio-server-url"
-                    type="url"
-                    value={lmStudioUrlDraft}
-                    onChange={(event) => setLmStudioUrlDraft(event.target.value)}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter") {
-                        event.preventDefault();
-                        checkLmStudio();
-                      }
-                    }}
-                    placeholder={DEFAULT_LM_STUDIO_URL}
-                    className="min-w-0 flex-1 rounded border border-hairline bg-white px-2 py-1.5 font-mono text-[11px] text-ink outline-none focus:border-pale-yellow-text"
+                    type="checkbox"
+                    aria-label="Use my Ollama server"
+                    checked={status.preference?.backend === "ollama"}
+                    disabled={!probeDone || !ollamaAvailable}
+                    onChange={(e) => commitOllama(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer accent-pale-blue-text"
                   />
                   <button
                     type="button"
-                    onClick={checkLmStudio}
-                    disabled={!probeDone || lmStudioProbing}
-                    className="shrink-0 rounded border border-hairline bg-white px-2.5 py-1.5 font-sans text-[11px] font-medium text-ink transition-colors hover:border-muted disabled:cursor-wait disabled:opacity-50"
+                    onClick={() => toggleProvider("ollama")}
+                    aria-expanded={openProvider === "ollama"}
+                    aria-controls="ollama-provider-details"
+                    className="min-w-0 flex-1 text-left"
                   >
-                    {lmStudioProbing ? "Checking…" : "Check"}
+                    <span className="block font-sans text-sm font-medium text-ink">
+                      Use my Ollama server
+                    </span>
+                    <span className="mt-0.5 block truncate font-sans text-xs text-muted">
+                      {ollamaStatusText}
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => toggleProvider("ollama")}
+                    aria-label={`${openProvider === "ollama" ? "Hide" : "Configure"} Ollama`}
+                    className="flex shrink-0 items-center gap-1 rounded border border-hairline bg-white px-2 py-1 font-sans text-[11px] font-medium text-muted transition-colors hover:border-muted hover:text-ink"
+                  >
+                    <span aria-hidden="true">{openProvider === "ollama" ? "▾" : "▸"}</span>
+                    <span>{openProvider === "ollama" ? "Hide" : "Configure"}</span>
                   </button>
                 </div>
-                <p className="mt-1 font-sans text-[10px] text-muted">
-                  Use the address shown in LM Studio. The default is {DEFAULT_LM_STUDIO_URL}.
-                </p>
-                <div className="mt-3">
-                  <label
-                    htmlFor="lmstudio-preferred-model"
-                    className="font-mono text-[10px] uppercase tracking-widest text-muted"
+                {openProvider === "ollama" && (
+                  <div
+                    id="ollama-provider-details"
+                    className="border-t border-hairline/60 px-4 py-3"
                   >
-                    Preferred model name
-                  </label>
-                  <input
-                    id="lmstudio-preferred-model"
-                    type="text"
-                    value={selectedLmStudioModel}
-                    onChange={(event) => setSelectedLmStudioModel(event.target.value)}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter") {
-                        event.preventDefault();
-                        checkLmStudio();
-                      }
-                    }}
-                    placeholder="Optional — use the first loaded model"
-                    spellCheck="false"
-                    className="mt-1.5 w-full rounded border border-hairline bg-white px-2 py-1.5 font-mono text-[11px] text-ink outline-none focus:border-pale-yellow-text"
-                  />
-                  <p className="mt-1 font-sans text-[10px] text-muted">
-                    Use the exact model identifier shown by LM Studio. Leave it
-                    blank to use the first loaded model.
-                  </p>
-                </div>
-                <div className="mt-3">
-                  <label
-                    htmlFor="lmstudio-api-key"
-                    className="font-mono text-[10px] uppercase tracking-widest text-muted"
-                  >
-                    API token <span className="normal-case tracking-normal">(optional)</span>
-                  </label>
-                  <div className="mt-1.5 flex items-center gap-2">
-                    <input
-                      id="lmstudio-api-key"
-                      type="password"
-                      value={lmStudioApiKeyDraft}
-                      onChange={(event) => {
-                        lmStudioApiKeyChangedRef.current = true;
-                        setLmStudioApiKeyDraft(event.target.value);
-                      }}
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter") {
-                          event.preventDefault();
-                          checkLmStudio();
-                        }
-                      }}
-                      placeholder={
-                        lmStudioApiKeyConfigured
-                          ? "Saved token — leave blank to keep it"
-                          : "Paste the token from Manage Tokens"
-                      }
-                      autoComplete="off"
-                      spellCheck="false"
-                      className="min-w-0 flex-1 rounded border border-hairline bg-white px-2 py-1.5 font-mono text-[11px] text-ink outline-none focus:border-pale-yellow-text"
-                    />
-                    {lmStudioApiKeyConfigured && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          lmStudioApiKeyChangedRef.current = true;
-                          setLmStudioApiKeyDraft("");
-                        }}
-                        className="shrink-0 rounded border border-hairline bg-white px-2.5 py-1.5 font-sans text-[11px] font-medium text-muted transition-colors hover:border-muted hover:text-ink"
-                      >
-                        Clear
-                      </button>
+                    {ollamaAvailable && ollamaModels.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5">
+                        {ollamaModels.map((name) => (
+                          <button
+                            key={name}
+                            type="button"
+                            onClick={() => {
+                              setSelectedOllamaModel(name);
+                              setStatus((s) => ({
+                                ...s,
+                                preference: { ...s.preference, ollama_model: name },
+                              }));
+                              if (
+                                status.preference?.backend === "ollama" &&
+                                onPreferenceChange
+                              ) {
+                                onPreferenceChange({
+                                  backend: "ollama",
+                                  model_key: modelKey,
+                                  ollama_model: name,
+                                  lmstudio_model: selectedLmStudioModel,
+                                  lmstudio_url: lmStudioUrl,
+                                });
+                              }
+                            }}
+                            className={`inline-flex items-center rounded-md border px-2 py-0.5 font-mono text-[11px] transition-colors ${
+                              selectedOllamaModel === name
+                                ? "border-pale-blue-text bg-pale-blue/20 text-ink"
+                                : "border-hairline bg-white text-muted hover:border-muted hover:text-ink"
+                            }`}
+                          >
+                            {name}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    {!ollamaAvailable && (
+                      <p className="font-sans text-[11px] text-muted">
+                        Start Ollama to discover its available chat models.
+                      </p>
+                    )}
+                    {ollamaAvailable && ollamaModels.length === 0 && (
+                      <p className="font-sans text-[11px] text-muted">
+                        Ollama is ready. It will select a chat model automatically.
+                      </p>
                     )}
                   </div>
-                  <p className="mt-1 font-sans text-[10px] text-muted">
-                    Required only when LM Studio has Require Authentication
-                    enabled in Server Settings.
-                  </p>
+                )}
+              </div>
+              <div className="rounded-lg border border-hairline bg-canvas">
+                <div className="flex items-start gap-3 px-4 py-3">
+                  <input
+                    type="checkbox"
+                    aria-label="Use my LM Studio server"
+                    checked={status.preference?.backend === "lmstudio"}
+                    disabled={!probeDone || !lmStudioAvailable}
+                    onChange={(e) => commitLmStudio(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer accent-pale-yellow-text"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => toggleProvider("lmstudio")}
+                    aria-expanded={openProvider === "lmstudio"}
+                    aria-controls="lmstudio-provider-details"
+                    className="min-w-0 flex-1 text-left"
+                  >
+                    <span className="block font-sans text-sm font-medium text-ink">
+                      Use my LM Studio server
+                    </span>
+                    <span className="mt-0.5 block truncate font-sans text-xs text-muted">
+                      {lmStudioStatusText}
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => toggleProvider("lmstudio")}
+                    aria-label={`${openProvider === "lmstudio" ? "Hide" : "Configure"} LM Studio`}
+                    className="flex shrink-0 items-center gap-1 rounded border border-hairline bg-white px-2 py-1 font-sans text-[11px] font-medium text-muted transition-colors hover:border-muted hover:text-ink"
+                  >
+                    <span aria-hidden="true">
+                      {openProvider === "lmstudio" ? "▾" : "▸"}
+                    </span>
+                    <span>{openProvider === "lmstudio" ? "Hide" : "Configure"}</span>
+                  </button>
                 </div>
+                {openProvider === "lmstudio" && (
+                  <div
+                    id="lmstudio-provider-details"
+                    className="border-t border-hairline/60 px-4 pb-3 pt-3"
+                  >
+                    {lmStudioModels.length > 0 && !lmStudioSelectedModelLoaded && (
+                      <p className="mb-2 font-sans text-[11px] text-muted">
+                        LM Studio will load the selected model automatically on
+                        first use.
+                      </p>
+                    )}
+                    {lmStudioModels.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5">
+                        {lmStudioModels.map((name) => (
+                          <button
+                            key={name}
+                            type="button"
+                            title={
+                              status.lmstudio_loaded_models?.includes(name)
+                                ? "Loaded in LM Studio"
+                                : "Available on device; LM Studio will load it on first use"
+                            }
+                            onClick={() => {
+                              setSelectedLmStudioModel(name);
+                              setStatus((s) => ({
+                                ...s,
+                                preference: { ...s.preference, lmstudio_model: name },
+                              }));
+                              if (
+                                status.preference?.backend === "lmstudio" &&
+                                onPreferenceChange
+                              ) {
+                                onPreferenceChange({
+                                  backend: "lmstudio",
+                                  model_key: modelKey,
+                                  ollama_model: selectedOllamaModel,
+                                  lmstudio_model: name,
+                                  lmstudio_url: lmStudioUrl,
+                                  lmstudio_api_key: lmStudioApiKeyForSave(),
+                                });
+                              }
+                            }}
+                            className={`inline-flex items-center rounded-md border px-2 py-0.5 font-mono text-[11px] transition-colors ${
+                              selectedLmStudioModel === name
+                                ? "border-pale-yellow-text bg-pale-yellow/40 text-ink"
+                                : "border-hairline bg-white text-muted hover:border-muted hover:text-ink"
+                            }`}
+                          >
+                            {name}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    <div className="mt-3 border-t border-hairline/60 pt-3">
+                      <label
+                        htmlFor="lmstudio-server-url"
+                        className="font-mono text-[10px] uppercase tracking-widest text-muted"
+                      >
+                        Server URL
+                      </label>
+                      <div className="mt-1.5 flex items-center gap-2">
+                        <input
+                          id="lmstudio-server-url"
+                          type="url"
+                          value={lmStudioUrlDraft}
+                          onChange={(event) => setLmStudioUrlDraft(event.target.value)}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter") {
+                              event.preventDefault();
+                              checkLmStudio();
+                            }
+                          }}
+                          placeholder={DEFAULT_LM_STUDIO_URL}
+                          className="min-w-0 flex-1 rounded border border-hairline bg-white px-2 py-1.5 font-mono text-[11px] text-ink outline-none focus:border-pale-yellow-text"
+                        />
+                        <button
+                          type="button"
+                          onClick={checkLmStudio}
+                          disabled={!probeDone || lmStudioProbing}
+                          className="shrink-0 rounded border border-hairline bg-white px-2.5 py-1.5 font-sans text-[11px] font-medium text-ink transition-colors hover:border-muted disabled:cursor-wait disabled:opacity-50"
+                        >
+                          {lmStudioProbing ? "Checking…" : "Check"}
+                        </button>
+                      </div>
+                      <p className="mt-1 font-sans text-[10px] text-muted">
+                        Use the address shown in LM Studio. The default is {DEFAULT_LM_STUDIO_URL}.
+                      </p>
+                      <div className="mt-3">
+                        <label
+                          htmlFor="lmstudio-preferred-model"
+                          className="font-mono text-[10px] uppercase tracking-widest text-muted"
+                        >
+                          Preferred model name
+                        </label>
+                        <input
+                          id="lmstudio-preferred-model"
+                          type="text"
+                          value={selectedLmStudioModel}
+                          onChange={(event) => setSelectedLmStudioModel(event.target.value)}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter") {
+                              event.preventDefault();
+                              checkLmStudio();
+                            }
+                          }}
+                          placeholder="Optional — use the first loaded model"
+                          spellCheck="false"
+                          className="mt-1.5 w-full rounded border border-hairline bg-white px-2 py-1.5 font-mono text-[11px] text-ink outline-none focus:border-pale-yellow-text"
+                        />
+                        <p className="mt-1 font-sans text-[10px] text-muted">
+                          Use the exact model identifier shown by LM Studio. Leave it
+                          blank to use the first loaded model.
+                        </p>
+                      </div>
+                      <div className="mt-3">
+                        <label
+                          htmlFor="lmstudio-api-key"
+                          className="font-mono text-[10px] uppercase tracking-widest text-muted"
+                        >
+                          API token{" "}
+                          <span className="normal-case tracking-normal">(optional)</span>
+                        </label>
+                        <div className="mt-1.5 flex items-center gap-2">
+                          <input
+                            id="lmstudio-api-key"
+                            type="password"
+                            value={lmStudioApiKeyDraft}
+                            onChange={(event) => {
+                              lmStudioApiKeyChangedRef.current = true;
+                              setLmStudioApiKeyDraft(event.target.value);
+                            }}
+                            onKeyDown={(event) => {
+                              if (event.key === "Enter") {
+                                event.preventDefault();
+                                checkLmStudio();
+                              }
+                            }}
+                            placeholder={
+                              lmStudioApiKeyConfigured
+                                ? "Saved token — leave blank to keep it"
+                                : "Paste the token from Manage Tokens"
+                            }
+                            autoComplete="off"
+                            spellCheck="false"
+                            className="min-w-0 flex-1 rounded border border-hairline bg-white px-2 py-1.5 font-mono text-[11px] text-ink outline-none focus:border-pale-yellow-text"
+                          />
+                          {lmStudioApiKeyConfigured && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                lmStudioApiKeyChangedRef.current = true;
+                                setLmStudioApiKeyDraft("");
+                              }}
+                              className="shrink-0 rounded border border-hairline bg-white px-2.5 py-1.5 font-sans text-[11px] font-medium text-muted transition-colors hover:border-muted hover:text-ink"
+                            >
+                              Clear
+                            </button>
+                          )}
+                        </div>
+                        <p className="mt-1 font-sans text-[10px] text-muted">
+                          Required only when LM Studio has Require Authentication enabled
+                          in Server Settings.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
