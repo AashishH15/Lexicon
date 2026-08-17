@@ -1794,7 +1794,8 @@ export default function Settings({
                           pref.model_key,
                           pref.ollama_model || "",
                           pref.lmstudio_model || "",
-                          pref.lmstudio_url || ""
+                          pref.lmstudio_url || "",
+                          pref.lmstudio_api_key ?? null
                         ).catch(() => { });
                       }}
                       onConfigured={() =>

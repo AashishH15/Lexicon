@@ -233,24 +233,94 @@ class LMStudioBackend(InferenceBackend):
         base_url: str = LM_STUDIO_SERVER,
         model: str | None = None,
         models: list[str] | None = None,
+        api_key: str | None = None,
     ):
         base_url = base_url.rstrip("/")
-        self.base_url = base_url[:-3] if base_url.endswith("/v1") else base_url
+        if base_url.endswith("/api/v1"):
+            base_url = base_url[:-7]
+        elif base_url.endswith("/v1"):
+            base_url = base_url[:-3]
+        self.base_url = base_url
         self.api_url = f"{self.base_url}/v1"
-        self._model = model
+        self.native_api_url = f"{self.base_url}/api/v1"
+        self._model = model.strip() if isinstance(model, str) and model.strip() else None
         self._cached_models = models
+        self.api_key = api_key.strip() if isinstance(api_key, str) else ""
         self._server_reachable = models is not None
+        self._auth_required = False
+
+    def _request_kwargs(self, **kwargs):
+        if self.api_key:
+            kwargs["headers"] = {"Authorization": f"Bearer {self.api_key}"}
+        return kwargs
+
+    @staticmethod
+    def _status_code(exc: requests.HTTPError) -> int | None:
+        response = getattr(exc, "response", None)
+        return getattr(response, "status_code", None)
+
+    @staticmethod
+    def _native_model_ids(data: dict) -> list[str]:
+        items = data.get("models")
+        if not isinstance(items, list):
+            return []
+        model_ids = []
+        for item in items:
+            if not isinstance(item, dict) or item.get("type") != "llm":
+                continue
+            loaded_instances = item.get("loaded_instances")
+            if not isinstance(loaded_instances, list):
+                continue
+            model_ids.extend(
+                instance["id"]
+                for instance in loaded_instances
+                if isinstance(instance, dict) and isinstance(instance.get("id"), str)
+            )
+        return list(dict.fromkeys(model_ids))
 
     def _models(self) -> list[str]:
         if self._cached_models is not None:
             return list(self._cached_models)
+        self._auth_required = False
         try:
             response = requests.get(
-                f"{self.api_url}/models",
-                timeout=PROBE_TIMEOUT,
+                f"{self.native_api_url}/models",
+                **self._request_kwargs(timeout=PROBE_TIMEOUT),
             )
             response.raise_for_status()
             data = response.json()
+        except requests.HTTPError as exc:
+            status_code = self._status_code(exc)
+            if status_code in (401, 403):
+                self._server_reachable = True
+                self._auth_required = True
+                return []
+            if status_code not in (404, 405):
+                self._server_reachable = False
+                return []
+        except ValueError:
+            self._server_reachable = False
+            return []
+        except requests.RequestException:
+            self._server_reachable = False
+            return []
+        else:
+            if isinstance(data, dict) and isinstance(data.get("models"), list):
+                self._server_reachable = True
+                return self._native_model_ids(data)
+
+        try:
+            response = requests.get(
+                f"{self.api_url}/models",
+                **self._request_kwargs(timeout=PROBE_TIMEOUT),
+            )
+            response.raise_for_status()
+            data = response.json()
+        except requests.HTTPError as exc:
+            status_code = self._status_code(exc)
+            self._server_reachable = status_code in (401, 403)
+            self._auth_required = self._server_reachable
+            return []
         except (requests.RequestException, ValueError):
             self._server_reachable = False
             return []
@@ -261,15 +331,21 @@ class LMStudioBackend(InferenceBackend):
         items = data.get("data", [])
         if not isinstance(items, list):
             return []
-        return [
-            item["id"]
-            for item in items
-            if isinstance(item, dict) and isinstance(item.get("id"), str)
-        ]
+        return list(
+            dict.fromkeys(
+                item["id"]
+                for item in items
+                if isinstance(item, dict) and isinstance(item.get("id"), str)
+            )
+        )
 
     def server_reachable(self) -> bool:
         """Return whether the last models probe reached LM Studio."""
         return self._server_reachable
+
+    def authentication_required(self) -> bool:
+        """Return whether LM Studio rejected the last probe as unauthorized."""
+        return self._auth_required
 
     def available(self) -> bool:
         """Return true if LM Studio has a loaded model."""
@@ -306,9 +382,11 @@ class LMStudioBackend(InferenceBackend):
         try:
             response = requests.post(
                 f"{self.api_url}/chat/completions",
-                json=payload,
-                stream=True,
-                timeout=GENERATE_TIMEOUT,
+                **self._request_kwargs(
+                    json=payload,
+                    stream=True,
+                    timeout=GENERATE_TIMEOUT,
+                ),
             )
             if on_response:
                 on_response(response)
@@ -496,16 +574,20 @@ def get_backend(
     if _backend is not None and not force_refresh:
         return _backend
 
+    prefs = load_prefs()
     if FORCE_BACKEND in ("ollama", "lmstudio", "bundled"):
         if FORCE_BACKEND == "ollama":
             _backend = OllamaBackend()
         elif FORCE_BACKEND == "lmstudio":
-            _backend = LMStudioBackend()
+            _backend = LMStudioBackend(
+                base_url=prefs.get("lmstudio_url") or LM_STUDIO_SERVER,
+                model=prefs.get("lmstudio_model") or None,
+                api_key=prefs.get("lmstudio_api_key") or None,
+            )
         else:
             _backend = BundledBackend()
         return _backend
 
-    prefs = load_prefs()
     choice = prefs["backend"]
     key = prefs["model_key"]
     ollama_model = prefs.get("ollama_model", "")
@@ -525,6 +607,7 @@ def get_backend(
             base_url=lmstudio_url,
             model=model,
             models=cached_lmstudio_models,
+            api_key=prefs.get("lmstudio_api_key") or None,
         )
 
     if choice == "ollama":

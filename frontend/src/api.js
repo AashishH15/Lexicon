@@ -85,6 +85,7 @@ export async function setAiPreference(
   ollamaModel = "",
   lmstudioModel = "",
   lmstudioUrl = "",
+  lmstudioApiKey = null,
 ) {
   const response = await request("/ai/preference", {
     method: "POST",
@@ -95,6 +96,7 @@ export async function setAiPreference(
       ollama_model: ollamaModel,
       lmstudio_model: lmstudioModel,
       lmstudio_url: lmstudioUrl,
+      lmstudio_api_key: lmstudioApiKey,
     }),
   });
   if (!response.ok) {

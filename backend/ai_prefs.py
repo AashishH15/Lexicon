@@ -19,6 +19,7 @@ DEFAULT_PREFS = {
     "ollama_model": "",
     "lmstudio_model": "",
     "lmstudio_url": "",
+    "lmstudio_api_key": "",
 }
 
 _VALID_BACKENDS = ("auto", "ollama", "lmstudio", "bundled")
@@ -37,8 +38,14 @@ def load_prefs() -> dict:
     ollama_model = data.get("ollama_model", DEFAULT_PREFS["ollama_model"])
     lmstudio_model = data.get("lmstudio_model", DEFAULT_PREFS["lmstudio_model"])
     lmstudio_url = data.get("lmstudio_url", DEFAULT_PREFS["lmstudio_url"])
+    lmstudio_api_key = data.get(
+        "lmstudio_api_key",
+        DEFAULT_PREFS["lmstudio_api_key"],
+    )
     if not isinstance(lmstudio_url, str):
         lmstudio_url = DEFAULT_PREFS["lmstudio_url"]
+    if not isinstance(lmstudio_api_key, str):
+        lmstudio_api_key = DEFAULT_PREFS["lmstudio_api_key"]
     if backend not in _VALID_BACKENDS:
         backend = DEFAULT_PREFS["backend"]
     if model_key not in _VALID_KEYS:
@@ -49,6 +56,7 @@ def load_prefs() -> dict:
         "ollama_model": ollama_model,
         "lmstudio_model": lmstudio_model,
         "lmstudio_url": lmstudio_url,
+        "lmstudio_api_key": lmstudio_api_key,
     }
 
 
@@ -58,18 +66,27 @@ def save_prefs(
     ollama_model: str = "",
     lmstudio_model: str = "",
     lmstudio_url: str = "",
+    lmstudio_api_key: str | None = None,
 ) -> dict:
     """Persist a choice. Unknown values are coerced to defaults."""
     if backend not in _VALID_BACKENDS:
         backend = DEFAULT_PREFS["backend"]
     if model_key not in _VALID_KEYS:
         model_key = DEFAULT_PREFS["model_key"]
+    if lmstudio_api_key is None:
+        lmstudio_api_key = load_prefs().get(
+            "lmstudio_api_key",
+            DEFAULT_PREFS["lmstudio_api_key"],
+        )
+    if not isinstance(lmstudio_api_key, str):
+        lmstudio_api_key = DEFAULT_PREFS["lmstudio_api_key"]
     prefs = {
         "backend": backend,
         "model_key": model_key,
         "ollama_model": ollama_model,
         "lmstudio_model": lmstudio_model,
         "lmstudio_url": lmstudio_url,
+        "lmstudio_api_key": lmstudio_api_key.strip(),
     }
     try:
         with open(PREFS_PATH, "w", encoding="utf-8") as fh:
@@ -78,3 +95,11 @@ def save_prefs(
         # Non-fatal: the in-memory choice still applies for this session.
         pass
     return prefs
+
+
+def public_prefs(prefs: dict | None = None) -> dict:
+    """Return preferences without exposing the LM Studio API token."""
+    data = dict(prefs or load_prefs())
+    api_key = data.pop("lmstudio_api_key", "")
+    data["lmstudio_api_key_configured"] = bool(api_key)
+    return data

@@ -20,7 +20,9 @@ const DEFAULT_LM_STUDIO_URL = "http://localhost:1234";
 const _EMBED_ONLY = ["nomic-embed-text", "mxbai-embed-large", "all-minilm"];
 
 function normalizeLmStudioUrl(value) {
-  const trimmed = String(value || "").trim().replace(/\/+$/, "");
+  let trimmed = String(value || "").trim().replace(/\/+$/, "");
+  if (trimmed.endsWith("/api/v1")) trimmed = trimmed.slice(0, -7);
+  else if (trimmed.endsWith("/v1")) trimmed = trimmed.slice(0, -3);
   return trimmed || DEFAULT_LM_STUDIO_URL;
 }
 
@@ -69,6 +71,8 @@ function describeActive(status) {
       tone: "lmstudio",
       text: status.lmstudio_available
         ? `Using LM Studio · ${modelLabel}`
+        : status.lmstudio_auth_required
+          ? "LM Studio authentication required · enter an API token"
         : status.lmstudio_server_available
           ? "LM Studio server found · load a model to use it"
           : "Using your LM Studio server (not detected — will fall back)",
@@ -140,6 +144,7 @@ export default function ModelManager({
     ollama_available: false,
     lmstudio_available: false,
     lmstudio_server_available: false,
+    lmstudio_auth_required: false,
     lmstudio_models: [],
     models_ready: {},
     model_key: "2b",
@@ -150,6 +155,7 @@ export default function ModelManager({
       ollama_model: "",
       lmstudio_model: "",
       lmstudio_url: "",
+      lmstudio_api_key_configured: false,
     },
   });
   const [probeDone, setProbeDone] = useState(false);
@@ -165,6 +171,8 @@ export default function ModelManager({
   const [selectedLmStudioModel, setSelectedLmStudioModel] = useState("");
   const [lmStudioUrl, setLmStudioUrl] = useState(DEFAULT_LM_STUDIO_URL);
   const [lmStudioUrlDraft, setLmStudioUrlDraft] = useState(DEFAULT_LM_STUDIO_URL);
+  const [lmStudioApiKeyDraft, setLmStudioApiKeyDraft] = useState("");
+  const [lmStudioApiKeyConfigured, setLmStudioApiKeyConfigured] = useState(false);
   const [modelKey, setModelKey] = useState(adviseModelKey());
   const [phase, setPhase] = useState("choose"); // choose | downloading | done | error
   const [progress, setProgress] = useState(null);
@@ -172,6 +180,11 @@ export default function ModelManager({
   const [error, setError] = useState("");
   const pollRef = useRef(null);
   const userPickedRef = useRef(false);
+  const lmStudioApiKeyChangedRef = useRef(false);
+
+  function lmStudioApiKeyForSave() {
+    return lmStudioApiKeyChangedRef.current ? lmStudioApiKeyDraft : null;
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -195,6 +208,10 @@ export default function ModelManager({
         const savedLmStudioUrl = normalizeLmStudioUrl(s.preference?.lmstudio_url || "");
         setLmStudioUrl(savedLmStudioUrl);
         setLmStudioUrlDraft(savedLmStudioUrl);
+        setLmStudioApiKeyConfigured(
+          Boolean(s.preference?.lmstudio_api_key_configured)
+        );
+        if (!lmStudioApiKeyChangedRef.current) setLmStudioApiKeyDraft("");
       })
       .catch(() => {
         if (!cancelled)
@@ -202,6 +219,7 @@ export default function ModelManager({
             ollama_available: false,
             lmstudio_available: false,
             lmstudio_server_available: false,
+            lmstudio_auth_required: false,
             lmstudio_models: [],
             models_ready: {},
             model_key: "2b",
@@ -212,6 +230,7 @@ export default function ModelManager({
               ollama_model: "",
               lmstudio_model: "",
               lmstudio_url: "",
+              lmstudio_api_key_configured: false,
             },
           });
       })
@@ -262,6 +281,7 @@ export default function ModelManager({
               backend: "bundled",
               model_key: modelKey,
               lmstudio_url: lmStudioUrl,
+              lmstudio_api_key: lmStudioApiKeyForSave(),
             });
           }
         } else if (st.state === "error") {
@@ -284,6 +304,9 @@ export default function ModelManager({
       setStatus(s);
       if (s.ollama_models) setOllamaModels(s.ollama_models);
       if (s.lmstudio_models) setLmStudioModels(s.lmstudio_models);
+      setLmStudioApiKeyConfigured(
+        Boolean(s.preference?.lmstudio_api_key_configured)
+      );
       if (s.preference?.lmstudio_url) {
         const savedLmStudioUrl = normalizeLmStudioUrl(s.preference.lmstudio_url);
         setLmStudioUrl(savedLmStudioUrl);
@@ -370,15 +393,22 @@ export default function ModelManager({
 
   async function checkLmStudio() {
     const nextUrl = normalizeLmStudioUrl(lmStudioUrlDraft);
+    const nextModel = selectedLmStudioModel.trim();
     setLmStudioUrl(nextUrl);
     setLmStudioUrlDraft(nextUrl);
+    setSelectedLmStudioModel(nextModel);
     setLmStudioProbing(true);
     setStatus((s) => ({
       ...s,
       lmstudio_available: false,
       lmstudio_server_available: false,
+      lmstudio_auth_required: false,
       lmstudio_models: [],
-      preference: { ...s.preference, lmstudio_url: nextUrl },
+      preference: {
+        ...s.preference,
+        lmstudio_model: nextModel,
+        lmstudio_url: nextUrl,
+      },
     }));
     try {
       if (onPreferenceChange) {
@@ -386,8 +416,9 @@ export default function ModelManager({
           backend: status.preference?.backend || "auto",
           model_key: modelKey,
           ollama_model: selectedOllamaModel,
-          lmstudio_model: selectedLmStudioModel,
+          lmstudio_model: nextModel,
           lmstudio_url: nextUrl,
+          lmstudio_api_key: lmStudioApiKeyForSave(),
         });
       }
       await refreshStatus();
@@ -418,6 +449,7 @@ export default function ModelManager({
           ollama_model: selectedOllamaModel,
           lmstudio_model: selectedLmStudioModel,
           lmstudio_url: lmStudioUrl,
+          lmstudio_api_key: lmStudioApiKeyForSave(),
         });
       }
     } else {
@@ -432,6 +464,7 @@ export default function ModelManager({
           ollama_model: "",
           lmstudio_model: selectedLmStudioModel,
           lmstudio_url: lmStudioUrl,
+          lmstudio_api_key: lmStudioApiKeyForSave(),
         });
       }
     }
@@ -455,6 +488,7 @@ export default function ModelManager({
           ollama_model: selectedOllamaModel,
           lmstudio_model: selectedLmStudioModel,
           lmstudio_url: lmStudioUrl,
+          lmstudio_api_key: lmStudioApiKeyForSave(),
         });
       }
     } else {
@@ -469,6 +503,7 @@ export default function ModelManager({
           ollama_model: selectedOllamaModel,
           lmstudio_model: "",
           lmstudio_url: lmStudioUrl,
+          lmstudio_api_key: lmStudioApiKeyForSave(),
         });
       }
     }
@@ -477,6 +512,7 @@ export default function ModelManager({
   const ollamaAvailable = status.ollama_available || ollamaModels.length > 0;
   const lmStudioAvailable = status.lmstudio_available || lmStudioModels.length > 0;
   const lmStudioServerAvailable = status.lmstudio_server_available;
+  const lmStudioAuthRequired = status.lmstudio_auth_required;
 
   return (
     <div>
@@ -559,6 +595,7 @@ export default function ModelManager({
                         backend: "bundled",
                         model_key: tier.key,
                         lmstudio_url: lmStudioUrl,
+                        lmstudio_api_key: lmStudioApiKeyForSave(),
                       });
                     refreshStatus();
                   }
@@ -575,6 +612,7 @@ export default function ModelManager({
                           backend: "bundled",
                           model_key: tier.key,
                           lmstudio_url: lmStudioUrl,
+                          lmstudio_api_key: lmStudioApiKeyForSave(),
                         });
                       refreshStatus();
                     }
@@ -791,6 +829,8 @@ export default function ModelManager({
                   <span className="mt-0.5 block font-sans text-xs text-muted">
                     {lmStudioProbing
                       ? "Checking for LM Studio…"
+                      : lmStudioAuthRequired
+                        ? "Authentication required. Enter the API token below."
                       : lmStudioAvailable
                         ? "Detected and ready. AI tools will use your loaded LM Studio models."
                         : lmStudioServerAvailable
@@ -819,6 +859,7 @@ export default function ModelManager({
                                 ollama_model: selectedOllamaModel,
                                 lmstudio_model: name,
                                 lmstudio_url: lmStudioUrl,
+                                lmstudio_api_key: lmStudioApiKeyForSave(),
                               });
                             }
                           }}
@@ -869,6 +910,82 @@ export default function ModelManager({
                 <p className="mt-1 font-sans text-[10px] text-muted">
                   Use the address shown in LM Studio. The default is {DEFAULT_LM_STUDIO_URL}.
                 </p>
+                <div className="mt-3">
+                  <label
+                    htmlFor="lmstudio-preferred-model"
+                    className="font-mono text-[10px] uppercase tracking-widest text-muted"
+                  >
+                    Preferred model name
+                  </label>
+                  <input
+                    id="lmstudio-preferred-model"
+                    type="text"
+                    value={selectedLmStudioModel}
+                    onChange={(event) => setSelectedLmStudioModel(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        event.preventDefault();
+                        checkLmStudio();
+                      }
+                    }}
+                    placeholder="Optional — use the first loaded model"
+                    spellCheck="false"
+                    className="mt-1.5 w-full rounded border border-hairline bg-white px-2 py-1.5 font-mono text-[11px] text-ink outline-none focus:border-pale-yellow-text"
+                  />
+                  <p className="mt-1 font-sans text-[10px] text-muted">
+                    Use the exact model identifier shown by LM Studio. Leave it
+                    blank to use the first loaded model.
+                  </p>
+                </div>
+                <div className="mt-3">
+                  <label
+                    htmlFor="lmstudio-api-key"
+                    className="font-mono text-[10px] uppercase tracking-widest text-muted"
+                  >
+                    API token <span className="normal-case tracking-normal">(optional)</span>
+                  </label>
+                  <div className="mt-1.5 flex items-center gap-2">
+                    <input
+                      id="lmstudio-api-key"
+                      type="password"
+                      value={lmStudioApiKeyDraft}
+                      onChange={(event) => {
+                        lmStudioApiKeyChangedRef.current = true;
+                        setLmStudioApiKeyDraft(event.target.value);
+                      }}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") {
+                          event.preventDefault();
+                          checkLmStudio();
+                        }
+                      }}
+                      placeholder={
+                        lmStudioApiKeyConfigured
+                          ? "Saved token — leave blank to keep it"
+                          : "Paste the token from Manage Tokens"
+                      }
+                      autoComplete="off"
+                      spellCheck="false"
+                      className="min-w-0 flex-1 rounded border border-hairline bg-white px-2 py-1.5 font-mono text-[11px] text-ink outline-none focus:border-pale-yellow-text"
+                    />
+                    {lmStudioApiKeyConfigured && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          lmStudioApiKeyChangedRef.current = true;
+                          setLmStudioApiKeyDraft("");
+                        }}
+                        className="shrink-0 rounded border border-hairline bg-white px-2.5 py-1.5 font-sans text-[11px] font-medium text-muted transition-colors hover:border-muted hover:text-ink"
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
+                  <p className="mt-1 font-sans text-[10px] text-muted">
+                    Required only when LM Studio has Require Authentication
+                    enabled in Server Settings.
+                  </p>
+                </div>
               </div>
             </div>
           </div>

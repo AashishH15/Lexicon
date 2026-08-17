@@ -25,7 +25,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-from ai_prefs import load_prefs, save_prefs
+from ai_prefs import load_prefs, public_prefs, save_prefs
 from inference import (
     LM_STUDIO_SERVER,
     BundledBackend,
@@ -267,6 +267,7 @@ def ai_status():
     lmstudio = LMStudioBackend(
         base_url=prefs.get("lmstudio_url") or LM_STUDIO_SERVER,
         model=prefs.get("lmstudio_model") or None,
+        api_key=prefs.get("lmstudio_api_key") or None,
     )
     with ThreadPoolExecutor(max_workers=2) as executor:
         ollama_probe = executor.submit(ollama._chat_models)
@@ -287,9 +288,10 @@ def ai_status():
         "lmstudio_available": lmstudio_available,
         "lmstudio_models": lmstudio_models,
         "lmstudio_server_available": lmstudio.server_reachable(),
+        "lmstudio_auth_required": lmstudio.authentication_required(),
         "models_ready": models_ready(),
         "model_key": prefs["model_key"],
-        "preference": prefs,
+        "preference": public_prefs(prefs),
         "active_backend": active.name,
     }
 
@@ -297,7 +299,7 @@ def ai_status():
 @app.get("/ai/preference")
 def ai_preference_get():
     """Current persisted backend choice."""
-    return load_prefs()
+    return public_prefs()
 
 
 class AiPreferenceRequest(BaseModel):
@@ -306,6 +308,7 @@ class AiPreferenceRequest(BaseModel):
     ollama_model: str = ""  # Selected Ollama model name.
     lmstudio_model: str = ""  # Selected LM Studio model name.
     lmstudio_url: str = ""  # LM Studio server URL.
+    lmstudio_api_key: str | None = None  # Optional LM Studio API token.
 
 
 @app.post("/ai/preference")
@@ -318,10 +321,11 @@ def ai_preference_set(request: AiPreferenceRequest):
         request.ollama_model,
         request.lmstudio_model,
         request.lmstudio_url,
+        request.lmstudio_api_key,
     )
     # Force the cached backend to re-resolve against the new preference.
     get_backend(force_refresh=True)
-    return prefs
+    return public_prefs(prefs)
 
 
 @app.post("/model/cancel")
@@ -399,6 +403,7 @@ def transform(request: TransformRequest):
             backend = LMStudioBackend(
                 base_url=prefs.get("lmstudio_url") or LM_STUDIO_SERVER,
                 model=prefs.get("lmstudio_model") or None,
+                api_key=prefs.get("lmstudio_api_key") or None,
             )
         else:
             backend = get_backend()
