@@ -291,6 +291,19 @@ const SEARCH_INDEX = [
     ],
   },
   {
+    label: "Browser Extensions",
+    tab: "about",
+    settingKey: "browser-extensions",
+    keywords: [
+      "browser",
+      "extension",
+      "extensions",
+      "chrome",
+      "firefox",
+      "web",
+    ],
+  },
+  {
     label: "Typography Preset",
     tab: "appearance",
     settingKey: "typography-preset",
@@ -741,7 +754,7 @@ export default function Settings({
 
   function getHighlightClass(
     key,
-    { includeSpacing = true, includeRounded = true } = {}
+    { includeSpacing = true, includeRounded = true, includeBackground = true } = {}
   ) {
     const isHighlighted = highlightedKey === key;
     return (
@@ -750,7 +763,9 @@ export default function Settings({
       "transition-all duration-1000 " +
       (isHighlighted
         ? "bg-[rgba(31,108,159,0.22)] ring-2 ring-[rgba(31,108,159,0.5)] shadow-sm"
-        : "bg-transparent ring-0 ring-transparent")
+        : includeBackground
+          ? "bg-transparent ring-0 ring-transparent"
+          : "ring-0 ring-transparent")
     );
   }
 
@@ -2050,6 +2065,34 @@ export default function Settings({
                         </div>
                       )}
                     </div>
+                  </div>
+
+                  <div
+                    data-setting-key="browser-extensions"
+                    className={`rounded-lg border border-hairline bg-canvas px-4 py-3.5 ${getHighlightClass("browser-extensions", { includeSpacing: false, includeRounded: false, includeBackground: false })}`}
+                  >
+                    <p className="font-mono text-[10px] uppercase tracking-widest text-muted">
+                      Browser extensions
+                    </p>
+                    <p className="mt-1 font-sans text-xs leading-relaxed text-muted">
+                      Use Lexicon in Chrome or Firefox with the browser
+                      extension. The Lexicon window does not need to stay open,
+                      but the app must keep running in the background.
+                      Official store links will be added when v0.11.0 is the
+                      latest stable release.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        openExternalUrl(
+                          "https://github.com/AashishH15/Lexicon/releases",
+                        )
+                      }
+                      className="mt-3 flex w-full items-center justify-center gap-2 rounded border border-hairline bg-white py-2.5 font-sans text-sm font-medium text-ink transition-colors hover:border-muted hover:bg-hairline/40"
+                    >
+                      View extension releases
+                      <ArrowSquareOut size={14} className="text-muted" />
+                    </button>
                   </div>
 
                   <div className="rounded-lg border border-hairline bg-canvas px-4 py-3.5">
