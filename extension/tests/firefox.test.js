@@ -103,3 +103,13 @@ test("xpi exists for AMO submission", () => {
   const xpiPath = join(EXTENSION_DIR, "dist", `lexicon-firefox-${firefox.version}.xpi`);
   assert.ok(existsSync(xpiPath), "firefox xpi was not produced");
 });
+
+test("store package carries Lexicon and third-party license notices", () => {
+  for (const file of [
+    "LICENSE",
+    "THIRD_PARTY_NOTICES.md",
+    "vendor/LICENSE-MPL-2.0.txt",
+  ]) {
+    assert.ok(existsSync(join(DIST_DIR, file)), `missing license notice: ${file}`);
+  }
+});

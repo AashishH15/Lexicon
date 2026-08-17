@@ -113,3 +113,13 @@ test("store zip exists and contains the dist contents", () => {
   const zipPath = join(EXTENSION_DIR, "dist", `lexicon-chrome-${manifest.version}.zip`);
   assert.ok(existsSync(zipPath), "chrome zip was not produced");
 });
+
+test("store package carries Lexicon and third-party license notices", () => {
+  for (const file of [
+    "LICENSE",
+    "THIRD_PARTY_NOTICES.md",
+    "vendor/LICENSE-MPL-2.0.txt",
+  ]) {
+    assert.ok(existsSync(join(DIST_DIR, file)), `missing license notice: ${file}`);
+  }
+});

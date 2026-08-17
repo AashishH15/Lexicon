@@ -1,5 +1,6 @@
 // Shared build helpers for both platform build scripts.
-// Files resolve from the platform dir first, then from shared/.
+// Files resolve from the platform dir first, then from shared/ and any
+// additional source directories supplied by the platform build.
 
 import { spawnSync } from "node:child_process";
 import { cpSync, existsSync, mkdirSync, readFileSync, rmSync } from "node:fs";
@@ -27,15 +28,22 @@ export function readManifest(platformDir, requiredFields) {
   return manifest;
 }
 
-export function stageDist({ platformDir, sharedDir, distDir, files }) {
+export function stageDist({
+  platformDir,
+  sharedDir,
+  distDir,
+  files,
+  additionalDirs = [],
+}) {
   rmSync(distDir, { recursive: true, force: true });
   mkdirSync(distDir, { recursive: true });
+  const sourceDirs = [platformDir, sharedDir, ...additionalDirs];
   for (const file of files) {
-    const candidates = [join(platformDir, file), join(sharedDir, file)];
+    const candidates = sourceDirs.map((sourceDir) => join(sourceDir, file));
     const src = candidates.find((c) => existsSync(c));
     if (!src) {
       throw new Error(
-        `ship file not found in ${platformDir} or ${sharedDir}: ${file}`,
+        `ship file not found in ${sourceDirs.join(", ")}: ${file}`,
       );
     }
     const dest = join(distDir, file);

@@ -180,6 +180,26 @@ Commons Attribution-ShareAlike terms. The authoritative notices are the
 language-specific `README*` and `LICENSE*` files under
 `org/languagetool/resource/<language>/` in the bundled distribution.
 
+## Browser extension
+
+The Chrome and Firefox extension packages include this notice, Lexicon's MIT
+license, and the license text for the vendored browser API polyfill. The
+extensions do not bundle LanguageTool; they connect to the Lexicon desktop
+application, which uses LanguageTool separately.
+
+### Mozilla webextension-polyfill
+
+- **Project:** `webextension-polyfill`
+- **Version:** 0.12.0
+- **Copyright:** Mozilla contributors
+- **License:** Mozilla Public License 2.0 (MPL-2.0)
+- **Source:** <https://github.com/mozilla/webextension-polyfill/tree/0.12.0>
+- **License text:** `vendor/LICENSE-MPL-2.0.txt` in each extension package
+
+The vendored `extension/shared/vendor/browser-polyfill.min.js` retains
+Mozilla's MPL notice and source URL. The extension packages also include the
+full MPL text as `vendor/LICENSE-MPL-2.0.txt`.
+
 ## Bundled Java runtime
 
 Desktop releases include an Eclipse Temurin JRE from the Eclipse Adoptium

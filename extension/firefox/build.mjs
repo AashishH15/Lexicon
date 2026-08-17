@@ -11,6 +11,7 @@ import { packArchive, readManifest, stageDist } from "../tools/build.mjs";
 
 const FIREFOX_DIR = dirname(fileURLToPath(import.meta.url));
 const SHARED_DIR = join(FIREFOX_DIR, "..", "shared");
+const REPO_ROOT = join(FIREFOX_DIR, "..", "..");
 const DIST_DIR = join(FIREFOX_DIR, "dist");
 const OUT_DIR = join(FIREFOX_DIR, "..", "dist");
 
@@ -28,6 +29,9 @@ const SHIP_FILES = [
   "popup.html",
   "popup.css",
   "popup.js",
+  "LICENSE",
+  "THIRD_PARTY_NOTICES.md",
+  "vendor/LICENSE-MPL-2.0.txt",
 ];
 
 const manifest = readManifest(FIREFOX_DIR, [
@@ -53,6 +57,7 @@ stageDist({
   sharedDir: SHARED_DIR,
   distDir: DIST_DIR,
   files: SHIP_FILES,
+  additionalDirs: [REPO_ROOT],
 });
 
 const archivePath = packArchive(
