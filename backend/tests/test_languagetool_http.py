@@ -364,6 +364,30 @@ def test_close_does_not_manage_external_server(monkeypatch):
     assert terminated == []
 
 
+def test_owned_process_termination_does_not_spawn_taskkill(monkeypatch):
+    process = FakeProcess()
+    monkeypatch.setattr(
+        languagetool.subprocess,
+        "run",
+        lambda *_args, **_kwargs: pytest.fail("taskkill must not run"),
+    )
+
+    languagetool._terminate_process(process)
+
+    assert process.terminated
+    assert not process.killed
+
+
+def test_already_exited_process_needs_no_cleanup():
+    process = FakeProcess()
+    process.running = False
+
+    languagetool._terminate_process(process)
+
+    assert not process.terminated
+    assert not process.killed
+
+
 def test_java_command_uses_the_language_tool_http_server(tmp_path):
     command = languagetool._build_server_command(
         "java",

@@ -212,15 +212,10 @@ def _wait_for_server(process, base_url: str) -> None:
 def _terminate_process(process) -> None:
     if not _process_running(process):
         return
-    if os.name == "nt" and getattr(process, "pid", None):
-        subprocess.run(
-            ["taskkill", "/PID", str(process.pid), "/T", "/F"],
-            check=False,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-        )
-    else:
+    try:
         process.terminate()
+    except (OSError, AttributeError):
+        pass
     try:
         process.wait(timeout=3)
     except (subprocess.TimeoutExpired, AttributeError):

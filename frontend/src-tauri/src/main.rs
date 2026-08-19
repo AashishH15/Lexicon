@@ -2,6 +2,7 @@
 
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+use serde::Serialize;
 use std::env;
 use std::io::{Read, Write};
 use std::net::{SocketAddr, TcpStream};
@@ -10,7 +11,6 @@ use std::process::{Child, Command, Stdio};
 use std::sync::Mutex;
 use std::thread;
 use std::time::{Duration, Instant};
-use serde::Serialize;
 use tauri::ipc::Channel;
 use tauri::menu::{MenuBuilder, MenuItemBuilder};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
@@ -21,7 +21,7 @@ use tauri_plugin_updater::{Update, UpdaterExt};
 use url::Url;
 
 struct BackendState {
-    child: Mutex<Option<Child>>,
+    child: Mutex<Option<BackendProcess>>,
     last_activity: Mutex<Instant>,
     tier1_offloaded: Mutex<bool>,
     tier2_offloaded: Mutex<bool>,
@@ -29,9 +29,12 @@ struct BackendState {
 }
 
 const BACKEND_PORT: u16 = 18000;
-const TIER1_LLM_IDLE_SECS: u64 = 5 * 60;       // 5 minutes: unload LLM model weights
-const TIER2_LT_IDLE_SECS: u64 = 15 * 60;      // 15 minutes: stop LanguageTool JVM
+const TIER1_LLM_IDLE_SECS: u64 = 5 * 60; // 5 minutes: unload LLM model weights
+const TIER2_LT_IDLE_SECS: u64 = 15 * 60; // 15 minutes: stop LanguageTool JVM
 const BACKEND_IDLE_POLL: Duration = Duration::from_secs(15);
+const BACKEND_SHUTDOWN_WAIT: Duration = Duration::from_secs(2);
+const PROCESS_TERMINATE_WAIT: Duration = Duration::from_secs(3);
+const PROCESS_POLL: Duration = Duration::from_millis(50);
 const AUTOSTART_ARG: &str = "--autostart";
 
 #[cfg(target_os = "windows")]
@@ -66,22 +69,43 @@ fn request_backend_shutdown() -> bool {
     post_backend_endpoint("/shutdown")
 }
 
-fn terminate_backend_tree(child: &mut Child) {
+struct BackendProcess {
+    child: Child,
     #[cfg(target_os = "windows")]
-    {
-        let pid = child.id().to_string();
-        let _ = Command::new("taskkill")
-            .args(["/PID", pid.as_str(), "/T", "/F"])
-            .status();
-    }
-    #[cfg(not(target_os = "windows"))]
-    {
-        let _ = child.kill();
-    }
-    let _ = child.wait();
+    job: Option<windows_job::JobHandle>,
 }
 
-fn start_backend(_app_handle: &tauri::AppHandle) -> Result<Child, String> {
+fn wait_for_child_exit(child: &mut Child, timeout: Duration) -> bool {
+    let deadline = Instant::now() + timeout;
+    loop {
+        match child.try_wait() {
+            Ok(Some(_)) | Err(_) => return true,
+            Ok(None) if Instant::now() >= deadline => return false,
+            Ok(None) => thread::sleep(PROCESS_POLL),
+        }
+    }
+}
+
+fn terminate_backend_tree(process: &mut BackendProcess) {
+    if !wait_for_child_exit(&mut process.child, Duration::ZERO) {
+        #[cfg(target_os = "windows")]
+        {
+            if let Some(job) = process.job.take() {
+                job.terminate();
+                drop(job);
+            } else {
+                let _ = process.child.kill();
+            }
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+            let _ = process.child.kill();
+        }
+    }
+    let _ = wait_for_child_exit(&mut process.child, PROCESS_TERMINATE_WAIT);
+}
+
+fn start_backend(_app_handle: &tauri::AppHandle) -> Result<BackendProcess, String> {
     #[cfg(not(debug_assertions))]
     let java_home = {
         let resource_dir = _app_handle
@@ -179,15 +203,22 @@ fn start_backend(_app_handle: &tauri::AppHandle) -> Result<Child, String> {
         .map_err(|error| format!("failed to spawn backend: {error}"))?;
 
     #[cfg(target_os = "windows")]
-    {
-        windows_job::assign_child_to_job(&child);
-    }
+    let job = windows_job::assign_child_to_job(&child);
 
     if let Err(error) = wait_for_backend(&mut child, BACKEND_PORT) {
-        terminate_backend_tree(&mut child);
+        let mut process = BackendProcess {
+            child,
+            #[cfg(target_os = "windows")]
+            job,
+        };
+        terminate_backend_tree(&mut process);
         return Err(error);
     }
-    Ok(child)
+    Ok(BackendProcess {
+        child,
+        #[cfg(target_os = "windows")]
+        job,
+    })
 }
 
 #[cfg(target_os = "windows")]
@@ -237,6 +268,7 @@ mod windows_job {
     const JOBOBJECT_EXTENDED_LIMIT_INFORMATION_CLASS: i32 = 9;
 
     extern "system" {
+        fn CloseHandle(handle: HANDLE) -> BOOL;
         fn CreateJobObjectW(job_attributes: *mut std::ffi::c_void, name: *const u16) -> HANDLE;
         fn SetInformationJobObject(
             h_job: HANDLE,
@@ -245,29 +277,58 @@ mod windows_job {
             cb_job_object_information_length: DWORD,
         ) -> BOOL;
         fn AssignProcessToJobObject(h_job: HANDLE, h_process: HANDLE) -> BOOL;
+        fn TerminateJobObject(h_job: HANDLE, u_exit_code: u32) -> BOOL;
     }
 
-    pub fn assign_child_to_job(child: &Child) {
+    pub struct JobHandle(HANDLE);
+
+    // The handle is owned and moved only for process cleanup.
+    unsafe impl Send for JobHandle {}
+
+    impl JobHandle {
+        pub fn terminate(&self) {
+            unsafe {
+                let _ = TerminateJobObject(self.0, 1);
+            }
+        }
+    }
+
+    impl Drop for JobHandle {
+        fn drop(&mut self) {
+            unsafe {
+                let _ = CloseHandle(self.0);
+            }
+        }
+    }
+
+    pub fn assign_child_to_job(child: &Child) -> Option<JobHandle> {
         unsafe {
             let job = CreateJobObjectW(ptr::null_mut(), ptr::null());
             if job.is_null() {
-                return;
+                return None;
             }
 
             let mut info: JOBOBJECT_EXTENDED_LIMIT_INFORMATION = std::mem::zeroed();
             info.basic_limit_information.limit_flags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
 
-            let res = SetInformationJobObject(
+            if SetInformationJobObject(
                 job,
                 JOBOBJECT_EXTENDED_LIMIT_INFORMATION_CLASS,
                 &info as *const _ as *const _,
                 std::mem::size_of::<JOBOBJECT_EXTENDED_LIMIT_INFORMATION>() as DWORD,
-            );
-
-            if res != 0 {
-                let process_handle = child.as_raw_handle() as HANDLE;
-                AssignProcessToJobObject(job, process_handle);
+            ) == 0
+            {
+                let _ = CloseHandle(job);
+                return None;
             }
+
+            let process_handle = child.as_raw_handle() as HANDLE;
+            if AssignProcessToJobObject(job, process_handle) == 0 {
+                let _ = CloseHandle(job);
+                return None;
+            }
+
+            Some(JobHandle(job))
         }
     }
 }
@@ -278,19 +339,11 @@ fn stop_backend(app_handle: &tauri::AppHandle) {
             return;
         };
         if let Ok(mut child_lock) = state.child.lock() {
-            if let Some(mut child) = child_lock.take() {
+            if let Some(mut process) = child_lock.take() {
                 if request_backend_shutdown() {
-                    let deadline = Instant::now() + Duration::from_secs(2);
-                    while Instant::now() < deadline {
-                        if let Ok(Some(_)) = child.try_wait() {
-                            break;
-                        }
-                        thread::sleep(Duration::from_millis(50));
-                    }
+                    let _ = wait_for_child_exit(&mut process.child, BACKEND_SHUTDOWN_WAIT);
                 }
-                // Always terminate the full process tree (including Java/child processes)
-                // so no orphan processes or locked DLLs remain.
-                terminate_backend_tree(&mut child);
+                terminate_backend_tree(&mut process);
             }
         }
     }
@@ -336,15 +389,15 @@ fn ensure_backend(app_handle: tauri::AppHandle) -> Result<(), String> {
 
     let mut needs_start = child.is_none();
     if let Some(process) = child.as_mut() {
-        match process.try_wait() {
+        match process.child.try_wait() {
             Ok(None) => {}
             Ok(Some(_)) | Err(_) => needs_start = true,
         }
     }
 
     if needs_start {
-        if let Some(mut old_child) = child.take() {
-            terminate_backend_tree(&mut old_child);
+        if let Some(mut old_process) = child.take() {
+            terminate_backend_tree(&mut old_process);
         }
         *child = Some(start_backend(&app_handle)?);
     }
@@ -396,9 +449,13 @@ const BETA_UPDATE_ENDPOINT: &str =
 #[serde(tag = "event", content = "data")]
 pub enum DownloadEvent {
     #[serde(rename_all = "camelCase")]
-    Started { content_length: Option<u64> },
+    Started {
+        content_length: Option<u64>,
+    },
     #[serde(rename_all = "camelCase")]
-    Progress { chunk_length: usize },
+    Progress {
+        chunk_length: usize,
+    },
     Preparing,
     Installing,
     Finished,
@@ -428,7 +485,7 @@ async fn fetch_update(
     let update = app
         .updater_builder()
         .endpoints(vec![
-            Url::parse(endpoint).map_err(|error| error.to_string())?,
+            Url::parse(endpoint).map_err(|error| error.to_string())?
         ])
         .map_err(|error| error.to_string())?
         .timeout(Duration::from_secs(8))
@@ -595,7 +652,9 @@ fn main() {
                             match start_backend(&handle_clone) {
                                 Ok(child) => *child_lock = Some(child),
                                 Err(error) => {
-                                    eprintln!("Warning: initial backend sidecar start failed: {error}");
+                                    eprintln!(
+                                        "Warning: initial backend sidecar start failed: {error}"
+                                    );
                                 }
                             }
                         }
