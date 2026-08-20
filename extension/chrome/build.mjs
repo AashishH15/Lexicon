@@ -17,6 +17,10 @@ const OUT_DIR = join(CHROME_DIR, "..", "dist");
 // Only these files ship. Resolve from the platform dir first, then shared/.
 const SHIP_FILES = [
   "manifest.json",
+  "icons/icon-16.png",
+  "icons/icon-32.png",
+  "icons/icon-48.png",
+  "icons/icon-128.png",
   "vendor/browser-polyfill.min.js",
   "background.js",
   "detectEditable.js",

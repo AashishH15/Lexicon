@@ -29,6 +29,20 @@ test("firefox manifest is MV3 with semver version", () => {
   assert.equal(firefox.version, chrome.version, "versions must stay in sync");
 });
 
+test("manifest uses the Lexicon logo for extension and toolbar icons", () => {
+  const expected = {
+    16: "icons/icon-16.png",
+    32: "icons/icon-32.png",
+    48: "icons/icon-48.png",
+    128: "icons/icon-128.png",
+  };
+  assert.deepEqual(firefox.icons, expected);
+  assert.deepEqual(firefox.action.default_icon, expected);
+  for (const file of Object.values(expected)) {
+    assert.ok(existsSync(join(DIST_DIR, file)), `missing icon: ${file}`);
+  }
+});
+
 test("gecko id present for AMO; Chrome-only `key` never ships", () => {
   assert.equal(firefox.browser_specific_settings.gecko.id, "lexicon@lexicon.app");
   // web-ext lint requires version 142 or higher.

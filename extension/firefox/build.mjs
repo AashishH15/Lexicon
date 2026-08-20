@@ -17,6 +17,10 @@ const OUT_DIR = join(FIREFOX_DIR, "..", "dist");
 
 const SHIP_FILES = [
   "manifest.json",
+  "icons/icon-16.png",
+  "icons/icon-32.png",
+  "icons/icon-48.png",
+  "icons/icon-128.png",
   "vendor/browser-polyfill.min.js",
   "background.js",
   "detectEditable.js",

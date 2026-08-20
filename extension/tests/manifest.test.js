@@ -40,6 +40,20 @@ test("manifest is MV3 with semver version and pinned key", () => {
   assert.ok(manifest.key.length > 0);
 });
 
+test("manifest uses the Lexicon logo for extension and toolbar icons", () => {
+  const expected = {
+    16: "icons/icon-16.png",
+    32: "icons/icon-32.png",
+    48: "icons/icon-48.png",
+    128: "icons/icon-128.png",
+  };
+  assert.deepEqual(manifest.icons, expected);
+  assert.deepEqual(manifest.action.default_icon, expected);
+  for (const file of Object.values(expected)) {
+    assert.ok(existsSync(join(DIST_DIR, file)), `missing icon: ${file}`);
+  }
+});
+
 test("pinned extension ID still matches the key in the manifest", () => {
   // The backend pins this ID in its CORS allowlist.
   assert.equal(
