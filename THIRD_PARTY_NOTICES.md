@@ -200,6 +200,21 @@ The vendored `extension/shared/vendor/browser-polyfill.min.js` retains
 Mozilla's MPL notice and source URL. The extension packages also include the
 full MPL text as `vendor/LICENSE-MPL-2.0.txt`.
 
+### Phosphor Icons
+
+The browser extension embeds inline SVG paths from Phosphor Icons for its
+icon controls:
+
+- `MagicWand` for the Tone action
+- `Check` for the clean-status badge
+- `X` for popover close controls
+
+- **Project:** `@phosphor-icons/react`
+- **Version:** 2.1.10
+- **Copyright:** Phosphor Icons contributors
+- **License:** MIT
+- **Source:** <https://github.com/phosphor-icons/react/tree/v2.1.10>
+
 ## Bundled Java runtime
 
 Desktop releases include an Eclipse Temurin JRE from the Eclipse Adoptium

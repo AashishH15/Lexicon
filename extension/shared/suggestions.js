@@ -8,6 +8,20 @@
   const PANEL_MAX_HEIGHT = 360;
   const PANEL_GAP = 8;
   const TOOLTIP_WIDTH = 288;
+  const AI_TRIGGER_WIDTH = 76;
+  const AI_TRIGGER_GAP = 5;
+  const HOVER_BRIDGE = 4;
+  const TONE_TOOLS = [
+    "Friendly",
+    "Professional",
+    "Academic",
+    "Formal",
+    "Casual",
+    "Playful",
+    "Empathetic",
+    "Persuasive",
+    "Humorous",
+  ];
 
   const STYLE =
     `.badge{position:fixed;width:${BADGE_SIZE}px;height:${BADGE_SIZE}px;` +
@@ -15,12 +29,30 @@
     "display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.25);user-select:none;z-index:2}" +
     ".badge.clean{background:#346538}" +
     ".badge.offline{background:#71706c}" +
+    `.badge-group{position:fixed;width:${BADGE_SIZE}px;height:${BADGE_SIZE}px;z-index:2}` +
+    `.badge-group::before,.badge-group::after{content:"";position:absolute;top:0;height:${BADGE_SIZE}px;` +
+    `width:${AI_TRIGGER_GAP + HOVER_BRIDGE}px;pointer-events:auto}` +
+    `.badge-group::before{left:-${AI_TRIGGER_GAP + HOVER_BRIDGE}px}` +
+    `.badge-group::after{right:-${AI_TRIGGER_GAP + HOVER_BRIDGE}px}` +
+    `.badge-group .ai-trigger{position:absolute;right:${BADGE_SIZE + AI_TRIGGER_GAP}px;top:0;width:${AI_TRIGGER_WIDTH}px;` +
+    "height:26px;border:1px solid #d8d7d3;border-radius:13px;background:#ffffff;color:#1f6c9f;" +
+    "display:flex;align-items:center;justify-content:center;gap:5px;font:600 11px/1 -apple-system,BlinkMacSystemFont,\"Segoe UI\",Helvetica,Arial,sans-serif;" +
+    "box-shadow:0 2px 8px rgba(0,0,0,0.18);cursor:pointer;opacity:0;pointer-events:none;" +
+    "transform:translateX(4px);transition:opacity .12s ease,transform .12s ease;white-space:nowrap}" +
+    ".badge-group:hover .ai-trigger,.badge-group:focus-within .ai-trigger{opacity:1;pointer-events:auto;transform:translateX(0)}" +
+    ".badge-group .ai-trigger:hover{background:#edf3fa}" +
+    ".badge-group .magic-icon{display:inline-flex;width:15px;height:15px;align-items:center;justify-content:center}" +
+    ".badge-group .magic-icon svg{display:block;width:15px;height:15px;fill:currentColor}" +
+    ".badge .check-icon{display:inline-flex;width:15px;height:15px;align-items:center;justify-content:center}" +
+    ".badge .check-icon svg{display:block;width:15px;height:15px;fill:currentColor}" +
     `.panel{position:fixed;width:${PANEL_WIDTH}px;max-height:${PANEL_MAX_HEIGHT}px;` +
     "display:flex;flex-direction:column;background:#f7f6f3;border:1px solid #d8d7d3;border-radius:8px;box-shadow:0 6px 24px rgba(0,0,0,0.18);" +
     "font:13px/1.45 -apple-system,BlinkMacSystemFont,\"Segoe UI\",Helvetica,Arial,sans-serif;color:#111111;overflow:hidden;z-index:3}" +
     `.panel[hidden]{display:none}` +
     ".panel .head{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-bottom:1px solid #eaeaea;font-weight:600}" +
     ".panel .close{border:none;background:none;color:#5f5e5b;font:inherit;cursor:pointer;padding:0 2px}" +
+    ".panel .close-icon{display:inline-flex;width:14px;height:14px;align-items:center;justify-content:center}" +
+    ".panel .close-icon svg{display:block;width:14px;height:14px;fill:currentColor}" +
     ".panel .list{overflow-y:auto;padding:6px}" +
     ".panel .empty{margin:0;padding:10px 9px;color:#5f5e5b}" +
     ".panel .row{display:flex;align-items:flex-start;gap:8px;padding:7px 9px;margin-bottom:6px;border-left:3px solid #956400;border-radius:0 6px 6px 0;background:#fbf3db}" +
@@ -32,6 +64,19 @@
     ".panel .apply:hover{filter:brightness(1.08)}" +
     ".panel .dismiss{border:1px solid #d8d7d3;border-radius:6px;background:transparent;color:#111111;font:inherit;font-weight:500;padding:4px 10px;cursor:pointer}" +
     ".panel .dismiss:hover{background:#ebeae6}" +
+    ".panel .ai{border-top:1px solid #eaeaea;padding:8px;background:#efeee9}" +
+    ".panel .ai-title{margin:0 0 5px;font-size:11px;font-weight:600;color:#5f5e5b}" +
+    ".panel .ai-controls{display:flex;gap:5px}" +
+    ".panel .ai select{min-width:0;flex:1;padding:5px 6px;border:1px solid #d8d7d3;border-radius:5px;background:#ffffff;color:#111111;font:12px/1.3 -apple-system,BlinkMacSystemFont,\"Segoe UI\",Helvetica,Arial,sans-serif}" +
+    ".panel .ai-run,.panel .ai-replace{border:1px solid #1f6c9f;border-radius:5px;background:#1f6c9f;color:#ffffff;font:600 12px/1.3 -apple-system,BlinkMacSystemFont,\"Segoe UI\",Helvetica,Arial,sans-serif;padding:5px 8px;cursor:pointer}" +
+    ".panel .ai-run:disabled,.panel .ai-replace:disabled{opacity:.55;cursor:default}" +
+    ".panel .ai-result{margin-top:6px;padding:6px;border-radius:5px;background:#ffffff;color:#111111;font-size:12px;white-space:pre-wrap;word-break:break-word;max-height:100px;overflow-y:auto}" +
+    ".panel .list,.panel .ai-result{scrollbar-width:thin;scrollbar-color:#b9b7b0 transparent}" +
+    ".panel .list::-webkit-scrollbar,.panel .ai-result::-webkit-scrollbar{width:6px;height:6px}" +
+    ".panel .list::-webkit-scrollbar-track,.panel .ai-result::-webkit-scrollbar-track{background:transparent}" +
+    ".panel .list::-webkit-scrollbar-thumb,.panel .ai-result::-webkit-scrollbar-thumb{background:#b9b7b0;border-radius:6px}" +
+    ".panel .list::-webkit-scrollbar-thumb:hover,.panel .ai-result::-webkit-scrollbar-thumb:hover{background:#9f9d96}" +
+    ".panel .ai-error{margin:6px 0 0;color:#9f2f2d;font-size:11px}" +
     `.tooltip{position:fixed;width:${TOOLTIP_WIDTH}px;box-sizing:border-box;padding:12px;` +
     "background:#ffffff;border:1px solid #eaeaea;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.04);" +
     "font:14px/1.45 -apple-system,BlinkMacSystemFont,\"Segoe UI\",Helvetica,Arial,sans-serif;color:#111111;z-index:4}" +
@@ -230,8 +275,11 @@
     const count = state.matches.length;
     const clean = count === 0;
     state.badgeEl.classList.toggle("clean", clean);
-    state.badgeEl.textContent = clean ? "✓" : String(count);
-    state.badgeEl.title = clean ? "No issues found" : "Lexicon issues";
+    if (clean) state.badgeEl.replaceChildren(checkIcon());
+    else state.badgeEl.textContent = String(count);
+    state.badgeEl.title = clean
+      ? "No issues found — click to review, hover for Tone"
+      : "Lexicon issues — click to review, hover for Tone";
   }
 
   function renderPanel() {
@@ -251,7 +299,7 @@
             `${state.matches.length === 1 ? "issue" : "issues"} found`;
     const close = document.createElement("button");
     close.className = "close";
-    close.textContent = "✕";
+    close.appendChild(closeIcon());
     close.setAttribute("aria-label", "Close");
     close.addEventListener("click", () => {
       state.panelOpen = false;
@@ -528,36 +576,53 @@
   function fieldPosition(state) {
     if (!state) return;
     if (!fieldInViewport(state.field)) {
+      state.badgeGroupEl.style.display = "none";
       state.badgeEl.style.display = "none";
       state.panelEl.hidden = true;
+      state.aiPanelEl.hidden = true;
       if (fieldTooltipState === state) fieldHideMatchTooltip(state);
       return;
     }
+    state.badgeGroupEl.style.display = "block";
     state.badgeEl.style.display = "flex";
     const badge = badgePosition(state.field);
+    state.badgeGroupEl.style.left = `${badge.left}px`;
+    state.badgeGroupEl.style.top = `${badge.top}px`;
     state.badgeEl.style.left = `${badge.left}px`;
     state.badgeEl.style.top = `${badge.top}px`;
-    if (!state.panelOpen) {
+    const triggerOnLeft =
+      badge.left - AI_TRIGGER_WIDTH - AI_TRIGGER_GAP >= 8;
+    state.aiTriggerEl.style.left = triggerOnLeft
+      ? `-${AI_TRIGGER_WIDTH + AI_TRIGGER_GAP}px`
+      : `${BADGE_SIZE + AI_TRIGGER_GAP}px`;
+    state.aiTriggerEl.style.right = "auto";
+    const fieldRect = state.field.getBoundingClientRect();
+    if (state.panelOpen) {
+      fieldPositionPanel(state.panelEl, badge, fieldRect);
+    } else {
       state.panelEl.hidden = true;
-      return;
     }
-    state.panelEl.style.maxHeight = `${Math.max(
+    if (state.aiPanelOpen) {
+      fieldPositionPanel(state.aiPanelEl, badge, fieldRect);
+    } else {
+      state.aiPanelEl.hidden = true;
+    }
+  }
+
+  function fieldPositionPanel(panel, badge, fieldRect) {
+    panel.style.maxHeight = `${Math.max(
       80,
       Math.min(PANEL_MAX_HEIGHT, window.innerHeight - 16),
     )}px`;
-    state.panelEl.hidden = false;
-    const panel = panelPosition(
-      badge,
-      state.panelEl.offsetHeight,
-      state.field.getBoundingClientRect(),
-    );
-    state.panelEl.style.left = `${panel.left}px`;
-    if (Number.isFinite(panel.bottom)) {
-      state.panelEl.style.top = "auto";
-      state.panelEl.style.bottom = `${panel.bottom}px`;
+    panel.hidden = false;
+    const position = panelPosition(badge, panel.offsetHeight, fieldRect);
+    panel.style.left = `${position.left}px`;
+    if (Number.isFinite(position.bottom)) {
+      panel.style.top = "auto";
+      panel.style.bottom = `${position.bottom}px`;
     } else {
-      state.panelEl.style.bottom = "auto";
-      state.panelEl.style.top = `${panel.top}px`;
+      panel.style.bottom = "auto";
+      panel.style.top = `${position.top}px`;
     }
   }
 
@@ -611,8 +676,11 @@
     const count = state.matches.length;
     const clean = count === 0;
     state.badgeEl.classList.toggle("clean", clean);
-    state.badgeEl.textContent = clean ? "✓" : String(count);
-    state.badgeEl.title = clean ? "No issues found" : "Lexicon issues";
+    if (clean) state.badgeEl.replaceChildren(checkIcon());
+    else state.badgeEl.textContent = String(count);
+    state.badgeEl.title = clean
+      ? "No issues found — click to review, hover for Tone"
+      : "Lexicon issues — click to review, hover for Tone";
   }
 
   function fieldRenderPanel(state) {
@@ -632,7 +700,7 @@
             `${state.matches.length === 1 ? "issue" : "issues"} found`;
     const close = document.createElement("button");
     close.className = "close";
-    close.textContent = "✕";
+    close.appendChild(closeIcon());
     close.setAttribute("aria-label", "Close");
     close.addEventListener("click", () => {
       state.panelOpen = false;
@@ -700,19 +768,200 @@
     panel.appendChild(list);
   }
 
+  function phosphorIcon(className, path) {
+    const icon = document.createElement("span");
+    icon.className = className;
+    icon.setAttribute("aria-hidden", "true");
+    icon.innerHTML = `<svg viewBox="0 0 256 256" focusable="false"><path d="${path}"></path></svg>`;
+    return icon;
+  }
+
+  function checkIcon() {
+    return phosphorIcon(
+      "check-icon",
+      "M232.49,80.49l-128,128a12,12,0,0,1-17,0l-56-56a12,12,0,1,1,17-17L96,183,215.51,63.51a12,12,0,0,1,17,17Z",
+    );
+  }
+
+  function closeIcon() {
+    return phosphorIcon(
+      "close-icon",
+      "M208.49,191.51a12,12,0,0,1-17,17L128,145,64.49,208.49a12,12,0,0,1-17-17L111,128,47.51,64.49a12,12,0,0,1,17-17L128,111l63.51-63.52a12,12,0,0,1,17,17L145,128Z",
+    );
+  }
+
+  function magicWandIcon() {
+    return phosphorIcon(
+      "magic-icon",
+      "M252,152a12,12,0,0,1-12,12H228v12a12,12,0,0,1-24,0V164H192a12,12,0,0,1,0-24h12V128a12,12,0,0,1,24,0v12h12A12,12,0,0,1,252,152ZM56,76H68V88a12,12,0,0,0,24,0V76h12a12,12,0,1,0,0-24H92V40a12,12,0,0,0-24,0V52H56a12,12,0,0,0,0,24ZM184,188h-4v-4a12,12,0,0,0-24,0v4h-4a12,12,0,0,0,0,24h4v4a12,12,0,0,0,24,0v-4h4a12,12,0,0,0,0-24ZM222.14,82.83,82.82,222.14a20,20,0,0,1-28.28,0L33.85,201.46a20,20,0,0,1,0-28.29L173.17,33.86a20,20,0,0,1,28.28,0l20.69,20.68A20,20,0,0,1,222.14,82.83ZM159,112,144,97,53.65,187.31l15,15Zm43.31-43.31-15-15L161,80l15,15Z",
+    );
+  }
+
+  function fieldRenderAiPanel(state) {
+    if (!state.aiPanelEl || typeof state.onTransform !== "function") return;
+    const panel = state.aiPanelEl;
+    panel.replaceChildren();
+
+    const head = document.createElement("div");
+    head.className = "head";
+    const heading = document.createElement("span");
+    heading.textContent = "Tone";
+    head.appendChild(heading);
+    const close = document.createElement("button");
+    close.className = "close";
+    close.type = "button";
+    close.appendChild(closeIcon());
+    close.setAttribute("aria-label", "Close Tone");
+    close.addEventListener("click", () => {
+      state.aiPanelOpen = false;
+      panel.hidden = true;
+    });
+    head.appendChild(close);
+    panel.appendChild(head);
+
+    const ai = document.createElement("div");
+    ai.className = "ai";
+
+    const controls = document.createElement("div");
+    controls.className = "ai-controls";
+    const select = document.createElement("select");
+    select.setAttribute("aria-label", "AI tool");
+    for (const tool of TONE_TOOLS) {
+      const option = document.createElement("option");
+      option.value = tool;
+      option.textContent = tool;
+      select.appendChild(option);
+    }
+    select.value = TONE_TOOLS.includes(state.aiTool)
+      ? state.aiTool
+      : "Friendly";
+    select.addEventListener("change", () => {
+      state.aiTool = select.value;
+    });
+    controls.appendChild(select);
+
+    const run = document.createElement("button");
+    run.className = "ai-run";
+    run.type = "button";
+    run.textContent = state.aiBusy ? "Working…" : "Run";
+    run.disabled = Boolean(state.aiBusy || state.checking || state.offline);
+    run.addEventListener("click", () => {
+      const tool = select.value;
+      state.aiTool = tool;
+      state.aiBusy = true;
+      state.aiError = "";
+      fieldRenderAiPanel(state);
+      fieldPosition(state);
+      Promise.resolve()
+        .then(() => state.onTransform(tool))
+        .then((result) => {
+          if (!result || result.ok === false) {
+            state.aiError = result?.error || "AI tool failed.";
+            state.aiResult = null;
+            return;
+          }
+          const text = typeof result === "string" ? result : result.text;
+          if (typeof text !== "string" || !text.trim()) {
+            state.aiError = "AI tool returned no text.";
+            state.aiResult = null;
+            return;
+          }
+          state.aiResult = {
+            text,
+            sourceText: result.sourceText || "",
+          };
+        })
+        .catch((error) => {
+          state.aiError = error?.message || "AI tool failed.";
+          state.aiResult = null;
+        })
+        .finally(() => {
+          state.aiBusy = false;
+          fieldRenderAiPanel(state);
+          fieldPosition(state);
+        });
+    });
+    controls.appendChild(run);
+    ai.appendChild(controls);
+
+    if (state.aiResult) {
+      const result = document.createElement("div");
+      result.className = "ai-result";
+      result.textContent = state.aiResult.text;
+      ai.appendChild(result);
+
+      const replace = document.createElement("button");
+      replace.className = "ai-replace";
+      replace.type = "button";
+      replace.textContent = "Replace field";
+      replace.disabled = Boolean(state.aiBusy);
+      replace.addEventListener("click", () => {
+        const pending = state.aiResult;
+        if (!pending) return;
+        state.aiBusy = true;
+        state.aiError = "";
+        fieldRenderAiPanel(state);
+        fieldPosition(state);
+        Promise.resolve()
+          .then(() =>
+            state.onApplyTransform(pending.text, pending.sourceText),
+          )
+          .then((response) => {
+            if (response === false || response?.ok === false) {
+              state.aiError = response?.error || "The field changed.";
+            } else {
+              state.aiResult = null;
+            }
+          })
+          .catch((error) => {
+            state.aiError = error?.message || "The field could not be updated.";
+          })
+          .finally(() => {
+            state.aiBusy = false;
+            fieldRenderAiPanel(state);
+            fieldPosition(state);
+          });
+      });
+      ai.appendChild(replace);
+    }
+
+    if (state.aiError) {
+      const error = document.createElement("p");
+      error.className = "ai-error";
+      error.textContent = state.aiError;
+      ai.appendChild(error);
+    }
+    panel.appendChild(ai);
+  }
+
   function fieldHideOtherPanels(selected) {
     for (const state of fieldStates.values()) {
       if (state === selected) continue;
       state.panelOpen = false;
       state.panelEl.hidden = true;
+      state.aiPanelOpen = false;
+      state.aiPanelEl.hidden = true;
     }
   }
 
   function fieldOpenPanel(state) {
     fieldHideOtherPanels(state);
     fieldHideMatchTooltip();
+    state.aiPanelOpen = false;
+    state.aiPanelEl.hidden = true;
     state.panelOpen = true;
     state.panelEl.hidden = false;
+    fieldPosition(state);
+  }
+
+  function fieldOpenAiPanel(state) {
+    fieldHideOtherPanels(state);
+    fieldHideMatchTooltip();
+    state.panelOpen = false;
+    state.panelEl.hidden = true;
+    state.aiPanelOpen = true;
+    state.aiPanelEl.hidden = false;
+    fieldRenderAiPanel(state);
     fieldPosition(state);
   }
 
@@ -722,6 +971,15 @@
       state.panelEl.hidden = true;
     } else {
       fieldOpenPanel(state);
+    }
+  }
+
+  function fieldToggleAiPanel(state) {
+    if (state.aiPanelOpen) {
+      state.aiPanelOpen = false;
+      state.aiPanelEl.hidden = true;
+    } else {
+      fieldOpenAiPanel(state);
     }
   }
 
@@ -841,6 +1099,7 @@
     const opts = options || {};
     let state = fieldStates.get(field);
     const keepOpen = Boolean(state && state.panelOpen);
+    const keepAiOpen = Boolean(state && state.aiPanelOpen);
     if (!state) {
       ensureFieldHost();
       state = {
@@ -852,12 +1111,24 @@
         onDismiss: opts.onDismiss || (() => {}),
         onApplyReplacement: opts.onApplyReplacement || null,
         onDismissMatch: opts.onDismissMatch || null,
+        onTransform: opts.onTransform || null,
+        onApplyTransform: opts.onApplyTransform || null,
+        aiTool: "Friendly",
+        aiBusy: false,
+        aiResult: null,
+        aiError: "",
         host: fieldHost,
         panelOpen: false,
+        aiPanelOpen: false,
         tooltipMatch: null,
         scrollHandler: null,
       };
       fieldStates.set(field, state);
+
+      const badgeGroup = document.createElement("div");
+      badgeGroup.className = "badge-group";
+      fieldRoot.appendChild(badgeGroup);
+      state.badgeGroupEl = badgeGroup;
 
       const badge = document.createElement("div");
       badge.className = "badge";
@@ -866,14 +1137,36 @@
         event.stopPropagation();
         fieldTogglePanel(state);
       });
-      fieldRoot.appendChild(badge);
+      badgeGroup.appendChild(badge);
       state.badgeEl = badge;
+
+      const aiTrigger = document.createElement("button");
+      aiTrigger.className = "ai-trigger";
+      aiTrigger.type = "button";
+      aiTrigger.setAttribute("aria-label", "Open Tone actions");
+      aiTrigger.appendChild(magicWandIcon());
+      const toneLabel = document.createElement("span");
+      toneLabel.textContent = "Tone";
+      aiTrigger.appendChild(toneLabel);
+      aiTrigger.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        fieldToggleAiPanel(state);
+      });
+      badgeGroup.appendChild(aiTrigger);
+      state.aiTriggerEl = aiTrigger;
 
       const panel = document.createElement("div");
       panel.className = "panel";
       panel.hidden = true;
       fieldRoot.appendChild(panel);
       state.panelEl = panel;
+
+      const aiPanel = document.createElement("div");
+      aiPanel.className = "panel ai-panel";
+      aiPanel.hidden = true;
+      fieldRoot.appendChild(aiPanel);
+      state.aiPanelEl = aiPanel;
 
       const tooltip = document.createElement("div");
       tooltip.className = "tooltip";
@@ -890,10 +1183,16 @@
         state.onApplyReplacement = opts.onApplyReplacement;
       }
       if (opts.onDismissMatch) state.onDismissMatch = opts.onDismissMatch;
+      if (opts.onTransform) state.onTransform = opts.onTransform;
+      if (opts.onApplyTransform) {
+        state.onApplyTransform = opts.onApplyTransform;
+      }
       state.panelOpen = keepOpen;
+      state.aiPanelOpen = keepAiOpen;
     }
     fieldUpdateBadge(state);
     fieldRenderPanel(state);
+    fieldRenderAiPanel(state);
     bindFieldReposition(state);
     fieldPosition(state);
     return state;
@@ -906,9 +1205,12 @@
     state.matches = matches || [];
     state.checking = false;
     state.offline = Boolean(opts.offline);
+    if (opts.onTransform) state.onTransform = opts.onTransform;
+    if (opts.onApplyTransform) state.onApplyTransform = opts.onApplyTransform;
     fieldHideMatchTooltip(state);
     fieldUpdateBadge(state);
     fieldRenderPanel(state);
+    fieldRenderAiPanel(state);
     fieldPosition(state);
     return state;
   }
@@ -922,6 +1224,7 @@
     fieldHideMatchTooltip(state);
     fieldUpdateBadge(state);
     fieldRenderPanel(state);
+    fieldRenderAiPanel(state);
     fieldPosition(state);
     return state;
   }
@@ -930,8 +1233,9 @@
     const state = fieldStates.get(field);
     if (!state) return;
     fieldHideMatchTooltip(state);
-    state.badgeEl.remove();
+    state.badgeGroupEl.remove();
     state.panelEl.remove();
+    state.aiPanelEl.remove();
     state.tooltipEl.remove();
     fieldStates.delete(field);
     unbindFieldReposition(state);

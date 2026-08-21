@@ -1,6 +1,7 @@
 // Content script: detect fields, draw squiggles, show suggestions.
-// Messages: lexicon:get-text, lexicon:highlight, lexicon:clear-highlights,
-// lexicon:replace-text.
+// Messages: lexicon:list-fields, lexicon:select-field, lexicon:get-text,
+// lexicon:highlight, lexicon:clear-highlights, lexicon:replace-text,
+// lexicon:transform-text.
 
 (function () {
   "use strict";
@@ -18,6 +19,11 @@
   let fieldScanTimer = null;
   let activeChecks = 0;
   let intersectionObserver = null;
+  let settingsReady = false;
+  let proofreadingPaused = false;
+  let siteDisabled = false;
+  let nextFieldId = 1;
+  let frameHasFields = null;
 
   function fieldIsAttached(field) {
     return Boolean(
@@ -25,6 +31,43 @@
         (field.isConnected === true ||
           (document.contains && document.contains(field))),
     );
+  }
+
+  function currentSite() {
+    return String(location.hostname || "").toLowerCase().replace(/\.$/, "");
+  }
+
+  function isSiteDisabledBySettings(nextSettings) {
+    if (typeof nextSettings?.siteDisabled === "boolean") {
+      return nextSettings.siteDisabled;
+    }
+    const disabledSites = Array.isArray(nextSettings?.disabledSites)
+      ? nextSettings.disabledSites
+      : [];
+    const site = currentSite();
+    return site ? disabledSites.includes(site) : siteDisabled;
+  }
+
+  function isSiteEnabled() {
+    return settingsReady && !siteDisabled;
+  }
+
+  function isProofreadingEnabled() {
+    return isSiteEnabled() && !proofreadingPaused;
+  }
+
+  function applySettings(nextSettings) {
+    const wasEnabled = isProofreadingEnabled();
+    settingsReady = true;
+    proofreadingPaused = Boolean(nextSettings?.paused);
+    siteDisabled = isSiteDisabledBySettings(nextSettings);
+    const enabled = isProofreadingEnabled();
+    if (!enabled) {
+      checkQueue.length = 0;
+      for (const state of fieldStates.values()) suspendState(state);
+    } else if (!wasEnabled) {
+      scanEditableFields(true);
+    }
   }
 
   function fieldIsInViewport(field) {
@@ -38,6 +81,15 @@
   function notifyActiveField() {
     browser.runtime
       .sendMessage({ type: "lexicon:active-field" })
+      .catch(() => {});
+  }
+
+  function notifyFrameFields(hasFields) {
+    const value = Boolean(hasFields);
+    if (frameHasFields === value) return;
+    frameHasFields = value;
+    browser.runtime
+      .sendMessage({ type: "lexicon:frame-fields", hasFields: value })
       .catch(() => {});
   }
 
@@ -73,6 +125,7 @@
     if (state) return state;
     state = {
       field,
+      fieldId: `field-${nextFieldId++}`,
       kind: null,
       text: null,
       segments: null,
@@ -93,6 +146,56 @@
     };
     fieldStates.set(field, state);
     return state;
+  }
+
+  function fieldAttribute(field, name) {
+    return String(field?.getAttribute?.(name) || "").trim();
+  }
+
+  function fieldDisplayName(field, index) {
+    const ariaLabel = fieldAttribute(field, "aria-label");
+    if (ariaLabel) return ariaLabel;
+    const labels = field?.labels;
+    const labelText = labels?.[0]?.textContent?.trim();
+    if (labelText) return labelText.replace(/\s+/g, " ");
+    const placeholder = fieldAttribute(field, "placeholder");
+    if (placeholder) return placeholder;
+    const name = fieldAttribute(field, "name");
+    if (name) return name;
+    return `Text field ${index + 1}`;
+  }
+
+  function visibleFieldDetails() {
+    const detected = editable.detectEditableFields
+      ? editable.detectEditableFields(document, { visibleOnly: true })
+      : [editable.detectEditableField(document)].filter(Boolean);
+    const candidates = [...detected];
+    for (const state of fieldStates.values()) {
+      if (fieldIsInViewport(state.field)) candidates.push(state.field);
+    }
+    const fields = [];
+    const seen = new Set();
+    for (const field of candidates) {
+      if (
+        seen.has(field) ||
+        !fieldIsAttached(field) ||
+        !editable.isVisible(field) ||
+        !suggestions.fieldInViewport(field)
+      ) {
+        continue;
+      }
+      seen.add(field);
+      const state = getOrCreateState(field);
+      const text = editable.extractEditableText(field).text;
+      const preview = text.trim().replace(/\s+/g, " ").slice(0, 72);
+      fields.push({
+        id: state.fieldId,
+        label: fieldDisplayName(field, fields.length),
+        preview,
+        active: activeField === field,
+      });
+    }
+    return fields;
   }
 
   function refreshStateText(state) {
@@ -297,7 +400,73 @@
       onDismissMatch: (match) => {
         dismissMatch(state, match);
       },
+      onTransform: (tool) => transformField(state, tool),
+      onApplyTransform: (text, sourceText) =>
+        applyTransform(state, text, sourceText),
     };
+  }
+
+  async function transformField(state, tool) {
+    if (!state.visible || !fieldIsAttached(state.field)) {
+      return { ok: false, error: "The field is no longer visible." };
+    }
+    const current = editable.extractEditableText(state.field);
+    if (current.text !== state.text) {
+      refreshStateText(state);
+      onFieldInput(state);
+      return { ok: false, error: "The field changed. Try again." };
+    }
+    if (!state.text.trim()) {
+      return { ok: false, error: "The field is empty." };
+    }
+    const response = await browser.runtime.sendMessage({
+      type: "lexicon:transform-text",
+      tool,
+      text: state.text,
+    });
+    if (!response?.ok) {
+      return {
+        ok: false,
+        error: response?.error || "AI tool failed.",
+      };
+    }
+    return {
+      ok: true,
+      text: response.text,
+      sourceText: state.text,
+    };
+  }
+
+  function applyTransform(state, text, sourceText) {
+    if (!state.visible || !fieldIsAttached(state.field)) {
+      return { ok: false, error: "The field is no longer visible." };
+    }
+    const current = editable.extractEditableText(state.field);
+    if (current.text !== sourceText) {
+      return { ok: false, error: "The field changed. Try again." };
+    }
+    const expected = editable.normalizeText(text);
+    invalidateCheck(state);
+    beginProgrammaticChange(state);
+    let replaced = false;
+    try {
+      replaced =
+        editable.replaceEditableText(state.field, state.kind, expected) &&
+        editable.extractEditableText(state.field).text === expected;
+      refreshStateText(state);
+    } finally {
+      endProgrammaticChange(state);
+    }
+    if (!replaced) {
+      return { ok: false, error: "The field rejected the replacement." };
+    }
+    state.matches = null;
+    state.checkedText = null;
+    state.offline = false;
+    state.dismissedKeys.clear();
+    if (state.text.trim()) scheduleFieldCheck(state);
+    else hideStateVisuals(state);
+    return { ok: true };
   }
 
   function squiggleHandlers(state) {
@@ -426,6 +595,7 @@
     if (
       token !== state.checkToken ||
       requestToken !== state.requestToken ||
+      !isProofreadingEnabled() ||
       !state.visible ||
       !fieldIsAttached(state.field)
     ) {
@@ -457,6 +627,7 @@
     }
     if (
       requestToken !== state.requestToken ||
+      !isProofreadingEnabled() ||
       !state.visible ||
       !fieldIsAttached(state.field)
     ) {
@@ -469,6 +640,12 @@
       return;
     }
     if (response && response.ok === false) {
+      if (
+        response.error === "proofreading-paused" ||
+        response.error === "site-disabled"
+      ) {
+        return;
+      }
       showOffline(state);
       return;
     }
@@ -522,7 +699,14 @@
   }
 
   function scheduleFieldCheck(state, showIndicator = true) {
-    if (!state.visible || !state.text || !state.text.trim()) return;
+    if (
+      !isProofreadingEnabled() ||
+      !state.visible ||
+      !state.text ||
+      !state.text.trim()
+    ) {
+      return;
+    }
     invalidateCheck(state);
     const token = state.checkToken;
     const requestToken = state.requestToken;
@@ -535,7 +719,13 @@
   }
 
   function onFieldInput(state) {
-    if (state.programmaticChange || !state.visible) return;
+    if (
+      state.programmaticChange ||
+      !isProofreadingEnabled() ||
+      !state.visible
+    ) {
+      return;
+    }
     refreshStateText(state);
     if (!state.text.trim()) {
       invalidateCheck(state);
@@ -571,7 +761,7 @@
   }
 
   function registerVisibleField(field) {
-    if (!fieldIsInViewport(field)) return null;
+    if (!isProofreadingEnabled() || !fieldIsInViewport(field)) return null;
     const state = getOrCreateState(field);
     state.visible = true;
     attachInputWatch(state);
@@ -618,7 +808,11 @@
     for (const entry of entries) {
       const field = entry.target;
       if (!observedFields.has(field)) continue;
-      if (entry.isIntersecting && fieldIsInViewport(field)) {
+      if (
+        isProofreadingEnabled() &&
+        entry.isIntersecting &&
+        fieldIsInViewport(field)
+      ) {
         registerVisibleField(field);
       } else {
         const state = fieldStates.get(field);
@@ -627,20 +821,33 @@
     }
   }
 
-  function scanEditableFields() {
+  function scanEditableFields(forceVisible = false) {
     fieldScanTimer = null;
+    if (!settingsReady || !isProofreadingEnabled()) {
+      for (const state of fieldStates.values()) suspendState(state);
+      return;
+    }
     const detected = editable.detectEditableFields
       ? editable.detectEditableFields(document, { visibleOnly: false })
       : [editable.detectEditableField(document)].filter(Boolean);
     const candidates = new Set(detected.filter(fieldIsAttached));
+    notifyFrameFields(candidates.size > 0);
     for (const field of candidates) observeCandidate(field);
     for (const field of [...observedFields]) {
       if (!candidates.has(field)) unobserveCandidate(field);
     }
+    if (forceVisible) {
+      for (const field of candidates) {
+        if (fieldIsInViewport(field)) registerVisibleField(field);
+      }
+    }
     if (!intersectionObserver) {
       for (const field of candidates) {
         if (fieldIsInViewport(field)) registerVisibleField(field);
-        else suspendState(fieldStates.get(field));
+        else {
+          const state = fieldStates.get(field);
+          if (state) suspendState(state);
+        }
       }
     }
   }
@@ -661,7 +868,20 @@
     return state;
   }
 
-  function resolveActiveField() {
+  function stateForFieldId(fieldId) {
+    const id = String(fieldId || "");
+    if (!id) return null;
+    for (const state of fieldStates.values()) {
+      if (state.fieldId === id && fieldIsAttached(state.field)) return state;
+    }
+    return null;
+  }
+
+  function resolveActiveField(fieldId) {
+    if (fieldId != null && String(fieldId)) {
+      const requested = stateForFieldId(fieldId);
+      return requested ? setActiveField(requested.field, false) : null;
+    }
     if (fieldIsAttached(activeField)) {
       return setActiveField(activeField, false);
     }
@@ -705,15 +925,56 @@
   function onMessage(msg) {
     try {
       switch (msg?.type) {
+        case "lexicon:settings-changed": {
+          applySettings(msg.settings || {});
+          return { ok: true };
+        }
+        case "lexicon:list-fields": {
+          if (siteDisabled) {
+            return { ok: false, error: "site-disabled", fields: [] };
+          }
+          const fields = visibleFieldDetails();
+          const active = fields.find((field) => field.active);
+          return {
+            ok: true,
+            fields,
+            activeId: active?.id || null,
+          };
+        }
+        case "lexicon:select-field": {
+          if (siteDisabled) {
+            return { ok: false, error: "site-disabled" };
+          }
+          const state = stateForFieldId(msg.fieldId);
+          if (!state || !fieldIsInViewport(state.field)) {
+            return { ok: false, error: "field-not-visible" };
+          }
+          const selected = setActiveField(state.field);
+          if (!selected) return { ok: false, error: "field-not-available" };
+          refreshStateText(selected);
+          return {
+            ok: true,
+            fieldId: selected.fieldId,
+            text: selected.text,
+            kind: selected.kind,
+          };
+        }
         case "lexicon:get-text": {
-          const state = resolveActiveField();
+          if (siteDisabled) return { ok: false, error: "site-disabled" };
+          const state = resolveActiveField(msg.fieldId);
           if (!state) return { ok: false, error: "no-editable-field" };
           refreshStateText(state);
           rememberField(state.field, state.kind, state.text, state.segments);
           return { ok: true, text: state.text, kind: state.kind };
         }
         case "lexicon:highlight": {
-          const state = resolveActiveField();
+          if (siteDisabled) {
+            return { ok: false, error: "site-disabled" };
+          }
+          if (proofreadingPaused) {
+            return { ok: false, error: "proofreading-paused" };
+          }
+          const state = resolveActiveField(msg.fieldId);
           if (!state) return { ok: false, error: "no-editable-field" };
           refreshStateText(state);
           invalidateCheck(state);
@@ -724,7 +985,7 @@
           return { ok: true, count: applyHighlight(state, msg.matches) };
         }
         case "lexicon:clear-highlights": {
-          const state = resolveActiveField();
+          const state = resolveActiveField(msg.fieldId);
           if (!state) return { ok: true };
           invalidateCheck(state);
           state.matches = null;
@@ -733,7 +994,8 @@
           return { ok: true };
         }
         case "lexicon:replace-text": {
-          const state = resolveActiveField();
+          if (siteDisabled) return { ok: false, error: "site-disabled" };
+          const state = resolveActiveField(msg.fieldId);
           if (!state || typeof msg.text !== "string") {
             return { ok: false, error: "no-field" };
           }
@@ -786,7 +1048,20 @@
     });
   }
   browser.runtime.onMessage.addListener(onMessage);
-  scanEditableFields();
+  async function loadSettings() {
+    try {
+      const response = await browser.runtime.sendMessage({
+        type: "lexicon:get-settings",
+      });
+      applySettings(response || {});
+    } catch {
+      applySettings({ paused: false, disabledSites: [] });
+    }
+  }
+  browser.runtime
+    .sendMessage({ type: "lexicon:frame-ready" })
+    .catch(() => {});
+  loadSettings();
 })();
 
 (function () {

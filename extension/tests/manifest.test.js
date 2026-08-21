@@ -66,6 +66,12 @@ test("popup and background are wired", () => {
   assert.equal(manifest.action.default_popup, "popup.html");
   assert.equal(manifest.background.service_worker, "background.js");
   assert.equal(manifest.background.type, "module");
+  const popup = readFileSync(join(EXTENSION_DIR, "shared", "popup.html"), "utf-8");
+  assert.match(popup, /id="pause-proofreading"/);
+  assert.match(popup, /id="disable-site"/);
+  assert.match(popup, /id="field-select"/);
+  assert.match(popup, /Hover it\s+to reveal Tone/);
+  assert.match(popup, /class="legacy-ai" hidden/);
 });
 
 test("proofread shortcut command is declared", () => {
@@ -90,7 +96,7 @@ test("content scripts run on all sites and matching editor frames", () => {
 });
 
 test("required permissions stay minimal; everything else is optional", () => {
-  assert.deepEqual(manifest.permissions.sort(), ["activeTab", "scripting"]);
+  assert.deepEqual(manifest.permissions.sort(), ["activeTab", "scripting", "storage"]);
   assert.equal("host_permissions" in manifest, false, "no required host permissions");
   assert.deepEqual(manifest.optional_host_permissions, ["http://*/*", "https://*/*"]);
 });

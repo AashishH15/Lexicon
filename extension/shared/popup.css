@@ -46,6 +46,61 @@ h1 {
   color: #9f2f2d;
 }
 
+.settings {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 10px;
+  padding: 8px 10px;
+  border: 1px solid #e5e4e0;
+  border-radius: 6px;
+  background: #efeee9;
+}
+
+.toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  color: #353431;
+  font-size: 12px;
+}
+
+.toggle input {
+  flex: none;
+  margin: 2px 0 0;
+  accent-color: #1f6c9f;
+}
+
+.toggle input:disabled {
+  opacity: 0.55;
+}
+
+.settings-status {
+  min-height: 16px;
+  margin: 0;
+  color: #5f5e5b;
+  font-size: 11px;
+}
+
+.popup-help {
+  margin: 10px 2px;
+  color: #5f5e5b;
+  font-size: 12px;
+}
+
+.field-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.field-picker label {
+  color: #5f5e5b;
+  font-size: 11px;
+  font-weight: 600;
+}
+
 textarea {
   width: 100%;
   min-height: 96px;

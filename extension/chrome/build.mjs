@@ -30,6 +30,7 @@ const SHIP_FILES = [
   "api.js",
   "backendStatus.js",
   "prompts.js",
+  "settings.js",
   "popup.html",
   "popup.css",
   "popup.js",

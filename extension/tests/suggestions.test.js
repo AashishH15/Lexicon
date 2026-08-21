@@ -202,6 +202,7 @@ test("keeps independent badges for multiple fields", () => {
     hidden: false,
     textContent: "",
     title: "",
+    listeners: {},
     offsetHeight: 100,
     appendChild(child) {
       this.children.push(child);
@@ -210,7 +211,9 @@ test("keeps independent badges for multiple fields", () => {
     replaceChildren(...nodes) {
       this.children = nodes;
     },
-    addEventListener() {},
+    addEventListener(type, handler) {
+      this.listeners[type] = handler;
+    },
     removeEventListener() {},
     setAttribute() {},
     remove() {},
@@ -268,9 +271,133 @@ test("keeps independent badges for multiple fields", () => {
 
   assert.equal(api.fieldStates().length, 2);
   assert.equal(api.fieldState(field1).badgeEl.textContent, "1");
-  assert.equal(api.fieldState(field2).badgeEl.textContent, "✓");
+  assert.equal(api.fieldState(field2).badgeEl.textContent, "");
+  assert.match(api.fieldState(field2).badgeEl.children[0].innerHTML, /M232.49/);
   assert.ok(rootEl.children.length >= 7);
   api.hideField(field1);
   assert.equal(api.fieldStates().length, 1);
+});
+
+test("Tone uses a dedicated badge popover and keeps the proofread panel clear", async () => {
+  let rootEl = null;
+  const makeElement = (tag) => ({
+    tagName: tag.toUpperCase(),
+    className: "",
+    classList: {
+      classes: new Set(),
+      add(...classes) {
+        classes.forEach((name) => this.classes.add(name));
+      },
+      remove(...classes) {
+        classes.forEach((name) => this.classes.delete(name));
+      },
+      toggle(name, value) {
+        if (value) this.classes.add(name);
+        else this.classes.delete(name);
+      },
+    },
+    style: {},
+    children: [],
+    hidden: false,
+    textContent: "",
+    title: "",
+    listeners: {},
+    offsetHeight: 100,
+    appendChild(child) {
+      this.children.push(child);
+      return child;
+    },
+    replaceChildren(...nodes) {
+      this.children = nodes;
+    },
+    addEventListener(type, handler) {
+      this.listeners[type] = handler;
+    },
+    removeEventListener() {},
+    setAttribute() {},
+    remove() {},
+    attachShadow() {
+      rootEl = {
+        children: [],
+        appendChild(child) {
+          this.children.push(child);
+          return child;
+        },
+      };
+      return rootEl;
+    },
+  });
+  const sandbox = {
+    document: {
+      documentElement: { appendChild() {} },
+      createElement: makeElement,
+    },
+    window: {
+      innerWidth: 1000,
+      innerHeight: 800,
+      addEventListener() {},
+      removeEventListener() {},
+    },
+    globalThis: {},
+  };
+  sandbox.globalThis = sandbox;
+  vm.createContext(sandbox);
+  vm.runInContext(source, sandbox);
+  const api = sandbox.__lexiconSuggestions;
+  const field = {
+    tagName: "TEXTAREA",
+    getBoundingClientRect: () => ({
+      top: 100,
+      bottom: 180,
+      left: 50,
+      right: 400,
+      height: 80,
+    }),
+    addEventListener() {},
+    removeEventListener() {},
+  };
+  let selectedTool = "";
+  let replacement = null;
+  api.showField(field, [], {
+    onTransform: async (tool) => {
+      selectedTool = tool;
+      return { ok: true, text: "Improved text", sourceText: "Original text" };
+    },
+    onApplyTransform: async (text, sourceText) => {
+      replacement = { text, sourceText };
+      return { ok: true };
+    },
+  });
+
+  const state = api.fieldState(field);
+  assert.equal(
+    state.panelEl.children.some((child) => child.className === "ai"),
+    false,
+  );
+  state.aiTriggerEl.listeners.click({
+    preventDefault() {},
+    stopPropagation() {},
+  });
+  assert.equal(state.aiTriggerEl.children[1].textContent, "Tone");
+  assert.match(state.aiTriggerEl.children[0].innerHTML, /M252,152/);
+  const ai = state.aiPanelEl.children.find((child) => child.className === "ai");
+  assert.ok(ai);
+  const controls = ai.children[0];
+  const run = controls.children[1];
+  run.listeners.click();
+  await new Promise((resolve) => setTimeout(resolve, 10));
+
+  assert.equal(selectedTool, "Friendly");
+  const resultAi = state.aiPanelEl.children.find(
+    (child) => child.className === "ai",
+  );
+  assert.equal(resultAi.children[1].textContent, "Improved text");
+  const replace = resultAi.children[2];
+  replace.listeners.click();
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  assert.deepEqual(replacement, {
+    text: "Improved text",
+    sourceText: "Original text",
+  });
 });
 

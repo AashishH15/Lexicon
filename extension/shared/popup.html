@@ -12,20 +12,46 @@
       <p id="status" class="status">Checking for Lexicon…</p>
     </header>
 
-    <textarea
-      id="input"
-      readonly
-      placeholder="Focus a text field on this page to proofread or rewrite it."
-      spellcheck="false"
-    ></textarea>
+    <section class="settings" aria-label="Extension controls">
+      <label class="toggle">
+        <input id="pause-proofreading" type="checkbox" />
+        <span>Pause proofreading</span>
+      </label>
+      <label class="toggle">
+        <input id="disable-site" type="checkbox" />
+        <span>Disable Lexicon on <strong id="site-name">this site</strong></span>
+      </label>
+      <p id="settings-status" class="settings-status" role="status"></p>
+    </section>
 
-    <div class="actions">
-      <button id="proofread" type="button">Proofread</button>
-      <select id="rewrite-tool" aria-label="Rewrite style"></select>
-      <button id="rewrite" type="button">Rewrite</button>
+    <p class="popup-help">
+      Click a Lexicon badge beside a visible field to review issues. Hover it
+      to reveal Tone.
+    </p>
+
+    <div class="legacy-ai" hidden>
+      <div class="field-picker">
+        <label for="field-select">Apply Tone to</label>
+        <select id="field-select" aria-label="Text field target">
+          <option value="">Choose a visible text field…</option>
+        </select>
+      </div>
+
+      <textarea
+        id="input"
+        readonly
+        placeholder="Choose a visible text field above to use Tone."
+        spellcheck="false"
+      ></textarea>
+
+      <div class="actions">
+        <button id="proofread" type="button">Proofread</button>
+        <select id="rewrite-tool" aria-label="Rewrite style"></select>
+        <button id="rewrite" type="button">Rewrite</button>
+      </div>
+
+      <div id="results" class="results" role="status" aria-live="polite"></div>
     </div>
-
-    <div id="results" class="results" role="status" aria-live="polite"></div>
 
     <footer class="footer">
       <a href="https://discord.gg/nDCedWH3SV" target="_blank" rel="noopener" class="footer-link">Report on Discord</a>
