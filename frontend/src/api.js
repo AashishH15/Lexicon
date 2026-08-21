@@ -106,7 +106,7 @@ export async function setAiPreference(
   return response.json();
 }
 
-// Trigger the bundled-model download (runs synchronously server-side).
+// Trigger the local-model download (runs synchronously server-side).
 export async function downloadModel(modelKey = "2b") {
   const response = await request("/model/download", {
     method: "POST",

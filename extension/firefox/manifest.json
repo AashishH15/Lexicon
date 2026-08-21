@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Lexicon",
   "version": "0.1.0",
-  "description": "Grammar, spelling, and rewrite suggestions from Lexicon's local engine (desktop app required).",
+  "description": "Grammar, spelling, Tone, and rewrite suggestions from Lexicon's desktop app (local by default; desktop app required).",
   "icons": {
     "16": "icons/icon-16.png",
     "32": "icons/icon-32.png",

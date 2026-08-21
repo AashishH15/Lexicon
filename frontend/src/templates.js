@@ -21,9 +21,9 @@ export const TEMPLATES = [
 <h1>Evaluating Local AI Assistance in the Lexicon Editor</h1>
 <p><em>Priya Deshmukh &amp; Zhang Wei</em><br>Department of Language Technology, Lexicon Research Labs</p>
 <h2>Abstract</h2>
-<p>This paper investigates whether a locally hosted language model inside the Lexicon editor can improve prose clarity and grammatical correctness without compromising data confidentiality. Empirical benchmarks demonstrate measurable readability gains with zero telemetry transmission.</p>
+<p>This paper investigates whether a locally hosted language model inside the Lexicon editor can improve prose clarity and grammatical correctness without compromising data confidentiality. Empirical benchmarks demonstrate measurable readability gains without first-party telemetry transmission.</p>
 <h2>Introduction</h2>
-<p>Academic drafting imposes strict privacy and precision requirements. Cloud-based proofreading services introduce data leakage risks. Lexicon resolves this tension by running grammar analysis and model inference entirely on-device.</p>
+<p>Academic drafting imposes strict privacy and precision requirements. Cloud-based proofreading services introduce data leakage risks. Lexicon resolves this tension by running grammar analysis and model inference on-device by default.</p>
 <h2>Methodology</h2>
 <p>We evaluated Lexicon&rsquo;s deterministic proofreader and local LLM backend across fifty technical drafts, measuring error detection accuracy and local execution latency.</p>
 <h2>Results</h2>
@@ -34,7 +34,7 @@ export const TEMPLATES = [
 <p>where <span data-type="inline-math" data-latex="N"></span> represents parameter count in millions. Tone alignment correlation was calculated as follows:</p>
 <div data-type="block-math" data-latex="r = \\frac{\\sum (x_i - \\bar{x})(y_i - \\bar{y})}{\\sqrt{\\sum (x_i - \\bar{x})^2 \\sum (y_i - \\bar{y})^2}}"></div>
 <h2>Discussion</h2>
-<p>Lexicon demonstrates that local-first AI writing assistants match cloud productivity while preserving total privacy. Future work will focus on rich export format fidelity.</p>
+<p>Lexicon demonstrates that local-first AI writing assistants can support cloud-like productivity while keeping processing on-device by default. Future work will focus on rich export format fidelity.</p>
 <h2>References</h2>
 <ol><li><p>Diop, A. &amp; Sat&omacr;, K. (2024). <em>On-Device Language Models in Lexicon</em>. Journal of Local Computing, 12(3), 45&ndash;67.</p></li><li><p>Eduardo, J. &amp; Deshmukh, P. (2023). Deterministic Grammar Analysis. <em>Lexicon Technical Reports</em>, 9(1), 88&ndash;102.</p></li></ol>
 `,
@@ -87,7 +87,7 @@ export const TEMPLATES = [
 <p>Twelve months ago I moved all my drafting into Lexicon. Here is how local-first editing transformed my focus and speed.</p>
 <blockquote><p>&ldquo;Your words belong to you, before and after they are published.&rdquo;</p></blockquote>
 <h2>Why local matters</h2>
-<p>Writing inside Lexicon ensures your drafts remain strictly private on your own machine. There are no cloud sync hiccups, no telemetry trackers, and no subscription paywalls.</p>
+<p>Writing inside Lexicon keeps drafts on your own machine by default. There are no Lexicon cloud sync features, no first-party telemetry trackers, and no subscription paywalls.</p>
 <h2>A small example</h2>
 <pre><code class="language-javascript">// A tiny Lexicon local document saver
 for (const draft of drafts) {
@@ -95,7 +95,7 @@ for (const draft of drafts) {
   console.log("saved " + draft.slug);
 }</code></pre>
 <h2>Summary</h2>
-<ul><li><p>100% offline privacy with local AI models.</p></li><li><p>Instant grammar, spelling, and tone feedback.</p></li><li><p>Clean Markdown, HTML, and rich PDF exports.</p></li></ul>
+<ul><li><p>Local-by-default privacy with local AI models.</p></li><li><p>Instant grammar, spelling, and tone feedback.</p></li><li><p>Clean Markdown, HTML, and rich PDF exports.</p></li></ul>
 `,
     preview: `
 <h1>Post Title</h1>

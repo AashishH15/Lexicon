@@ -39,7 +39,7 @@
     <div class="container legal-container">
       <p class="legal-eyebrow">Legal</p>
       <h1>Privacy Policy</h1>
-      <p class="legal-meta">Last updated: August 12, 2026</p>
+      <p class="legal-meta">Last updated: August 21, 2026</p>
 
       <p>
         Lexicon is a local-first desktop writing app, with an optional browser
@@ -55,13 +55,20 @@
 
       <h2>1. Short version</h2>
       <ul>
-        <li>No accounts. No cloud sync of your documents.</li>
-        <li>Your drafts, settings, dictionaries, and history stay on your computer.</li>
-        <li>Proofreading and optional local AI run on your machine.</li>
+        <li>No Lexicon accounts and no Lexicon cloud sync of your documents.</li>
         <li>
-          The browser extension sends supported page text to the Lexicon desktop
-          app on the same device for local proofreading; it does not send that
-          text to a Lexicon-operated cloud service.
+          Your drafts, settings, dictionaries, and history are stored locally by
+          default. The external-endpoint exceptions are described below.
+        </li>
+        <li>
+          Proofreading and AI can run locally, but a server URL that you
+          configure may receive the text and prompt sent to that server.
+        </li>
+        <li>
+          The browser extension can send supported page text to the Lexicon
+          desktop app on the same device for proofreading or Tone/rewrite
+          actions. It does not send that text to a Lexicon-operated cloud
+          service.
         </li>
         <li>I do not operate a cloud backend that stores your writing.</li>
         <li>
@@ -73,28 +80,78 @@
       <h2>2. Data stored on your device</h2>
       <p>Depending on how you use Lexicon, your device may store:</p>
       <ul>
-        <li><strong>Documents and drafts</strong> in the app’s local browser/WebView storage</li>
-        <li><strong>Document history</strong> and <strong>AI transform history</strong></li>
+        <li>
+          <strong>Documents and drafts</strong> in the app’s local browser/WebView
+          storage. The current rich-text document is saved as HTML; automatic
+          draft snapshots can include the HTML, plain text, timestamp, and word
+          and character counts.
+        </li>
+        <li>
+          <strong>Document history</strong> and <strong>AI transform history</strong>.
+          History has no time-based expiry; the normal item limit can be exceeded
+          by entries you lock.
+        </li>
         <li>
           <strong>Settings and preferences</strong> (language, appearance, layout,
-          proofreading options, beta update channel, AI backend preference, and similar)
+          proofreading options, beta update channel, AI backend preference, and similar),
+          including a local marker that remembers initial operating-system startup setup
         </li>
-        <li><strong>Personal dictionary</strong> and dismissed suggestion state</li>
-        <li><strong>Custom tools / prompt overrides</strong> and export-related prefs (for example DOCX author name)</li>
+        <li>
+          <strong>Personal dictionary</strong> and dismissed suggestion state.
+          A dismissed suggestion key can include the rule message, original text,
+          and sentence context used to recognize it on later checks.
+        </li>
+        <li>
+          <strong>Custom tools / prompt overrides</strong>, transform history,
+          and export-related preferences (for example DOCX author name)
+        </li>
         <li>
           <strong>Downloaded AI model files</strong> and an AI preferences file in Lexicon’s
           local app-data directory (for example under Application Support / AppData)
         </li>
+        <li>
+          The AI preferences file can contain your selected backend, model names,
+          a custom LM Studio URL, and an LM Studio API token. The token is stored
+          in the local <code>ai_prefs.json</code> file and is used as a Bearer
+          token on requests to the configured LM Studio server for
+          authentication.
+          Lexicon does not send that token to the Lexicon operator, and the
+          application does not provide a separate encrypted token vault.
+        </li>
         <li><strong>Import/export files</strong> you choose to open or save elsewhere on disk</li>
         <li>
-          <strong>Browser-extension settings or temporary state</strong> that the
-          browser stores for the extension. Browser sync settings, if enabled,
-          are controlled by your browser provider rather than Lexicon.
+          <strong>Browser-extension settings</strong> that the browser stores in
+          local extension storage: whether proofreading is paused and the
+          hostnames where Lexicon is disabled. The extension does not store page
+          text in that storage.
         </li>
       </ul>
       <p>
+        Documents, histories, dictionary entries, prompt data, preferences, and
+        downloaded models use ordinary WebView or local filesystem storage.
+        Lexicon does not apply application-level encryption to these records or
+        provide an encrypted backup. This is not a guarantee against device
+        loss, account access, malware, or operating-system backup providers.
+        Protect your OS account and control which folders are included in
+        backups or synchronization services.
+      </p>
+      <p>
         I do not receive copies of this content in the normal course of using
         the app. There is no cloud copy of your drafts for me to delete on your behalf.
+      </p>
+      <h3>Browser extension controls</h3>
+      <p>
+        The beta extension requests optional HTTP/HTTPS page access. On a page
+        where access is granted, its content scripts match all URLs and frames,
+        including supported blank-frame fallbacks, and automatically scan
+        supported visible editable fields. Proofreading is enabled by default:
+        a non-empty visible field is normally checked about 700 milliseconds
+        after input, with at most three field checks running at once. Firefox
+        142 or later is required. You can pause proofreading globally or
+        disable Lexicon for the current website. Pausing stops proofreading
+        checks but does not prevent a manually requested Tone/rewrite action;
+        disabling a website prevents Lexicon extension processing there. These
+        controls are stored locally in the browser extension.
       </p>
 
       <h2>3. Deleting local data</h2>
@@ -111,30 +168,110 @@
           after uninstall or if you use a portable/dev build.
         </li>
         <li>
+          <strong>Browser extension:</strong> remove the extension from your
+          browser and use the browser’s extension-data controls if you also want
+          to remove its locally stored pause and disabled-site settings.
+        </li>
+        <li>
           <strong>macOS / Linux:</strong> remove the app bundle or package, then delete
           Lexicon folders under Application Support / local share if you want a full wipe.
         </li>
       </ul>
+      <p>
+        <strong>Reset to Default</strong> resets selected interface and
+        proofreading preferences; it does not delete the current document,
+        document or transform history, dictionary, dismissed suggestions,
+        custom tools, prompt overrides, AI setup, or the LM Studio token.
+        The in-app history controls also leave locked entries in place and do
+        not delete the current document. Remove those records separately when
+        you want a full local-data wipe.
+      </p>
 
       <h2>4. What leaves your computer</h2>
       <p>
-        Lexicon is designed so your writing is not uploaded for grammar checking
-        or AI transforms. Limited outbound connections may occur as follows:
+        Lexicon is local-first, not an unconditional promise that no bytes can
+        leave your computer. The destination depends on the backend and URLs
+        you use. Lexicon does not send your writing to a Lexicon-operated cloud
+        service for normal grammar checking or AI transforms.
       </p>
       <ul>
         <li>
           <strong>Browser extension connection:</strong> when you run the beta
-          extension on a supported page, it may read text from an enabled text
-          field and send that text over a local connection to the Lexicon
-          desktop app running on the same device. The app returns proofreading
-          results to the extension. This local exchange is not a transmission
-          to a Lexicon-operated cloud service.
+          extension on a supported page, it may read text from enabled fields
+          in the page and send that text over a loopback connection to the
+          Lexicon desktop app on the same device. This can include the current
+          field text for a Tone or rewrite action. The app returns results to
+          the extension. This local exchange is not a transmission to a
+          Lexicon-operated cloud service.
+        </li>
+        <li>
+          <strong>Local API trust boundary:</strong> the desktop application
+          exposes an unauthenticated HTTP API on loopback
+          (<code>127.0.0.1:18000</code> in packaged builds and
+          <code>127.0.0.1:8000</code> in development) for the desktop UI and
+          extension. It is not an encrypted or authenticated channel. Other
+          software running on the same device may be able to connect to that
+          port and submit or read request data, so do not run untrusted local
+          software while using Lexicon.
+        </li>
+        <li>
+          <strong>Local processing:</strong> the packaged LanguageTool engine,
+          any downloaded local GGUF model on a supported build, and default
+          local-server configurations process text on the device. A default
+          local Ollama server (<code>localhost:11434</code>) or default local
+          LM Studio server (<code>localhost:1234</code>) is also a server on
+          your device.
+        </li>
+        <li>
+          <strong>User-configured AI servers:</strong> if you configure LM
+          Studio with a LAN or remote URL, or configure Ollama to use a
+          non-local server, the text and prompt sent for a transform go to that
+          server. The server operator may retain or process the request under
+          its own policies. LM Studio model-availability probes also go to the
+          configured URL, and an API token, if saved, is sent in the
+          authorization header. Extension Tone/rewrite requests follow the
+          same backend choice.
+        </li>
+        <li>
+          <strong>Network configuration:</strong> <code>LANGUAGETOOL_SERVER</code>,
+          <code>OLLAMA_SERVER</code>, and <code>LM_STUDIO_SERVER</code> can
+          redirect backend requests in any installation when configured.
+          Advanced source/development settings such as
+          <code>VITE_API_URL</code> and <code>LEXICON_HOST</code> can redirect
+          or expose the standalone API. Custom URLs may use unencrypted HTTP;
+          an LM Studio Bearer token sent to an HTTP URL can be observed by
+          parties able to monitor that connection.
+        </li>
+        <li>
+          <strong>Optional remote proofreading configuration:</strong> any
+          installation with the <code>LANGUAGETOOL_SERVER</code> environment
+          override can route proofreading to an external LanguageTool-compatible
+          endpoint. In that case, proofreading text is sent to that endpoint.
+          Packaged builds use the bundled local engine by default.
+        </li>
+        <li>
+          <strong>Backend availability probes:</strong> Lexicon may check the
+          configured Ollama and LM Studio servers for available models. These
+          probes are sent to the configured server and return server/model
+          metadata; they do not include document text.
+        </li>
+        <li>
+          <strong>Retries and cancellation:</strong> a transient failed request
+          can be retried, and cancelling a proofreading or transform request
+          stops Lexicon's wait but cannot retract text already received by a
+          remote endpoint. Whole-document transforms may send several chunks
+          to that endpoint.
         </li>
         <li>
           <strong>Automatic update checks:</strong> the packaged desktop app may contact
           GitHub-hosted update manifests shortly after launch (stable channel by default;
-          beta channel if you enable beta updates). Checking does not install anything by
-          itself. Downloading and installing an update happens only if you choose to.
+          beta channel if you enable beta updates). Packaged builds enable operating-system
+          startup by default and can start in the background with a tray process, so an
+          update check can occur without the main editor window being visible. The current
+          build has no in-app startup toggle; after initial setup, an operating-system
+          startup disable is respected.
+          Checking does not install anything by itself.
+          Downloading and installing an update happens only if you choose to.
         </li>
         <li>
           <strong>Beta updates:</strong> the beta toggle only changes which update manifest
@@ -145,19 +282,38 @@
           GitHub’s API when you open that UI.
         </li>
         <li>
-          <strong>Optional model download:</strong> if you download a bundled local model,
-          Lexicon retrieves the model file from Hugging Face (or its CDN). Your document
-          text is not sent as part of that download. Model files are subject to their own
+        <strong>Optional model download:</strong> when you choose
+          <strong>Download &amp; enable</strong>, Lexicon retrieves a local
+          model file from Hugging Face (or its CDN). Your document text is not
+          sent as part of that download. Model files are subject to their own
           third-party licenses.
         </li>
         <li>
-          <strong>Optional Ollama:</strong> if you select Ollama, requests go to a local
-          server you run (typically on your machine). That is not my cloud service.
+          <strong>Optional Ollama:</strong> if you select Ollama, requests go to
+          the Ollama server configured for Lexicon. The default is a local
+          server on your machine; a non-local server is covered above.
+        </li>
+        <li>
+          <strong>Source and development setup:</strong> the quick-start or
+          manual source setup can download Python packages from PyPI, frontend
+          packages from npm, and the official LanguageTool standalone archive
+          from Maven Central. These downloads are installation activity, not
+          uploads of your document text.
         </li>
         <li>
           <strong>Remote images:</strong> if you insert or paste an image that uses an
           <code>https://</code> (or other remote) URL, your device may fetch that image from
-          the host you referenced. Prefer embedding local images if you do not want that request.
+          the host you referenced when the document is displayed or reopened.
+          Imported HTML can contain the same kind of image reference. Prefer
+          embedding local images if you do not want that request.
+        </li>
+        <li>
+          <strong>Clipboard and exports:</strong> user-initiated paste can read
+          text or images from the OS clipboard, and copying history writes text
+          to that clipboard. DOCX and EPUB exports can include metadata such as
+          author, title, publisher, language, timestamps, and tracked-change
+          information. Clipboard managers, file systems, and recipients may
+          process those values under their own policies.
         </li>
         <li>
           <strong>Links you open:</strong> website, Discord, GitHub, docs, or other URLs you
@@ -166,7 +322,11 @@
       </ul>
       <p>
         Those third parties process connection metadata (such as IP address) under their own
-        policies (for example GitHub, Hugging Face, Discord, or an image host you link to).
+        policies (for example Cloudflare, GitHub, Google Fonts, unpkg,
+        <code>img.shields.io</code>, Hugging Face, Maven Central, PyPI, npm,
+        Discord, or an image host you link to). The operator of any external AI
+        or LanguageTool-compatible endpoint you configure may also process the
+        request contents and authentication data.
       </p>
 
       <h2>5. Website</h2>
@@ -177,10 +337,16 @@
         process technical logs (such as IP address, user agent, and request timing). The site
         may load fonts from Google Fonts, a scrolling library from a public CDN (unpkg), and
         public repository metadata from GitHub’s API (for example release or star counts).
+        The Lenis file from unpkg executes third-party JavaScript on this marketing page and
+        can access the page DOM for scrolling.
+        The download selector also reads browser architecture, bitness, and limited WebGL
+        renderer hints locally, without putting those values in Lexicon request bodies or URLs.
+        README status badges can request images from <code>img.shields.io</code> when the
+        README is rendered.
         I do not run a first-party analytics product that profiles your writing
-        inside Lexicon. The browser extension packages are distributed through
-        GitHub Releases, so GitHub may process download connection metadata
-        under its own policies.
+        inside Lexicon. Browser extension packages may be distributed as
+        published GitHub release artifacts, so GitHub may process download
+        connection metadata under its own policies.
       </p>
       <p>
         The extension can interact with text fields on websites where you enable
@@ -204,6 +370,16 @@
         If you post on Discord, open a GitHub issue or pull request, or email me, you share
         whatever you include in that message (and Discord/GitHub/Google process it under their
         terms). Prefer not to paste highly sensitive drafts into public channels.
+      </p>
+      <p>
+        Lexicon does not send automatic crash reports, usage analytics, or
+        diagnostic logs to me. A voluntary report may include your contact
+        details, account or community username, screenshots, logs, or text
+        that you choose to attach. I may retain that information only as
+        needed to respond, investigate, or maintain the project, subject to
+        what the relevant community or email provider retains. You can ask me
+        to delete a support message or copy that I control; I cannot delete
+        copies retained by Discord, GitHub, Google, or another provider.
       </p>
       <p>
         Contact for privacy or security questions:

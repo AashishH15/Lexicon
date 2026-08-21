@@ -4,6 +4,8 @@
 
 use serde::Serialize;
 use std::env;
+#[cfg(not(debug_assertions))]
+use std::fs;
 use std::io::{Read, Write};
 use std::net::{SocketAddr, TcpStream};
 use std::path::PathBuf;
@@ -36,6 +38,8 @@ const BACKEND_SHUTDOWN_WAIT: Duration = Duration::from_secs(2);
 const PROCESS_TERMINATE_WAIT: Duration = Duration::from_secs(3);
 const PROCESS_POLL: Duration = Duration::from_millis(50);
 const AUTOSTART_ARG: &str = "--autostart";
+#[cfg(not(debug_assertions))]
+const AUTOSTART_INITIALIZED_FILE: &str = "autostart-initialized";
 
 #[cfg(target_os = "windows")]
 const CREATE_NO_WINDOW: u32 = 0x08000000;
@@ -63,6 +67,28 @@ fn post_backend_endpoint(endpoint: &str) -> bool {
 
 fn launched_from_autostart() -> bool {
     env::args().any(|argument| argument == AUTOSTART_ARG)
+}
+
+#[cfg(not(debug_assertions))]
+fn autostart_was_initialized(app: &tauri::AppHandle) -> bool {
+    app.path()
+        .app_config_dir()
+        .map(|path| path.join(AUTOSTART_INITIALIZED_FILE).is_file())
+        .unwrap_or(false)
+}
+
+#[cfg(not(debug_assertions))]
+fn mark_autostart_initialized(app: &tauri::AppHandle) {
+    let Ok(config_dir) = app.path().app_config_dir() else {
+        return;
+    };
+    if let Err(error) = fs::create_dir_all(&config_dir) {
+        eprintln!("Warning: failed to create Lexicon config directory: {error}");
+        return;
+    }
+    if let Err(error) = fs::write(config_dir.join(AUTOSTART_INITIALIZED_FILE), b"1") {
+        eprintln!("Warning: failed to save Lexicon startup preference: {error}");
+    }
 }
 
 fn request_backend_shutdown() -> bool {
@@ -619,16 +645,24 @@ fn main() {
         .setup(move |app| {
             #[cfg(not(debug_assertions))]
             {
-                let autolaunch = app.autolaunch();
-                match autolaunch.is_enabled() {
-                    Ok(false) => {
-                        if let Err(error) = autolaunch.enable() {
-                            eprintln!("Warning: failed to enable Lexicon startup: {error}");
+                if !autostart_was_initialized(app.handle()) {
+                    let autolaunch = app.autolaunch();
+                    let initialized = match autolaunch.is_enabled() {
+                        Ok(false) => match autolaunch.enable() {
+                            Ok(()) => true,
+                            Err(error) => {
+                                eprintln!("Warning: failed to enable Lexicon startup: {error}");
+                                false
+                            }
+                        },
+                        Ok(true) => true,
+                        Err(error) => {
+                            eprintln!("Warning: failed to inspect Lexicon startup: {error}");
+                            false
                         }
-                    }
-                    Ok(true) => {}
-                    Err(error) => {
-                        eprintln!("Warning: failed to inspect Lexicon startup: {error}");
+                    };
+                    if initialized {
+                        mark_autostart_initialized(app.handle());
                     }
                 }
             }

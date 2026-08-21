@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Lexicon | Free Writing App &amp; Offline Grammarly Alternative</title>
   <meta name="description"
-    content="Lexicon is a free, open-source Grammarly alternative and a private writing app for Windows, macOS &amp; Linux with offline grammar checking, local AI rewrites, and clean PDF export. 100% offline, no accounts." />
+    content="Lexicon is a free, open-source Grammarly alternative and local-first writing app for Windows, macOS &amp; Linux with offline grammar checking, local AI rewrites, and clean PDF export. No accounts." />
 
   <!-- Google Search Console Verification & AI Standards -->
   <meta name="google-site-verification" content="-OHF7u4k-Cd8tiNiIITCXMtra5o5-KYaTj-MP08zVUc" />
@@ -19,19 +19,19 @@
   <meta property="og:url" content="https://lexicon-writer.pages.dev/" />
   <meta property="og:title" content="Lexicon | Free Writing App &amp; Offline Grammarly Alternative" />
   <meta property="og:description"
-    content="A free, open-source Grammarly alternative that's a private writing app with built-in offline grammar checking, local AI rewrites, and clean PDF export." />
+    content="A free, open-source Grammarly alternative that's a local-first writing app with built-in offline grammar checking, local AI rewrites, and clean PDF export." />
   <meta property="og:image" content="https://lexicon-writer.pages.dev/assets/og-banner.png" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="628" />
-  <meta property="og:image:alt" content="Lexicon - Free open source writing app for private offline writing" />
+  <meta property="og:image:alt" content="Lexicon - Free open source writing app for local-first writing" />
 
   <!-- Twitter Meta Cards -->
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="Lexicon | Free Writing App &amp; Offline Grammarly Alternative" />
   <meta name="twitter:description"
-    content="A free, open-source Grammarly alternative that's a private writing app with offline grammar checking, local AI rewrites, and clean PDF export." />
+    content="A free, open-source Grammarly alternative that's a local-first writing app with offline grammar checking, local AI rewrites, and clean PDF export." />
   <meta name="twitter:image" content="https://lexicon-writer.pages.dev/assets/og-banner.png" />
-  <meta name="twitter:image:alt" content="Lexicon - Free open source writing app for private offline writing" />
+  <meta name="twitter:image:alt" content="Lexicon - Free open source writing app for local-first writing" />
 
   <!-- Favicon: Non-transparent logo for dark/light tab visibility -->
   <link rel="icon" type="image/png" href="assets/lexicon-logo-windows.png" />
@@ -67,12 +67,7 @@
       "price": "0",
       "priceCurrency": "USD"
     },
-    "aggregateRating": {
-      "@type": "AggregateRating",
-      "ratingValue": "5.0",
-      "ratingCount": "10"
-    },
-    "description": "Free open source Grammarly alternative and writing app for Windows, macOS, and Linux with a distraction-free rich-text editor, inline offline grammar checking, on-device AI rewrites, LaTeX math, and clean PDF export.",
+    "description": "Free open source Grammarly alternative and local-first writing app for Windows, macOS, and Linux with a distraction-free rich-text editor, inline offline grammar checking, local AI rewrites, LaTeX math, and clean PDF export.",
     "license": "https://opensource.org/licenses/MIT",
     "downloadUrl": "https://github.com/AashishH15/Lexicon/releases/latest",
     "url": "https://lexicon-writer.pages.dev/"
@@ -104,7 +99,7 @@
         "name": "Does Lexicon upload my writing to the cloud?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "No. Proofreading and Lex rewrites run on your machine. Drafts stay local, and Lexicon does not ship your prose to remote servers or collect tracking data."
+          "text": "Not to a Lexicon-operated cloud service. Built-in proofreading and downloaded local or local-server AI can run on your machine. If you configure a remote LM Studio, Ollama, or proofreading endpoint, the text sent to that endpoint is processed under its terms. Lexicon has no accounts or first-party writing analytics."
         }
       },
       {
@@ -112,7 +107,7 @@
         "name": "Do I need a Lex model just to proofread?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "No. Grammar and style checks work without a model. Download Light (~0.8 GB) or Standard (~1.4 GB) from Settings only when you want Lex rewrites, or connect your own Ollama server."
+          "text": "No. Grammar and style checks work without an AI model. Download a local Light (~0.8 GB) or Standard (~1.4 GB) model on supported builds when you want Lex rewrites, or connect your own Ollama or LM Studio server. A configured network server may receive the text and prompt sent to it."
         }
       },
       {
@@ -120,7 +115,7 @@
         "name": "Can I proofread without an internet connection?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Yes. An embedded engine handles spelling, grammar, punctuation, and style on your CPU as you type, so the editor keeps working offline."
+          "text": "Yes. The packaged LanguageTool engine handles spelling, grammar, punctuation, and style locally when you run a check, so proofreading can work offline. A configured remote LanguageTool-compatible endpoint is an exception."
         }
       },
       {
@@ -128,7 +123,7 @@
         "name": "Is there a browser extension?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Yes. A beta browser extension for Chrome and Firefox proofreads text fields on any website, powered by the desktop app's local engine. It is a beta: Google Docs is not supported yet, the Firefox package is unsigned, and the desktop app must be running."
+          "text": "Yes. A beta browser extension for Chrome and Firefox proofreads multiple visible text fields, including supported frames, through the desktop app on pages where optional access is granted. It also offers Tone and rewrite actions from field badges. Google Docs is not supported yet, Firefox 142 or later is required, the Firefox package is unsigned, and the desktop app must be running."
         }
       },
       {
@@ -144,7 +139,7 @@
         "name": "Why use Lexicon instead of a cloud grammar checker?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Most cloud checkers bill monthly and process your documents on their servers. Lexicon is a free desktop writing app with offline grammar and on-device Lex tools, so your prose never leaves your computer."
+          "text": "Most cloud checkers bill monthly and process your documents on their servers. Lexicon is a free local-first desktop writing app with offline grammar and local AI options. Updates, model downloads, and any server you configure are separate network paths."
         }
       }
     ]
@@ -212,17 +207,16 @@
       <div class="container">
         <div class="hero-badge-wrapper">
           <span class="badge-pill badge-blue">
-            <span>Free &amp; Open Source &bull; 100% Offline &bull; No Accounts</span>
+            <span>Free &amp; Open Source &bull; Local by Default &bull; No Accounts</span>
           </span>
         </div>
 
         <h1 class="hero-title">
-          The calm, private writing app that proofreads as you type.
+          The calm, private writing app for clearer drafts.
         </h1>
 
         <p class="hero-subtitle">
-          A distraction-free desktop editor with offline grammar, on-device Lex rewrites, and clean PDF export.
-          Your words never leave your machine, and there's nothing to subscribe to.
+          A distraction-free desktop editor with local proofreading on demand, local-first Lex rewrites. No account or subscription is required.
         </p>
 
         <!-- Dynamic Download Box -->
@@ -327,7 +321,7 @@
           <div class="ai-wow-demo" id="ai-wow-demo">
           <div class="proofread-live-bar">
             <span><span class="proofread-live-dot"></span><span class="proofread-live-label" id="ai-wow-label">Proofread &amp; Lex's Engine</span></span>
-            <span class="proofread-live-metrics" id="ai-wow-status-badge">100% Offline &middot; On-device</span>
+            <span class="proofread-live-metrics" id="ai-wow-status-badge">Local by default &middot; On-device</span>
           </div>
           <div class="ai-wow-body">
             <!-- Typing Editor Canvas Line -->
@@ -380,8 +374,8 @@
 
         <div class="trust-strip" aria-label="Product highlights">
           <div class="trust-strip-item">
-            <span class="trust-strip-value">100%</span>
-            <span class="trust-strip-label">Offline</span>
+            <span class="trust-strip-value">Local</span>
+            <span class="trust-strip-label">By default</span>
           </div>
           <div class="trust-strip-item">
             <span class="trust-strip-value">45+</span>
@@ -417,10 +411,11 @@
               <span class="badge-pill badge-green">02 &middot; Proofread</span>
               <span class="bento-meta">Grammar &amp; Prose</span>
             </div>
-            <h3 class="bento-title">Grammar, style &amp; readability as you type</h3>
+            <h3 class="bento-title">Grammar, style &amp; readability when you check</h3>
             <p class="bento-desc">
-              Inline squiggles for spelling, grammar, and style with 1-click Apply. Clarity, readability, and
-              tone update live. Every check runs on your CPU, never uploaded.
+              Run inline checks for spelling, grammar, and style with 1-click Apply. Clarity, readability, and tone
+              update with the check. Built-in checks run on your CPU; external AI servers are optional and
+              user-configured.
             </p>
           </div>
 
@@ -430,10 +425,11 @@
               <span class="badge-pill badge-green">03 &middot; Polish</span>
               <span class="bento-meta">Lex's Engine</span>
             </div>
-            <h3 class="bento-title">On-device Lex rewrites &amp; tone shifts</h3>
+            <h3 class="bento-title">Local-first Lex rewrites &amp; tone shifts</h3>
             <p class="bento-desc">
               Highlight a passage and ask Lex to rewrite, tighten, summarize, or shift tone.
-              Professional, Academic, Friendly, and more. Runs entirely on your device.
+              Professional, Academic, Friendly, and more. Use a downloaded
+              local model on supported builds or a server that you configure.
             </p>
           </div>
 
@@ -491,7 +487,8 @@
             </div>
             <h3 class="bento-title">Local profile, models kept intact</h3>
             <p class="bento-desc">
-              Local auto-save keeps drafts safe. Updates preserve your Lex models, settings, and personal dictionary.
+              Local auto-save saves drafts locally. Updates preserve your Lex models, settings, and personal
+              dictionary; local storage is not an encrypted backup.
             </p>
           </div>
 
@@ -504,7 +501,7 @@
             <div class="export-live-card" id="export-demo-card">
               <div class="proofread-live-bar">
                 <span><span class="proofread-live-dot"></span><span class="proofread-live-label">Export &amp; Theme Studio</span></span>
-                <span class="proofread-live-metrics" id="export-metrics-text">PDF (Vector) &middot; 300 DPI</span>
+                <span class="proofread-live-metrics" id="export-metrics-text">PDF export &middot; System print dialog</span>
               </div>
               <div class="export-live-body">
                 <div class="export-preview-header">
@@ -512,7 +509,7 @@
                   <span class="export-status" id="export-status-badge">Ready for 1-click export</span>
                 </div>
                 <div class="export-chip-group">
-                  <button type="button" class="export-chip active" data-format="pdf">PDF (Vector)</button>
+                  <button type="button" class="export-chip active" data-format="pdf">PDF export</button>
                   <button type="button" class="export-chip" data-format="epub">EPUB 3</button>
                   <button type="button" class="export-chip" data-format="docx">DOCX (Tracked)</button>
                   <button type="button" class="export-chip" data-format="html">HTML (Styled)</button>
@@ -568,10 +565,11 @@
       <div class="container">
         <div class="section-header">
           <div class="section-tag">The Browser Extension <span class="badge-pill badge-blue">Beta</span></div>
-          <h2 class="section-title">Proofread anywhere you type on the web.</h2>
+          <h2 class="section-title">Proofread across supported web fields.</h2>
           <p class="section-subtitle">
-            Lexicon for Chrome &amp; Firefox checks emails, forum posts, and text fields on any
-            website. Powered by the same local engine already running in your desktop app.
+            Lexicon for Chrome &amp; Firefox checks supported visible editable fields, including supported frames, on
+            pages where you grant access. Checks run automatically by default until you pause or disable Lexicon for
+            that site. It uses the same local-first desktop app and can forward text to a server you configure.
           </p>
         </div>
 
@@ -582,7 +580,7 @@
                 <span class="proofread-live-dot"></span>
                 <span class="proofread-live-label">Browser Extension</span>
               </span>
-              <span class="proofread-live-metrics" id="extension-metrics">Connected &middot; Local engine</span>
+              <span class="proofread-live-metrics" id="extension-metrics">Connected &middot; Local-first engine</span>
             </div>
 
             <div class="extension-live-body">
@@ -662,10 +660,11 @@
                 d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
             </svg>
             <span>Get for Firefox</span>
-            <span class="extension-dl-tag">.zip &middot; temporary add-on</span>
+            <span class="extension-dl-tag">.xpi &middot; temporary add-on</span>
           </a>
           <p class="extension-dl-note">
-            Beta build. Pairs with the desktop app (v0.11.0-beta.1+). It does not work with stable
+            Beta build. Pairs with the desktop app (v0.11.0-beta.1+). It requests optional HTTP/HTTPS page access;
+            when granted, it can inspect supported visible editable fields in frames. It does not work with stable
             v0.10.3, and the desktop app must be running.
           </p>
           <p class="extension-dl-note">
@@ -676,14 +675,17 @@
 
         <div class="extension-grid">
           <div class="extension-card">
-            <h4>Proofread any text field</h4>
-            <p>Emails, tweets, forum posts, blog editors. Squiggles appear wherever you type, on any
-              website the extension is enabled for.</p>
+            <h4>Proofread supported text fields</h4>
+            <p>Emails, tweets, forum posts, and blog editors can show squiggles in supported visible fields on pages
+              where the extension has access, including supported frames. Non-empty visible fields are checked
+              automatically unless you pause proofreading or disable the site.</p>
           </div>
           <div class="extension-card">
-            <h4>Your prose stays local</h4>
-            <p>The extension talks only to Lexicon on your own machine. Nothing you type is uploaded or
-              stored anywhere else.</p>
+            <h4>Your prose stays local by default</h4>
+            <p>The extension sends supported text to Lexicon on your own
+              machine and does not store page text in extension storage. If you
+              configure a remote AI or proofreading server, that server may
+              receive the text sent to it.</p>
           </div>
           <div class="extension-card">
             <h4>One-click fixes</h4>
@@ -692,7 +694,7 @@
           </div>
           <div class="extension-card">
             <h4>Alt + Shift + L</h4>
-            <p>Press the shortcut in any page to proofread the focused text field, or use the popup to run a
+            <p>Press the shortcut on a supported page to proofread the focused text field, or use the popup to run a
               manual check.</p>
           </div>
         </div>
@@ -755,9 +757,10 @@
               <div class="faq-answer-inner">
                 <ul>
                   <li><strong>Google Docs is not supported</strong> yet.</li>
-                  <li>The Firefox package is unsigned. Temporary install only.</li>
+                  <li>The Firefox package is unsigned and requires Firefox 142 or later. Temporary install only.</li>
                   <li>The desktop app must be running (it can stay in the system tray).</li>
-                  <li>The status badge can show green even when the app is not running.</li>
+                  <li>Packaged desktop builds enable operating-system startup by default and may check for updates in the background.</li>
+                  <li>The status badge turns gray when the desktop app is unavailable.</li>
                   <li>Beta builds may be unstable. Report issues on <a href="https://discord.gg/nDCedWH3SV"
                       target="_blank" rel="noopener">Discord</a>.</li>
                 </ul>
@@ -823,8 +826,9 @@
               <div class="appearance-page-wrap" id="appearance-page-wrap">
                 <div class="appearance-page" id="appearance-page">
                   <h3 class="appearance-page-title" id="appearance-title">A quiet desk for your thoughts.</h3>
-                  <p class="appearance-page-par" id="appearance-par-1">Lexicon proofreads as you type and rewrites with your
-                    own local Lex model. Every check runs on your machine, so your prose never leaves your computer.</p>
+                  <p class="appearance-page-par" id="appearance-par-1">Lexicon proofreads when enabled and can rewrite with
+                    a downloaded local model on supported builds. Built-in proofreading and local models run on your
+                    machine; configured remote servers are an explicit exception.</p>
                   <p class="appearance-page-par" id="appearance-par-2">Pick a typeface pairing, warm up the paper, or switch to
                     Bionic or OpenDyslexic. The page follows you instantly.</p>
                 </div>
@@ -845,19 +849,19 @@
           <p class="manifesto-text">
             Writing is personal. Cloud writing tools turned document editors into monthly subscriptions, background
             telemetry, and remote server queues. We built Lexicon because we wanted a quiet, distraction-free desk on
-            our own machine, where prose is polished offline, data stays private, and software never asks for a login.
+            our own machine, where prose is polished locally by default, data stays private by default, and software never asks for a login.
           </p>
           <p class="manifesto-aside">
-            Built for people who write things they wouldn&rsquo;t want sitting on someone else&rsquo;s server.
+            Built for people who prefer not to send drafts to someone else&rsquo;s server; configured endpoints remain your choice.
           </p>
           <div class="manifesto-trust-grid">
             <div class="manifesto-trust-item">
-              <h4>Zero Telemetry</h4>
-              <p>No tracking scripts, no analytics — your writing never leaves your machine.</p>
+              <h4>Zero First-Party Telemetry</h4>
+              <p>No tracking scripts or in-app analytics. Built-in writing processing stays local; configured processing servers are opt-in. Updates and model downloads may use the network.</p>
             </div>
             <div class="manifesto-trust-item">
-              <h4>Open Source (MIT)</h4>
-              <p>100% free and open code. Inspect every line of code on GitHub anytime.</p>
+              <h4>Lexicon Code (MIT)</h4>
+              <p>Lexicon-authored code is MIT-licensed. Bundled dependencies and model weights have separate licenses.</p>
             </div>
             <div class="manifesto-trust-item">
               <h4>No Subscription</h4>
@@ -875,7 +879,8 @@
           <div class="section-tag">Privacy by Design</div>
           <h2 class="section-title">Your prose belongs to you</h2>
           <p class="section-subtitle">
-            No cloud servers, no tracking, no subscription fees. Lexicon runs 100% locally on your hardware.
+            No Lexicon cloud storage, no first-party tracking, and no subscription fees. Lexicon runs locally by default,
+            with network exceptions for downloads, updates, and servers you configure.
           </p>
         </div>
 
@@ -883,35 +888,36 @@
           <div class="privacy-card">
             <div class="privacy-card-header">
               <h3>Local Profile Storage</h3>
-              <span class="badge-pill badge-green">100% PRIVATE</span>
+              <span class="badge-pill badge-green">LOCAL BY DEFAULT</span>
             </div>
             <p>
-              Your drafts, personal dictionaries, custom settings, and writing analytics are stored in your local user
-              profile. No cloud sync, mandatory account creation, or background telemetry.
+              Your drafts, personal dictionaries, custom settings, and local writing metrics are stored in your local user
+              profile. No Lexicon cloud sync, mandatory account creation, or first-party background telemetry.
             </p>
           </div>
 
           <div class="privacy-card">
             <div class="privacy-card-header">
               <h3>Embedded LanguageTool Engine</h3>
-              <p style="margin: 0; font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted);">ON
-                DEVICE</p>
+              <p style="margin: 0; font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted);">LOCAL
+                BY DEFAULT</p>
             </div>
             <p>
-              Grammar, spelling, and style rule passes run deterministically on your local CPU via an embedded runtime.
-              Your prose is never uploaded to remote cloud APIs for proofreading.
+              Grammar, spelling, and style rule passes run deterministically on your local CPU via the embedded runtime
+              in packaged builds. A source or development user can configure a remote LanguageTool-compatible endpoint.
             </p>
           </div>
 
           <div class="privacy-card">
             <div class="privacy-card-header">
-              <h3>Offline LLM Inference</h3>
+              <h3>Local-First LLM Inference</h3>
               <span class="badge-pill badge-blue">LEX'S ENGINE</span>
             </div>
             <p>
-              Lex, Lexicon's writing assistant, executes GGUF models (<strong>Light</strong> 0.8 GB or
-              <strong>Standard</strong> 1.4 GB) directly on your device via native sidecar processes or your existing
-              Ollama server.
+              Lex, Lexicon's writing assistant, can use a downloaded local GGUF model (<strong>Light</strong> 0.8 GB
+              or <strong>Standard</strong> 1.4 GB) on supported builds, or use your Ollama or LM Studio server. A
+              network URL you configure may receive transform text and prompts; Windows x86 and ARM64 builds do not
+              include the native GGUF engine.
             </p>
           </div>
 
@@ -922,9 +928,10 @@
                 STANDARDS</p>
             </div>
             <p>
-              Import and export documents seamlessly in `.md`, `.txt`, `.html`, or `.pdf`. Delete downloaded AI models
-              or
-              clear local data at any time with a single click.
+              Import `.docx`, `.md`, `.txt`, and `.html` documents. Export to PDF, EPUB, styled HTML, or DOCX.
+              Remove downloaded models in Settings and manage drafts, history, and dictionary entries in the app.
+              A full local-data wipe may still require browser or operating-system controls; locked history and the
+              current document are not removed by the history controls.
             </p>
           </div>
         </div>
@@ -935,9 +942,8 @@
             style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 16px;">
             <div>
               <h3 style="font-size: 1.35rem;">Why Writers Choose a Free Open Source Grammarly Alternative</h3>
-              <p style="color: var(--text-secondary); font-size: 0.95rem;">Why 100% offline processing protects your
-                privacy,
-                budget, and intellectual property.</p>
+              <p style="color: var(--text-secondary); font-size: 0.95rem;">Why local-by-default processing protects
+                your privacy, budget, and intellectual property.</p>
             </div>
           </div>
 
@@ -953,12 +959,12 @@
               <tbody>
                 <tr>
                   <td>Privacy &amp; Cloud Storage</td>
-                  <td>100% Offline / Zero Cloud</td>
+                  <td>Local by default / No Lexicon cloud storage</td>
                   <td>Drafts sent to third-party servers</td>
                 </tr>
                 <tr>
                   <td>Pricing</td>
-                  <td>100% Free &amp; Open-Source (MIT)</td>
+                  <td>Free; Lexicon-authored code is MIT-licensed</td>
                   <td>$12 &ndash; $30 / month subscription</td>
                 </tr>
                 <tr>
@@ -968,12 +974,12 @@
                 </tr>
                 <tr>
                   <td>AI Processing</td>
-                  <td>On-Device (<kbd>llama.cpp</kbd> / Ollama)</td>
+                  <td>Downloaded local or configured server (<kbd>llama.cpp</kbd> / Ollama / LM Studio)</td>
                   <td>External cloud models</td>
                 </tr>
                 <tr>
                   <td>Internet &amp; Account Needed</td>
-                  <td>None (Works 100% Offline, No Account)</td>
+                  <td>No account; network optional for updates, downloads, or configured servers</td>
                   <td>Requires active internet &amp; account login</td>
                 </tr>
               </tbody>
@@ -1036,8 +1042,10 @@
             <div class="faq-answer">
               <div class="faq-answer-inner">
                 <p>
-                No. Proofreading and Lex rewrites run on your machine. Drafts stay local, and Lexicon does not ship your
-                prose to remote servers or collect tracking data.
+                Not to a Lexicon-operated cloud service. Built-in proofreading
+                and local AI can run on your machine; a remote endpoint you
+                configure may receive the text sent to it. Lexicon has no
+                accounts or first-party writing analytics.
               </p>
               </div>
             </div>
@@ -1053,8 +1061,9 @@
             <div class="faq-answer">
               <div class="faq-answer-inner">
                 <p>
-                No. Grammar and style checks work without a model. Download Light (~0.8 GB) or Standard (~1.4 GB) from
-                Settings only when you want Lex rewrites, or connect your own Ollama server.
+                No. Grammar and style checks work without an AI model. Download a local Light (~0.8 GB) or Standard
+                (~1.4 GB) model on supported builds when you want Lex rewrites, or connect your own Ollama or LM Studio
+                server. A configured network server may receive the text and prompt sent to it.
               </p>
               </div>
             </div>
@@ -1070,8 +1079,9 @@
             <div class="faq-answer">
               <div class="faq-answer-inner">
                 <p>
-                Yes. An embedded engine handles spelling, grammar, punctuation, and style on your CPU as you type, so
-                the editor keeps working offline.
+                Yes. The packaged LanguageTool engine handles spelling, grammar, punctuation, and style locally when
+                you run a check, so proofreading can work offline. A configured remote LanguageTool-compatible endpoint
+                is an exception.
               </p>
               </div>
             </div>
@@ -1087,9 +1097,12 @@
             <div class="faq-answer">
               <div class="faq-answer-inner">
                 <p>
-                Yes. A beta browser extension for Chrome and Firefox proofreads text fields on any website,
-                powered by the desktop app's local engine. It is a beta: Google Docs is not supported yet,
-                the Firefox package is unsigned (temporary install only), and the desktop app must be running.
+                Yes. A beta browser extension for Chrome and Firefox proofreads
+                multiple visible text fields, including supported frames, through
+                the desktop app. It also offers Tone and rewrite actions from
+                field badges. Google Docs is not supported yet, the Firefox
+                package is unsigned (temporary install only), and the desktop
+                app must be running.
                 See the <a href="#extension">Extension section</a> for downloads and install steps.
               </p>
               </div>
@@ -1127,7 +1140,9 @@
               <div class="faq-answer-inner">
                 <p>
                 Most cloud checkers bill monthly and process your documents on their servers. Lexicon is a free desktop
-                writing app with offline grammar and on-device Lex tools, so your prose never leaves your computer.
+                writing app with offline grammar and local AI options. Updates,
+                model downloads, and any server you configure are separate
+                network paths.
               </p>
               </div>
             </div>
@@ -1169,8 +1184,8 @@
             <div class="setup-step-box">
               <span class="step-number">3. START WRITING</span>
               <h4>Begin Drafting</h4>
-              <p>Open Lexicon, choose your optional model, and start typing. Grammar fixes and suggestion cards appear
-                automatically!</p>
+              <p>Open Lexicon, choose your optional model, enable Proofread, and run a check to review grammar fixes
+                and suggestion cards.</p>
             </div>
           </div>
         </div>
@@ -1201,7 +1216,7 @@
                 <p>
                   <strong>Antivirus (Defender, AVG, etc.):</strong> some tools may quarantine the installer or flag
                   &ldquo;malicious code&rdquo; as a false positive on unsigned NSIS installers. Confirm the file came from the official
-                  Releases page (check asset name / checksums), then restore or allow it in your AV quarantine settings.
+                  Releases page and that the asset name matches the selected build, then restore or allow it in your AV quarantine settings.
                 </p>
               </div>
             </div>
@@ -1293,6 +1308,8 @@
           <a href="https://discord.gg/nDCedWH3SV" target="_blank" rel="noopener">Discord</a>
           <a href="https://github.com/AashishH15/Lexicon" target="_blank" rel="noopener">GitHub</a>
           <a href="https://github.com/AashishH15/Lexicon/blob/master/LICENSE" target="_blank" rel="noopener">LICENSE</a>
+          <a href="https://github.com/AashishH15/Lexicon/blob/master/THIRD_PARTY_NOTICES.md" target="_blank"
+            rel="noopener">Third-party notices</a>
         </div>
         <div class="footer-socials">
           <a class="footer-icon-btn" href="https://discord.gg/nDCedWH3SV" target="_blank" rel="noopener" aria-label="Discord">

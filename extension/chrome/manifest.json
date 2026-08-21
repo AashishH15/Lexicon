@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Lexicon",
   "version": "0.1.0",
-  "description": "Grammar, spelling, and rewrite suggestions from Lexicon's local engine (desktop app required).",
+  "description": "Grammar, spelling, Tone, and rewrite suggestions from Lexicon's desktop app (local by default; desktop app required).",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAzOVKr6vGwxilzd7Homn7ehu/WCbuUMJZwlV5FzQt3P6Ws4mDuq1Qks8xVwb8vpNseMEwGpN+PSvtFdqqLHHHIQf6IBZGuMoD8NZAhx+YTIkzJrKClpW1Vq/qg8s1B5IlsDpGNhmHP6HdT5kcEbyLULQUjUuPym8SmXg1Y2BJAvX+/+bHHi1lBoBLEnHv4RWSIxhFOdZe8TWXYgSaQg9Rn4e1iqJQFidcqkggagHZsWRrZf0b++GH4rcfVRw4Ha+dzoR5/juRKqjqhsmVmxiNKWAZxiCSPcc4S4xVvbfJr5jAMrEvsfq4x2YPyQAlLwfPyP1zgT8OvEkmhwTly9Z0rwIDAQAB",
   "icons": {
     "16": "icons/icon-16.png",

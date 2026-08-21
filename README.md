@@ -6,7 +6,7 @@
 
 <p align="center">
   <strong>A local-first writing assistant for clearer drafts.</strong><br />
-  Proofread, rewrite, format, and export your work while keeping your words on your machine.
+  Proofread, rewrite, format, and export your work with local processing by default.
 </p>
 
 <p align="center">
@@ -35,9 +35,9 @@
 </p>
 
 Lexicon is a distraction-free rich-text editor with inline proofreading,
-local AI writing tools, and a review panel for suggestions. It is designed to
-feel calm, private, and useful without requiring an account or a cloud writing
-service.
+local-first AI writing tools, and a review panel for suggestions. It is designed
+to feel calm, private, and useful without requiring an account or a Lexicon
+cloud writing service.
 
 ## Download
 
@@ -68,8 +68,8 @@ installers from this repository’s
 reputation heuristics on new or unsigned indie installers, not a confirmed
 infection. If Defender or another AV blocks the file, restore/allow it from
 quarantine after you have confirmed the download came from the GitHub Releases
-URL above. If you are unsure, compare the release asset name and checksums on
-the release page before allowing.
+URL above. If you are unsure, compare the release asset name with the build
+you intended to download before allowing it.
 
 ### macOS
 
@@ -106,18 +106,21 @@ If Gatekeeper blocks Lexicon:
    separate LanguageTool engine and does not require the AI model.
 
 The editor and proofreading tools work without downloading an AI model. The AI
-tools can also use an existing local Ollama or LM Studio server when one is
-available. LM Studio's local server uses its default `http://localhost:1234`
-endpoint. If LM Studio serves on the local network, enter the address displayed
-in LM Studio under Settings → Lex's Engine → Advanced. LM Studio must also
-have a model loaded before Lexicon can use the server.
+tools can also use an existing Ollama or LM Studio server when one is
+available. The default LM Studio server uses `http://localhost:1234`. If LM
+Studio serves on the local network or another host, enter the address displayed
+in LM Studio under Settings → Lex's Engine → Advanced; text and prompts sent
+there are handled by that server. LM Studio must also have a model loaded
+before Lexicon can use the server.
 
 ## Updates
 
 Lexicon checks for new releases when it starts and provides **Check for
 updates** in Settings. Updates install over the app while keeping downloaded
 models and other app data in the user profile, so models do not need to be
-downloaded again after an update.
+downloaded again after an update. Packaged builds enable operating-system
+startup by default and may run in the system tray while checking for updates.
+After initial setup, an operating-system startup disable is respected.
 
 ## What Lexicon includes
 
@@ -141,7 +144,7 @@ downloaded again after an update.
 
 ### Local AI tools
 
-With a downloaded bundled model, Lexicon provides:
+With a downloaded local model on supported builds, Lexicon provides:
 
 - Rewrite and Concise
 - Friendly, Professional, Academic, Formal, Casual, Playful, Empathetic,
@@ -149,14 +152,14 @@ With a downloaded bundled model, Lexicon provides:
 - Summary, Key Points, List, and Table transforms
 - Whole-document transforms with chunk progress for longer drafts
 
-AI transforms run locally through the bundled llama.cpp backend. Ollama and LM
-Studio are optional alternatives for users who already run them on their
-machine.
+On supported builds, local AI transforms run through the included llama.cpp
+backend. Ollama and LM Studio are optional alternatives; a network server you
+configure may receive the text and prompt sent for a transform.
 
 ### Import and export
 
-- Import `.txt`, `.md`, `.markdown`, `.html`, and `.htm` files
-- Export HTML, plain text, Markdown, or PDF
+- Import `.docx`, `.txt`, `.md`, `.markdown`, `.html`, and `.htm` files
+- Export HTML, plain text, Markdown, PDF, EPUB, or DOCX
 - PDF export produces a clean manuscript-style document with app chrome and
   proofreading marks removed
 
@@ -164,14 +167,30 @@ machine.
 
 Lexicon is local-first:
 
-- Your writing is not sent to any servers.
-- Nothing leaves your computer: no account, no cloud, no datacenter, no water.
+- Your writing is processed locally by default and is not sent to a Lexicon
+  cloud service.
+- Updates, model downloads, and any Ollama, LM Studio, or LanguageTool endpoint
+  that you configure are separate network paths. Those endpoints may receive
+  the text and prompt sent to them.
 - Documents are auto-saved locally in the app's browser storage.
-- Your Local Assistant (Lex) runs entirely on your device for opt-in rewriting, tone adjustments, and summaries.
+- A downloaded local model can run the Local Assistant (Lex) on your device
+  for opt-in rewriting, tone adjustments, and summaries on supported builds.
+  A configured external AI server may process those requests instead.
 - Downloaded models remain in your platform's Lexicon app-data directory.
-- The initial model download connects to Hugging Face only to retrieve the
-  selected model file.
-- Ollama, when selected, is a local server you run yourself.
+- A user-triggered model download connects to Hugging Face or its CDN only to
+  retrieve the selected model file.
+- Ollama and LM Studio availability/model checks contact the configured server.
+- LM Studio's API token, when used, is stored locally in `ai_prefs.json` and
+  sent to the configured LM Studio server for authentication.
+- Local app storage is not an encrypted backup. Protect your OS account and
+  review which folders your backup or synchronization tools include.
+- The desktop sidecar API uses an unauthenticated loopback HTTP connection
+  (`127.0.0.1:18000` in packaged builds and `127.0.0.1:8000` in development).
+  Other software on the same device may be able to connect to it; do not run
+  untrusted local software.
+- Remote images in documents may be fetched when displayed or reopened.
+  User-triggered clipboard copies and DOCX/EPUB exports can also expose content
+  or metadata to the OS, file recipients, or other providers.
 
 ## Developer setup
 
@@ -279,14 +298,16 @@ or engine returns HTTP 503 with an actionable error instead of HTTP 500.
 
 ## Platform and release status
 
-The release workflow builds desktop installers for Windows (x86, x64, ARM64), macOS (Intel and Apple Silicon), and Linux (x64 `.deb` and `.AppImage`). Builds are triggered from version tags and attached to GitHub Releases.
+The release workflow builds desktop installers for Windows (x86, x64, ARM64),
+macOS (Intel and Apple Silicon), and Linux x64 (`.deb`). Builds are triggered
+from version tags and attached to published GitHub release artifacts.
 
 ## Technology
 
 - React, Vite, Tailwind CSS, and TipTap
 - FastAPI and Uvicorn
 - LanguageTool for rule-based proofreading
-- llama.cpp and quantized GGUF models for bundled local AI
+- llama.cpp and downloaded quantized GGUF models for local AI on supported builds
 - Tauri for the cross-platform desktop shell
 
 ## Acknowledgements

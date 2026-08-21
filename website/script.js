@@ -69,7 +69,7 @@
  arch = 'arm64';
  } else if (/Win64|x86_64|x64|WOW64/i.test(ua)) {
  arch = 'x64';
- } else if (/Win32/i.test(ua) && !/Win64|WOW64/i.test(ua) && !isWin) {
+  } else if (/Win32/i.test(ua) && !/Win64|WOW64/i.test(ua)) {
  arch = 'x86';
  }
  }
@@ -213,7 +213,7 @@
   const chromeExtensionBtn = document.getElementById('dl-extension-chrome');
   const firefoxExtensionBtn = document.getElementById('dl-extension-firefox');
   const chromeExtensionAsset = extensionAssets.find(a => /^lexicon-chrome-.*\.zip$/i.test(a.name));
-  // Prefer a signed/temp .xpi when present; current beta ships lexicon-firefox-extension.zip.
+  // Prefer a signed/temp .xpi when present; the Firefox build produces an .xpi.
   const firefoxExtensionAsset =
   extensionAssets.find(a => /^lexicon-firefox-.*\.xpi$/i.test(a.name)) ||
   extensionAssets.find(a => /^lexicon-firefox-.*\.zip$/i.test(a.name));
@@ -240,14 +240,7 @@
  if (releaseVersionText) {
  releaseVersionText.textContent = 'Latest release on GitHub';
  }
- if (downloadCountBadge && downloadCountText) {
- downloadCountText.textContent = '1.3k+ downloads';
- downloadCountBadge.style.visibility = 'visible';
- }
- const trustDownloads = document.getElementById('trust-downloads');
- if (trustDownloads) {
- trustDownloads.textContent = '1.3k+';
- }
+  // Leave the live download count hidden when GitHub is unavailable.
  const chromeExtensionBtn = document.getElementById('dl-extension-chrome');
  const firefoxExtensionBtn = document.getElementById('dl-extension-firefox');
  if (chromeExtensionBtn) chromeExtensionBtn.href = FALLBACK_EXTENSION_RELEASES_PAGE;
@@ -274,10 +267,8 @@
  }
  } catch (err) {
  console.warn('Could not fetch GitHub repository stars automatically:', err);
- starsCountText.textContent = '160+';
- starsContainer.style.display = 'inline-flex';
- const trustStars = document.getElementById('trust-stars');
- if (trustStars) trustStars.textContent = '160+';
+  // Leave the live star count hidden when GitHub is unavailable.
+  starsContainer.style.display = 'none';
  }
  }
 
@@ -596,13 +587,13 @@
       executive: {
         tag: 'Executive Summary Brief',
         title: 'Q3 Product Strategy & Privacy Compliance Report',
-        text: 'Key Takeaways: 100% on-device AI rewrites achieved zero compliance risk while reducing cloud API infrastructure costs by $14,000/mo.',
+        text: 'Key Takeaways: Local-first AI rewrites can support a privacy review without requiring a cloud writing service.',
         class: 'theme-executive'
       }
     };
 
     const formatsData = {
-      pdf: 'PDF (Vector) · 300 DPI',
+      pdf: 'PDF export · System print dialog',
       epub: 'EPUB 3 · Reflowable eBook',
       docx: 'DOCX · Tracked Changes Redlines',
       html: 'HTML · Self-Contained Web Document'
@@ -774,7 +765,7 @@
 
     const SAMPLE = {
       title: 'A quiet desk for your thoughts.',
-      par1: 'Lexicon proofreads as you type and rewrites with your own local Lex model. Every check runs on your machine, so your prose never leaves your computer.',
+      par1: 'Lexicon proofreads when enabled and can rewrite with a downloaded local model on supported builds. Built-in proofreading and local models run on your machine; configured remote servers are an explicit exception.',
       par2: 'Pick a typeface pairing, warm up the paper, or switch to Bionic or OpenDyslexic. The page follows you instantly.'
     };
 
@@ -960,7 +951,7 @@
       email: {
         url: 'mail.example.com/compose',
         meta: 'To: sam@example.com \u00B7 Subject: Quick follow-up',
-        metric: 'Email field \u00B7 Local engine',
+        metric: 'Email field \u00B7 Local-first engine',
         text: 'Hi Sam, thanks for the note. I already receive the report yesterday.',
         err: 'receive',
         fix: 'received',
@@ -970,7 +961,7 @@
         url: 'social.example.com/compose',
         metaPrefix: 'New post',
         charLimit: 240,
-        metric: 'Social post \u00B7 Local engine',
+        metric: 'Social post \u00B7 Local-first engine',
         text: 'Shipping the calm writing app today. Its finally offline-first.',
         err: 'Its',
         fix: "It's",
@@ -979,7 +970,7 @@
       forum: {
         url: 'forum.example.com/new-topic',
         meta: 'New topic \u00B7 Writing Tools',
-        metric: 'Forum editor \u00B7 Local engine',
+        metric: 'Forum editor \u00B7 Local-first engine',
         text: 'Has anyone tried a quik private grammar checker that stays local?',
         err: 'quik',
         fix: 'quick',
@@ -1298,14 +1289,14 @@
         if (!inView) return;
         autoIndex = (autoIndex + 1) % toolKeys.length;
         applyTool(toolKeys[autoIndex], false);
-        if (statusBadge) statusBadge.textContent = 'Offline Engine \u00B7 Try a tool';
+        if (statusBadge) statusBadge.textContent = 'Local-first engine \u00B7 Try a tool';
       }, 3800);
     }
 
     function enterInteractiveMode() {
       interactive = true;
       applyTool('concise', false);
-      if (statusBadge) statusBadge.textContent = 'Offline Engine \u00B7 Try a tool';
+      if (statusBadge) statusBadge.textContent = 'Local-first engine \u00B7 Try a tool';
       startAutoCycle();
     }
 
@@ -1330,7 +1321,7 @@
       typeTextEl.innerHTML = '';
       typeTextEl.style.color = '';
       if (caret) caret.style.display = '';
-      if (statusBadge) statusBadge.textContent = '100% Offline \u00B7 On-device';
+      if (statusBadge) statusBadge.textContent = 'Local by default \u00B7 On-device';
 
       await waitForView();
       if (token !== introToken) return;
@@ -1369,7 +1360,7 @@
       await sleepMs(900);
       if (token !== introToken) return;
 
-      if (statusBadge) statusBadge.textContent = 'Lex Ready \u00B7 Offline Engine';
+      if (statusBadge) statusBadge.textContent = 'Lex Ready \u00B7 Local-first engine';
       setHighlightedSource('The algorithm works efficiently.');
       await sleepMs(600);
       if (token !== introToken) return;

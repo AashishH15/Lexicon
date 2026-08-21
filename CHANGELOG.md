@@ -1,7 +1,9 @@
 # Changelog
 
-Lexicon is a local-first, offline writing assistant. No accounts, no cloud,
-no usage costs — the grammar engine and your documents stay on your machine.
+Lexicon is a local-first writing assistant. No accounts, no cloud document
+sync, and no usage costs — bundled grammar and downloaded local AI processing
+on supported builds run on your machine by default. Updates, model downloads,
+and servers you configure may use the network.
 
 This changelog tracks what is **live** in each release and what is still
 **stubbed** (shown in the interface but not yet functional). Stubbed features
@@ -143,13 +145,13 @@ Please rollback to v0.10.3 if this version doesnt work properly!
   - **Modern**: Inter sans-serif body and headings for clean contemporary prose.
   - **Monospace**: JetBrains Mono body and headings for technical drafting.
 
-- **100% Local Bundled Fonts (Zero Network Privacy)**:
+- **Local Bundled Fonts (No Font Network Requests)**:
   - Bundled `Newsreader.woff2`, `Inter.woff2`, `JetBrainsMono.woff2`, and `OpenDyslexic.woff2` locally under `src/assets/fonts/`.
-  - Removed all external Google Fonts API network calls (`fonts.googleapis.com` / `fonts.gstatic.com`). All custom typefaces render 100% offline with zero external network connections or IP telemetry.
+  - Removed all external Google Fonts API network calls (`fonts.googleapis.com` / `fonts.gstatic.com`). All custom typefaces render from bundled files without font requests or font-provider connection metadata.
 
 - **Bundled LanguageTool Engine (Out-of-the-Box Offline Proofreading)**:
   - The exact `LanguageTool-6.8` Java engine is now pre-bundled directly into the application sidecar bundle (`lt/`).
-  - Fresh installs on Windows, macOS, and Linux run grammar proofreading 100% offline from second zero without triggering background downloads.
+  - Fresh installs on Windows, macOS, and Linux run bundled grammar proofreading offline from second zero without triggering background downloads.
 
 - **Paper Texture Backgrounds**: Customize the reading and writing canvas with 5 pre-tuned paper surface pairs:
   - **Plain White (Default)**: Crisp `#FFFFFF` page with `#F7F6F3` surround.
@@ -245,7 +247,7 @@ Please rollback to v0.10.3 if this version doesnt work properly!
 
 - **Professional PDF & HTML Export Themes**: Transform your drafts into beautifully styled documents before printing or exporting:
   - **Four Print Theme Presets:** Choose from **Academic / Formal** (serif font, numbered section headers, page footers), **Novel / Literary** (classic Garamond/Georgia layout, drop caps), **Minimalist / Modern** (sans-serif Inter, bold monochrome accents), or **Executive / Corporate** (navy header bars, card callout boxes, gold rules).
-  - **Ask Lex to Style Your Document (100% Offline AI):** Users can describe their document layout in plain English (or tap 1-click quick style chips like *Navy Headings*, *Double Spaced*, *Legal Brief*, *Callout Cards*). Lexicon's local AI generates clean CSS directly into the Custom CSS box.
+  - **Ask Lex to Style Your Document (Local AI):** Users can describe their document layout in plain English (or tap 1-click quick style chips like *Navy Headings*, *Double Spaced*, *Legal Brief*, *Callout Cards*). Lexicon's local AI generates clean CSS directly into the Custom CSS box.
   - **Custom CSS Support:** Power users can type or edit custom CSS rules directly to personalize exported documents.
   - **Clean Vector PDF Export:** Automatically hides background app interface buttons, removes clutter like browser URLs (`localhost:5173`) and dates, and includes an in-app tip guiding users to save clean, 100% highlightable text PDFs.
   - **Export as Styled HTML:** Export self-contained, beautifully styled `.html` files that preserve your selected design theme when opened in any web browser.
@@ -385,13 +387,13 @@ Lexicon v0.8.0 introduces high-speed rule-based prose style checking, integrated
 
 ### Welcome to Lexicon v0.7.0!
 
-Lexicon is a private, local-first writing assistant designed for calm, distraction-free drafting. Everything runs directly on your device; no accounts, no cloud subscriptions, no tracking, and zero data leaving your machine.
+Lexicon is a private, local-first writing assistant designed for calm, distraction-free drafting. The bundled experience runs directly on your device by default; there are no accounts or cloud document subscriptions. Updates, model downloads, and servers you configure are separate network paths.
 
 #### Key Features Included:
 
-- **100% Offline & Private**: Your drafts, notes, and documents stay strictly on your local hardware.
+- **Local by Default & Private**: Your drafts, notes, and documents stay on your local hardware during local processing.
 - **Local Grammar & Spellchecking**: Instant, deterministic proofreading powered by local LanguageTool (zero LLM latency).
-- **Your Local Assistant (Lex)**: Opt-in local AI for rewriting, tone adjustments (Friendly, Professional, Academic, Formal, Casual, Playful, Empathetic, Persuasive, Humorous), and document summaries running entirely on your machine or an optional Ollama server.
+- **Your Local Assistant (Lex)**: Opt-in AI for rewriting, tone adjustments (Friendly, Professional, Academic, Formal, Casual, Playful, Empathetic, Persuasive, Humorous), and document summaries using a downloaded local model on supported builds or an optional Ollama server.
 - **Distraction-Free Workspace**: Rich-text editing with headings, lists, blockquotes, typography rules, slash commands, LaTeX math ($E=mc^2$), resizable side panels, and Focus Mode.
 - **Import & Export**: Support for `.md`, `.txt`, `.html` imports and clean PDF / Markdown exports.
 
@@ -448,13 +450,13 @@ Lexicon is a private, local-first writing assistant designed for calm, distracti
 
 ### Welcome to Lexicon v0.6.0!
 
-Lexicon is a private, local-first writing assistant designed for calm, distraction-free drafting. Everything runs directly on your device; no accounts, no cloud subscriptions, no tracking, and zero data leaving your machine.
+Lexicon is a private, local-first writing assistant designed for calm, distraction-free drafting. The bundled experience runs directly on your device by default; there are no accounts or cloud document subscriptions. Updates, model downloads, and servers you configure are separate network paths.
 
 #### Key Features Included:
 
-- **100% Offline & Private**: Your drafts, notes, and documents stay strictly on your local hardware.
+- **Local by Default & Private**: Your drafts, notes, and documents stay on your local hardware during local processing.
 - **Local Grammar & Spellchecking**: Instant, deterministic proofreading powered by local LanguageTool (zero LLM latency).
-- **Your Local Assistant (Lex)**: Opt-in local AI for rewriting, tone adjustments (Friendly, Professional, Academic, Formal, Casual, Playful, Empathetic, Persuasive, Humorous), and document summaries running entirely on your machine or an optional Ollama server.
+- **Your Local Assistant (Lex)**: Opt-in AI for rewriting, tone adjustments (Friendly, Professional, Academic, Formal, Casual, Playful, Empathetic, Persuasive, Humorous), and document summaries using a downloaded local model on supported builds or an optional Ollama server.
 - **Distraction-Free Workspace**: Rich-text editing with headings, lists, blockquotes, typography rules, slash commands, LaTeX math ($E=mc^2$), resizable side panels, and Focus Mode.
 - **Import & Export**: Support for `.md`, `.txt`, `.html` imports and clean PDF / Markdown exports.
 
@@ -581,4 +583,5 @@ but not part of v0.3.0.
 
 See the README for the backend (`pip install -r requirements.txt`,
 `uvicorn main:app --reload`) and frontend (`npm install`, `npm run dev`)
-instructions. The app runs entirely offline on `localhost`.
+instructions. The default local development setup runs through `localhost`;
+configured external servers are separate network paths.

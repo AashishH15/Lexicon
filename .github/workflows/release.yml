@@ -389,7 +389,7 @@ jobs:
           if-no-files-found: error
 
   release:
-    needs: [desktop]
+    needs: [desktop, extension-chrome, extension-firefox]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -447,7 +447,7 @@ jobs:
 
           default_notes = f"""Lexicon {tag}
 
-          Privacy-first grammar and AI writing assistant. Runs locally on your computer; the local model downloads on first use.
+          Local-first grammar and AI writing assistant. Proofreading runs locally; a local AI model is available for user-triggered download on supported builds.
 
           ### Downloads
           - **Windows x64**: 64-bit Intel/AMD Windows
@@ -460,7 +460,7 @@ jobs:
           macOS builds are unsigned. On first open, right-click the app and choose Open, or run:
           `xattr -dr com.apple.quarantine /Applications/Lexicon.app`
 
-          On first launch the app downloads the local AI model (~1.4 GB for the 2B tier). Proofreading works immediately without it.
+          In Settings, supported builds can download the local AI model (~1.4 GB for the 2B tier) when you choose Download & enable. Proofreading works immediately without it.
 
           Lexicon checks for updates in the app. Downloaded models and app data are kept outside the installation directory."""
 
@@ -560,5 +560,7 @@ jobs:
             artifacts/lexicon-macos-x64/*
             artifacts/lexicon-macos-arm64/*
             artifacts/lexicon-linux-x64/*
+            artifacts/lexicon-chrome-extension/*
+            artifacts/lexicon-firefox-extension/*
             artifacts/latest.json
             artifacts/beta.json

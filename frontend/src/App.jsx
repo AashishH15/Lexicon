@@ -170,7 +170,7 @@ const PLACEHOLDER_PROMPTS = [
   "Write a rough first draft. Lex will help clean it up later.",
   "Start with one sentence.",
   "Ideas first, polish second.",
-  "Your draft stays 100% on this device.",
+  "Your draft stays local by default.",
   "Let the words come — you can shape them after.",
   "A blank page is just a starting line.",
   "Write like no one else is reading. (Because no one is.)",
@@ -188,7 +188,7 @@ function capHistory(list, newEntry, max) {
 
 const SAMPLE_DOC_HTML = `
 <h1>Welcome to Lexicon</h1>
-<p>Lexicon is a local-first writing assistant designed for calm drafting. Every documents and notes stays on your machine—your drafts are never uploaded to any cloud server.</p>
+<p>Lexicon is a local-first writing assistant designed for calm drafting. Documents and notes stay on your machine during local use; configured remote servers may receive text sent to them.</p>
 <h2>Inline Proofreading & Grammar</h2>
 <p>They is going to love how fast Lexicon proofreads your text. There are many error in this draft, and the color and colour of the text looks great. She receive the document yesterday. Try clicking on any flagged red text to view suggestions in the Review panel on the right.</p>
 <h2>Mathematical Expressions</h2>
@@ -2372,8 +2372,8 @@ export default function App() {
                 <div className="mt-2 rounded-lg border border-dashed border-hairline bg-canvas px-3 py-2.5">
                   <p className="font-sans text-xs leading-snug text-muted">
                     AI tools aren&rsquo;t set up yet. Download a local model or
-                    connect your Ollama server to enable Rewrite, Tones, Summary
-                    and more.
+                    connect your Ollama or LM Studio server to enable Rewrite,
+                    Tones, Summary and more.
                   </p>
                   <button
                     type="button"

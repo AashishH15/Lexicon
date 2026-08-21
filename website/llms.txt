@@ -9,33 +9,45 @@
 - [Releases & Changelog](https://github.com/AashishH15/Lexicon/releases)
 - [Privacy Policy](https://lexicon-writer.pages.dev/privacy.html)
 - [Terms of Service](https://lexicon-writer.pages.dev/terms.html)
-- [License (MIT)](https://github.com/AashishH15/Lexicon/blob/master/LICENSE)
+- [Lexicon License (MIT)](https://github.com/AashishH15/Lexicon/blob/master/LICENSE)
+- [Third-party notices](https://github.com/AashishH15/Lexicon/blob/master/THIRD_PARTY_NOTICES.md)
 - [Product Launch Video](https://www.youtube.com/watch?v=LGL-8wP_CAY)
 - [Discord](https://discord.gg/nDCedWH3SV)
 
 ## What Lexicon Is
 
-A free, open-source desktop **writing app**: a distraction-free rich-text editor for essays, reports, notes, and manuscripts, with proofreading, AI rewriting, and PDF export built in. Everything runs 100% offline on the user's machine; no accounts, no cloud, no subscriptions.
+A free, open-source desktop **writing app**: a distraction-free rich-text editor for essays, reports, notes, and manuscripts, with proofreading, AI rewriting, and PDF export built in. Processing is local by default; there are no Lexicon accounts or cloud document sync, and network access can occur for updates, model downloads, or servers the user configures.
 
 ## Alternatives & Comparisons
 
-- **Grammarly alternative:** Provides free, private, offline grammar and spellchecking without sending drafts to cloud servers or requiring a paid subscription.
-- **ProWritingAid & QuillBot alternative:** Includes on-device AI rewriting, tone shifts, summarization, and table generation running 100% free and locally on user hardware.
+- **Grammarly alternative:** Provides free, private, offline-capable grammar and spellchecking without a Lexicon cloud account or document store. A remote LanguageTool-compatible endpoint is an optional user configuration.
+- **ProWritingAid & QuillBot alternative:** Includes downloaded local AI rewriting on supported builds, tone shifts, summarization, and table generation. A user-configured remote Ollama or LM Studio server may receive the text and prompt sent to it.
 
 ## Key Details
 
-Lexicon runs 100% offline with zero cloud server communication. Grammar checking is powered by an embedded LanguageTool Java sidecar, and optional AI transformations run on-device using local GGUF models via llama.cpp or Ollama.
+Lexicon runs locally by default with no Lexicon cloud server for document processing. Grammar checking is powered by an embedded LanguageTool Java sidecar, and optional AI transformations run on-device using a downloaded local GGUF model via llama.cpp on supported builds, or through an Ollama or LM Studio server selected by the user.
 
-- License: MIT
-- System Requirements: Windows (.exe), macOS (.dmg)
+- License: MIT for Lexicon-authored code; third-party components and model weights have separate licenses listed in the notices.
+- System Requirements: Windows (.exe), macOS (.dmg), Linux x64 (.deb); Windows x86 and ARM64 builds do not include the native GGUF engine.
 - Pricing: Free, open-source
+
+## Privacy and network notes
+
+- The desktop app stores drafts, history, dictionary data, settings, custom prompts, and model preferences locally. LM Studio credentials are stored locally in `ai_prefs.json`; the token is sent only to the configured LM Studio server for authentication.
+- Documents, histories, prompts, preferences, tokens, and models use ordinary local storage without application-level encryption. Resetting defaults does not delete all of that data; history controls retain locked entries.
+- The extension stores only its pause state and disabled-site hostnames in browser local storage. It does not store page text there. Page text is sent over loopback to the desktop app when proofreading or using Tone/rewrite.
+- Packaged proofreading and a downloaded local AI model on supported builds are local. Remote LM Studio, Ollama, or LanguageTool-compatible URLs can receive the text and prompt sent to them.
+- Packaged builds enable operating-system startup by default, may start in the system tray, and check GitHub-hosted update metadata. After initial setup, an operating-system startup disable is respected. User-triggered model downloads use Hugging Face. Source setup may download dependencies and LanguageTool from Maven Central.
+- The loopback desktop API is unauthenticated HTTP and is intended for trusted same-device software. Custom backend URLs may use plaintext HTTP, and cancellation cannot retract text already received by a remote endpoint.
+- Documents can reference remote images, which may be fetched when displayed. Clipboard actions and DOCX/EPUB exports can expose content or metadata to the operating system, recipients, or other providers.
+- The website is hosted on Cloudflare Pages and may load Google Fonts, Lenis from unpkg, and public GitHub metadata. See the [Privacy Policy](https://lexicon-writer.pages.dev/privacy.html) for details.
 
 ## Core Features
 
-- Browser extension (beta) for Chrome and Firefox that proofreads text fields on any website using the desktop app's local engine. Google Docs is not supported yet; the desktop app must be running. Install via load-unpacked (Chrome) or temporary add-on (Firefox) from GitHub Releases.
+- Browser extension (beta) for Chrome and Firefox that, after optional page access is granted, automatically proofreads multiple visible text fields, including supported frames, through the desktop app. It also offers Tone/rewrite actions from field badges. Google Docs is not supported yet; Firefox 142 or later is required; the desktop app must be running. Install via load-unpacked (Chrome) or temporary add-on (Firefox) from published GitHub release artifacts.
 - Real-time LanguageTool grammar, spelling, punctuation, and style proofreading with inline squiggles and synchronized suggestion cards, plus a deterministic prose engine flagging passive voice (with one-click AI active-voice rewrites), 30+ clichés and filler phrases, and repetitive sentence openers.
 - Readability metrics: Clarity score, Flesch-Kincaid grade level and reading ease, estimated reading/speaking time, word counts, and a visual tone distribution chart.
-- 10+ offline AI writing tools: Rewrite, Concise, Summaries, Key Points, Lists & Tables, 9 Tone Shifts (Professional, Academic, Friendly, Casual, Formal, Empathetic, Persuasive, Humorous, Playful), plus user-defined Custom Tools with saved prompts.
+- 10+ local-first AI writing tools: Rewrite, Concise, Summaries, Key Points, Lists & Tables, 9 Tone Shifts (Professional, Academic, Friendly, Casual, Formal, Empathetic, Persuasive, Humorous, Playful), plus user-defined Custom Tools with saved prompts.
 - Built-in document templates (Academic Paper, Novel Manuscript, Minimalist Blog, Executive Summary) with a visual template gallery.
 - Document export: PDF and styled HTML with print themes (Academic, Novel, Minimalist, Executive), AI-generated custom CSS ("Ask Lex to Style"), standard EPUB 3 ebooks, and native Word `.docx` where unapplied grammar suggestions export as tracked-change redlines with a configurable author name.
 - Document import: `.docx` (Word, Google Docs, LibreOffice), `.md`, `.txt`, and `.html`.

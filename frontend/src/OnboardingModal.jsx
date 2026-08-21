@@ -195,10 +195,12 @@ export default function OnboardingModal({
             <div className="space-y-5">
               <div className="space-y-1.5">
                 <h2 className="font-serif text-2xl font-medium tracking-tight text-ink">
-                  Your Private, Offline Writing Companion
+                  Your Private, Local-First Writing Companion
                 </h2>
                 <p className="font-sans text-sm text-muted leading-relaxed">
-                  Lexicon is built to keep your writing completely private, calm, and distraction-free. No cloud accounts, no subscriptions, and no tracking.
+                  Lexicon is built to keep your writing local by default,
+                  calm, and distraction-free. No Lexicon cloud account, no
+                  subscription, and no first-party tracking.
                 </p>
               </div>
 
@@ -208,9 +210,11 @@ export default function OnboardingModal({
                     <ShieldCheck size={20} weight="bold" />
                   </div>
                   <div>
-                    <h3 className="font-sans text-sm font-semibold text-ink">100% Offline & Private</h3>
+                    <h3 className="font-sans text-sm font-semibold text-ink">Local by Default &amp; Private</h3>
                     <p className="font-sans text-xs text-muted leading-normal mt-0.5">
-                      Your drafts, notes, and documents stay strictly on your device. Nothing is uploaded to any remote server.
+                      Drafts, notes, and documents stay on your device during
+                      normal local use. A remote AI or proofreading server
+                      receives text only when you configure and use it.
                     </p>
                   </div>
                 </div>
@@ -234,7 +238,10 @@ export default function OnboardingModal({
                   <div>
                     <h3 className="font-sans text-sm font-semibold text-ink">Your Local Assistant (Lex)</h3>
                     <p className="font-sans text-xs text-muted leading-normal mt-0.5">
-                      Opt-in for rewriting, tone adjustments, and summaries running entirely on your local hardware.
+                      Opt-in rewriting, tone adjustments, and summaries can use
+                      a downloaded local model on supported builds or your
+                      configured Ollama or LM Studio server. Remote servers
+                      receive the text sent to them.
                     </p>
                   </div>
                 </div>

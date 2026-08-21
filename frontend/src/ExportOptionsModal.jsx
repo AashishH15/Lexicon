@@ -234,7 +234,7 @@ export default function ExportOptionsModal({ editor, mode, onClose }) {
                 <PaintBrush size={13} weight="bold" className="text-ink" />
                 Ask Lex to Style Your Document
               </span>
-              <span className="font-sans text-[10px] text-muted">Offline Engine</span>
+              <span className="font-sans text-[10px] text-muted">Local-first engine</span>
             </div>
             <p className="mt-1 font-sans text-xs text-muted">
               Describe how you want your document formatted:

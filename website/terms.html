@@ -39,7 +39,7 @@
     <div class="container legal-container">
       <p class="legal-eyebrow">Legal</p>
       <h1>Terms of Service</h1>
-      <p class="legal-meta">Last updated: August 12, 2026</p>
+      <p class="legal-meta">Last updated: August 21, 2026</p>
 
       <p>
         These Terms govern your use of the Lexicon desktop application, related
@@ -67,7 +67,8 @@
       <h2>2. What Lexicon is</h2>
       <p>
         Lexicon is a local-first writing assistant that helps with drafting,
-        proofreading, optional on-device AI transforms, and export. Features may
+        proofreading, optional AI transforms using a downloaded local model on
+        supported builds or a server you configure, and export. Features may
         change over time. Some UI elements may be experimental or incomplete;
         release notes describe what is live versus stubbed.
       </p>
@@ -75,21 +76,42 @@
       <h2>3. Browser extension beta</h2>
       <p>
         Lexicon may provide a beta browser extension for Chrome and Firefox.
-        When enabled on a supported page, the extension can read text from
-        supported page fields, send it to the Lexicon desktop application
-        running on the same device, and display proofreading results or
-        suggestions in the page. The desktop app must be running for this
-        integration to work. The extension is distributed through GitHub
-        Releases as a Chrome load-unpacked package and an unsigned, temporary
-        Firefox add-on.
+        After optional page access is granted, the extension's content scripts
+        match supported URLs and frames and, by default, automatically detect
+        visible editable fields, read their text, send it to the Lexicon
+        desktop application running on the same device, and display
+        proofreading results or suggestions in the page. It also supports Tone
+        and rewrite actions from a field badge. The desktop app must be
+        running for this integration to work. The Published GitHub release
+        artifacts provide a Chrome load-unpacked package and an unsigned,
+        temporary Firefox add-on when available.
       </p>
       <p>
         The extension is experimental and may be unstable or unavailable on
-        particular sites. Google Docs is not currently supported. You are
-        responsible for reviewing browser permissions, installing packages only
-        from the official Lexicon release page, and deciding where to enable the
-        extension. Your use of a website with the extension remains subject to
-        that website’s terms and privacy policy.
+        particular sites. Google Docs is not currently supported, and Firefox
+        142 or later is required. You are responsible for reviewing the
+        optional HTTP/HTTPS host permissions, installing packages only from the
+        official Lexicon release page, and deciding where to enable the
+        extension. The extension provides controls to pause proofreading
+        globally or disable Lexicon on a specific website. Pausing does not
+        prevent a manually requested Tone/rewrite action; disabling a website
+        prevents extension processing there. Your use of a website with the
+        extension remains subject to that website’s terms and privacy policy.
+      </p>
+      <p>
+        Extension page text is sent to the desktop app over a local connection,
+        not to a Lexicon-operated cloud service. If you configure the desktop
+        app to use a remote AI or proofreading endpoint, the relevant text and
+        prompt may then be sent to that endpoint under its terms.
+      </p>
+      <p>
+        The desktop integration uses an unauthenticated HTTP API on loopback.
+        It is intended as a same-device trust boundary, not as an encrypted
+        or authenticated service for untrusted local software. Other software
+        running on the device may be able to connect to the API. Advanced
+        configurations can also change backend destinations or expose the
+        standalone API beyond loopback; you are responsible for securing those
+        configurations and using HTTPS where credentials or writing are sent.
       </p>
 
       <h2>4. Your content</h2>
@@ -98,7 +120,15 @@
         import into Lexicon. These Terms do not transfer ownership of your
         writing to me, including text you choose to proofread through the
         browser extension. You are responsible for having the rights to any
-        content you use with Lexicon.
+        content you use with Lexicon and for reviewing any rights or
+        restrictions that may apply to AI-generated output or to a
+        third-party endpoint.
+      </p>
+      <p>
+        Local documents, histories, prompts, preferences, and model files are
+        stored using ordinary application storage without an application-level
+        encryption or backup guarantee. You are responsible for protecting
+        your device, OS account, backups, and any files you export.
       </p>
 
       <h2>5. Open-source license</h2>
@@ -132,12 +162,39 @@
         originality, citation quality, or fitness for exams, job applications,
         publications, or legal filings.
       </p>
+      <p>
+        AI output may be generated by a downloaded local model on supported
+        builds, a local Ollama or LM Studio server, or another endpoint that
+        you configure. Windows x86 and ARM64 builds do not include the native
+        local GGUF engine. A custom network or remote endpoint may receive the
+        text and prompt supplied to it. You are responsible for reviewing
+        output, confirming that your use complies with the endpoint’s terms,
+        and avoiding confidential material in any endpoint you do not control.
+      </p>
+      <p>
+        If you save an LM Studio API token, Lexicon sends it to the configured
+        LM Studio server as request authentication. You are responsible for
+        choosing a trustworthy server and protecting access to your local
+        application data.
+      </p>
+      <p>
+        Remote requests may use more than one HTTP request for a
+        whole-document transform, and cancelling a request cannot retract data
+        that an endpoint already received. Custom HTTP URLs may transmit
+        writing or bearer credentials without transport encryption.
+      </p>
 
       <h2>8. Updates</h2>
       <p>
         Packaged builds may automatically check for updates. Installing an
         available update is optional and occurs only if you choose to install.
         Enabling beta updates only changes which update channel is checked.
+        Packaged builds enable operating-system startup by default and can run
+        in the system tray while the main editor window is hidden. This can
+        allow an update check to occur in the background. The current build
+        has no in-app startup toggle; after initial setup, an
+        operating-system startup disable is respected. You can stop using or
+        uninstall Lexicon through the normal operating-system controls.
       </p>
 
       <h2>9. Disclaimer of warranties</h2>
@@ -185,13 +242,16 @@
       <p>
         Lexicon may interact with or bundle third-party technology (for example
         LanguageTool, local model downloads via Hugging Face, optional Ollama,
+        LM Studio, user-configured AI or LanguageTool-compatible endpoints,
         GitHub for releases/updates and browser-extension distribution, browser
         extension APIs, websites where the extension is enabled, Discord for
         community support, and libraries listed in the project README).
-        Optional downloaded model weights are subject to their own licenses.
-        Those services and components are subject to their own terms and
-        licenses. I am not responsible for third-party outages, policy changes,
-        permissions, or content on third-party sites.
+        Source installation may also contact Maven Central, PyPI, and npm.
+        Optional downloaded model weights and bundled third-party components
+        are subject to their own licenses. Those services and components are
+        subject to their own terms and privacy policies. I am not responsible
+        for third-party outages, policy changes, permissions, retention
+        practices, or content on third-party sites.
       </p>
 
       <h2>13. Community support</h2>
@@ -200,6 +260,12 @@
         Discord. GitHub is primarily for source code, releases, and pull
         requests; Issues may still be used and addressed, but Discord is preferred
         for product feedback.
+      </p>
+      <p>
+        You may also contact me by email. Messages sent through Discord, GitHub,
+        or email are handled by those providers under their own terms and
+        privacy policies. Do not include confidential material unless you are
+        comfortable sharing it with the relevant provider.
       </p>
 
       <h2>14. Privacy</h2>
@@ -218,9 +284,13 @@
       <h2>16. Termination</h2>
       <p>
         You may stop using Lexicon at any time by uninstalling it, removing the
-        browser extension, and ceasing use of the website. On Windows, the
-        installer may offer an option to delete application data during
-        uninstall. I may stop distributing builds, change features, or
+        browser extension, clearing its browser-local data if desired, and
+        ceasing use of the website. On Windows, the installer may offer an
+        option to delete application data during uninstall; you may also need
+        to remove the current document, histories, dictionary, dismissed
+        suggestions, custom tools, local models, preferences, tokens, and
+        WebView data separately. Resetting defaults does not perform that full
+        deletion. I may stop distributing builds, change features, or
         discontinue hosting materials at any time.
       </p>
 

@@ -566,9 +566,11 @@ export default function ModelManager({
               </p>
               <p className="mt-1 font-sans text-xs leading-relaxed text-muted">
                 Lexicon can rewrite, tighten, and retune your writing with a
-                small local model. Nothing leaves your computer — no account,
-                no cloud, no datacenter, no water. The model downloads once and lives in your app-data
-                folder.
+                downloaded local model on supported builds or a server you
+                configure. The downloaded model stays on your computer; a
+                remote Ollama or LM Studio server receives the text and prompt
+                sent to it. No account or Lexicon cloud service is required.
+                The model downloads once and lives in your app-data folder.
               </p>
             </div>
           </div>
@@ -770,7 +772,7 @@ export default function ModelManager({
         </p>
       )}
 
-      {/* Advanced: connect a local server. */}
+      {/* Advanced: connect a server. */}
       <div className="mt-6 border-t border-hairline pt-4">
         <button
           type="button"

@@ -1801,9 +1801,10 @@ export default function Settings({
                     Lex's Model
                   </p>
                   <p className="mt-1 font-sans text-xs text-muted">
-                    Runs entirely on your device. Download a local AI model or
-                    use your own Ollama or LM Studio server. Your selection is
-                    saved and used until changed.
+                    Runs locally by default. Download a local AI model or use
+                    your own Ollama or LM Studio server; a network URL you
+                    configure may receive the text and prompt sent to it. Your
+                    selection is saved and used until changed.
                   </p>
                   <div className="mt-3">
                     <ModelManager
@@ -2156,15 +2157,16 @@ export default function Settings({
                       />
                       <div>
                         <p className="font-sans text-sm font-semibold text-ink">
-                          Offline by design
+                          Local by default
                         </p>
                         <p className="mt-0.5 font-sans text-xs leading-relaxed text-muted">
                           Your writing stays on your device when using
                           Lexicon&apos;s built-in proofreading and local AI
-                          features. The browser extension connects only to the
-                          Lexicon app on this computer. Network access may be
-                          used for model downloads, updates, or an external AI
-                          server you configure.
+                          features. The browser extension sends page text to
+                          the Lexicon app on this computer; a configured
+                          external AI or proofreading server may then receive
+                          relevant text. Network access may also be used for
+                          model updates.
                         </p>
                       </div>
                     </div>
