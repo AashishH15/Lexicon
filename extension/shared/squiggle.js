@@ -10,7 +10,7 @@
   const STYLE =
     `#${LAYER_ID}{position:fixed;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:2147483645;overflow:hidden}` +
     `#${LAYER_ID} .lexicon-squiggle{position:absolute;height:4px;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='9' height='4'><path d='M0 3 Q 2.25 1 4.5 3 T 9 3' fill='none' stroke='%23e5484d' stroke-width='1.4'/></svg>");background-repeat:repeat-x;background-size:9px 4px}` +
-    `#${MIRROR_ID}{position:absolute;visibility:hidden;white-space:pre-wrap;overflow:hidden;pointer-events:none}`;
+    `#${MIRROR_ID},.lexicon-squiggle-mirror{position:absolute;visibility:hidden;white-space:pre-wrap;overflow:hidden;pointer-events:none}`;
 
   let state = null; // { field, ranges, text, spans?, mirror?, onActivate, onDeactivate }
   let boundField = null;
@@ -107,11 +107,12 @@
     };
   }
 
-  function buildMirror(field, ranges, text) {
+  function buildMirror(field, ranges, text, mirrorId = MIRROR_ID) {
     const computed = getComputedStyle(field);
     const style = mirrorStyle(field, computed);
     const mirror = document.createElement("div");
-    mirror.id = MIRROR_ID;
+    mirror.id = mirrorId;
+    mirror.className = "lexicon-squiggle-mirror";
     Object.assign(mirror.style, {
       left: "0px",
       top: "0px",
@@ -321,9 +322,246 @@
     state = null;
   }
 
+  const fieldStates = new Map();
+  let fieldMirrorCounter = 0;
+  let fieldRafPending = false;
+  let fieldListenersBound = false;
+  let fieldActiveState = null;
+
+  function addFieldSquiggle(fieldState, layer, rect, matchIndex) {
+    const el = document.createElement("div");
+    el.className = "lexicon-squiggle";
+    el.style.left = `${rect.left}px`;
+    el.style.top = `${rect.bottom - 3}px`;
+    el.style.width = `${Math.max(2, rect.width)}px`;
+    layer.appendChild(el);
+    if (typeof matchIndex !== "number" || rect.width <= 0 || rect.height <= 0) {
+      return;
+    }
+    fieldState.hitRegions.push({
+      index: matchIndex,
+      left: rect.left,
+      top: rect.top,
+      right: rect.right,
+      bottom: rect.bottom,
+      rect: {
+        left: rect.left,
+        top: rect.top,
+        right: rect.right,
+        bottom: rect.bottom,
+        width: rect.width,
+        height: rect.height,
+      },
+    });
+  }
+
+  function positionFieldTextarea(layer, fieldState) {
+    const { field, mirror, spans } = fieldState;
+    const rect = field.getBoundingClientRect();
+    mirror.style.left = `${rect.left}px`;
+    mirror.style.top = `${rect.top - field.scrollTop}px`;
+    for (const item of spans) {
+      const spanRect = item.el.getBoundingClientRect();
+      addFieldSquiggle(fieldState, layer, spanRect, item.index);
+    }
+  }
+
+  function positionFieldContenteditable(layer, fieldState) {
+    fieldState.ranges.forEach((range, index) => {
+      if (!range || !range.startNode || !range.endNode) return;
+      const domRange = document.createRange();
+      try {
+        domRange.setStart(range.startNode, range.startOffset);
+        domRange.setEnd(range.endNode, range.endOffset);
+      } catch {
+        return;
+      }
+      for (const rect of domRange.getClientRects()) {
+        addFieldSquiggle(fieldState, layer, rect, index);
+      }
+    });
+  }
+
+  function renderFieldSquiggles() {
+    if (fieldStates.size === 0) return;
+    const layer = ensureLayer();
+    layer.replaceChildren();
+    for (const fieldState of fieldStates.values()) {
+      fieldState.hitRegions = [];
+      if (fieldState.kind === "textarea") {
+        positionFieldTextarea(layer, fieldState);
+      } else {
+        positionFieldContenteditable(layer, fieldState);
+      }
+    }
+  }
+
+  function scheduleFieldRender() {
+    if (fieldRafPending) return;
+    fieldRafPending = true;
+    requestAnimationFrame(() => {
+      fieldRafPending = false;
+      renderFieldSquiggles();
+    });
+  }
+
+  function findFieldHit(fieldState, x, y) {
+    for (let i = fieldState.hitRegions.length - 1; i >= 0; i--) {
+      const hit = fieldState.hitRegions[i];
+      if (x >= hit.left && x <= hit.right && y >= hit.top && y <= hit.bottom) {
+        return hit;
+      }
+    }
+    return null;
+  }
+
+  function deactivateFieldSquiggle() {
+    if (!fieldActiveState) return;
+    if (typeof fieldActiveState.onDeactivate === "function") {
+      fieldActiveState.onDeactivate();
+    }
+    fieldActiveState = null;
+  }
+
+  function activateFieldSquiggle(fieldState, hit, pinned) {
+    if (!hit) return;
+    if (
+      fieldActiveState &&
+      (fieldActiveState !== fieldState ||
+        fieldActiveState.activeIndex !== hit.index)
+    ) {
+      deactivateFieldSquiggle();
+    }
+    fieldActiveState = fieldState;
+    fieldState.activeIndex = hit.index;
+    if (typeof fieldState.onActivate === "function") {
+      fieldState.onActivate(hit.index, hit.rect, { pinned: Boolean(pinned) });
+    }
+  }
+
+  function onFieldPointerMove(event) {
+    let selectedState = null;
+    let selectedHit = null;
+    const states = [...fieldStates.values()];
+    for (let i = states.length - 1; i >= 0; i--) {
+      const hit = findFieldHit(states[i], event.clientX, event.clientY);
+      if (hit) {
+        selectedState = states[i];
+        selectedHit = hit;
+        break;
+      }
+    }
+    if (selectedState) activateFieldSquiggle(selectedState, selectedHit, false);
+    else deactivateFieldSquiggle();
+  }
+
+  function onFieldPointerDown(event) {
+    const states = [...fieldStates.values()];
+    for (let i = states.length - 1; i >= 0; i--) {
+      const hit = findFieldHit(states[i], event.clientX, event.clientY);
+      if (hit) {
+        activateFieldSquiggle(states[i], hit, true);
+        return;
+      }
+    }
+  }
+
+  function bindFieldListeners(fieldState) {
+    if (!fieldListenersBound) {
+      window.addEventListener("scroll", scheduleFieldRender, {
+        capture: true,
+        passive: true,
+      });
+      window.addEventListener("resize", scheduleFieldRender);
+      document.addEventListener("mousemove", onFieldPointerMove, true);
+      document.addEventListener("mousedown", onFieldPointerDown, true);
+      fieldListenersBound = true;
+    }
+    if (fieldState.kind === "textarea" && !fieldState.scrollHandler) {
+      fieldState.scrollHandler = scheduleFieldRender;
+      fieldState.field.addEventListener(
+        "scroll",
+        fieldState.scrollHandler,
+        { passive: true },
+      );
+    }
+  }
+
+  function unbindFieldListeners(fieldState) {
+    if (fieldState && fieldState.scrollHandler) {
+      fieldState.field.removeEventListener(
+        "scroll",
+        fieldState.scrollHandler,
+      );
+      fieldState.scrollHandler = null;
+    }
+    if (fieldStates.size > 0 || !fieldListenersBound) return;
+    window.removeEventListener("scroll", scheduleFieldRender, {
+      capture: true,
+    });
+    window.removeEventListener("resize", scheduleFieldRender);
+    document.removeEventListener("mousemove", onFieldPointerMove, true);
+    document.removeEventListener("mousedown", onFieldPointerDown, true);
+    fieldListenersBound = false;
+    deactivateFieldSquiggle();
+  }
+
+  function clearFieldSquiggles(field) {
+    const fieldState = fieldStates.get(field);
+    if (!fieldState) return;
+    if (fieldActiveState === fieldState) deactivateFieldSquiggle();
+    if (fieldState.mirror) fieldState.mirror.remove();
+    fieldStates.delete(field);
+    unbindFieldListeners(fieldState);
+    if (fieldStates.size === 0) {
+      const layer = document.getElementById(LAYER_ID);
+      if (layer) layer.remove();
+      const style = document.getElementById(STYLE_ID);
+      if (style) style.remove();
+      return;
+    }
+    scheduleFieldRender();
+  }
+
+  function clearAllFieldSquiggles() {
+    for (const field of [...fieldStates.keys()]) clearFieldSquiggles(field);
+  }
+
+  function applyFieldSquiggles(field, ranges, text, options) {
+    clearFieldSquiggles(field);
+    if (!field || !ranges || ranges.length === 0 || text == null) return;
+    const opts = options || {};
+    const fieldState = {
+      field,
+      kind: field.tagName === "TEXTAREA" ? "textarea" : "contenteditable",
+      ranges,
+      text,
+      mirror: null,
+      spans: [],
+      hitRegions: [],
+      activeIndex: null,
+      onActivate: opts.onActivate || null,
+      onDeactivate: opts.onDeactivate || null,
+      scrollHandler: null,
+    };
+    fieldStates.set(field, fieldState);
+    if (fieldState.kind === "textarea") {
+      const mirrorId = `${MIRROR_ID}-${fieldMirrorCounter++}`;
+      const mirrorData = buildMirror(field, ranges, text, mirrorId);
+      fieldState.mirror = mirrorData.mirror;
+      fieldState.spans = mirrorData.spans;
+      document.documentElement.appendChild(fieldState.mirror);
+    }
+    bindFieldListeners(fieldState);
+    renderFieldSquiggles();
+  }
+
   globalThis.__lexiconSquiggle = {
     applySquiggles,
     clearSquiggles,
     mergeRanges,
+    applyFieldSquiggles,
+    clearFieldSquiggles,
+    clearAllFieldSquiggles,
   };
 })();

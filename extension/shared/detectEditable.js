@@ -121,16 +121,57 @@
     return null;
   }
 
-  function detectEditableField(doc) {
+  function detectEditableFields(doc, options) {
+    const fields = [];
+    const seenFields = new Set();
+    const seenRoots = new Set();
+    const visibleOnly = !options || options.visibleOnly !== false;
+    const selectors = selectorsForHost(
+      (doc.location && doc.location.hostname) || "",
+    );
+
+    function addField(field) {
+      if (!field || seenFields.has(field)) return;
+      if (!isEditableElement(field)) return;
+      if (visibleOnly && !isVisible(field)) return;
+      seenFields.add(field);
+      fields.push(field);
+    }
+
+    function scanRoot(root) {
+      if (!root || seenRoots.has(root)) return;
+      seenRoots.add(root);
+      for (const selector of selectors) {
+        let list;
+        try {
+          list = root.querySelectorAll(selector);
+        } catch {
+          continue;
+        }
+        for (const field of list) addField(field);
+      }
+      let elements;
+      try {
+        elements = root.querySelectorAll("*");
+      } catch {
+        return;
+      }
+      for (const element of elements) {
+        if (element.shadowRoot) scanRoot(element.shadowRoot);
+      }
+    }
+
     const active = deepActiveElement(doc);
     if (active && active !== doc.body) {
-      const fromActive = editableFromNode(active);
-      if (fromActive) return fromActive;
-      const nested = findEditableDescendant(active);
-      if (nested) return nested;
+      addField(editableFromNode(active));
+      addField(findEditableDescendant(active));
     }
-    const host = doc.location && doc.location.hostname;
-    return queryFirstVisible(doc, selectorsForHost(host || ""));
+    scanRoot(doc);
+    return fields;
+  }
+
+  function detectEditableField(doc) {
+    return detectEditableFields(doc)[0] || null;
   }
 
   function normalizeText(text) {
@@ -489,6 +530,7 @@
     deepActiveElement,
     editableFromNode,
     detectEditableField,
+    detectEditableFields,
     normalizeText,
     textSegments,
     normalizeSegments,

@@ -179,3 +179,98 @@ test("shows offline badge and messaging when backend is offline", () => {
   assert.equal(badgeEl.title, "Lexicon isn't running — open Lexicon to check");
 });
 
+test("keeps independent badges for multiple fields", () => {
+  let rootEl = null;
+  const makeElement = (tag) => ({
+    tagName: tag.toUpperCase(),
+    className: "",
+    classList: {
+      classes: new Set(),
+      add(...classes) {
+        classes.forEach((name) => this.classes.add(name));
+      },
+      remove(...classes) {
+        classes.forEach((name) => this.classes.delete(name));
+      },
+      toggle(name, value) {
+        if (value) this.classes.add(name);
+        else this.classes.delete(name);
+      },
+    },
+    style: {},
+    children: [],
+    hidden: false,
+    textContent: "",
+    title: "",
+    offsetHeight: 100,
+    appendChild(child) {
+      this.children.push(child);
+      return child;
+    },
+    replaceChildren(...nodes) {
+      this.children = nodes;
+    },
+    addEventListener() {},
+    removeEventListener() {},
+    setAttribute() {},
+    remove() {},
+    attachShadow() {
+      rootEl = {
+        children: [],
+        appendChild(child) {
+          this.children.push(child);
+          return child;
+        },
+      };
+      return rootEl;
+    },
+  });
+  const sandbox = {
+    document: {
+      documentElement: { appendChild() {} },
+      createElement: makeElement,
+    },
+    window: {
+      innerWidth: 1000,
+      innerHeight: 800,
+      addEventListener() {},
+      removeEventListener() {},
+    },
+    globalThis: {},
+  };
+  sandbox.globalThis = sandbox;
+  vm.createContext(sandbox);
+  vm.runInContext(source, sandbox);
+  const api = sandbox.__lexiconSuggestions;
+  const makeField = (top) => ({
+    tagName: "TEXTAREA",
+    getBoundingClientRect: () => ({
+      top,
+      bottom: top + 80,
+      left: 50,
+      right: 400,
+      height: 80,
+    }),
+    addEventListener() {},
+    removeEventListener() {},
+  });
+  const field1 = makeField(100);
+  const field2 = makeField(300);
+  const match = {
+    offset: 0,
+    length: 3,
+    message: "Spelling issue",
+    replacements: ["The"],
+  };
+
+  api.showField(field1, [match]);
+  api.showField(field2, []);
+
+  assert.equal(api.fieldStates().length, 2);
+  assert.equal(api.fieldState(field1).badgeEl.textContent, "1");
+  assert.equal(api.fieldState(field2).badgeEl.textContent, "✓");
+  assert.ok(rootEl.children.length >= 7);
+  api.hideField(field1);
+  assert.equal(api.fieldStates().length, 1);
+});
+

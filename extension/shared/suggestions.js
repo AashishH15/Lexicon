@@ -506,6 +506,461 @@
     }
   }
 
+  const fieldStates = new Map();
+  let fieldHost = null;
+  let fieldRoot = null;
+  let fieldRepositionBound = false;
+  let fieldTooltipState = null;
+  let fieldTooltipOutsideBound = false;
+
+  function ensureFieldHost() {
+    if (fieldHost) return;
+    fieldHost = document.createElement("div");
+    fieldHost.style.position = "relative";
+    fieldHost.style.zIndex = "2147483646";
+    fieldRoot = fieldHost.attachShadow({ mode: "closed" });
+    const style = document.createElement("style");
+    style.textContent = STYLE;
+    fieldRoot.appendChild(style);
+    document.documentElement.appendChild(fieldHost);
+  }
+
+  function fieldPosition(state) {
+    if (!state) return;
+    if (!fieldInViewport(state.field)) {
+      state.badgeEl.style.display = "none";
+      state.panelEl.hidden = true;
+      if (fieldTooltipState === state) fieldHideMatchTooltip(state);
+      return;
+    }
+    state.badgeEl.style.display = "flex";
+    const badge = badgePosition(state.field);
+    state.badgeEl.style.left = `${badge.left}px`;
+    state.badgeEl.style.top = `${badge.top}px`;
+    if (!state.panelOpen) {
+      state.panelEl.hidden = true;
+      return;
+    }
+    state.panelEl.style.maxHeight = `${Math.max(
+      80,
+      Math.min(PANEL_MAX_HEIGHT, window.innerHeight - 16),
+    )}px`;
+    state.panelEl.hidden = false;
+    const panel = panelPosition(
+      badge,
+      state.panelEl.offsetHeight,
+      state.field.getBoundingClientRect(),
+    );
+    state.panelEl.style.left = `${panel.left}px`;
+    if (Number.isFinite(panel.bottom)) {
+      state.panelEl.style.top = "auto";
+      state.panelEl.style.bottom = `${panel.bottom}px`;
+    } else {
+      state.panelEl.style.bottom = "auto";
+      state.panelEl.style.top = `${panel.top}px`;
+    }
+  }
+
+  function positionFields() {
+    for (const state of fieldStates.values()) fieldPosition(state);
+  }
+
+  function bindFieldReposition(state) {
+    if (!fieldRepositionBound) {
+      window.addEventListener("scroll", positionFields, {
+        capture: true,
+        passive: true,
+      });
+      window.addEventListener("resize", positionFields);
+      fieldRepositionBound = true;
+    }
+    if (state.field.tagName === "TEXTAREA" && !state.scrollHandler) {
+      state.scrollHandler = positionFields;
+      state.field.addEventListener("scroll", state.scrollHandler, {
+        passive: true,
+      });
+    }
+  }
+
+  function unbindFieldReposition(state) {
+    if (state && state.scrollHandler) {
+      state.field.removeEventListener("scroll", state.scrollHandler);
+      state.scrollHandler = null;
+    }
+    if (fieldStates.size > 0 || !fieldRepositionBound) return;
+    window.removeEventListener("scroll", positionFields, { capture: true });
+    window.removeEventListener("resize", positionFields);
+    fieldRepositionBound = false;
+  }
+
+  function fieldUpdateBadge(state) {
+    if (state.checking) {
+      state.badgeEl.classList.remove("clean", "offline");
+      state.badgeEl.textContent = "…";
+      state.badgeEl.title = "Checking…";
+      return;
+    }
+    if (state.offline) {
+      state.badgeEl.classList.remove("clean");
+      state.badgeEl.classList.add("offline");
+      state.badgeEl.textContent = "!";
+      state.badgeEl.title = "Lexicon isn't running — open Lexicon to check";
+      return;
+    }
+    state.badgeEl.classList.remove("offline");
+    const count = state.matches.length;
+    const clean = count === 0;
+    state.badgeEl.classList.toggle("clean", clean);
+    state.badgeEl.textContent = clean ? "✓" : String(count);
+    state.badgeEl.title = clean ? "No issues found" : "Lexicon issues";
+  }
+
+  function fieldRenderPanel(state) {
+    const panel = state.panelEl;
+    panel.replaceChildren();
+
+    const head = document.createElement("div");
+    head.className = "head";
+    const title = document.createElement("span");
+    title.textContent = state.checking
+      ? "Checking…"
+      : state.offline
+        ? "Lexicon isn't running"
+        : state.matches.length === 0
+          ? "No issues found"
+          : `${state.matches.length} ` +
+            `${state.matches.length === 1 ? "issue" : "issues"} found`;
+    const close = document.createElement("button");
+    close.className = "close";
+    close.textContent = "✕";
+    close.setAttribute("aria-label", "Close");
+    close.addEventListener("click", () => {
+      state.panelOpen = false;
+      state.panelEl.hidden = true;
+    });
+    head.appendChild(title);
+    head.appendChild(close);
+    panel.appendChild(head);
+
+    const list = document.createElement("div");
+    list.className = "list";
+    if (state.checking) {
+      const empty = document.createElement("p");
+      empty.className = "empty";
+      empty.textContent = "Checking…";
+      list.appendChild(empty);
+    } else if (state.offline) {
+      const empty = document.createElement("p");
+      empty.className = "empty";
+      empty.textContent = "Open Lexicon to use grammar checking here.";
+      list.appendChild(empty);
+    } else if (state.matches.length === 0) {
+      const empty = document.createElement("p");
+      empty.className = "empty";
+      empty.textContent = "No issues found.";
+      list.appendChild(empty);
+    } else {
+      for (let i = 0; i < state.matches.length; i++) {
+        const match = state.matches[i];
+        const row = document.createElement("div");
+        row.className = "row";
+
+        const text = document.createElement("div");
+        text.className = "text";
+        const message = document.createElement("p");
+        message.className = "message";
+        message.textContent = match.message;
+        const suggestion = document.createElement("p");
+        suggestion.className = "suggestion";
+        suggestion.textContent = match.replacements[0]
+          ? `Suggestion: ${match.replacements[0]}`
+          : "No automatic fix — you can dismiss this.";
+        text.appendChild(message);
+        text.appendChild(suggestion);
+        row.appendChild(text);
+
+        const actions = document.createElement("div");
+        actions.className = "actions";
+        if (match.replacements[0]) {
+          const apply = document.createElement("button");
+          apply.className = "apply";
+          apply.textContent = "Apply";
+          apply.addEventListener("click", () => state.onApply(i));
+          actions.appendChild(apply);
+        }
+        const dismiss = document.createElement("button");
+        dismiss.className = "dismiss";
+        dismiss.textContent = "Dismiss";
+        dismiss.addEventListener("click", () => state.onDismiss(i));
+        actions.appendChild(dismiss);
+        row.appendChild(actions);
+        list.appendChild(row);
+      }
+    }
+    panel.appendChild(list);
+  }
+
+  function fieldHideOtherPanels(selected) {
+    for (const state of fieldStates.values()) {
+      if (state === selected) continue;
+      state.panelOpen = false;
+      state.panelEl.hidden = true;
+    }
+  }
+
+  function fieldOpenPanel(state) {
+    fieldHideOtherPanels(state);
+    fieldHideMatchTooltip();
+    state.panelOpen = true;
+    state.panelEl.hidden = false;
+    fieldPosition(state);
+  }
+
+  function fieldTogglePanel(state) {
+    if (state.panelOpen) {
+      state.panelOpen = false;
+      state.panelEl.hidden = true;
+    } else {
+      fieldOpenPanel(state);
+    }
+  }
+
+  function fieldOnTooltipOutside(event) {
+    const state = fieldTooltipState;
+    if (!state || !state.tooltipEl || state.tooltipEl.hidden) return;
+    const path =
+      typeof event.composedPath === "function" ? event.composedPath() : [];
+    if (path.includes(state.tooltipEl) || path.includes(state.badgeEl)) return;
+    if (path.includes(fieldHost)) {
+      fieldHideMatchTooltip(state);
+      return;
+    }
+    fieldHideMatchTooltip(state);
+  }
+
+  function fieldBindTooltipOutside() {
+    if (fieldTooltipOutsideBound) return;
+    document.addEventListener("mousedown", fieldOnTooltipOutside, true);
+    fieldTooltipOutsideBound = true;
+  }
+
+  function fieldUnbindTooltipOutside() {
+    if (!fieldTooltipOutsideBound) return;
+    document.removeEventListener("mousedown", fieldOnTooltipOutside, true);
+    fieldTooltipOutsideBound = false;
+  }
+
+  function fieldHideMatchTooltip(state) {
+    const target = state || fieldTooltipState;
+    if (!target) return;
+    if (fieldTooltipState === target) fieldTooltipState = null;
+    target.tooltipEl.hidden = true;
+    target.tooltipEl.replaceChildren();
+    target.tooltipMatch = null;
+    if (!fieldTooltipState) fieldUnbindTooltipOutside();
+  }
+
+  function fieldShowMatchTooltip(field, match, rect, options) {
+    const state = fieldStates.get(field);
+    if (!state || !match || !rect) return;
+    const opts = options || {};
+    if (fieldTooltipState && fieldTooltipState !== state) {
+      fieldHideMatchTooltip(fieldTooltipState);
+    }
+    const pinned = Boolean(opts.pinned);
+    state.tooltipMatch = match;
+    fieldTooltipState = state;
+
+    const tip = state.tooltipEl;
+    tip.replaceChildren();
+    tip.hidden = false;
+
+    const message = document.createElement("p");
+    message.className = "message";
+    message.textContent = match.message || "Issue found.";
+    tip.appendChild(message);
+
+    const replacements = (match.replacements || []).slice(0, 4);
+    if (replacements.length > 0) {
+      const chips = document.createElement("div");
+      chips.className = "chips";
+      for (const replacement of replacements) {
+        const chip = document.createElement("button");
+        chip.type = "button";
+        chip.className = "chip";
+        chip.textContent = replacement;
+        chip.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          fieldHideMatchTooltip(state);
+          if (typeof opts.onApply === "function") opts.onApply(replacement);
+          else if (typeof state.onApplyReplacement === "function") {
+            state.onApplyReplacement(match, replacement);
+          }
+        });
+        chips.appendChild(chip);
+      }
+      tip.appendChild(chips);
+    } else {
+      const none = document.createElement("p");
+      none.className = "none";
+      none.textContent = "No automatic fix available";
+      tip.appendChild(none);
+    }
+
+    const tipActions = document.createElement("div");
+    tipActions.className = "actions";
+    const dismiss = document.createElement("button");
+    dismiss.type = "button";
+    dismiss.className = "dismiss";
+    dismiss.textContent = "Dismiss";
+    dismiss.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      fieldHideMatchTooltip(state);
+      if (typeof opts.onDismiss === "function") opts.onDismiss();
+      else if (typeof state.onDismissMatch === "function") {
+        state.onDismissMatch(match);
+      }
+    });
+    tipActions.appendChild(dismiss);
+    tip.appendChild(tipActions);
+
+    tip.onmouseleave = () => {
+      if (!pinned) fieldHideMatchTooltip(state);
+    };
+    const pos = tooltipPosition(rect);
+    tip.style.left = `${pos.left}px`;
+    tip.style.top = `${pos.top}px`;
+    if (pinned) fieldBindTooltipOutside();
+    else fieldUnbindTooltipOutside();
+  }
+
+  function fieldShow(field, matches, options) {
+    if (!field) return null;
+    const opts = options || {};
+    let state = fieldStates.get(field);
+    const keepOpen = Boolean(state && state.panelOpen);
+    if (!state) {
+      ensureFieldHost();
+      state = {
+        field,
+        matches: matches || [],
+        checking: Boolean(opts.checking),
+        offline: Boolean(opts.offline),
+        onApply: opts.onApply || (() => {}),
+        onDismiss: opts.onDismiss || (() => {}),
+        onApplyReplacement: opts.onApplyReplacement || null,
+        onDismissMatch: opts.onDismissMatch || null,
+        host: fieldHost,
+        panelOpen: false,
+        tooltipMatch: null,
+        scrollHandler: null,
+      };
+      fieldStates.set(field, state);
+
+      const badge = document.createElement("div");
+      badge.className = "badge";
+      badge.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        fieldTogglePanel(state);
+      });
+      fieldRoot.appendChild(badge);
+      state.badgeEl = badge;
+
+      const panel = document.createElement("div");
+      panel.className = "panel";
+      panel.hidden = true;
+      fieldRoot.appendChild(panel);
+      state.panelEl = panel;
+
+      const tooltip = document.createElement("div");
+      tooltip.className = "tooltip";
+      tooltip.hidden = true;
+      fieldRoot.appendChild(tooltip);
+      state.tooltipEl = tooltip;
+    } else {
+      state.matches = matches || [];
+      state.checking = Boolean(opts.checking);
+      state.offline = Boolean(opts.offline);
+      if (opts.onApply) state.onApply = opts.onApply;
+      if (opts.onDismiss) state.onDismiss = opts.onDismiss;
+      if (opts.onApplyReplacement) {
+        state.onApplyReplacement = opts.onApplyReplacement;
+      }
+      if (opts.onDismissMatch) state.onDismissMatch = opts.onDismissMatch;
+      state.panelOpen = keepOpen;
+    }
+    fieldUpdateBadge(state);
+    fieldRenderPanel(state);
+    bindFieldReposition(state);
+    fieldPosition(state);
+    return state;
+  }
+
+  function fieldUpdate(field, matches, options) {
+    const state = fieldStates.get(field);
+    if (!state) return fieldShow(field, matches, options);
+    const opts = options || {};
+    state.matches = matches || [];
+    state.checking = false;
+    state.offline = Boolean(opts.offline);
+    fieldHideMatchTooltip(state);
+    fieldUpdateBadge(state);
+    fieldRenderPanel(state);
+    fieldPosition(state);
+    return state;
+  }
+
+  function fieldSetChecking(field) {
+    const state = fieldStates.get(field);
+    if (!state) return fieldShow(field, [], { checking: true });
+    state.checking = true;
+    state.offline = false;
+    state.matches = [];
+    fieldHideMatchTooltip(state);
+    fieldUpdateBadge(state);
+    fieldRenderPanel(state);
+    fieldPosition(state);
+    return state;
+  }
+
+  function fieldRemove(field) {
+    const state = fieldStates.get(field);
+    if (!state) return;
+    fieldHideMatchTooltip(state);
+    state.badgeEl.remove();
+    state.panelEl.remove();
+    state.tooltipEl.remove();
+    fieldStates.delete(field);
+    unbindFieldReposition(state);
+    if (fieldStates.size === 0) {
+      fieldUnbindTooltipOutside();
+      if (fieldHost) fieldHost.remove();
+      fieldHost = null;
+      fieldRoot = null;
+    }
+  }
+
+  function fieldHide(field) {
+    if (field) {
+      fieldRemove(field);
+      return;
+    }
+    for (const current of [...fieldStates.keys()]) fieldRemove(current);
+  }
+
+  function isSuggestionUiFocus(event) {
+    if (!fieldHost) return false;
+    if (event && event.target === fieldHost) return true;
+    const path =
+      event && typeof event.composedPath === "function"
+        ? event.composedPath()
+        : [];
+    return path.includes(fieldHost);
+  }
+
   globalThis.__lexiconSuggestions = {
     show,
     update,
@@ -517,5 +972,14 @@
     badgePosition,
     panelPosition,
     state: () => state,
+    showField: fieldShow,
+    updateField: fieldUpdate,
+    setCheckingField: fieldSetChecking,
+    hideField: fieldHide,
+    showFieldMatchTooltip: fieldShowMatchTooltip,
+    hideFieldMatchTooltip: fieldHideMatchTooltip,
+    fieldState: (field) => fieldStates.get(field) || null,
+    fieldStates: () => [...fieldStates.values()],
+    isSuggestionUiFocus,
   };
 })();

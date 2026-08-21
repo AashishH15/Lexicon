@@ -32,6 +32,7 @@ const {
   replaceRangeDirect,
   replaceContentDirect,
   matchRanges,
+  detectEditableFields,
   isNotionEditor,
   isYoutubeEditor,
 } = sandbox.__lexiconEditable;
@@ -76,6 +77,44 @@ test("selectorsForHost returns site selectors plus generics", () => {
   // Unknown hosts still get the generic editor selectors.
   assert.ok(plain(selectorsForHost("example.com")).length > 0);
   assert.ok(plain(selectorsForHost("github.com")).includes("textarea"));
+});
+
+test("detectEditableFields returns every visible field and keeps focus first", () => {
+  const box1 = {
+    nodeType: 1,
+    tagName: "TEXTAREA",
+    getClientRects: () => [{}],
+  };
+  const box2 = {
+    nodeType: 1,
+    tagName: "TEXTAREA",
+    getClientRects: () => [{}],
+  };
+  const hidden = {
+    nodeType: 1,
+    tagName: "TEXTAREA",
+    getClientRects: () => [],
+  };
+  const doc = {
+    activeElement: null,
+    body: {},
+    location: { hostname: "example.com" },
+    querySelectorAll: (selector) =>
+      selector === "textarea" ? [box1, box2, hidden] : [],
+  };
+
+  let fields = detectEditableFields(doc);
+  assert.equal(fields.length, 2);
+  assert.equal(fields[0], box1);
+  assert.equal(fields[1], box2);
+  doc.activeElement = box2;
+  fields = detectEditableFields(doc);
+  assert.equal(fields.length, 2);
+  assert.equal(fields[0], box2);
+  assert.equal(fields[1], box1);
+  fields = detectEditableFields(doc, { visibleOnly: false });
+  assert.equal(fields.length, 3);
+  assert.equal(fields[2], hidden);
 });
 
 test("recognizes Notion and YouTube managed editors", () => {
