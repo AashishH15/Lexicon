@@ -8,6 +8,7 @@
  const API_LATEST_RELEASE_URL = `https://api.github.com/repos/${GITHUB_REPO}/releases/latest`;
  const API_REPO_URL = `https://api.github.com/repos/${GITHUB_REPO}`;
  const FALLBACK_RELEASE_PAGE = `https://github.com/${GITHUB_REPO}/releases/latest`;
+ const FALLBACK_EXTENSION_RELEASES_PAGE = `https://github.com/${GITHUB_REPO}/releases`;
 
  const primaryDownloadBtn = document.getElementById('primary-download-btn');
  const primaryDownloadText = document.getElementById('primary-download-text');
@@ -193,13 +194,43 @@
  }
  }
 
- ['win_x64', 'win_arm64', 'win_x86', 'mac_arm64', 'mac_x64', 'linux_x64'].forEach(key => {
- const asset = matchAsset(latestAssets, key);
- const el = document.getElementById(`dl-${key.replace('_', '-')}`);
- if (el && asset && asset.browser_download_url) {
- el.href = asset.browser_download_url;
- }
- });
+  ['win_x64', 'win_arm64', 'win_x86', 'mac_arm64', 'mac_x64', 'linux_x64'].forEach(key => {
+  const asset = matchAsset(latestAssets, key);
+  const el = document.getElementById(`dl-${key.replace('_', '-')}`);
+  if (el && asset && asset.browser_download_url) {
+  el.href = asset.browser_download_url;
+  }
+  });
+
+  // Browser extension downloads: pick the newest release that actually
+  // carries extension assets (beta releases until the extension goes stable).
+  let extensionRelease = latestRelease;
+  if (Array.isArray(releases)) {
+  const withExtension = releases.find(rel => rel.assets && rel.assets.some(a => /^lexicon-(chrome|firefox)-/i.test(a.name)));
+  if (withExtension) extensionRelease = withExtension;
+  }
+  const extensionAssets = extensionRelease.assets || [];
+  const chromeExtensionBtn = document.getElementById('dl-extension-chrome');
+  const firefoxExtensionBtn = document.getElementById('dl-extension-firefox');
+  const chromeExtensionAsset = extensionAssets.find(a => /^lexicon-chrome-.*\.zip$/i.test(a.name));
+  // Prefer a signed/temp .xpi when present; current beta ships lexicon-firefox-extension.zip.
+  const firefoxExtensionAsset =
+  extensionAssets.find(a => /^lexicon-firefox-.*\.xpi$/i.test(a.name)) ||
+  extensionAssets.find(a => /^lexicon-firefox-.*\.zip$/i.test(a.name));
+  if (chromeExtensionBtn) {
+  chromeExtensionBtn.href = (chromeExtensionAsset && chromeExtensionAsset.browser_download_url)
+  || FALLBACK_EXTENSION_RELEASES_PAGE;
+  }
+  if (firefoxExtensionBtn) {
+  firefoxExtensionBtn.href = (firefoxExtensionAsset && firefoxExtensionAsset.browser_download_url)
+  || FALLBACK_EXTENSION_RELEASES_PAGE;
+  const firefoxTag = firefoxExtensionBtn.querySelector('.extension-dl-tag');
+  if (firefoxTag && firefoxExtensionAsset) {
+  firefoxTag.textContent = /\.xpi$/i.test(firefoxExtensionAsset.name)
+  ? '.xpi · temporary add-on'
+  : '.zip · temporary add-on';
+  }
+  }
 
  } catch (err) {
  console.warn('Could not fetch GitHub release details automatically:', err);
@@ -209,6 +240,18 @@
  if (releaseVersionText) {
  releaseVersionText.textContent = 'Latest release on GitHub';
  }
+ if (downloadCountBadge && downloadCountText) {
+ downloadCountText.textContent = '1.3k+ downloads';
+ downloadCountBadge.style.visibility = 'visible';
+ }
+ const trustDownloads = document.getElementById('trust-downloads');
+ if (trustDownloads) {
+ trustDownloads.textContent = '1.3k+';
+ }
+ const chromeExtensionBtn = document.getElementById('dl-extension-chrome');
+ const firefoxExtensionBtn = document.getElementById('dl-extension-firefox');
+ if (chromeExtensionBtn) chromeExtensionBtn.href = FALLBACK_EXTENSION_RELEASES_PAGE;
+ if (firefoxExtensionBtn) firefoxExtensionBtn.href = FALLBACK_EXTENSION_RELEASES_PAGE;
  }
  }
 
@@ -231,6 +274,10 @@
  }
  } catch (err) {
  console.warn('Could not fetch GitHub repository stars automatically:', err);
+ starsCountText.textContent = '160+';
+ starsContainer.style.display = 'inline-flex';
+ const trustStars = document.getElementById('trust-stars');
+ if (trustStars) trustStars.textContent = '160+';
  }
  }
 
@@ -283,7 +330,7 @@
 
   function initRevealAnimations() {
   const revealSelector =
-  '.section-header, .bento-card, .proofread-live, .editor-live, .export-live-card, .appearance-live-card, .manifesto-card, .tutorial-card, .privacy-card, .faq-item, .setup-step-box, .support-card, .privacy-comparison-table, .footer';
+  '.section-header, .bento-card, .proofread-live, .editor-live, .export-live-card, .appearance-live-card, .extension-live-card, .extension-card, .manifesto-card, .tutorial-card, .privacy-card, .faq-item, .setup-step-box, .support-card, .privacy-comparison-table, .footer';
  const revealEls = Array.prototype.slice.call(document.querySelectorAll(revealSelector));
 
  if (!('IntersectionObserver' in window)) {
@@ -896,6 +943,215 @@
     scheduleHeightLock();
   }
 
+  function initExtensionDemo() {
+    const card = document.getElementById('extension-demo-card');
+    const typeEl = document.getElementById('extension-type');
+    const chip = document.getElementById('extension-chip');
+    const chipLabel = document.getElementById('extension-chip-label');
+    const chipFix = document.getElementById('extension-chip-fix');
+    const chipApply = document.getElementById('extension-chip-apply');
+    const urlEl = document.getElementById('extension-url');
+    const metaEl = document.getElementById('extension-compose-meta');
+    const metricsEl = document.getElementById('extension-metrics');
+    const tabs = Array.prototype.slice.call(document.querySelectorAll('.extension-tab'));
+    if (!card || !typeEl || !chip || !tabs.length) return;
+
+    const scenes = {
+      email: {
+        url: 'mail.example.com/compose',
+        meta: 'To: sam@example.com \u00B7 Subject: Quick follow-up',
+        metric: 'Email field \u00B7 Local engine',
+        text: 'Hi Sam, thanks for the note. I already receive the report yesterday.',
+        err: 'receive',
+        fix: 'received',
+        label: 'Grammar'
+      },
+      social: {
+        url: 'social.example.com/compose',
+        metaPrefix: 'New post',
+        charLimit: 240,
+        metric: 'Social post \u00B7 Local engine',
+        text: 'Shipping the calm writing app today. Its finally offline-first.',
+        err: 'Its',
+        fix: "It's",
+        label: 'Grammar'
+      },
+      forum: {
+        url: 'forum.example.com/new-topic',
+        meta: 'New topic \u00B7 Writing Tools',
+        metric: 'Forum editor \u00B7 Local engine',
+        text: 'Has anyone tried a quik private grammar checker that stays local?',
+        err: 'quik',
+        fix: 'quick',
+        label: 'Spelling'
+      }
+    };
+
+    const sceneOrder = ['email', 'social', 'forum'];
+    let activeScene = 'email';
+    let demoVisible = true;
+    let loopToken = 0;
+    let pendingScene = null;
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    function setTab(sceneKey) {
+      tabs.forEach(function (tab) {
+        const on = tab.getAttribute('data-scene') === sceneKey;
+        tab.classList.toggle('active', on);
+        tab.setAttribute('aria-selected', on ? 'true' : 'false');
+      });
+    }
+
+    function updateComposeMeta(scene, typedLen) {
+      if (!metaEl) return;
+      if (typeof scene.charLimit === 'number') {
+        const left = Math.max(0, scene.charLimit - typedLen);
+        metaEl.textContent = scene.metaPrefix + ' \u00B7 ' + left + ' characters left';
+        return;
+      }
+      metaEl.textContent = scene.meta;
+    }
+
+    function applySceneChrome(scene) {
+      if (urlEl) urlEl.textContent = scene.url;
+      updateComposeMeta(scene, 0);
+      if (metricsEl) metricsEl.textContent = scene.metric;
+      setTab(activeScene);
+    }
+
+    function showStatic(scene) {
+      const fixed = scene.text.replace(scene.err, scene.fix);
+      typeEl.innerHTML = '';
+      typeEl.appendChild(document.createTextNode(fixed));
+      chipLabel.textContent = scene.label;
+      chipFix.textContent = scene.err + ' \u2192 ' + scene.fix;
+      chipApply.textContent = 'Applied';
+      chip.classList.add('visible');
+      applySceneChrome(scene);
+      updateComposeMeta(scene, fixed.length);
+    }
+
+    function typeScript(scene, token) {
+      return new Promise(function (resolve) {
+        typeEl.innerHTML = '';
+        chip.classList.remove('visible');
+        chipApply.textContent = 'Apply Fix';
+        updateComposeMeta(scene, 0);
+        const errStart = scene.text.indexOf(scene.err);
+        const errEnd = errStart + scene.err.length;
+        let i = 0;
+        let errSpan = null;
+        const out = document.createElement('span');
+        typeEl.appendChild(out);
+
+        function tick() {
+          if (token !== loopToken) {
+            resolve();
+            return;
+          }
+          if (i >= scene.text.length) {
+            setTimeout(resolve, 280);
+            return;
+          }
+          const ch = scene.text.charAt(i);
+          if (i === errStart) {
+            errSpan = document.createElement('span');
+            errSpan.className = 'err';
+            out.appendChild(errSpan);
+          }
+          const holder = (errSpan && i < errEnd) ? errSpan : out;
+          holder.appendChild(document.createTextNode(ch));
+          i += 1;
+          updateComposeMeta(scene, i);
+          setTimeout(tick, 28 + Math.random() * 24);
+        }
+        tick();
+      });
+    }
+
+    async function applyFix(scene) {
+      await sleep(420);
+      const errEl = typeEl.querySelector('.err');
+      if (errEl) {
+        errEl.classList.remove('err');
+        errEl.classList.add('fixed');
+        errEl.textContent = scene.fix;
+      }
+      chipApply.textContent = 'Applied';
+      const fixedLen = scene.text.length - scene.err.length + scene.fix.length;
+      updateComposeMeta(scene, fixedLen);
+    }
+
+    async function playScene(sceneKey, token) {
+      activeScene = sceneKey;
+      const scene = scenes[sceneKey];
+      applySceneChrome(scene);
+      await typeScript(scene, token);
+      if (token !== loopToken) return;
+      chipLabel.textContent = scene.label;
+      chipFix.textContent = scene.err + ' \u2192 ' + scene.fix;
+      chipApply.textContent = 'Apply Fix';
+      chip.classList.add('visible');
+      await applyFix(scene);
+      if (token !== loopToken) return;
+      await sleep(1700);
+    }
+
+    async function runLoop() {
+      let s = 0;
+      while (true) {
+        if (!demoVisible) {
+          await sleep(500);
+          continue;
+        }
+        const token = loopToken;
+        let key;
+        if (pendingScene) {
+          key = pendingScene;
+          pendingScene = null;
+          const idx = sceneOrder.indexOf(key);
+          s = idx >= 0 ? idx + 1 : s + 1;
+        } else {
+          key = sceneOrder[s % sceneOrder.length];
+          s += 1;
+        }
+        await playScene(key, token);
+        if (token !== loopToken) {
+          await sleep(120);
+        }
+      }
+    }
+
+    tabs.forEach(function (tab) {
+      tab.addEventListener('click', function () {
+        const key = tab.getAttribute('data-scene');
+        if (!key || !scenes[key]) return;
+        activeScene = key;
+        applySceneChrome(scenes[key]);
+        if (reduced) {
+          showStatic(scenes[key]);
+          return;
+        }
+        pendingScene = key;
+        loopToken += 1;
+      });
+    });
+
+    if ('IntersectionObserver' in window) {
+      const observer = new IntersectionObserver(function (entries) {
+        demoVisible = entries.some(function (e) { return e.isIntersecting; });
+      }, { threshold: 0.12 });
+      observer.observe(card);
+    }
+
+    if (reduced) {
+      showStatic(scenes.email);
+      return;
+    }
+
+    setTimeout(runLoop, 900);
+  }
+
   function initAiWowDemo() {
     const card = document.getElementById('ai-wow-demo');
     if (!card) return;
@@ -1223,7 +1479,7 @@
 
   function initCursorAwareDots() {
     var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    var zones = Array.prototype.slice.call(document.querySelectorAll('.demo-showcase, .widget-canvas, .editor-live-zone, .export-journey, .appearance-zone'));
+    var zones = Array.prototype.slice.call(document.querySelectorAll('.demo-showcase, .widget-canvas, .editor-live-zone, .export-journey, .appearance-zone, .extension-zone'));
     if (!zones.length) return;
 
     var DOT_GAP = 22;
@@ -1254,7 +1510,7 @@
       document.body.appendChild(canvas);
       items.push({
         zone: zone,
-        target: zone.querySelector('.faux-window, .ai-wow-demo, .editor-live, .export-live-card, .appearance-live-card') || zone,
+        target: zone.querySelector('.faux-window, .ai-wow-demo, .editor-live, .export-live-card, .appearance-live-card, .extension-live-card') || zone,
         canvas: canvas,
         ctx: canvas.getContext('2d'),
         dots: [],
@@ -1429,11 +1685,37 @@
     }
   }
 
+  function initExtensionDownloadHighlight() {
+    const chromeBtn = document.getElementById('dl-extension-chrome');
+    const firefoxBtn = document.getElementById('dl-extension-firefox');
+    const row = document.querySelector('.extension-downloads');
+    if (!chromeBtn || !firefoxBtn || !row) return;
+
+    const ua = navigator.userAgent || '';
+    // Prefer Firefox when that engine is present. Everything Chromium-based
+    // (Chrome, Edge, Brave, Opera) maps to the Chrome extension package.
+    const preferFirefox = /Firefox\//i.test(ua) && !/Seamonkey/i.test(ua);
+
+    const primary = preferFirefox ? firefoxBtn : chromeBtn;
+    const secondary = preferFirefox ? chromeBtn : firefoxBtn;
+
+    primary.classList.remove('btn-secondary');
+    primary.classList.add('btn-primary-cta');
+    secondary.classList.remove('btn-primary-cta');
+    secondary.classList.add('btn-secondary');
+
+    // Put the matching browser first so it leads on wrap/mobile too.
+    const note = row.querySelector('.extension-dl-note');
+    row.insertBefore(primary, row.firstChild);
+    row.insertBefore(secondary, note || null);
+  }
+
   document.addEventListener('DOMContentLoaded', function () {
     initSmoothScroll();
     initReleaseInfo();
     initStarsBadge();
     initPlatformDropdown();
+    initExtensionDownloadHighlight();
     initMobileNav();
     initMobileHeroVideo();
     initFaqAccordion();
@@ -1443,6 +1725,7 @@
     initEditorDemo();
     initExportStudioDemo();
     initAppearanceDemo();
+    initExtensionDemo();
     initAiWowDemo();
     initNavBarMorph();
     initCursorAwareDots();

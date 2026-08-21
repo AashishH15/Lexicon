@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Privacy Policy | Lexicon</title>
+  <meta name="description"
+    content="Lexicon’s privacy policy: local-first writing, no accounts, browser extension data handling, and limited network activity." />
+  <link rel="canonical" href="https://lexicon-writer.pages.dev/privacy.html" />
+  <link rel="icon" type="image/png" href="assets/lexicon-logo-windows.png" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap"
+    rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body>
+  <nav class="navbar navbar-scrolled" id="navbar">
+    <div class="container nav-container">
+      <a href="index.html" class="brand">
+        <img src="assets/lexicon-logo-small.png" alt="Lexicon logo" width="28" height="28" />
+        <span>Lexicon</span>
+      </a>
+      <ul class="nav-links">
+        <li><a href="index.html">Home</a></li>
+        <li><a href="privacy.html">Privacy</a></li>
+        <li><a href="terms.html">Terms</a></li>
+        <li><a href="https://discord.gg/nDCedWH3SV" target="_blank" rel="noopener">Discord</a></li>
+        <li><a href="https://github.com/AashishH15/Lexicon" target="_blank" rel="noopener">GitHub</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <main class="legal-page">
+    <div class="container legal-container">
+      <p class="legal-eyebrow">Legal</p>
+      <h1>Privacy Policy</h1>
+      <p class="legal-meta">Last updated: August 12, 2026</p>
+
+      <p>
+        Lexicon is a local-first desktop writing app, with an optional browser
+        extension beta, operated by
+        <strong>Aashish Harishchandre</strong> (“I,” “me,” or “Lexicon”).
+        This policy explains what data stays on your device, what limited
+        network activity can happen, and how to delete local data.
+      </p>
+      <p>
+        This is a practical policy for an indie open-source project—not a
+        substitute for professional legal advice.
+      </p>
+
+      <h2>1. Short version</h2>
+      <ul>
+        <li>No accounts. No cloud sync of your documents.</li>
+        <li>Your drafts, settings, dictionaries, and history stay on your computer.</li>
+        <li>Proofreading and optional local AI run on your machine.</li>
+        <li>
+          The browser extension sends supported page text to the Lexicon desktop
+          app on the same device for local proofreading; it does not send that
+          text to a Lexicon-operated cloud service.
+        </li>
+        <li>I do not operate a cloud backend that stores your writing.</li>
+        <li>
+          The desktop app may automatically check for updates. Installing an
+          update, downloading a model, or contacting support is still your choice.
+        </li>
+      </ul>
+
+      <h2>2. Data stored on your device</h2>
+      <p>Depending on how you use Lexicon, your device may store:</p>
+      <ul>
+        <li><strong>Documents and drafts</strong> in the app’s local browser/WebView storage</li>
+        <li><strong>Document history</strong> and <strong>AI transform history</strong></li>
+        <li>
+          <strong>Settings and preferences</strong> (language, appearance, layout,
+          proofreading options, beta update channel, AI backend preference, and similar)
+        </li>
+        <li><strong>Personal dictionary</strong> and dismissed suggestion state</li>
+        <li><strong>Custom tools / prompt overrides</strong> and export-related prefs (for example DOCX author name)</li>
+        <li>
+          <strong>Downloaded AI model files</strong> and an AI preferences file in Lexicon’s
+          local app-data directory (for example under Application Support / AppData)
+        </li>
+        <li><strong>Import/export files</strong> you choose to open or save elsewhere on disk</li>
+        <li>
+          <strong>Browser-extension settings or temporary state</strong> that the
+          browser stores for the extension. Browser sync settings, if enabled,
+          are controlled by your browser provider rather than Lexicon.
+        </li>
+      </ul>
+      <p>
+        I do not receive copies of this content in the normal course of using
+        the app. There is no cloud copy of your drafts for me to delete on your behalf.
+      </p>
+
+      <h2>3. Deleting local data</h2>
+      <p>You control local Lexicon data on your machine. Common options:</p>
+      <ul>
+        <li>
+          <strong>Windows uninstall:</strong> the Nullsoft (NSIS) installer may offer a
+          “delete the application data” option. Choosing it removes Lexicon application
+          data associated with that install path/flow.
+        </li>
+        <li>
+          <strong>Manual cleanup:</strong> you can delete Lexicon’s app-data folders
+          (models and prefs) and clear the app’s WebView / local storage if anything remains
+          after uninstall or if you use a portable/dev build.
+        </li>
+        <li>
+          <strong>macOS / Linux:</strong> remove the app bundle or package, then delete
+          Lexicon folders under Application Support / local share if you want a full wipe.
+        </li>
+      </ul>
+
+      <h2>4. What leaves your computer</h2>
+      <p>
+        Lexicon is designed so your writing is not uploaded for grammar checking
+        or AI transforms. Limited outbound connections may occur as follows:
+      </p>
+      <ul>
+        <li>
+          <strong>Browser extension connection:</strong> when you run the beta
+          extension on a supported page, it may read text from an enabled text
+          field and send that text over a local connection to the Lexicon
+          desktop app running on the same device. The app returns proofreading
+          results to the extension. This local exchange is not a transmission
+          to a Lexicon-operated cloud service.
+        </li>
+        <li>
+          <strong>Automatic update checks:</strong> the packaged desktop app may contact
+          GitHub-hosted update manifests shortly after launch (stable channel by default;
+          beta channel if you enable beta updates). Checking does not install anything by
+          itself. Downloading and installing an update happens only if you choose to.
+        </li>
+        <li>
+          <strong>Beta updates:</strong> the beta toggle only changes which update manifest
+          is fetched. It does not send your documents, dictionary, or identity to me.
+        </li>
+        <li>
+          <strong>Release lists:</strong> Settings may fetch public release metadata from
+          GitHub’s API when you open that UI.
+        </li>
+        <li>
+          <strong>Optional model download:</strong> if you download a bundled local model,
+          Lexicon retrieves the model file from Hugging Face (or its CDN). Your document
+          text is not sent as part of that download. Model files are subject to their own
+          third-party licenses.
+        </li>
+        <li>
+          <strong>Optional Ollama:</strong> if you select Ollama, requests go to a local
+          server you run (typically on your machine). That is not my cloud service.
+        </li>
+        <li>
+          <strong>Remote images:</strong> if you insert or paste an image that uses an
+          <code>https://</code> (or other remote) URL, your device may fetch that image from
+          the host you referenced. Prefer embedding local images if you do not want that request.
+        </li>
+        <li>
+          <strong>Links you open:</strong> website, Discord, GitHub, docs, or other URLs you
+          click open outside the private editor flow.
+        </li>
+      </ul>
+      <p>
+        Those third parties process connection metadata (such as IP address) under their own
+        policies (for example GitHub, Hugging Face, Discord, or an image host you link to).
+      </p>
+
+      <h2>5. Website</h2>
+      <p>
+        The marketing site at
+        <a href="https://lexicon-writer.pages.dev/">lexicon-writer.pages.dev</a>
+        is hosted on Cloudflare Pages. Like most websites, hosting and CDN providers may
+        process technical logs (such as IP address, user agent, and request timing). The site
+        may load fonts from Google Fonts, a scrolling library from a public CDN (unpkg), and
+        public repository metadata from GitHub’s API (for example release or star counts).
+        I do not run a first-party analytics product that profiles your writing
+        inside Lexicon. The browser extension packages are distributed through
+        GitHub Releases, so GitHub may process download connection metadata
+        under its own policies.
+      </p>
+      <p>
+        The extension can interact with text fields on websites where you enable
+        it. Those websites, your browser, and any other browser extensions you
+        install may separately collect or process page content under their own
+        terms and privacy policies. Lexicon does not control that processing.
+      </p>
+
+      <h2>6. Community, bug reports, and email</h2>
+      <p>
+        <strong>Bug reports and feature requests</strong> for Lexicon should go through the
+        <a href="https://discord.gg/nDCedWH3SV" target="_blank" rel="noopener">Lexicon Discord</a>
+        (for example bug-reports and feature-requests channels).
+      </p>
+      <p>
+        <strong>GitHub</strong> is primarily for source code, releases, and pull requests.
+        GitHub Issues may still exist and I may still address them, but Discord is the
+        preferred channel for product bugs and feature requests.
+      </p>
+      <p>
+        If you post on Discord, open a GitHub issue or pull request, or email me, you share
+        whatever you include in that message (and Discord/GitHub/Google process it under their
+        terms). Prefer not to paste highly sensitive drafts into public channels.
+      </p>
+      <p>
+        Contact for privacy or security questions:
+        <a href="mailto:hello.lexiconwriter@gmail.com">hello.lexiconwriter@gmail.com</a>.
+      </p>
+
+      <h2>7. Children</h2>
+      <p>
+        Lexicon is a general productivity tool and is not directed at children under 13.
+        I do not knowingly collect personal information from children through a Lexicon
+        account system, because Lexicon has no accounts. If you believe a child has sent
+        personal information by email or community channels, contact
+        <a href="mailto:hello.lexiconwriter@gmail.com">hello.lexiconwriter@gmail.com</a>
+        and I will delete what I can control on my side.
+      </p>
+
+      <h2>8. Changes</h2>
+      <p>
+        If this policy changes in a material way, I will update the “Last updated” date on
+        this page. Continued use of the website or app after changes means you have read the
+        updated policy.
+      </p>
+
+      <h2>9. Open source</h2>
+      <p>
+        Lexicon’s source code is released under the
+        <a href="https://github.com/AashishH15/Lexicon/blob/master/LICENSE" target="_blank" rel="noopener">MIT License</a>.
+        Third-party libraries, engines, and optional model weights (including LanguageTool,
+        TipTap, llama.cpp-related tooling, Hugging Face–hosted models, and others listed in
+        the project README) are subject to their own licenses and notices.
+      </p>
+
+      <p class="legal-back">
+        <a href="index.html">← Back to Lexicon</a>
+        &nbsp;·&nbsp;
+        <a href="terms.html">Terms of Service</a>
+      </p>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="container footer-container">
+      <div>
+        <span>Lexicon &bull; Local-First Writing Assistant</span>
+        <div class="footer-byline">Built by Aashish</div>
+      </div>
+      <div>
+        <div class="footer-links">
+          <a href="privacy.html">Privacy</a>
+          <a href="terms.html">Terms</a>
+          <a href="https://discord.gg/nDCedWH3SV" target="_blank" rel="noopener">Discord</a>
+          <a href="https://github.com/AashishH15/Lexicon" target="_blank" rel="noopener">GitHub</a>
+          <a href="https://github.com/AashishH15/Lexicon/blob/master/LICENSE" target="_blank" rel="noopener">LICENSE</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+</body>
+
+</html>

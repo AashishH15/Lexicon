@@ -107,7 +107,7 @@ export default function OnboardingModal({
 
   async function openFeedbackUrl(e) {
     e?.preventDefault?.();
-    const url = "https://tally.so/r/LZq8vy";
+    const url = "https://discord.gg/nDCedWH3SV";
     try {
       const { openUrl } = await import("@tauri-apps/plugin-opener");
       await openUrl(url);
@@ -268,7 +268,7 @@ export default function OnboardingModal({
                       <span className="pointer-events-none absolute left-0 top-5 z-20 w-56 rounded-md border border-hairline bg-white p-2.5 font-sans text-[11px] font-normal leading-relaxed text-muted opacity-0 shadow-sm transition-opacity duration-150 group-hover:opacity-100">
                         If a selected language doesn&apos;t load or apply
                         correctly in Lexicon, please take a screenshot and send
-                        it through the feedback form.
+                        it through Discord.
                       </span>
                     </span>
                   </label>
@@ -360,7 +360,7 @@ export default function OnboardingModal({
                       <span className="pointer-events-none absolute left-0 top-5 z-20 w-56 rounded-md border border-hairline bg-white p-2.5 font-sans text-[11px] font-normal leading-relaxed text-muted opacity-0 shadow-sm transition-opacity duration-150 group-hover:opacity-100">
                         Paper textures are in beta and some edge cases may
                         remain. If you find one, please take a screenshot and
-                        send it through the feedback form.
+                        send it through Discord.
                       </span>
                     </span>
                   </label>
