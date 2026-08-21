@@ -1448,7 +1448,10 @@ b,
     align-items: stretch;
     gap: 0;
     padding: 8px;
-    background: var(--bg-surface);
+    background-color: var(--bg-canvas);
+    background-image: var(--grain-bg);
+    background-size: 256px 256px;
+    background-blend-mode: multiply;
     border: 1px solid var(--border-color);
     border-radius: var(--radius-card);
     box-shadow: var(--shadow-lift);
