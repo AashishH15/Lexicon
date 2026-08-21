@@ -15,7 +15,8 @@ backend/lt/*
 frontend/src-tauri/binaries/
 frontend/src-tauri/target/
 frontend/src-tauri/gen/
-frontend/src-tauri/lexicon-backend/
+frontend/src-tauri/lexicon-backend/*
+!frontend/src-tauri/lexicon-backend/.gitkeep
 Cargo.lock
 # keep resource placeholders
 !frontend/src-tauri/jre/.gitkeep
