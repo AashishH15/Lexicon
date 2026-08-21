@@ -475,7 +475,20 @@
     return editable.isEditableElement(el);
   }
 
+  function isSuggestionUiFocus(event) {
+    const current = suggestions.state && suggestions.state();
+    const host = current && current.host;
+    if (!host) return false;
+    if (event && event.target === host) return true;
+    const path =
+      event && typeof event.composedPath === "function"
+        ? event.composedPath()
+        : [];
+    return path.includes(host);
+  }
+
   function onFocusIn(event) {
+    if (isSuggestionUiFocus(event)) return;
     const target =
       editable.editableFromNode(event.target) ||
       editable.detectEditableField(document);
