@@ -161,7 +161,11 @@ configure may receive the text and prompt sent for a transform.
 - Import `.docx`, `.txt`, `.md`, `.markdown`, `.html`, and `.htm` files
 - Export HTML, plain text, Markdown, PDF, EPUB, or DOCX
 - PDF export produces a clean manuscript-style document with app chrome and
-  proofreading marks removed
+  proofreading marks removed. On Windows, Lexicon opens a preview before
+  saving through WebView2's native PDF renderer, with browser-generated
+  headers and footers disabled. On macOS and Linux, turn off "Headers and
+  footers" in the system print preview. A rasterizing PDF printer cannot
+  preserve text selection.
 
 ## Privacy and local data
 
@@ -272,6 +276,28 @@ npm run dev
 
 The development frontend runs at <http://localhost:5173> and the backend API
 runs at <http://localhost:8000>.
+
+### PDF export verification
+
+The automated frontend tests verify the semantic print document and its
+cleanup lifecycle. A Windows WebView2 smoke check is also required because the
+native renderer creates the final PDF text layer:
+
+1. Add normal text, a heading, a link, an image, and a word with a proofreading
+   suggestion.
+2. Export a PDF with a print theme and custom CSS. Confirm that the Lexicon
+   PDF preview opens and that the document is visible and selectable.
+3. Click **Save PDF**, choose a save location, then reopen the PDF and confirm
+   that body text, the flagged word, and the link can be selected and copied,
+   and that the Lexicon preview toolbar is absent.
+4. Repeat once without a theme after a themed export. Confirm that the first
+   theme does not carry over.
+5. Confirm that the PDF does not contain the browser date, document title,
+   source URL, or automatic page-number footer. Header and footer content
+   supplied by the selected document CSS may remain.
+
+Third-party PDF printers may rasterize pages. If they do, text selection is
+controlled by that printer and cannot be guaranteed by Lexicon.
 
 ### LanguageTool verification
 

@@ -249,7 +249,7 @@ Please rollback to v0.10.3 if this version doesnt work properly!
   - **Four Print Theme Presets:** Choose from **Academic / Formal** (serif font, numbered section headers, page footers), **Novel / Literary** (classic Garamond/Georgia layout, drop caps), **Minimalist / Modern** (sans-serif Inter, bold monochrome accents), or **Executive / Corporate** (navy header bars, card callout boxes, gold rules).
   - **Ask Lex to Style Your Document (Local AI):** Users can describe their document layout in plain English (or tap 1-click quick style chips like *Navy Headings*, *Double Spaced*, *Legal Brief*, *Callout Cards*). Lexicon's local AI generates clean CSS directly into the Custom CSS box.
   - **Custom CSS Support:** Power users can type or edit custom CSS rules directly to personalize exported documents.
-  - **Clean Vector PDF Export:** Automatically hides background app interface buttons, removes clutter like browser URLs (`localhost:5173`) and dates, and includes an in-app tip guiding users to save clean, 100% highlightable text PDFs.
+  - **Text-Preserving PDF Export:** Shows a clean, selectable preview before saving. Windows uses WebView2's native PDF renderer with browser-generated headers and footers disabled; macOS and Linux continue to use the system print preview. Text selection depends on the selected PDF destination; rasterizing printers cannot preserve it.
   - **Export as Styled HTML:** Export self-contained, beautifully styled `.html` files that preserve your selected design theme when opened in any web browser.
 
 - **Client-Side EPUB Export (eBook Generator)**: Turn any document into a standard ebook with one click:

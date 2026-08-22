@@ -593,7 +593,7 @@
     };
 
     const formatsData = {
-      pdf: 'PDF export · System print dialog',
+      pdf: 'PDF export · Selectable text layer',
       epub: 'EPUB 3 · Reflowable eBook',
       docx: 'DOCX · Tracked Changes Redlines',
       html: 'HTML · Self-Contained Web Document'

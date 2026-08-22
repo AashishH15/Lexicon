@@ -10,15 +10,25 @@ use std::io::{Read, Write};
 use std::net::{SocketAddr, TcpStream};
 use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
-use std::sync::Mutex;
+#[cfg(target_os = "windows")]
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc,
+};
+use std::sync::{mpsc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
 use tauri::ipc::Channel;
 use tauri::menu::{MenuBuilder, MenuItemBuilder};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
+#[cfg(target_os = "windows")]
+use tauri::webview::PageLoadEvent;
 use tauri::{Manager, RunEvent, WindowEvent};
+#[cfg(target_os = "windows")]
+use tauri::{WebviewUrl, WebviewWindowBuilder};
 #[cfg(not(debug_assertions))]
 use tauri_plugin_autostart::ManagerExt;
+use tauri_plugin_dialog::DialogExt;
 use tauri_plugin_updater::{Update, UpdaterExt};
 use url::Url;
 
@@ -38,11 +48,21 @@ const BACKEND_SHUTDOWN_WAIT: Duration = Duration::from_secs(2);
 const PROCESS_TERMINATE_WAIT: Duration = Duration::from_secs(3);
 const PROCESS_POLL: Duration = Duration::from_millis(50);
 const AUTOSTART_ARG: &str = "--autostart";
+const NATIVE_PDF_WINDOW_LABEL: &str = "lexicon-pdf-preview";
+#[cfg(target_os = "windows")]
+const NATIVE_PDF_TIMEOUT: Duration = Duration::from_secs(900);
 #[cfg(not(debug_assertions))]
 const AUTOSTART_INITIALIZED_FILE: &str = "autostart-initialized";
 
 #[cfg(target_os = "windows")]
 const CREATE_NO_WINDOW: u32 = 0x08000000;
+
+struct PendingNativePdf {
+    result: mpsc::Sender<Result<(), String>>,
+    started: bool,
+}
+
+struct NativePdfState(Mutex<Option<PendingNativePdf>>);
 
 fn post_backend_endpoint(endpoint: &str) -> bool {
     let address: SocketAddr = match format!("127.0.0.1:{BACKEND_PORT}").parse() {
@@ -460,6 +480,310 @@ fn prepare_for_update(app_handle: tauri::AppHandle) -> Result<(), String> {
     Ok(())
 }
 
+fn report_native_pdf_result(app_handle: &tauri::AppHandle, result: Result<(), String>) {
+    let sender = app_handle.try_state::<NativePdfState>().and_then(|state| {
+        state
+            .0
+            .lock()
+            .ok()
+            .and_then(|pending| pending.as_ref().map(|pending| pending.result.clone()))
+    });
+
+    if let Some(sender) = sender {
+        let _ = sender.send(result);
+    }
+}
+
+fn clear_native_pdf_request(app_handle: &tauri::AppHandle) {
+    if let Some(state) = app_handle.try_state::<NativePdfState>() {
+        if let Ok(mut pending) = state.0.lock() {
+            *pending = None;
+        }
+    }
+}
+
+#[cfg(target_os = "windows")]
+fn start_windows_pdf_print(
+    window: tauri::WebviewWindow,
+    path: PathBuf,
+    result_sender: mpsc::Sender<Result<(), String>>,
+) -> Result<(), String> {
+    use std::os::windows::ffi::OsStrExt;
+    use webview2_com::Microsoft::Web::WebView2::Win32::{
+        ICoreWebView2Environment6, ICoreWebView2_7,
+    };
+    use windows::core::{Interface, PCWSTR};
+
+    let start_error_sender = result_sender.clone();
+    let callback_sender = result_sender.clone();
+
+    window
+        .with_webview(move |webview| {
+            let start_result = (|| -> windows::core::Result<()> {
+                unsafe {
+                    let core: ICoreWebView2_7 = webview
+                        .controller()
+                        .CoreWebView2()
+                        .and_then(|core| core.cast())?;
+                    let environment: ICoreWebView2Environment6 = webview.environment().cast()?;
+                    let settings = environment.CreatePrintSettings()?;
+
+                    // WebView2 owns the browser date, title, URL, and page number
+                    // headers. Disable them so only document content and its CSS
+                    // are included in the generated PDF.
+                    settings.SetShouldPrintHeaderAndFooter(false)?;
+                    settings.SetHeaderTitle(PCWSTR::null())?;
+                    settings.SetFooterUri(PCWSTR::null())?;
+                    settings.SetShouldPrintBackgrounds(true)?;
+                    settings.SetMarginTop(0.0)?;
+                    settings.SetMarginBottom(0.0)?;
+                    settings.SetMarginLeft(0.0)?;
+                    settings.SetMarginRight(0.0)?;
+
+                    let wide_path: Vec<u16> = path
+                        .as_os_str()
+                        .encode_wide()
+                        .chain(std::iter::once(0))
+                        .collect();
+                    let callback = webview2_com::PrintToPdfCompletedHandler::create(Box::new(
+                        move |error_code, succeeded| {
+                            let result = if succeeded {
+                                Ok(())
+                            } else {
+                                Err(format!(
+                                    "WebView2 PDF export did not complete successfully: {error_code:?}"
+                                ))
+                            };
+                            let _ = callback_sender.send(result);
+                            Ok(())
+                        },
+                    ));
+
+                    core.PrintToPdf(PCWSTR::from_raw(wide_path.as_ptr()), &settings, &callback)
+                }
+            })();
+
+            if let Err(error) = start_result {
+                let _ = start_error_sender
+                    .send(Err(format!("WebView2 PDF export failed to start: {error}")));
+            }
+        })
+        .map_err(|error| format!("Could not access the PDF print webview: {error}"))
+}
+
+#[tauri::command]
+fn native_pdf_preview_ready(app_handle: tauri::AppHandle) -> Result<(), String> {
+    #[cfg(not(target_os = "windows"))]
+    {
+        let _ = app_handle;
+        return Err("Native PDF export is only available on Windows.".to_string());
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        let state = app_handle
+            .try_state::<NativePdfState>()
+            .ok_or_else(|| "Native PDF export state is unavailable.".to_string())?;
+
+        let pending = state
+            .0
+            .lock()
+            .map_err(|_| "Native PDF export state is unavailable.".to_string())?;
+        if pending.is_none() {
+            return Err("There is no active native PDF export.".to_string());
+        }
+        Ok(())
+    }
+}
+
+#[tauri::command]
+fn native_pdf_save(app_handle: tauri::AppHandle) -> Result<bool, String> {
+    #[cfg(not(target_os = "windows"))]
+    {
+        let _ = app_handle;
+        return Err("Native PDF export is only available on Windows.".to_string());
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        let preview_window = app_handle
+            .get_webview_window(NATIVE_PDF_WINDOW_LABEL)
+            .ok_or_else(|| "The native PDF preview window is unavailable.".to_string())?;
+        let selected_path = app_handle
+            .dialog()
+            .file()
+            .set_title("Save PDF")
+            .set_file_name("document.pdf")
+            .add_filter("PDF document", &["pdf"])
+            .set_parent(&preview_window)
+            .blocking_save_file();
+        let Some(selected_path) = selected_path else {
+            return Ok(false);
+        };
+
+        let mut output_path = selected_path
+            .into_path()
+            .map_err(|error| format!("Could not read the selected PDF path: {error}"))?;
+        if !output_path
+            .extension()
+            .is_some_and(|extension| extension.eq_ignore_ascii_case("pdf"))
+        {
+            output_path.set_extension("pdf");
+        }
+
+        let result_sender = {
+            let state = app_handle
+                .try_state::<NativePdfState>()
+                .ok_or_else(|| "Native PDF export state is unavailable.".to_string())?;
+            let mut pending = state
+                .0
+                .lock()
+                .map_err(|_| "Native PDF export state is unavailable.".to_string())?;
+            let pending = pending
+                .as_mut()
+                .ok_or_else(|| "There is no active native PDF export.".to_string())?;
+
+            if pending.started {
+                return Ok(true);
+            }
+            pending.started = true;
+            pending.result.clone()
+        };
+
+        if let Err(error) = start_windows_pdf_print(preview_window, output_path, result_sender) {
+            report_native_pdf_result(&app_handle, Err(error.clone()));
+        }
+
+        Ok(true)
+    }
+}
+
+#[tauri::command]
+fn native_pdf_failed(app_handle: tauri::AppHandle, error: String) -> Result<(), String> {
+    report_native_pdf_result(
+        &app_handle,
+        Err(if error.trim().is_empty() {
+            "The native PDF print webview could not prepare the document.".to_string()
+        } else {
+            error
+        }),
+    );
+    Ok(())
+}
+
+#[tauri::command]
+fn native_pdf_cancel(app_handle: tauri::AppHandle) -> Result<(), String> {
+    report_native_pdf_result(&app_handle, Ok(()));
+    Ok(())
+}
+
+#[tauri::command]
+async fn native_pdf_export(app_handle: tauri::AppHandle, html: String) -> Result<(), String> {
+    #[cfg(not(target_os = "windows"))]
+    {
+        let _ = (app_handle, html);
+        return Err("Native PDF export is only available on Windows.".to_string());
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        if html.trim().is_empty() {
+            return Err("There is no document content to export.".to_string());
+        }
+
+        {
+            let state = app_handle.state::<NativePdfState>();
+            if state
+                .0
+                .lock()
+                .map_err(|_| "Native PDF export state is unavailable.".to_string())?
+                .is_some()
+            {
+                return Err("A PDF export is already in progress.".to_string());
+            }
+        }
+
+        if let Some(window) = app_handle.get_webview_window(NATIVE_PDF_WINDOW_LABEL) {
+            let _ = window.destroy();
+        }
+
+        let (result_sender, result_receiver) = mpsc::channel();
+        {
+            let state = app_handle.state::<NativePdfState>();
+            let mut pending = state
+                .0
+                .lock()
+                .map_err(|_| "Native PDF export state is unavailable.".to_string())?;
+            if pending.is_some() {
+                return Err("A PDF export is already in progress.".to_string());
+            }
+            *pending = Some(PendingNativePdf {
+                result: result_sender,
+                started: false,
+            });
+        }
+
+        let injection_script = serde_json::to_string(&html)
+            .map(|html| format!("window.__LEXICON_SET_PRINT_HTML__({html});"))
+            .map_err(|error| format!("Could not prepare the PDF document: {error}"))?;
+        let injection_script = Arc::new(injection_script);
+        let injected = Arc::new(AtomicBool::new(false));
+        let app_for_page_load = app_handle.clone();
+        let injection_for_page_load = Arc::clone(&injection_script);
+        let injected_for_page_load = Arc::clone(&injected);
+
+        let print_window = match WebviewWindowBuilder::new(
+            &app_handle,
+            NATIVE_PDF_WINDOW_LABEL,
+            WebviewUrl::App(PathBuf::from("print.html")),
+        )
+        .visible(true)
+        .on_page_load(move |window, payload| {
+            if payload.event() != PageLoadEvent::Finished
+                || injected_for_page_load.swap(true, Ordering::SeqCst)
+            {
+                return;
+            }
+
+            if let Err(error) = window.eval(injection_for_page_load.as_ref().clone()) {
+                report_native_pdf_result(
+                    &app_for_page_load,
+                    Err(format!("Could not load the PDF document: {error}")),
+                );
+            }
+        })
+        .build()
+        {
+            Ok(window) => window,
+            Err(error) => {
+                clear_native_pdf_request(&app_handle);
+                return Err(format!("Could not create the PDF print webview: {error}"));
+            }
+        };
+
+        let result = match tauri::async_runtime::spawn_blocking(move || {
+            match result_receiver.recv_timeout(NATIVE_PDF_TIMEOUT) {
+                Ok(result) => result,
+                Err(mpsc::RecvTimeoutError::Timeout) => {
+                    Err("The PDF export timed out while preparing the document.".to_string())
+                }
+                Err(mpsc::RecvTimeoutError::Disconnected) => {
+                    Err("The PDF export process ended unexpectedly.".to_string())
+                }
+            }
+        })
+        .await
+        {
+            Ok(result) => result,
+            Err(error) => Err(format!("The PDF export task failed: {error}")),
+        };
+
+        clear_native_pdf_request(&app_handle);
+        let _ = print_window.destroy();
+        result
+    }
+}
+
 // ── Release channels (stable / beta) ──────────────────────────────────
 //
 // Stable builds check the latest GitHub release's updater manifest; beta
@@ -641,6 +965,7 @@ fn main() {
         )
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(move |app| {
             #[cfg(not(debug_assertions))]
@@ -675,6 +1000,7 @@ fn main() {
                 lifecycle: Mutex::new(()),
             });
             app.manage(PendingUpdate(Mutex::new(None)));
+            app.manage(NativePdfState(Mutex::new(None)));
             let handle_clone = app.handle().clone();
             thread::spawn(move || {
                 if let Some(state) = handle_clone.try_state::<BackendState>() {
@@ -759,18 +1085,28 @@ fn main() {
             ensure_backend,
             prepare_for_update,
             fetch_update,
-            install_update
+            install_update,
+            native_pdf_export,
+            native_pdf_preview_ready,
+            native_pdf_save,
+            native_pdf_failed,
+            native_pdf_cancel
         ])
         .build(tauri::generate_context!())
         .expect("error while building Lexicon")
         .run(|app_handle, event| match event {
             RunEvent::WindowEvent {
+                label,
                 event: WindowEvent::CloseRequested { api, .. },
                 ..
             } => {
-                api.prevent_close();
-                if let Some(window) = app_handle.get_webview_window("main") {
-                    let _ = window.hide();
+                if label == "main" {
+                    api.prevent_close();
+                    if let Some(window) = app_handle.get_webview_window("main") {
+                        let _ = window.hide();
+                    }
+                } else if label == NATIVE_PDF_WINDOW_LABEL {
+                    report_native_pdf_result(&app_handle, Ok(()));
                 }
             }
             RunEvent::ExitRequested { .. } | RunEvent::Exit => {

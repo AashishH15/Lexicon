@@ -2,6 +2,6 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "main-capability",
   "description": "Permissions for the Lexicon desktop window.",
-  "windows": ["main"],
+  "windows": ["main", "lexicon-pdf-preview"],
   "permissions": ["core:default", "process:default", "updater:default", "opener:default"]
 }

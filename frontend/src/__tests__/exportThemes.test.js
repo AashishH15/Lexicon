@@ -1,10 +1,10 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import {
   EXPORT_THEMES,
   getThemeById,
-  applyPrintTheme,
   buildExportHtml,
+  printExportHtml,
 } from "../exportThemes.js";
 
 describe("theme catalog", () => {
@@ -56,44 +56,6 @@ describe("theme catalog", () => {
   });
 });
 
-describe("applyPrintTheme", () => {
-  beforeEach(() => {
-    window.print = vi.fn();
-    document.getElementById("lex-print-theme")?.remove();
-  });
-
-  it("updates the persistent print-only stylesheet", () => {
-    vi.useFakeTimers();
-    applyPrintTheme(".ProseMirror { color: red; }");
-    vi.advanceTimersByTime(10);
-    const style = document.getElementById("lex-print-theme");
-    expect(style).toBeTruthy();
-    expect(style.media).toBe("print");
-    expect(style.textContent).toContain("color: red");
-    expect(window.print).toHaveBeenCalledTimes(1);
-    window.dispatchEvent(new Event("afterprint"));
-    vi.advanceTimersByTime(5000);
-    expect(document.getElementById("lex-print-theme")).toBe(style);
-    vi.useRealTimers();
-    style.remove();
-  });
-
-  it("dedupes repeated invocations to a single style element", () => {
-    vi.useFakeTimers();
-    applyPrintTheme("a");
-    applyPrintTheme("b");
-    vi.advanceTimersByTime(10);
-    const styles = document.querySelectorAll("#lex-print-theme");
-    expect(styles.length).toBe(1);
-    expect(styles[0].textContent).toContain("b");
-    window.dispatchEvent(new Event("afterprint"));
-    vi.advanceTimersByTime(5000);
-    expect(document.getElementById("lex-print-theme")).toBe(styles[0]);
-    vi.useRealTimers();
-    styles[0].remove();
-  });
-});
-
 describe("buildExportHtml", () => {
   it("wraps content in a standalone styled document", async () => {
     const html = await buildExportHtml(
@@ -106,6 +68,7 @@ describe("buildExportHtml", () => {
     expect(html).toContain("<h1>Hello</h1>");
     expect(html).toContain("lex-export ProseMirror");
     expect(html).toContain("counter-increment: lex-section");
+    expect(html).toContain("@page { margin: 1in; }");
   });
 
   it("accepts a custom title and empty css", async () => {
@@ -113,16 +76,173 @@ describe("buildExportHtml", () => {
     expect(html).toContain("<title>My Doc</title>");
   });
 
+  it("keeps flagged source words as text in the standalone document", async () => {
+    const html = await buildExportHtml(
+      '<p>The <span class="lex-error">teh</span> cat.</p>',
+      ""
+    );
+    expect(html).toContain('class="lex-error">teh</span>');
+    expect(html).not.toContain(".lex-error { display: none");
+  });
+
   it("combines theme CSS with user custom CSS in exported HTML after theme rules", async () => {
     const themeCss = getThemeById("academic").css;
-    const customCss = ".ProseMirror p { color: #ff0000 !important; font-size: 18px; }";
+    const customCss =
+      ".ProseMirror p { color: #ff0000 !important; font-size: 18px; }";
     const combinedCss = [themeCss, customCss].join("\n");
-    const html = await buildExportHtml("<h1>Title</h1><p>Test</p>", combinedCss, "Custom Test");
+    const html = await buildExportHtml(
+      "<h1>Title</h1><p>Test</p>",
+      combinedCss,
+      "Custom Test"
+    );
 
     expect(html).toContain("counter-increment: lex-section");
-    expect(html).toContain(".ProseMirror p { color: #ff0000 !important; font-size: 18px; }");
+    expect(html).toContain(
+      ".ProseMirror p { color: #ff0000 !important; font-size: 18px; }"
+    );
     const themeIndex = html.indexOf("counter-increment: lex-section");
-    const customIndex = html.indexOf(".ProseMirror p { color: #ff0000 !important; font-size: 18px; }");
+    const customIndex = html.indexOf(
+      ".ProseMirror p { color: #ff0000 !important; font-size: 18px; }"
+    );
     expect(customIndex).toBeGreaterThan(themeIndex);
+  });
+
+  it("does not carry a selected theme into a later unthemed document", async () => {
+    const themed = await buildExportHtml(
+      "<h2>Heading</h2>",
+      getThemeById("academic").css
+    );
+    const plain = await buildExportHtml("<h2>Heading</h2>", "");
+    expect(themed).toContain("counter-increment: lex-section");
+    expect(plain).not.toContain("counter-increment: lex-section");
+  });
+});
+
+describe("printExportHtml", () => {
+  it("uses the Windows native PDF command in the Tauri runtime", async () => {
+    const invoke = vi.fn().mockResolvedValue(undefined);
+    const originalInternals = window.__TAURI_INTERNALS__;
+    const hadOwnInternals = Object.prototype.hasOwnProperty.call(
+      window,
+      "__TAURI_INTERNALS__"
+    );
+    const originalUserAgent = window.navigator.userAgent;
+
+    Object.defineProperty(window, "__TAURI_INTERNALS__", {
+      configurable: true,
+      value: { invoke },
+    });
+    Object.defineProperty(window.navigator, "userAgent", {
+      configurable: true,
+      value: "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+    });
+
+    try {
+      await printExportHtml(
+        "<!doctype html><html><body><main>Selectable text</main></body></html>"
+      );
+      expect(invoke).toHaveBeenCalled();
+      expect(invoke.mock.calls[0][0]).toBe("native_pdf_export");
+      expect(invoke.mock.calls[0][1]).toEqual(
+        expect.objectContaining({
+          html: expect.stringContaining("Selectable text"),
+        })
+      );
+    } finally {
+      if (hadOwnInternals) {
+        Object.defineProperty(window, "__TAURI_INTERNALS__", {
+          configurable: true,
+          value: originalInternals,
+        });
+      } else {
+        delete window.__TAURI_INTERNALS__;
+      }
+      Object.defineProperty(window.navigator, "userAgent", {
+        configurable: true,
+        value: originalUserAgent,
+      });
+    }
+  });
+
+  it("prints the isolated document and removes its frame after printing", async () => {
+    const printPromise = printExportHtml(
+      "<!doctype html><html><body><main>Selectable text</main></body></html>"
+    );
+    const frame = document.querySelector(
+      'iframe[title="Lexicon print document"]'
+    );
+    expect(frame).toBeTruthy();
+    expect(frame.contentDocument.body.textContent).toContain("Selectable text");
+
+    const printWindow = frame.contentWindow;
+    const print = vi.fn(() => {
+      printWindow.dispatchEvent(new Event("afterprint"));
+    });
+    printWindow.print = print;
+
+    await printPromise;
+    expect(print).toHaveBeenCalledTimes(1);
+    expect(
+      document.querySelector('iframe[title="Lexicon print document"]')
+    ).toBeNull();
+  });
+
+  it("waits for images before starting the print operation", async () => {
+    const printPromise = printExportHtml(
+      '<!doctype html><html><body><img src="document-image.png"></body></html>'
+    );
+    const frame = document.querySelector(
+      'iframe[title="Lexicon print document"]'
+    );
+    const image = frame.contentDocument.querySelector("img");
+    Object.defineProperty(image, "complete", {
+      configurable: true,
+      value: false,
+    });
+    const originalAddEventListener = image.addEventListener.bind(image);
+    let resolveImageListener;
+    const imageListenerReady = new Promise((resolve) => {
+      resolveImageListener = resolve;
+    });
+    vi.spyOn(image, "addEventListener").mockImplementation(
+      (type, listener, options) => {
+        originalAddEventListener(type, listener, options);
+        if (type === "load") resolveImageListener();
+      }
+    );
+
+    const printWindow = frame.contentWindow;
+    const print = vi.fn(() => {
+      printWindow.dispatchEvent(new Event("afterprint"));
+    });
+    printWindow.print = print;
+
+    await imageListenerReady;
+    expect(print).not.toHaveBeenCalled();
+
+    image.dispatchEvent(new Event("load"));
+    await printPromise;
+    expect(print).toHaveBeenCalledTimes(1);
+  });
+
+  it("renders serialized math before starting the print operation", async () => {
+    const printPromise = printExportHtml(
+      '<!doctype html><html><body><p><span data-type="inline-math" data-latex="E = mc^2"></span></p><div data-type="block-math" data-latex="a^2 + b^2 = c^2"></div></body></html>'
+    );
+    const frame = document.querySelector(
+      'iframe[title="Lexicon print document"]'
+    );
+    const printWindow = frame.contentWindow;
+    let printedHtml = "";
+    const print = vi.fn(() => {
+      printedHtml = frame.contentDocument.body.innerHTML;
+      printWindow.dispatchEvent(new Event("afterprint"));
+    });
+    printWindow.print = print;
+
+    await printPromise;
+    expect(print).toHaveBeenCalledTimes(1);
+    expect(printedHtml).toContain('data-latex="E = mc^2"');
+    expect(printedHtml).toContain("katex");
   });
 });

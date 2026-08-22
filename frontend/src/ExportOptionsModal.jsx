@@ -3,8 +3,8 @@ import { X, Printer, DownloadSimple, PaintBrush, MagicWand, CircleNotch, Stop } 
 import {
   EXPORT_THEMES,
   getThemeById,
-  applyPrintTheme,
   buildExportHtml,
+  printExportHtml,
 } from "./exportThemes.js";
 import { downloadBlob } from "./download.js";
 import { cancelTransform, transformText } from "./api.js";
@@ -23,6 +23,7 @@ export default function ExportOptionsModal({ editor, mode, onClose }) {
   const [aiPrompt, setAiPrompt] = useState("");
   const [aiGenerating, setAiGenerating] = useState(false);
   const [aiError, setAiError] = useState("");
+  const [exportError, setExportError] = useState("");
   const [generationTime, setGenerationTime] = useState(0);
   const abortRef = useRef(null);
   const requestIdRef = useRef(null);
@@ -87,18 +88,18 @@ export default function ExportOptionsModal({ editor, mode, onClose }) {
   async function handleExport() {
     if (!editor || busy) return;
     setBusy(true);
+    setExportError("");
     try {
       if (isPdf) {
-        if (css) {
-          applyPrintTheme(css);
-        } else {
-          window.print();
-        }
+        const html = await buildExportHtml(editor.getHTML(), css);
+        await printExportHtml(html);
       } else {
         const html = await buildExportHtml(editor.getHTML(), css);
         downloadBlob(html, "document.html", "text/html");
         onClose?.();
       }
+    } catch (error) {
+      setExportError(error?.message || "Could not export the document.");
     } finally {
       setBusy(false);
     }
@@ -219,12 +220,23 @@ export default function ExportOptionsModal({ editor, mode, onClose }) {
           {isPdf && (
             <div className="mt-4 rounded-xl border border-amber-200/80 bg-amber-50/70 p-3 text-xs leading-relaxed text-amber-900">
               <span className="block font-semibold text-amber-950 mb-0.5">
-                💡 Tip for Selectable PDF Text:
+                💡 Tip for selectable PDF text:
               </span>
               <span className="block text-amber-900/90">
-                In the print window, choose <strong>&ldquo;Save as PDF&rdquo;</strong> (or the <strong>PDF ▾</strong> menu on Mac). This ensures your exported document has 100% highlightable, vector-sharp text.
+                On Windows, Lexicon opens a PDF preview first. Click{" "}
+                <strong>Save PDF</strong> to use its built-in renderer with
+                browser-generated headers and footers disabled. On macOS and
+                Linux, use the system print preview and turn off{" "}
+                <strong>Headers and footers</strong> before saving. Text stays
+                selectable when the chosen PDF destination preserves text;
+                rasterizing printers cannot preserve selection.
               </span>
             </div>
+          )}
+          {exportError && (
+            <p className="mt-3 rounded-xl border border-red-200 bg-red-50 p-3 font-sans text-xs leading-relaxed text-red-800">
+              {exportError}
+            </p>
           )}
 
           {/* Lex Style Assistant */}

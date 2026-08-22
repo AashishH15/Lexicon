@@ -5,10 +5,19 @@ import { createRoot } from "react-dom/client";
 import { act } from "react";
 import ImportExportMenu from "../ImportExportMenu.jsx";
 import { downloadBlob } from "../download.js";
+import { printExportHtml } from "../exportThemes.js";
 
 vi.mock("../download.js", () => ({
   downloadBlob: vi.fn(),
 }));
+
+vi.mock("../exportThemes.js", async () => {
+  const actual = await vi.importActual("../exportThemes.js");
+  return {
+    ...actual,
+    printExportHtml: vi.fn().mockResolvedValue(undefined),
+  };
+});
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -141,6 +150,25 @@ describe("ImportExportMenu — C46.5 structured dropdown", () => {
     });
     expect(document.body.textContent).toContain("Export PDF");
     expect(document.body.textContent).toContain("Print Theme");
+  });
+
+  it("sends semantic editor HTML to the PDF print helper", async () => {
+    await renderMenu();
+    await openMenu();
+    await act(async () => {
+      Array.from(document.querySelectorAll("button"))
+        .find((b) => b.textContent.trim() === "Export as PDF…")
+        .click();
+    });
+    await act(async () => {
+      Array.from(document.querySelectorAll("button"))
+        .find((b) => b.textContent.trim() === "Print / Save as PDF")
+        .click();
+    });
+    await vi.waitFor(() => {
+      expect(printExportHtml).toHaveBeenCalledTimes(1);
+    });
+    expect(printExportHtml.mock.calls[0][0]).toContain(EDITOR_HTML);
   });
 
   it("opens the EPUB metadata modal for rich export", async () => {

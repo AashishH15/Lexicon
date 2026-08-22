@@ -1699,7 +1699,7 @@
     display: none !important;
   }
 
-  /* Strip visual filters and transforms during print to guarantee vector PDF output */
+  /* Remove visual effects that are not useful in printed document content. */
   *,
   *::before,
   *::after {
@@ -1761,8 +1761,14 @@
     print-color-adjust: exact !important;
   }
 
+  /* Keep flagged source text in the PDF while removing review decoration. */
   .lex-error {
-    display: none !important;
+    display: inline !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    color: inherit !important;
+    text-decoration: none !important;
   }
 
   .ProseMirror {
@@ -1771,6 +1777,5 @@
     max-width: 100% !important;
     min-height: 0 !important;
     height: auto !important;
-    font-size: 12pt !important;
   }
 }
