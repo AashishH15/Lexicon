@@ -1,7 +1,7 @@
 // Content script: detect fields, draw squiggles, show suggestions.
 // Messages: lexicon:list-fields, lexicon:select-field, lexicon:get-text,
 // lexicon:highlight, lexicon:clear-highlights, lexicon:replace-text,
-// lexicon:transform-text.
+// lexicon:transform-text, lexicon:add-to-dictionary.
 
 (function () {
   "use strict";
@@ -22,6 +22,7 @@
   let settingsReady = false;
   let proofreadingPaused = false;
   let siteDisabled = false;
+  let userDictionary = new Set();
   let nextFieldId = 1;
   let frameHasFields = null;
 
@@ -58,15 +59,37 @@
 
   function applySettings(nextSettings) {
     const wasEnabled = isProofreadingEnabled();
+    const nextDictionary = new Set(
+      (Array.isArray(nextSettings?.userDictionary)
+        ? nextSettings.userDictionary
+        : []
+      )
+        .map((word) => String(word ?? "").trim().toLowerCase())
+        .filter(Boolean),
+    );
+    const dictionaryChanged =
+      nextDictionary.size !== userDictionary.size ||
+      [...nextDictionary].some((word) => !userDictionary.has(word));
     settingsReady = true;
     proofreadingPaused = Boolean(nextSettings?.paused);
     siteDisabled = isSiteDisabledBySettings(nextSettings);
+    userDictionary = nextDictionary;
     const enabled = isProofreadingEnabled();
     if (!enabled) {
       checkQueue.length = 0;
       for (const state of fieldStates.values()) suspendState(state);
     } else if (!wasEnabled) {
       scanEditableFields(true);
+    }
+    if (enabled && dictionaryChanged) {
+      for (const state of fieldStates.values()) {
+        if (state.visible && state.matches) {
+          redrawMatches(state, state.matches);
+        }
+        if (state.visible && state.text && state.text.trim()) {
+          scheduleFieldCheck(state);
+        }
+      }
     }
   }
 
@@ -116,7 +139,19 @@
 
   function filterDismissed(matches, state) {
     return (matches || []).filter(
-      (match) => !state.dismissedKeys.has(matchKey(match, state.text)),
+      (match) => {
+        const word =
+          Number.isInteger(match.offset) && Number.isInteger(match.length)
+            ? String(state.text || "")
+                .slice(match.offset, match.offset + match.length)
+                .trim()
+                .toLowerCase()
+            : "";
+        return (
+          !state.dismissedKeys.has(matchKey(match, state.text)) &&
+          !userDictionary.has(word)
+        );
+      },
     );
   }
 
@@ -400,6 +435,7 @@
       onDismissMatch: (match) => {
         dismissMatch(state, match);
       },
+      onAddToDictionary: (match) => addMatchToDictionary(state, match),
       onTransform: (tool) => transformField(state, tool),
       onApplyTransform: (text, sourceText) =>
         applyTransform(state, text, sourceText),
@@ -478,6 +514,7 @@
           pinned: Boolean(meta && meta.pinned),
           onApply: (replacement) => applyMatch(state, match, replacement),
           onDismiss: () => dismissMatch(state, match),
+          onAddToDictionary: () => addMatchToDictionary(state, match),
         });
       },
       onDeactivate: () => {
@@ -492,6 +529,71 @@
     state.dismissedKeys.add(matchKey(match, state.text));
     const remaining = state.matches.filter((item) => item !== match);
     redrawMatches(state, remaining);
+  }
+
+  async function addMatchToDictionary(state, match) {
+    if (
+      !state.visible ||
+      !state.matches ||
+      !match ||
+      !fieldIsAttached(state.field)
+    ) {
+      return false;
+    }
+    const current = editable.extractEditableText(state.field);
+    if (current.text !== state.text) {
+      refreshStateText(state);
+      onFieldInput(state);
+      return false;
+    }
+    const word = state.text
+      .slice(match.offset, match.offset + match.length)
+      .trim();
+    if (!word) return false;
+
+    let response;
+    try {
+      response = await browser.runtime.sendMessage({
+        type: "lexicon:add-to-dictionary",
+        word,
+      });
+    } catch {
+      return false;
+    }
+    if (!response?.ok) return false;
+    if (
+      !state.visible ||
+      fieldStates.get(state.field) !== state ||
+      !fieldIsAttached(state.field)
+    ) {
+      return false;
+    }
+    const after = editable.extractEditableText(state.field);
+    if (after.text !== state.text) {
+      refreshStateText(state);
+      onFieldInput(state);
+      return false;
+    }
+
+    const dictionaryWord = String(response.word || word).trim().toLowerCase();
+    if (!dictionaryWord) return false;
+    userDictionary.add(dictionaryWord);
+    suggestions.hideFieldMatchTooltip();
+
+    const remaining = [];
+    for (const item of state.matches) {
+      const itemWord = state.text
+        .slice(item.offset, item.offset + item.length)
+        .trim()
+        .toLowerCase();
+      if (itemWord === dictionaryWord) {
+        state.dismissedKeys.add(matchKey(item, state.text));
+      } else {
+        remaining.push(item);
+      }
+    }
+    redrawMatches(state, remaining);
+    return true;
   }
 
   function applyMatch(state, match, chosenReplacement) {
@@ -1326,6 +1428,7 @@
       onDismissMatch: (match) => {
         dismissMatch(match);
       },
+      onAddToDictionary: (match) => addMatchToDictionary(match),
     };
   }
 
@@ -1338,6 +1441,7 @@
           pinned: Boolean(meta && meta.pinned),
           onApply: (replacement) => applyMatch(match, replacement),
           onDismiss: () => dismissMatch(match),
+          onAddToDictionary: () => addMatchToDictionary(match),
         });
       },
       onDeactivate: () => {
@@ -1449,6 +1553,66 @@
     dismissedKeys.add(matchKey(match, lastText));
     const remaining = lastMatches.filter((m) => m !== match);
     redrawMatches(remaining);
+  }
+
+  async function addMatchToDictionary(match) {
+    if (!lastField || !lastMatches || !match) return false;
+    const field = lastField;
+    const text = lastText;
+    const matches = lastMatches;
+    const current = editable.extractEditableText(field);
+    if (current.text !== text) {
+      adoptField(field);
+      onFieldInput();
+      return false;
+    }
+    const word = text
+      .slice(match.offset, match.offset + match.length)
+      .trim();
+    if (!word) return false;
+
+    let response;
+    try {
+      response = await browser.runtime.sendMessage({
+        type: "lexicon:add-to-dictionary",
+        word,
+      });
+    } catch {
+      return false;
+    }
+    if (!response?.ok) return false;
+    if (
+      lastField !== field ||
+      lastText !== text ||
+      lastMatches !== matches ||
+      !fieldIsAttached(field)
+    ) {
+      return false;
+    }
+    const after = editable.extractEditableText(field);
+    if (after.text !== text) {
+      adoptField(field);
+      onFieldInput();
+      return false;
+    }
+
+    const dictionaryWord = String(response.word || word).trim().toLowerCase();
+    if (!dictionaryWord) return false;
+    suggestions.hideMatchTooltip();
+    const remaining = [];
+    for (const item of matches) {
+      const itemWord = text
+        .slice(item.offset, item.offset + item.length)
+        .trim()
+        .toLowerCase();
+      if (itemWord === dictionaryWord) {
+        dismissedKeys.add(matchKey(item, text));
+      } else {
+        remaining.push(item);
+      }
+    }
+    redrawMatches(remaining);
+    return true;
   }
 
   function applyMatch(match, chosenReplacement) {

@@ -3,8 +3,11 @@ import assert from "node:assert/strict";
 
 import {
   isSiteDisabled,
+  normalizeDictionary,
+  normalizeDictionaryOperations,
   normalizeSettings,
   normalizeSite,
+  queueDictionaryOperation,
 } from "../shared/settings.js";
 
 test("normalizeSite stores host names without protocol or trailing dot", () => {
@@ -23,7 +26,59 @@ test("normalizeSettings removes invalid and duplicate disabled sites", () => {
     {
       paused: true,
       disabledSites: ["example.com"],
+      userDictionary: [],
+      dictionaryRevision: 0,
+      pendingDictionaryOps: [],
+      dictionaryMigrated: false,
     },
+  );
+});
+
+test("normalizeDictionary trims words and removes case-insensitive duplicates", () => {
+  assert.deepEqual(
+    normalizeDictionary([" Lexicon ", "lexicon", "", null, "Custom Term"]),
+    ["Lexicon", "Custom Term"],
+  );
+});
+
+test("normalizeSettings preserves a normalized user dictionary", () => {
+  assert.deepEqual(
+    normalizeSettings({
+      userDictionary: [" Teh ", "teh", "Lex"],
+    }).userDictionary,
+    ["Teh", "Lex"],
+  );
+});
+
+test("normalizes dictionary revisions and pending operations", () => {
+  const settings = normalizeSettings({
+    dictionaryRevision: "7",
+    pendingDictionaryOps: [
+      { op: "add", word: " Lexicon " },
+      { op: "remove", word: "" },
+      { op: "other", word: "ignored" },
+    ],
+    dictionaryMigrated: true,
+  });
+  assert.equal(settings.dictionaryRevision, 7);
+  assert.deepEqual(settings.pendingDictionaryOps, [
+    { op: "add", word: "Lexicon" },
+  ]);
+  assert.equal(settings.dictionaryMigrated, true);
+  assert.deepEqual(
+    normalizeDictionaryOperations(settings.pendingDictionaryOps),
+    settings.pendingDictionaryOps,
+  );
+});
+
+test("queueDictionaryOperation keeps only the latest delta per word", () => {
+  assert.deepEqual(
+    queueDictionaryOperation(
+      [{ op: "add", word: "Lexicon" }],
+      "remove",
+      " lexicon ",
+    ),
+    [{ op: "remove", word: "lexicon" }],
   );
 });
 

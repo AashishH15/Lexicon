@@ -19,6 +19,12 @@ const pauseProofreadingEl = document.getElementById("pause-proofreading");
 const disableSiteEl = document.getElementById("disable-site");
 const siteNameEl = document.getElementById("site-name");
 const settingsStatusEl = document.getElementById("settings-status");
+const dictionaryWordEl = document.getElementById("dictionary-word");
+const dictionaryAddButtonEl = document.getElementById("dictionary-add-button");
+const dictionaryListEl = document.getElementById("dictionary-list");
+const dictionaryEmptyEl = document.getElementById("dictionary-empty");
+const dictionaryCountEl = document.getElementById("dictionary-count");
+const dictionaryStatusEl = document.getElementById("dictionary-status");
 const fieldSelectEl = document.getElementById("field-select");
 
 let fieldText = "";
@@ -30,6 +36,7 @@ let currentSite = "";
 let settings = {
   paused: false,
   siteDisabled: false,
+  userDictionary: [],
 };
 
 for (const tool of TRANSFORM_TOOLS) {
@@ -142,6 +149,112 @@ function renderSettings() {
   refreshActions();
 }
 
+function renderDictionary() {
+  const words = Array.isArray(settings.userDictionary)
+    ? settings.userDictionary
+    : [];
+  dictionaryCountEl.textContent = words.length
+    ? `${words.length} word${words.length === 1 ? "" : "s"}`
+    : "";
+  dictionaryListEl.replaceChildren();
+  dictionaryEmptyEl.hidden = words.length > 0;
+  for (const word of words) {
+    const item = document.createElement("li");
+    const label = document.createElement("span");
+    label.className = "word";
+    label.textContent = word;
+    item.appendChild(label);
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.textContent = "Remove";
+    remove.setAttribute("aria-label", `Remove ${word} from dictionary`);
+    remove.addEventListener("click", () => removeDictionaryWordFromPopup(word, remove));
+    item.appendChild(remove);
+    dictionaryListEl.appendChild(item);
+  }
+}
+
+function syncDictionaryFromPopup() {
+  browser.runtime
+    .sendMessage({ type: "lexicon:sync-dictionary" })
+    .then((response) => {
+      if (!response?.ok) return;
+      settings = {
+        ...settings,
+        ...response,
+        userDictionary: Array.isArray(response.userDictionary)
+          ? response.userDictionary
+          : settings.userDictionary,
+      };
+      renderDictionary();
+    })
+    .catch(() => {});
+}
+
+function setDictionaryStatus(message, error = false) {
+  dictionaryStatusEl.textContent = message;
+  dictionaryStatusEl.classList.toggle("error", error);
+}
+
+function applyDictionaryResponse(response) {
+  if (!response?.ok) {
+    throw new Error(response?.error || "dictionary-update-failed");
+  }
+  settings = {
+    ...settings,
+    ...response,
+    userDictionary: Array.isArray(response.userDictionary)
+      ? response.userDictionary
+      : settings.userDictionary,
+  };
+  renderDictionary();
+}
+
+async function addDictionaryWordFromPopup() {
+  const word = dictionaryWordEl.value.trim();
+  if (!word) return;
+  dictionaryAddButtonEl.disabled = true;
+  try {
+    const response = await browser.runtime.sendMessage({
+      type: "lexicon:add-to-dictionary",
+      word,
+    });
+    applyDictionaryResponse(response);
+    dictionaryWordEl.value = "";
+    setDictionaryStatus(
+      response.queued
+        ? "Saved locally. It will sync when Lexicon is running."
+        : response.added === false
+          ? `"${word}" is already in your dictionary.`
+          : "",
+    );
+  } catch (error) {
+    setDictionaryStatus(error?.message || "Could not update the dictionary.", true);
+  } finally {
+    dictionaryAddButtonEl.disabled = false;
+    dictionaryWordEl.focus();
+  }
+}
+
+async function removeDictionaryWordFromPopup(word, button) {
+  if (button) button.disabled = true;
+  try {
+    const response = await browser.runtime.sendMessage({
+      type: "lexicon:remove-from-dictionary",
+      word,
+    });
+    applyDictionaryResponse(response);
+    setDictionaryStatus(
+      response.queued
+        ? "Removal saved locally. It will sync when Lexicon is running."
+        : "",
+    );
+  } catch (error) {
+    if (button) button.disabled = false;
+    setDictionaryStatus(error?.message || "Could not update the dictionary.", true);
+  }
+}
+
 async function getCurrentTab() {
   const [tab] = await browser.tabs.query({
     active: true,
@@ -166,9 +279,14 @@ async function loadSettings() {
       siteDisabled: Boolean(response?.siteDisabled),
     };
   } catch {
-    settings = { paused: false, siteDisabled: false };
+    settings = {
+      paused: false,
+      siteDisabled: false,
+      userDictionary: [],
+    };
   }
   renderSettings();
+  renderDictionary();
   if (settings.siteDisabled) {
     setFieldOptions([]);
     clearFieldTarget("Lexicon is disabled on this site.");
@@ -240,6 +358,7 @@ function renderStatus(state) {
   if (state === "connected") {
     statusEl.textContent = "Connected to Lexicon";
     statusEl.classList.remove("offline");
+    syncDictionaryFromPopup();
   } else if (state === "checking") {
     statusEl.textContent = "Checking for Lexicon…";
     statusEl.classList.remove("offline");
@@ -390,7 +509,11 @@ async function onProofread() {
   setActionsEnabled(false);
   clearResults();
   try {
-    const matches = await checkGrammar(text);
+    const matches = await checkGrammar(
+      text,
+      "en-US",
+      settings.userDictionary || [],
+    );
     const response = await sendToContent({
       type: "lexicon:highlight",
       matches,
@@ -443,6 +566,20 @@ fieldSelectEl.addEventListener("change", () => {
 });
 pauseProofreadingEl.addEventListener("change", updatePause);
 disableSiteEl.addEventListener("change", updateSiteDisabled);
+dictionaryAddButtonEl.addEventListener("click", addDictionaryWordFromPopup);
+dictionaryWordEl.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    addDictionaryWordFromPopup();
+  }
+});
+
+if (browser.storage?.onChanged?.addListener) {
+  browser.storage.onChanged.addListener((changes, areaName) => {
+    if (areaName !== "local" || !changes.lexiconSettings) return;
+    loadSettings();
+  });
+}
 
 renderStatus(monitor.state);
 monitor.start();

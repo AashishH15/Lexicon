@@ -70,6 +70,8 @@ test("popup and background are wired", () => {
   assert.match(popup, /id="pause-proofreading"/);
   assert.match(popup, /id="disable-site"/);
   assert.match(popup, /id="field-select"/);
+  assert.match(popup, /id="dictionary-word"/);
+  assert.match(popup, /id="dictionary-list"/);
   assert.match(popup, /Hover it\s+to reveal Tone/);
   assert.match(popup, /class="legacy-ai" hidden/);
 });

@@ -64,6 +64,8 @@
     ".panel .apply:hover{filter:brightness(1.08)}" +
     ".panel .dismiss{border:1px solid #d8d7d3;border-radius:6px;background:transparent;color:#111111;font:inherit;font-weight:500;padding:4px 10px;cursor:pointer}" +
     ".panel .dismiss:hover{background:#ebeae6}" +
+    ".panel .dictionary{border:1px solid #d8d7d3;border-radius:6px;background:transparent;color:#5f5e5b;font:inherit;font-weight:500;padding:4px 10px;cursor:pointer;white-space:nowrap}" +
+    ".panel .dictionary:hover{background:#ebeae6;color:#111111}" +
     ".panel .ai{border-top:1px solid #eaeaea;padding:8px;background:#efeee9}" +
     ".panel .ai-title{margin:0 0 5px;font-size:11px;font-weight:600;color:#5f5e5b}" +
     ".panel .ai-controls{display:flex;gap:5px}" +
@@ -87,9 +89,9 @@
     "font:12px/1.3 -apple-system,BlinkMacSystemFont,\"Segoe UI\",Helvetica,Arial,sans-serif;padding:4px 8px;cursor:pointer}" +
     ".tooltip .chip:hover{transform:scale(1.05)}" +
     ".tooltip .actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}" +
-    ".tooltip .dismiss{border:1px solid #eaeaea;border-radius:4px;background:transparent;color:#111111;" +
+    ".tooltip .dismiss,.tooltip .dictionary{border:1px solid #eaeaea;border-radius:4px;background:transparent;color:#111111;" +
     "font:12px/1.3 -apple-system,BlinkMacSystemFont,\"Segoe UI\",Helvetica,Arial,sans-serif;padding:4px 8px;cursor:pointer}" +
-    ".tooltip .dismiss:hover{background:#f3f2ef}" +
+    ".tooltip .dismiss:hover,.tooltip .dictionary:hover{background:#f3f2ef}" +
     ".tooltip .none{margin:8px 0 0;font:10px/1.3 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;" +
     "text-transform:uppercase;letter-spacing:0.08em;color:#5f5e5b}";
 
@@ -362,6 +364,18 @@
           if (typeof state.onDismiss === "function") state.onDismiss(i);
         });
         actions.appendChild(dismiss);
+        const dictionary = document.createElement("button");
+        dictionary.className = "dictionary";
+        dictionary.type = "button";
+        dictionary.textContent = "Add to Dictionary";
+        dictionary.addEventListener("click", async () => {
+          dictionary.disabled = true;
+          const result = await Promise.resolve(
+            state.onAddToDictionary(match),
+          ).catch(() => false);
+          if (result === false) dictionary.disabled = false;
+        });
+        actions.appendChild(dictionary);
         row.appendChild(actions);
         list.appendChild(row);
       }
@@ -462,6 +476,23 @@
       }
     });
     tipActions.appendChild(dismiss);
+    if (typeof opts.onAddToDictionary === "function") {
+      const dictionary = document.createElement("button");
+      dictionary.type = "button";
+      dictionary.className = "dictionary";
+      dictionary.textContent = "Add to Dictionary";
+      dictionary.addEventListener("click", async (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        dictionary.disabled = true;
+        const result = await Promise.resolve(
+          opts.onAddToDictionary(match),
+        ).catch(() => false);
+        if (result === false) dictionary.disabled = false;
+        else hideMatchTooltip();
+      });
+      tipActions.appendChild(dictionary);
+    }
     tip.appendChild(tipActions);
 
     tip.onmouseleave = () => {
@@ -490,6 +521,7 @@
       onDismiss: opts.onDismiss || (() => {}),
       onApplyReplacement: opts.onApplyReplacement || null,
       onDismissMatch: opts.onDismissMatch || null,
+      onAddToDictionary: opts.onAddToDictionary || (() => false),
       host,
       root,
       panelOpen: keepOpen,
@@ -761,6 +793,18 @@
         dismiss.textContent = "Dismiss";
         dismiss.addEventListener("click", () => state.onDismiss(i));
         actions.appendChild(dismiss);
+        const dictionary = document.createElement("button");
+        dictionary.className = "dictionary";
+        dictionary.type = "button";
+        dictionary.textContent = "Add to Dictionary";
+        dictionary.addEventListener("click", async () => {
+          dictionary.disabled = true;
+          const result = await Promise.resolve(
+            state.onAddToDictionary(match),
+          ).catch(() => false);
+          if (result === false) dictionary.disabled = false;
+        });
+        actions.appendChild(dictionary);
         row.appendChild(actions);
         list.appendChild(row);
       }
@@ -1082,6 +1126,23 @@
       }
     });
     tipActions.appendChild(dismiss);
+    if (typeof opts.onAddToDictionary === "function") {
+      const dictionary = document.createElement("button");
+      dictionary.type = "button";
+      dictionary.className = "dictionary";
+      dictionary.textContent = "Add to Dictionary";
+      dictionary.addEventListener("click", async (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        dictionary.disabled = true;
+        const result = await Promise.resolve(
+          opts.onAddToDictionary(match),
+        ).catch(() => false);
+        if (result === false) dictionary.disabled = false;
+        else fieldHideMatchTooltip(state);
+      });
+      tipActions.appendChild(dictionary);
+    }
     tip.appendChild(tipActions);
 
     tip.onmouseleave = () => {
@@ -1111,6 +1172,7 @@
         onDismiss: opts.onDismiss || (() => {}),
         onApplyReplacement: opts.onApplyReplacement || null,
         onDismissMatch: opts.onDismissMatch || null,
+        onAddToDictionary: opts.onAddToDictionary || (() => false),
         onTransform: opts.onTransform || null,
         onApplyTransform: opts.onApplyTransform || null,
         aiTool: "Friendly",
@@ -1183,6 +1245,9 @@
         state.onApplyReplacement = opts.onApplyReplacement;
       }
       if (opts.onDismissMatch) state.onDismissMatch = opts.onDismissMatch;
+      if (opts.onAddToDictionary) {
+        state.onAddToDictionary = opts.onAddToDictionary;
+      }
       if (opts.onTransform) state.onTransform = opts.onTransform;
       if (opts.onApplyTransform) {
         state.onApplyTransform = opts.onApplyTransform;

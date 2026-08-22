@@ -24,6 +24,30 @@
       <p id="settings-status" class="settings-status" role="status"></p>
     </section>
 
+    <section class="dictionary" aria-labelledby="dictionary-title">
+      <div class="dictionary-heading">
+        <h2 id="dictionary-title">Your Dictionary</h2>
+        <span id="dictionary-count" class="dictionary-count"></span>
+      </div>
+      <p class="dictionary-help">
+        Shared with the Lexicon desktop app. Words here are ignored by
+        proofreading.
+      </p>
+      <div class="dictionary-add">
+        <input
+          id="dictionary-word"
+          type="text"
+          placeholder="Add a word…"
+          aria-label="Add a word to the dictionary"
+          maxlength="256"
+        />
+        <button id="dictionary-add-button" type="button">Add</button>
+      </div>
+      <p id="dictionary-status" class="dictionary-status" role="status"></p>
+      <ul id="dictionary-list" class="dictionary-list"></ul>
+      <p id="dictionary-empty" class="dictionary-empty">No words added yet.</p>
+    </section>
+
     <p class="popup-help">
       Click a Lexicon badge beside a visible field to review issues. Hover it
       to reveal Tone.

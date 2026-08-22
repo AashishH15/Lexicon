@@ -4,6 +4,9 @@ export const BACKEND_PORTS = [18000, 8000];
 
 const PING_PATH = "/extension/ping";
 const GRAMMAR_PATH = "/grammar/check";
+const DICTIONARY_PATH = "/dictionary";
+const DICTIONARY_ADD_PATH = "/dictionary/add";
+const DICTIONARY_REMOVE_PATH = "/dictionary/remove";
 const TRANSFORM_PATH = "/transform";
 const PROBE_TIMEOUT_MS = 2000;
 const REQUEST_TIMEOUT_MS = 30000;
@@ -25,6 +28,10 @@ export function isValidPing(body) {
 
 export function buildGrammarRequest(text, language = "en-US", ignore = []) {
   return { text, language, ignore };
+}
+
+export function buildDictionaryWordRequest(word) {
+  return { word };
 }
 
 export function buildTransformRequest(prompt, text) {
@@ -103,6 +110,29 @@ export async function checkGrammar(text, language = "en-US", ignore = []) {
     body: JSON.stringify(buildGrammarRequest(text, language, ignore)),
   });
   return formatMatches(data.matches);
+}
+
+export async function getDictionary() {
+  if (!baseUrl) throw new Error("backend_unreachable");
+  return jsonRequest(DICTIONARY_PATH, { cache: "no-store" });
+}
+
+export async function addDictionaryWord(word) {
+  if (!baseUrl) throw new Error("backend_unreachable");
+  return jsonRequest(DICTIONARY_ADD_PATH, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(buildDictionaryWordRequest(word)),
+  });
+}
+
+export async function removeDictionaryWord(word) {
+  if (!baseUrl) throw new Error("backend_unreachable");
+  return jsonRequest(DICTIONARY_REMOVE_PATH, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(buildDictionaryWordRequest(word)),
+  });
 }
 
 export async function transformText(prompt, text) {

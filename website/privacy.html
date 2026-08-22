@@ -39,7 +39,7 @@
     <div class="container legal-container">
       <p class="legal-eyebrow">Legal</p>
       <h1>Privacy Policy</h1>
-      <p class="legal-meta">Last updated: August 21, 2026</p>
+      <p class="legal-meta">Last updated: August 22, 2026</p>
 
       <p>
         Lexicon is a local-first desktop writing app, with an optional browser
@@ -120,10 +120,11 @@
         </li>
         <li><strong>Import/export files</strong> you choose to open or save elsewhere on disk</li>
         <li>
-          <strong>Browser-extension settings</strong> that the browser stores in
-          local extension storage: whether proofreading is paused and the
-          hostnames where Lexicon is disabled. The extension does not store page
-          text in that storage.
+          <strong>Browser-extension settings and dictionary cache</strong> that
+          the browser stores in local extension storage: whether proofreading is
+          paused, the hostnames where Lexicon is disabled, cached dictionary
+          words, the dictionary revision, and pending add/remove operations.
+          The extension does not store page text in that storage.
         </li>
       </ul>
       <p>
@@ -151,7 +152,12 @@
         disable Lexicon for the current website. Pausing stops proofreading
         checks but does not prevent a manually requested Tone/rewrite action;
         disabling a website prevents Lexicon extension processing there. These
-        controls are stored locally in the browser extension.
+        controls are stored locally in the browser extension. You can also add a
+        flagged word to the shared personal dictionary. Dictionary changes are
+        sent over the same-device loopback connection to the Lexicon sidecar,
+        while the extension keeps a local cache and offline queue. The
+        canonical dictionary is stored in Lexicon app data, and dictionary
+        words are not sent to a Lexicon-operated cloud service.
       </p>
 
       <h2>3. Deleting local data</h2>
@@ -164,13 +170,16 @@
         </li>
         <li>
           <strong>Manual cleanup:</strong> you can delete Lexicon’s app-data folders
-          (models and prefs) and clear the app’s WebView / local storage if anything remains
+          (models, prefs, and the shared dictionary) and clear the app’s WebView / local storage if anything remains
           after uninstall or if you use a portable/dev build.
         </li>
         <li>
           <strong>Browser extension:</strong> remove the extension from your
           browser and use the browser’s extension-data controls if you also want
-          to remove its locally stored pause and disabled-site settings.
+          to remove its locally stored pause, disabled-site, dictionary cache,
+          revision, and pending operations. To remove the canonical shared
+          dictionary, also delete the Lexicon app-data dictionary or remove it
+          from the desktop Settings dictionary manager.
         </li>
         <li>
           <strong>macOS / Linux:</strong> remove the app bundle or package, then delete
@@ -203,6 +212,16 @@
           field text for a Tone or rewrite action. The app returns results to
           the extension. This local exchange is not a transmission to a
           Lexicon-operated cloud service.
+        </li>
+        <li>
+          <strong>Shared dictionary synchronization:</strong> the desktop app
+          and extension send individual dictionary add/remove requests and
+          revision reads over the same-device loopback connection to the
+          Lexicon sidecar. The sidecar stores the canonical dictionary in the
+          Lexicon app-data directory; each client keeps a local cache and an
+          offline mutation queue. Dictionary words are not sent to a
+          Lexicon-operated cloud service. If the sidecar is unavailable,
+          queued changes remain local until a later connection.
         </li>
         <li>
           <strong>Local API trust boundary:</strong> the desktop application

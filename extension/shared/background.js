@@ -2,9 +2,12 @@
 
 import "./vendor/browser-polyfill.min.js";
 import {
+  addDictionaryWord,
   checkGrammar,
   discoverBackend,
   getBackendBaseUrl,
+  getDictionary,
+  removeDictionaryWord,
   transformText,
 } from "./api.js";
 import { getTransformPrompt, TRANSFORM_TOOLS } from "./prompts.js";
@@ -12,13 +15,25 @@ import {
   DEFAULT_SETTINGS,
   SETTINGS_STORAGE_KEY,
   isSiteDisabled,
+  normalizeDictionary,
+  normalizeDictionaryOperations,
+  normalizeDictionaryRevision,
+  normalizeDictionaryWord,
   normalizeSettings,
   normalizeSite,
+  queueDictionaryOperation,
 } from "./settings.js";
 
 browser.runtime.onInstalled.addListener(() => {
   console.log("[Lexicon] installed", browser.runtime.getManifest().version);
+  synchronizeDictionary({ force: true }).catch(() => {});
 });
+
+if (browser.runtime.onStartup?.addListener) {
+  browser.runtime.onStartup.addListener(() => {
+    synchronizeDictionary({ force: true }).catch(() => {});
+  });
+}
 
 // Track the frame that owns the focused editor.
 const activeFrameByTab = new Map();
@@ -105,15 +120,192 @@ async function saveSettings(settings, tabId) {
               siteDisabled: isSiteDisabled(normalized, site),
             }
           : normalized;
-        await browser.tabs
-          .sendMessage(tab.id, {
-            type: "lexicon:settings-changed",
-            settings: messageSettings,
-          })
-          .catch(() => {});
+        const frameIds = new Set([0, ...(frameIdsByTab.get(tab.id) || [])]);
+        await Promise.all(
+          [...frameIds].map((frameId) =>
+            sendToFrame(tab.id, frameId, {
+              type: "lexicon:settings-changed",
+              settings: messageSettings,
+            }),
+          ),
+        );
       }),
   );
   return normalized;
+}
+
+const DICTIONARY_SYNC_COOLDOWN_MS = 3000;
+let dictionaryLastSyncAt = 0;
+let dictionarySyncPromise = null;
+
+function validateDictionarySnapshot(snapshot) {
+  if (
+    !snapshot ||
+    !Array.isArray(snapshot.words) ||
+    !Number.isSafeInteger(Number(snapshot.revision)) ||
+    Number(snapshot.revision) < 0
+  ) {
+    throw new Error("Invalid dictionary response");
+  }
+  return {
+    words: normalizeDictionary(snapshot.words),
+    revision: normalizeDictionaryRevision(snapshot.revision),
+  };
+}
+
+function scheduleDictionaryTask(task) {
+  const previous = dictionarySyncPromise || Promise.resolve();
+  const next = previous.then(task, task);
+  dictionarySyncPromise = next;
+  next.then(
+    () => {
+      if (dictionarySyncPromise === next) dictionarySyncPromise = null;
+    },
+    () => {
+      if (dictionarySyncPromise === next) dictionarySyncPromise = null;
+    },
+  );
+  return next;
+}
+
+async function synchronizeDictionaryCore(settings) {
+  await discoverBackend();
+  if (!getBackendBaseUrl()) {
+    return { settings, synced: false, lastResult: null };
+  }
+
+  let snapshot = validateDictionarySnapshot(await getDictionary());
+  let current = normalizeSettings(settings);
+  if (
+    current.dictionaryMigrated &&
+    snapshot.revision < current.dictionaryRevision
+  ) {
+    throw new Error("Stale dictionary response");
+  }
+  if (!current.dictionaryMigrated) {
+    // Merge the old browser-local cache through idempotent delta adds before
+    // the canonical revision becomes authoritative.
+    for (const word of current.userDictionary) {
+      snapshot = validateDictionarySnapshot(await addDictionaryWord(word));
+    }
+    current = {
+      ...current,
+      dictionaryRevision: snapshot.revision,
+      dictionaryMigrated: true,
+    };
+    await saveSettings(current);
+  }
+
+  let lastResult = null;
+  let pending = normalizeDictionaryOperations(current.pendingDictionaryOps);
+  while (pending.length > 0) {
+    const operation = pending[0];
+    lastResult =
+      operation.op === "add"
+        ? await addDictionaryWord(operation.word)
+        : await removeDictionaryWord(operation.word);
+    snapshot = validateDictionarySnapshot(lastResult);
+    if (snapshot.revision < current.dictionaryRevision) {
+      throw new Error("Stale dictionary response");
+    }
+    pending = pending.slice(1);
+    current = await saveSettings({
+      ...current,
+      userDictionary: snapshot.words,
+      dictionaryRevision: snapshot.revision,
+      pendingDictionaryOps: pending,
+    });
+  }
+
+  current = await saveSettings({
+    ...current,
+    userDictionary: snapshot.words,
+    dictionaryRevision: snapshot.revision,
+    pendingDictionaryOps: pending,
+  });
+  return { settings: current, synced: true, lastResult };
+}
+
+function synchronizeDictionary({ force = false } = {}) {
+  if (dictionarySyncPromise) return dictionarySyncPromise;
+  if (
+    !force &&
+    dictionaryLastSyncAt > 0 &&
+    Date.now() - dictionaryLastSyncAt < DICTIONARY_SYNC_COOLDOWN_MS
+  ) {
+    return readSettings();
+  }
+
+  return scheduleDictionaryTask(async () => {
+    const cached = await readSettings();
+    try {
+      const result = await synchronizeDictionaryCore(cached);
+      if (result.synced) dictionaryLastSyncAt = Date.now();
+      return result.settings;
+    } catch {
+      // The cache and pending deltas remain available until the sidecar can
+      // be reached again.
+      return cached;
+    }
+  });
+}
+
+async function mutateDictionary(op, value) {
+  const word = normalizeDictionaryWord(value);
+  if (!word) return { ok: false, error: "invalid-dictionary-word" };
+
+  return scheduleDictionaryTask(async () => {
+    let settings = await readSettings();
+    const currentWords = normalizeDictionary(settings.userDictionary);
+    const key = word.toLowerCase();
+    const existing = currentWords.find((item) => item.toLowerCase() === key);
+    const operationWord = existing || word;
+    const nextWords =
+      op === "add"
+        ? existing
+          ? currentWords
+          : [...currentWords, word]
+        : currentWords.filter((item) => item.toLowerCase() !== key);
+
+    settings = await saveSettings({
+      ...settings,
+      userDictionary: nextWords,
+      pendingDictionaryOps: queueDictionaryOperation(
+        settings.pendingDictionaryOps,
+        op,
+        operationWord,
+      ),
+    });
+
+    let result;
+    try {
+      result = await synchronizeDictionaryCore(settings);
+      if (result.synced) dictionaryLastSyncAt = Date.now();
+    } catch {
+      result = { settings, synced: false, lastResult: null };
+    }
+
+    const finalSettings = result.settings;
+    const response = {
+      ok: true,
+      queued: !result.synced || finalSettings.pendingDictionaryOps.length > 0,
+      word: result.lastResult?.word || existing || word,
+      words: finalSettings.userDictionary,
+      userDictionary: finalSettings.userDictionary,
+      dictionaryRevision: finalSettings.dictionaryRevision,
+      pendingDictionaryOps: finalSettings.pendingDictionaryOps,
+    };
+    if (op === "add") {
+      response.added = result.lastResult
+        ? Boolean(result.lastResult.added || !existing)
+        : !existing;
+    } else {
+      response.removed = result.lastResult
+        ? Boolean(result.lastResult.removed || existing)
+        : Boolean(existing);
+    }
+    return response;
+  });
 }
 
 async function sendToActiveFrame(tabId, message) {
@@ -172,7 +364,10 @@ async function proofreadTab(tabId) {
   } catch {
     return;
   }
-  const settings = await getSettingsForSite(tab?.url);
+  const settings = settingsForSite(
+    await synchronizeDictionary({ force: true }),
+    tab?.url,
+  );
   if (settings.paused || settings.siteDisabled) return;
 
   let response;
@@ -188,7 +383,11 @@ async function proofreadTab(tabId) {
   await discoverBackend();
   if (!getBackendBaseUrl()) return;
 
-  const matches = await checkGrammar(response.text);
+  const matches = await checkGrammar(
+    response.text,
+    "en-US",
+    settings.userDictionary,
+  );
   await sendToActiveFrame(tabId, {
     type: "lexicon:highlight",
     matches,
@@ -210,9 +409,19 @@ browser.commands.onCommand.addListener(async (command) => {
 });
 
 browser.runtime.onMessage.addListener((msg, sender) => {
+  if (msg?.type === "lexicon:sync-dictionary") {
+    return synchronizeDictionary({ force: true }).then((settings) => ({
+      ok: true,
+      ...settings,
+      userDictionary: settings.userDictionary,
+    }));
+  }
+
   if (msg?.type === "lexicon:get-settings") {
     rememberFrame(sender?.tab?.id, sender?.frameId);
-    return getSettingsForSite(msg.site || senderSite(sender));
+    return synchronizeDictionary().then((settings) =>
+      settingsForSite(settings, msg.site || senderSite(sender)),
+    );
   }
 
   if (msg?.type === "lexicon:frame-ready") {
@@ -278,6 +487,14 @@ browser.runtime.onMessage.addListener((msg, sender) => {
     return { ok: true };
   }
 
+  if (msg?.type === "lexicon:add-to-dictionary") {
+    return mutateDictionary("add", msg.word);
+  }
+
+  if (msg?.type === "lexicon:remove-from-dictionary") {
+    return mutateDictionary("remove", msg.word);
+  }
+
   if (msg?.type === "lexicon:content-command") {
     const tabId = Number(msg.tabId);
     if (!Number.isInteger(tabId) || !msg.message) {
@@ -328,7 +545,10 @@ browser.runtime.onMessage.addListener((msg, sender) => {
   if (msg?.type !== "lexicon:check-text") return undefined;
   return (async () => {
     rememberFrame(sender?.tab?.id, sender?.frameId);
-    const settings = await getSettingsForSite(senderSite(sender));
+    const settings = settingsForSite(
+      await synchronizeDictionary(),
+      senderSite(sender),
+    );
     if (settings.siteDisabled) {
       return { ok: false, error: "site-disabled", matches: [] };
     }
@@ -343,7 +563,11 @@ browser.runtime.onMessage.addListener((msg, sender) => {
       return { ok: false, error: "backend_unreachable", matches: [] };
     }
     try {
-      const matches = await checkGrammar(msg.text);
+      const matches = await checkGrammar(
+        msg.text,
+        msg.language || "en-US",
+        settings.userDictionary,
+      );
       return { ok: true, matches };
     } catch (error) {
       return {

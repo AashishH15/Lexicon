@@ -58,9 +58,27 @@ import {
   getAiStatus,
   setAiPreference,
   ensureBackend,
+  getDictionary,
+  addDictionaryWord,
+  removeDictionaryWord,
   openExternalUrl,
   transformText,
 } from "./api.js";
+import {
+  loadDictionaryCache,
+  loadDictionaryMigrationState,
+  loadDictionaryQueue,
+  loadDictionaryRevision,
+  isDictionaryRevisionStale,
+  normalizeDictionary,
+  normalizeDictionaryRevision,
+  persistDictionaryCache,
+  persistDictionaryMigrationState,
+  persistDictionaryQueue,
+  queueDictionaryOperation,
+  applyDictionaryOperation,
+  dictionariesEqual,
+} from "./dictionarySync.js";
 import {
   checkForUpdate,
   installUpdate,
@@ -159,7 +177,6 @@ const fontSizeKey = "lexicon:fontSize";
 const focusModeKey = "lexicon:focusMode";
 const lineSpacingKey = "lexicon:lineSpacing";
 const proseScanKey = "lexicon:proseScanEnabled";
-const dictionaryKey = "lexicon:user_dictionary";
 const documentHistoryKey = "lexicon:document_history";
 const transformHistoryKey = "lexicon:transform_history";
 const docxAuthorKey = "lexicon:docxAuthor";
@@ -253,12 +270,7 @@ function loadPanelOpen(key) {
 }
 
 function loadDictionary() {
-  try {
-    const raw = localStorage.getItem(dictionaryKey);
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
+  return loadDictionaryCache();
 }
 
 function loadHistory(key) {
@@ -558,6 +570,11 @@ export default function App() {
   const checkAbortRef = useRef(null);
   const checkingRef = useRef(false);
   const userDictionaryRef = useRef(userDictionary);
+  const dictionaryRevisionRef = useRef(loadDictionaryRevision());
+  const dictionaryQueueRef = useRef(loadDictionaryQueue());
+  const dictionaryMigratedRef = useRef(loadDictionaryMigrationState());
+  const dictionarySyncPromiseRef = useRef(null);
+  const dictionarySyncRef = useRef(() => Promise.resolve(false));
   const dismissedKeysRef = useRef(dismissedKeys);
   activeToolRef.current = activeTool;
   userDictionaryRef.current = userDictionary;
@@ -1038,9 +1055,30 @@ export default function App() {
   useEffect(() => {
     const onWindowFocus = () => {
       ensureBackend().catch(() => {});
+      dictionarySyncRef.current();
     };
     window.addEventListener("focus", onWindowFocus);
     return () => window.removeEventListener("focus", onWindowFocus);
+  }, []);
+
+  // Reconcile dictionary revisions so extension changes appear in the app
+  // without requiring a restart. The cache remains usable if the sidecar is
+  // temporarily unavailable.
+  useEffect(() => {
+    dictionarySyncRef.current();
+    const interval = window.setInterval(() => {
+      dictionarySyncRef.current();
+    }, 10000);
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        dictionarySyncRef.current();
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => {
+      window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
   }, []);
 
   // Automatic background auto-reconnect polling loop (retries every 8s while offline)
@@ -1095,6 +1133,142 @@ export default function App() {
     }
     return `${match.message}::${original}::${sentence}`;
   }
+
+  function validateDictionarySnapshot(snapshot) {
+    if (
+      !snapshot ||
+      !Array.isArray(snapshot.words) ||
+      !Number.isSafeInteger(Number(snapshot.revision)) ||
+      Number(snapshot.revision) < 0
+    ) {
+      throw new Error("Invalid dictionary response");
+    }
+    const normalized = {
+      words: normalizeDictionary(snapshot.words),
+      revision: normalizeDictionaryRevision(snapshot.revision),
+    };
+    if (
+      dictionaryMigratedRef.current &&
+      isDictionaryRevisionStale(
+        normalized.revision,
+        dictionaryRevisionRef.current,
+      )
+    ) {
+      throw new Error("Stale dictionary response");
+    }
+    return normalized;
+  }
+
+  function setDictionarySnapshot(
+    snapshot,
+    { preservePending = true, rerun = false } = {},
+  ) {
+    const canonical = validateDictionarySnapshot(snapshot);
+    let words = canonical.words;
+    if (preservePending) {
+      for (const operation of dictionaryQueueRef.current) {
+        words = applyDictionaryOperation(words, operation);
+      }
+    }
+    const changed = !dictionariesEqual(userDictionaryRef.current, words);
+    dictionaryRevisionRef.current = canonical.revision;
+    userDictionaryRef.current = words;
+    setUserDictionary(words);
+    persistDictionaryCache(words, canonical.revision);
+    if (changed) {
+      globalGrammarCache.clear();
+      if (rerun && activeToolRef.current === "Proofread") {
+        window.setTimeout(() => proofreadRef.current(true), 0);
+      }
+    }
+    return changed;
+  }
+
+  function setOptimisticDictionary(words) {
+    const normalized = normalizeDictionary(words);
+    userDictionaryRef.current = normalized;
+    setUserDictionary(normalized);
+    persistDictionaryCache(normalized, dictionaryRevisionRef.current);
+    globalGrammarCache.clear();
+    return normalized;
+  }
+
+  function enqueueDictionaryOperation(op, word) {
+    const next = queueDictionaryOperation(
+      dictionaryQueueRef.current,
+      op,
+      word,
+    );
+    dictionaryQueueRef.current = next;
+    persistDictionaryQueue(next);
+    return next;
+  }
+
+  async function flushDictionaryQueue(snapshot) {
+    let latest = snapshot;
+    while (dictionaryQueueRef.current.length > 0) {
+      const operation = dictionaryQueueRef.current[0];
+      const response =
+        operation.op === "add"
+          ? await addDictionaryWord(operation.word)
+          : await removeDictionaryWord(operation.word);
+      latest = validateDictionarySnapshot(response);
+      // Keep an operation that was replaced while its request was in flight.
+      if (dictionaryQueueRef.current[0] === operation) {
+        dictionaryQueueRef.current = dictionaryQueueRef.current.slice(1);
+        persistDictionaryQueue(dictionaryQueueRef.current);
+      }
+    }
+    return latest;
+  }
+
+  function scheduleDictionarySync(task) {
+    const previous = dictionarySyncPromiseRef.current || Promise.resolve();
+    const next = previous.then(task, task);
+    dictionarySyncPromiseRef.current = next;
+    next.then(
+      () => {
+        if (dictionarySyncPromiseRef.current === next) {
+          dictionarySyncPromiseRef.current = null;
+        }
+      },
+      () => {
+        if (dictionarySyncPromiseRef.current === next) {
+          dictionarySyncPromiseRef.current = null;
+        }
+      },
+    );
+    return next;
+  }
+
+  function syncDictionary() {
+    return scheduleDictionarySync(async () => {
+      try {
+        let snapshot = validateDictionarySnapshot(await getDictionary());
+        if (!dictionaryMigratedRef.current) {
+          // Merge the pre-sync local cache through delta adds. This is safe
+          // when both clients perform their first sync at the same time.
+          for (const word of userDictionaryRef.current) {
+            snapshot = validateDictionarySnapshot(await addDictionaryWord(word));
+            dictionaryRevisionRef.current = snapshot.revision;
+          }
+          dictionaryMigratedRef.current = true;
+          persistDictionaryMigrationState(true);
+        }
+        snapshot = await flushDictionaryQueue(snapshot);
+        setDictionarySnapshot(snapshot, { rerun: true });
+        setBackendOffline(false);
+        setBackendError("");
+        return true;
+      } catch (error) {
+        setBackendOffline(true);
+        setBackendError(error?.message || String(error));
+        return false;
+      }
+    });
+  }
+
+  dictionarySyncRef.current = syncDictionary;
 
   async function runGrammarCheck(
     silent = false,
@@ -1316,14 +1490,22 @@ export default function App() {
 
   function handleAddToDictionary(match) {
     const word = (match.original || "").trim();
-    if (!word || userDictionary.includes(word)) {
+    if (!word) {
       // Still remove the card locally even if it's already in the dictionary.
       handleDismiss(match);
       return;
     }
-    const next = [...userDictionary, word];
-    setUserDictionary(next);
-    localStorage.setItem(dictionaryKey, JSON.stringify(next));
+    const current = userDictionaryRef.current;
+    const alreadyPresent = current.some(
+      (item) => item.toLowerCase() === word.toLowerCase(),
+    );
+    const next = alreadyPresent
+      ? current
+      : setOptimisticDictionary([...current, word]);
+    if (!alreadyPresent || !dictionaryMigratedRef.current) {
+      enqueueDictionaryOperation("add", word);
+      dictionarySyncRef.current();
+    }
     // Remove this card and re-run so any other occurrences of the word clear.
     dismissError(editor, match.id);
     setGrammarMatches((current) => {
@@ -1413,12 +1595,20 @@ export default function App() {
     if (!word) {
       return "empty";
     }
-    if (userDictionary.includes(word)) {
+    const current = userDictionaryRef.current;
+    const existing = current.find(
+      (item) => item.toLowerCase() === word.toLowerCase(),
+    );
+    if (existing) {
+      if (!dictionaryMigratedRef.current) {
+        enqueueDictionaryOperation("add", word);
+        dictionarySyncRef.current();
+      }
       return "duplicate";
     }
-    const next = [...userDictionary, word];
-    setUserDictionary(next);
-    localStorage.setItem(dictionaryKey, JSON.stringify(next));
+    const next = setOptimisticDictionary([...current, word]);
+    enqueueDictionaryOperation("add", word);
+    dictionarySyncRef.current();
     runGrammarCheck(false, next);
     return "added";
   }
@@ -1426,9 +1616,12 @@ export default function App() {
   // Remove a word from the user dictionary. Re-runs the check so any errors
   // that were previously ignored for that word show up again.
   function handleRemoveFromDictionary(word) {
-    const next = userDictionary.filter((w) => w !== word);
-    setUserDictionary(next);
-    localStorage.setItem(dictionaryKey, JSON.stringify(next));
+    const current = userDictionaryRef.current;
+    const next = setOptimisticDictionary(
+      current.filter((item) => item.toLowerCase() !== word.toLowerCase()),
+    );
+    enqueueDictionaryOperation("remove", word);
+    dictionarySyncRef.current();
     runGrammarCheck(false, next);
   }
 

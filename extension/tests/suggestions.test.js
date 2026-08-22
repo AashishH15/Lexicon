@@ -179,7 +179,9 @@ test("shows offline badge and messaging when backend is offline", () => {
   assert.equal(badgeEl.title, "Lexicon isn't running — open Lexicon to check");
 });
 
-test("keeps independent badges for multiple fields", () => {
+test(
+  "keeps independent badges for multiple fields and exposes dictionary action",
+  async () => {
   let rootEl = null;
   const makeElement = (tag) => ({
     tagName: tag.toUpperCase(),
@@ -266,7 +268,13 @@ test("keeps independent badges for multiple fields", () => {
     replacements: ["The"],
   };
 
-  api.showField(field1, [match]);
+  let addedMatch = null;
+  api.showField(field1, [match], {
+    onAddToDictionary: async (selected) => {
+      addedMatch = selected;
+      return true;
+    },
+  });
   api.showField(field2, []);
 
   assert.equal(api.fieldStates().length, 2);
@@ -274,9 +282,37 @@ test("keeps independent badges for multiple fields", () => {
   assert.equal(api.fieldState(field2).badgeEl.textContent, "");
   assert.match(api.fieldState(field2).badgeEl.children[0].innerHTML, /M232.49/);
   assert.ok(rootEl.children.length >= 7);
+  const actions =
+    api.fieldState(field1).panelEl.children[1].children[0].children[1];
+  const dictionary = actions.children[actions.children.length - 1];
+  assert.equal(dictionary.className, "dictionary");
+  assert.equal(dictionary.textContent, "Add to Dictionary");
+  await dictionary.listeners.click();
+  assert.equal(addedMatch, match);
+  api.showFieldMatchTooltip(
+    field1,
+    match,
+    { top: 100, bottom: 180, left: 50, right: 400 },
+    {
+      onAddToDictionary: async (selected) => {
+        addedMatch = selected;
+        return true;
+      },
+    },
+  );
+  const tooltipActions = api.fieldState(field1).tooltipEl.children[2];
+  const tooltipDictionary =
+    tooltipActions.children[tooltipActions.children.length - 1];
+  assert.equal(tooltipDictionary.textContent, "Add to Dictionary");
+  await tooltipDictionary.listeners.click({
+    preventDefault() {},
+    stopPropagation() {},
+  });
+  assert.equal(addedMatch, match);
   api.hideField(field1);
   assert.equal(api.fieldStates().length, 1);
-});
+  },
+);
 
 test("Tone uses a dedicated badge popover and keeps the proofread panel clear", async () => {
   let rootEl = null;

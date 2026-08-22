@@ -82,6 +82,128 @@ h1 {
   font-size: 11px;
 }
 
+.dictionary {
+  margin-bottom: 10px;
+  padding: 8px 10px;
+  border: 1px solid #e5e4e0;
+  border-radius: 6px;
+  background: #ffffff;
+}
+
+.dictionary-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.dictionary-heading h2 {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.dictionary-count {
+  color: #71706c;
+  font-size: 11px;
+}
+
+.dictionary-help {
+  margin: 4px 0 8px;
+  color: #5f5e5b;
+  font-size: 11px;
+}
+
+.dictionary-add {
+  display: flex;
+  gap: 6px;
+}
+
+.dictionary-add input {
+  min-width: 0;
+  flex: 1;
+  padding: 6px 8px;
+  border: 1px solid #d8d7d3;
+  border-radius: 5px;
+  background: #f7f6f3;
+  color: #111111;
+  font: inherit;
+}
+
+.dictionary-add input:focus {
+  outline: 2px solid #1f6c9f;
+  outline-offset: 1px;
+}
+
+.dictionary-add button {
+  flex: none;
+  padding: 6px 10px;
+}
+
+.dictionary-add button:disabled {
+  cursor: default;
+}
+
+.dictionary-status {
+  min-height: 15px;
+  margin: 5px 0 0;
+  color: #5f5e5b;
+  font-size: 11px;
+}
+
+.dictionary-status.error {
+  color: #9f2f2d;
+}
+
+.dictionary-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 120px;
+  margin: 6px 0 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.dictionary-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 6px;
+  border-radius: 4px;
+  background: #f7f6f3;
+}
+
+.dictionary-list .word {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dictionary-list button {
+  flex: none;
+  padding: 2px 6px;
+  border: 1px solid #d8d7d3;
+  background: transparent;
+  color: #5f5e5b;
+  font-size: 11px;
+}
+
+.dictionary-list button:hover:not(:disabled) {
+  background: #ebeae6;
+  color: #9f2f2d;
+  filter: none;
+}
+
+.dictionary-empty {
+  margin: 6px 0 0;
+  color: #71706c;
+  font-size: 11px;
+}
+
 .popup-help {
   margin: 10px 2px;
   color: #5f5e5b;

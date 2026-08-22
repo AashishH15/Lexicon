@@ -26,6 +26,11 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from ai_prefs import load_prefs, public_prefs, save_prefs
+from dictionary import (
+    add_word as add_dictionary_word,
+    get_dictionary,
+    remove_word as remove_dictionary_word,
+)
 from inference import (
     LM_STUDIO_SERVER,
     BundledBackend,
@@ -122,6 +127,10 @@ class GrammarRequest(BaseModel):
     ignore: list[str] = []
 
 
+class DictionaryWordRequest(BaseModel):
+    word: str
+
+
 class ModelDownloadRequest(BaseModel):
     model_key: str = "2b"
 
@@ -203,6 +212,40 @@ def extension_ping():
     return {"ok": True, "app": "lexicon"}
 
 
+@app.get("/dictionary")
+def dictionary_get():
+    """Return the canonical user dictionary and its change revision."""
+    return {"ok": True, **get_dictionary()}
+
+
+@app.post("/dictionary/add")
+def dictionary_add(request: DictionaryWordRequest):
+    """Add one dictionary word without replacing concurrent changes."""
+    try:
+        return {"ok": True, **add_dictionary_word(request.word)}
+    except ValueError as exc:
+        return JSONResponse(status_code=400, content={"error": str(exc)})
+    except OSError as exc:
+        return JSONResponse(
+            status_code=503,
+            content={"error": "dictionary_unavailable", "detail": str(exc)},
+        )
+
+
+@app.post("/dictionary/remove")
+def dictionary_remove(request: DictionaryWordRequest):
+    """Remove one dictionary word without replacing concurrent changes."""
+    try:
+        return {"ok": True, **remove_dictionary_word(request.word)}
+    except ValueError as exc:
+        return JSONResponse(status_code=400, content={"error": str(exc)})
+    except OSError as exc:
+        return JSONResponse(
+            status_code=503,
+            content={"error": "dictionary_unavailable", "detail": str(exc)},
+        )
+
+
 @app.post("/shutdown")
 def shutdown():
     """Gracefully stop the sidecar and its LanguageTool JVM."""
@@ -232,7 +275,9 @@ def languagetool_unload():
 @app.post("/grammar/check")
 def grammar_check(request: GrammarRequest):
     try:
-        matches = check_text(request.text, request.language, request.ignore)
+        dictionary = get_dictionary()
+        ignore = [*request.ignore, *dictionary["words"]]
+        matches = check_text(request.text, request.language, ignore)
         return {"matches": matches}
     except Exception as exc:
         # Surface a clear message (e.g. "can't find Java") instead of a bare

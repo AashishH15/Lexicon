@@ -38,6 +38,41 @@ async function request(path, options) {
   }
 }
 
+async function dictionaryRequest(path, options) {
+  const response = await request(path, {
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...(options?.headers || {}),
+    },
+  });
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(
+      data.detail || data.error || `Dictionary request failed: ${response.status}`,
+    );
+  }
+  return response.json();
+}
+
+export async function getDictionary() {
+  return dictionaryRequest("/dictionary", { cache: "no-store" });
+}
+
+export async function addDictionaryWord(word) {
+  return dictionaryRequest("/dictionary/add", {
+    method: "POST",
+    body: JSON.stringify({ word }),
+  });
+}
+
+export async function removeDictionaryWord(word) {
+  return dictionaryRequest("/dictionary/remove", {
+    method: "POST",
+    body: JSON.stringify({ word }),
+  });
+}
+
 export async function checkGrammar(
   text,
   language = "en-US",
