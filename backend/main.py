@@ -28,7 +28,11 @@ from pydantic import BaseModel
 from ai_prefs import load_prefs, public_prefs, save_prefs
 from dictionary import (
     add_word as add_dictionary_word,
+)
+from dictionary import (
     get_dictionary,
+)
+from dictionary import (
     remove_word as remove_dictionary_word,
 )
 from inference import (

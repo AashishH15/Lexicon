@@ -7,7 +7,6 @@ import tempfile
 import threading
 from pathlib import Path
 
-
 STORE_VERSION = 1
 DICTIONARY_FILENAME = "dictionary.json"
 _STORE_LOCK = threading.RLock()
