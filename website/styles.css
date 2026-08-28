@@ -319,19 +319,13 @@ kbd {
 .brand {
   display: flex;
   align-items: center;
-  gap: 10px;
-  font-family: var(--font-serif);
-  font-weight: 500;
-  font-size: 1.35rem;
-  letter-spacing: -0.02em;
-  color: var(--text-primary);
   text-decoration: none;
 }
 
-.brand img {
-  width: 28px;
+.brand-logo-type {
+  display: block;
   height: 28px;
-  border-radius: 6px;
+  width: auto;
 }
 
 .nav-links {

@@ -1,8 +1,6 @@
 <p align="center">
-  <img src="media/lexicon-logo-windows.png" alt="Lexicon logo" width="150" />
+  <img src="media/lexicon-logo-type.png" alt="Lexicon" width="320" />
 </p>
-
-<h1 align="center">Lexicon</h1>
 
 <p align="center">
   <strong>A local-first writing assistant for clearer drafts.</strong><br />
@@ -352,6 +350,8 @@ Lexicon is built with:
 - [FastAPI](https://fastapi.tiangolo.com/) and
   [Uvicorn](https://www.uvicorn.org/)
 - [Hugging Face Hub](https://huggingface.co/) and [requests](https://requests.readthedocs.io/) for model downloads and inference
+
+Logo design by [Nic Kraneis](https://parzival-design.com/).
 
 See [LICENSE](LICENSE) for licensing information.
 See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for third-party
