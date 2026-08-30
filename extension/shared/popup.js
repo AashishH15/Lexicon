@@ -10,6 +10,8 @@ import { createBackendStatus } from "./backendStatus.js";
 import { normalizeSite } from "./settings.js";
 
 const statusEl = document.getElementById("status");
+const lexStatusEl = document.getElementById("lex-status");
+const statusIconEl = document.getElementById("status-icon");
 const inputEl = document.getElementById("input");
 const proofreadBtn = document.getElementById("proofread");
 const rewriteToolEl = document.getElementById("rewrite-tool");
@@ -35,11 +37,15 @@ let selectedFieldId = "";
 let selectedFrameId = null;
 let currentTabId = null;
 let currentSite = "";
+let monitorState = "checking";
+let operationStatus = null;
 let settings = {
   paused: false,
   siteDisabled: false,
+  aiConfigured: null,
   userDictionary: [],
 };
+const lexStatusApi = globalThis.__lexiconLexStatus;
 
 for (const tool of TRANSFORM_TOOLS) {
   const option = document.createElement("option");
@@ -62,7 +68,11 @@ function refreshActions() {
   const ready = fieldReady && fieldText.trim().length > 0;
   proofreadBtn.disabled =
     !connected || !ready || settings.paused || settings.siteDisabled;
-  rewriteBtn.disabled = !connected || !ready || settings.siteDisabled;
+  rewriteBtn.disabled =
+    !connected ||
+    !ready ||
+    settings.siteDisabled ||
+    settings.aiConfigured === false;
 }
 
 function setFieldOptions(fields, selectedId = "") {
@@ -84,6 +94,61 @@ function setFieldOptions(fields, selectedId = "") {
   fieldSelectEl.value = fields.some((field) => field.id === selectedId)
     ? selectedId
     : "";
+}
+
+function setOperationStatus(status, options = {}) {
+  operationStatus = {
+    status,
+    message: options.message || "",
+    issueCount: options.issueCount || 0,
+    aiBusy: Boolean(options.aiBusy),
+  };
+  renderLexStatus();
+}
+
+function renderLexStatus() {
+  if (!lexStatusApi || !lexStatusEl || !statusIconEl) return;
+  const baseStatus = lexStatusApi.resolveLexStatus({
+    checking: monitorState === "checking",
+    offline: monitorState === "offline",
+    disabled: settings.paused || settings.siteDisabled,
+    matches: null,
+  });
+  const blocked =
+    baseStatus === lexStatusApi.LEX_STATUS.CHECKING ||
+    baseStatus === lexStatusApi.LEX_STATUS.DISABLED ||
+    baseStatus === lexStatusApi.LEX_STATUS.NO_CONNECTION;
+  const status =
+    blocked || !operationStatus ? baseStatus : operationStatus.status;
+  const issueCount = operationStatus?.issueCount || 0;
+  const message =
+    blocked || !operationStatus
+      ? lexStatusApi.messageFor(status, {
+          issueCount,
+          aiBusy: false,
+          selected: false,
+        })
+      : operationStatus.message ||
+        lexStatusApi.messageFor(status, {
+          issueCount,
+          aiBusy: operationStatus.aiBusy,
+          selected: operationStatus.aiBusy,
+        });
+  const meta = lexStatusApi.metaFor(status);
+  lexStatusEl.className = `lex-status ${status}`;
+  lexStatusEl.dataset.lexStatus = status;
+  lexStatusEl.setAttribute(
+    "aria-label",
+    status === lexStatusApi.LEX_STATUS.ISSUES && issueCount > 0
+      ? `Lex found ${issueCount} ${
+          issueCount === 1 ? "issue" : "issues"
+        }.`
+      : meta.ariaLabel,
+  );
+  lexStatusEl.setAttribute("aria-busy", meta.busy ? "true" : "false");
+  statusIconEl.src = lexStatusApi.iconUrl(status);
+  statusIconEl.alt = "";
+  statusEl.textContent = message;
 }
 
 function clearFieldTarget(message) {
@@ -159,11 +224,14 @@ function renderSettings() {
     settingsStatusEl.textContent = "Lexicon is disabled on this site.";
   } else if (settings.paused) {
     settingsStatusEl.textContent = "Proofreading is paused. Rewrite remains available.";
+  } else if (settings.aiConfigured === false) {
+    settingsStatusEl.textContent = "AI tools are not configured. Set them up in Lexicon.";
   } else if (!currentSite) {
     settingsStatusEl.textContent = "This page cannot be disabled from the extension.";
   } else {
     settingsStatusEl.textContent = "";
   }
+  renderLexStatus();
   refreshActions();
 }
 
@@ -295,11 +363,16 @@ async function loadSettings() {
       ...settings,
       ...response,
       siteDisabled: Boolean(response?.siteDisabled),
+      aiConfigured:
+        typeof response?.aiConfigured === "boolean"
+          ? response.aiConfigured
+          : settings.aiConfigured,
     };
   } catch {
     settings = {
       paused: false,
       siteDisabled: false,
+      aiConfigured: null,
       userDictionary: [],
     };
   }
@@ -373,17 +446,10 @@ async function updateSiteDisabled(event) {
 }
 
 function renderStatus(state) {
-  if (state === "connected") {
-    statusEl.textContent = "Connected to Lexicon";
-    statusEl.classList.remove("offline");
-    syncDictionaryFromPopup();
-  } else if (state === "checking") {
-    statusEl.textContent = "Checking for Lexicon…";
-    statusEl.classList.remove("offline");
-  } else {
-    statusEl.textContent = "Open Lexicon to use grammar checking here";
-    statusEl.classList.add("offline");
-  }
+  monitorState = state;
+  renderLexStatus();
+  if (state === "connected") syncDictionaryFromPopup();
+  if (state === "connected") loadAiStatus();
   refreshField();
 }
 
@@ -391,6 +457,23 @@ const monitor = createBackendStatus({
   ping: async () => (await discoverBackend()) !== null,
   onChange: renderStatus,
 });
+
+async function loadAiStatus() {
+  if (monitorState !== "connected") return;
+  try {
+    const response = await browser.runtime.sendMessage({
+      type: "lexicon:get-ai-status",
+    });
+    if (monitorState !== "connected" || !response?.ok) return;
+    settings.aiConfigured =
+      typeof response.configured === "boolean"
+        ? response.configured
+        : null;
+    renderSettings();
+  } catch {
+    // The connection indicator remains authoritative if the AI probe fails.
+  }
+}
 
 async function sendToContent(msg, frameId = null) {
   const tab = await getCurrentTab();
@@ -510,7 +593,7 @@ function showRewrite(
       showEmpty("Replaced in the field.");
       refreshField();
     } catch (error) {
-      showError(error.message);
+      showError(error);
     } finally {
       replaceBtn.disabled = false;
     }
@@ -518,14 +601,33 @@ function showRewrite(
   resultsEl.appendChild(replaceBtn);
 }
 
-function showError(message) {
-  if (message === "backend_unreachable") {
+function isBackendUnavailable(error) {
+  const message = String(
+    typeof error === "string" ? error : error?.message || error || "",
+  ).trim();
+  return (
+    message === "backend_unreachable" ||
+    /^(failed to fetch|networkerror|load failed)$/i.test(message) ||
+    error?.name === "TypeError" ||
+    error?.name === "AbortError"
+  );
+}
+
+function showError(error) {
+  const message = String(
+    typeof error === "string" ? error : error?.message || error || "",
+  );
+  if (isBackendUnavailable(error)) {
+    setOperationStatus("no-connection");
     showEmpty("Open Lexicon to use grammar checking here.");
   } else if (message === "proofreading-paused") {
+    setOperationStatus("disabled");
     showEmpty("Proofreading is paused in the extension settings.");
   } else if (message === "site-disabled") {
+    setOperationStatus("disabled");
     showEmpty("Lexicon is disabled on this site.");
   } else {
+    setOperationStatus("error");
     showEmpty(`Something went wrong: ${message}`);
   }
 }
@@ -538,6 +640,7 @@ async function onProofread() {
     return;
   }
   setActionsEnabled(false);
+  setOperationStatus("checking", { message: "I’m checking…" });
   clearResults();
   try {
     const matches = await checkGrammar(
@@ -555,16 +658,19 @@ async function onProofread() {
       return;
     }
     if (matches.length === 0) {
+      setOperationStatus("all-clear");
       showEmpty("No issues found.");
     } else if (matches.length === 1) {
+      setOperationStatus("issues", { issueCount: 1 });
       showEmpty("1 issue marked in the field. Open the badge to review.");
     } else {
+      setOperationStatus("issues", { issueCount: matches.length });
       showEmpty(
         `${matches.length} issues marked in the field. Open the badge to review.`,
       );
     }
   } catch (error) {
-    showError(error.message);
+    showError(error);
   } finally {
     refreshActions();
   }
@@ -579,6 +685,10 @@ async function onRewrite() {
     return;
   }
   setActionsEnabled(false);
+  setOperationStatus("checking", {
+    message: "I’m working on your selection…",
+    aiBusy: true,
+  });
   clearResults();
   try {
     const rewritten = await transformText(
@@ -592,8 +702,9 @@ async function onRewrite() {
       fieldText,
       selection,
     );
+    setOperationStatus("idle", { message: "I’m ready to review this." });
   } catch (error) {
-    showError(error.message);
+    showError(error);
   } finally {
     refreshActions();
   }

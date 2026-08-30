@@ -51,7 +51,6 @@ import {
   ArrowLineLeft,
   ArrowSquareLeft,
   ArrowSquareRight,
-  CircleNotch,
 } from "@phosphor-icons/react";
 import {
   checkGrammar,
@@ -113,6 +112,11 @@ import {
 } from "./proseQualityEngine.js";
 import { DecorationSet } from "@tiptap/pm/view";
 import { globalGrammarCache } from "./grammarCache.js";
+import LexStatus from "./LexStatus.jsx";
+import {
+  lexStatusMessage,
+  resolveLexStatus,
+} from "./lexStatus.js";
 
 // Six-dot grip used for the drag handle
 const DRAG_HANDLE_GRIP_SVG = `
@@ -2257,6 +2261,23 @@ export default function App() {
 
   const emptyDoc = docText.trim().length === 0;
   const totalWords = emptyDoc ? 0 : docText.trim().split(/\s+/).length;
+  const lexStatus = resolveLexStatus({
+    activeTool,
+    checking,
+    grammarMatches,
+    backendOffline,
+    backendError,
+    transformRunning,
+    transformStatus,
+    transformError,
+    aiConfigured,
+    hasContent: !emptyDoc,
+  });
+  const lexStatusLabel = lexStatusMessage(lexStatus, {
+    activeTool,
+    issueCount: grammarMatches.length,
+    aiConfigured,
+  });
   const errorMatches = grammarMatches.filter(
     (m) => m.category !== "Prose Style"
   );
@@ -2464,6 +2485,13 @@ export default function App() {
           </div>
         </div>
         <div className="flex items-center gap-3">
+          <LexStatus
+            status={lexStatus}
+            message={lexStatusLabel}
+            issueCount={grammarMatches.length}
+            showLabel={false}
+            className="max-w-[260px]"
+          />
           <ImportExportMenu
             editor={editor}
             onRequestConfirm={setConfirmConfig}
@@ -2559,7 +2587,6 @@ export default function App() {
                 isMac={isMac}
                 isWarming={isWarming}
                 transformRunning={transformRunning}
-                transformStatus={transformStatus}
               />
               {!aiConfigured && (
                 <div className="mt-2 rounded-lg border border-dashed border-hairline bg-canvas px-3 py-2.5">
@@ -2639,13 +2666,8 @@ export default function App() {
           {transformRunning && (
             <div className="pointer-events-none absolute right-12 top-3 z-10">
               <div className="flex items-center gap-2.5 rounded-full border border-hairline bg-white/90 px-3 py-1.5 shadow-sm backdrop-blur">
-                <CircleNotch
-                  size={14}
-                  weight="bold"
-                  className="animate-spin text-muted"
-                />
                 <p className="font-sans text-xs text-ink">
-                  {activeTool} is running — editing paused
+                  Editing is paused while Lex works.
                 </p>
                 <button
                   type="button"

@@ -13,6 +13,15 @@ SRC = ROOT / "media" / "Lexicon Logos"
 MASTER_ICON = SRC / "icon.png"
 MASTER_ICON_SVG = SRC / "Logo-icon.svg"
 MASTER_TYPE_SVG = SRC / "Logo-Type.svg"
+LEX_STATUS_NAMES = (
+    "lex-idle.svg",
+    "lex-checking.svg",
+    "lex-disabled.svg",
+    "lex-no-connection.svg",
+    "lex-issues.svg",
+    "lex-error.svg",
+    "lex-all-clear.svg",
+)
 
 BRAND_BG = (247, 246, 243)  # --bg-canvas
 
@@ -121,9 +130,10 @@ def copy_svg(src: Path, dest: Path) -> None:
 def render_logo_type_png(dest: Path, width: int = 640) -> None:
     dest.parent.mkdir(parents=True, exist_ok=True)
     try:
+        npx = shutil.which("npx") or shutil.which("npx.cmd") or "npx"
         subprocess.run(
             [
-                "npx",
+                npx,
                 "--yes",
                 "@resvg/resvg-js-cli",
                 "--fit-width",
@@ -178,6 +188,12 @@ def main() -> None:
     copy_svg(MASTER_ICON_SVG, ROOT / "website" / "assets" / "lexicon-logo-svg.svg")
     copy_svg(MASTER_TYPE_SVG, ROOT / "media" / "lexicon-logo-type.svg")
     copy_svg(MASTER_TYPE_SVG, ROOT / "website" / "assets" / "lexicon-logo-type.svg")
+    for name in LEX_STATUS_NAMES:
+        source = SRC / name
+        if not source.exists():
+            raise SystemExit(f"Missing Lex status icon: {source}")
+        copy_svg(source, ROOT / "frontend" / "public" / name)
+        copy_svg(source, ROOT / "extension" / "shared" / "icons" / name)
 
     render_logo_type_png(ROOT / "media" / "lexicon-logo-type.png", width=640)
     shutil.copy2(

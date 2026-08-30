@@ -113,6 +113,24 @@ test("every referenced file exists in the staged dist", () => {
   }
 });
 
+test("status icons are web-accessible in the Firefox package", () => {
+  const resources = firefox.web_accessible_resources?.flatMap(
+    (entry) => entry.resources,
+  );
+  for (const icon of [
+    "lex-idle.svg",
+    "lex-checking.svg",
+    "lex-disabled.svg",
+    "lex-no-connection.svg",
+    "lex-issues.svg",
+    "lex-error.svg",
+    "lex-all-clear.svg",
+  ]) {
+    assert.ok(resources?.includes(`icons/${icon}`), `missing resource: ${icon}`);
+    assert.ok(existsSync(join(DIST_DIR, "icons", icon)), `missing dist icon: ${icon}`);
+  }
+});
+
 test("xpi exists for AMO submission", () => {
   const xpiPath = join(EXTENSION_DIR, "dist", `lexicon-firefox-${firefox.version}.xpi`);
   assert.ok(existsSync(xpiPath), "firefox xpi was not produced");

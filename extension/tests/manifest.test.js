@@ -90,6 +90,7 @@ test("content scripts run on all sites and matching editor frames", () => {
   assert.equal(manifest.content_scripts[0].match_origin_as_fallback, true);
   assert.deepEqual(manifest.content_scripts.flatMap((cs) => cs.js), [
     "vendor/browser-polyfill.min.js",
+    "lexStatus.js",
     "detectEditable.js",
     "squiggle.js",
     "suggestions.js",
@@ -101,6 +102,24 @@ test("required permissions stay minimal; everything else is optional", () => {
   assert.deepEqual(manifest.permissions.sort(), ["activeTab", "scripting", "storage"]);
   assert.equal("host_permissions" in manifest, false, "no required host permissions");
   assert.deepEqual(manifest.optional_host_permissions, ["http://*/*", "https://*/*"]);
+});
+
+test("status icons are web-accessible to content-page badges", () => {
+  const resources = manifest.web_accessible_resources?.flatMap(
+    (entry) => entry.resources,
+  );
+  for (const icon of [
+    "lex-idle.svg",
+    "lex-checking.svg",
+    "lex-disabled.svg",
+    "lex-no-connection.svg",
+    "lex-issues.svg",
+    "lex-error.svg",
+    "lex-all-clear.svg",
+  ]) {
+    assert.ok(resources?.includes(`icons/${icon}`), `missing resource: ${icon}`);
+    assert.ok(existsSync(join(DIST_DIR, "icons", icon)), `missing dist icon: ${icon}`);
+  }
 });
 
 test("every referenced file exists in the staged dist", () => {

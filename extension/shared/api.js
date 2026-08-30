@@ -8,6 +8,7 @@ const DICTIONARY_PATH = "/dictionary";
 const DICTIONARY_ADD_PATH = "/dictionary/add";
 const DICTIONARY_REMOVE_PATH = "/dictionary/remove";
 const TRANSFORM_PATH = "/transform";
+const AI_STATUS_PATH = "/ai/status";
 const PROBE_TIMEOUT_MS = 2000;
 const REQUEST_TIMEOUT_MS = 30000;
 
@@ -143,4 +144,9 @@ export async function transformText(prompt, text) {
     body: JSON.stringify(buildTransformRequest(prompt, text)),
   });
   return data.text;
+}
+
+export async function getAiStatus() {
+  if (!baseUrl) throw new Error("backend_unreachable");
+  return jsonRequest(AI_STATUS_PATH, { cache: "no-store" });
 }

@@ -13,6 +13,10 @@ const source = readFileSync(
   join(dirname(fileURLToPath(import.meta.url)), "..", "shared", "suggestions.js"),
   "utf-8",
 );
+const statusSource = readFileSync(
+  join(dirname(fileURLToPath(import.meta.url)), "..", "shared", "lexStatus.js"),
+  "utf-8",
+);
 
 function loadSuggestions(windowStub) {
   const sandbox = {
@@ -34,6 +38,7 @@ function loadSuggestions(windowStub) {
   };
   sandbox.globalThis = sandbox;
   vm.createContext(sandbox);
+  vm.runInContext(statusSource, sandbox);
   vm.runInContext(source, sandbox);
   return sandbox.__lexiconSuggestions;
 }
@@ -163,6 +168,7 @@ test("shows offline badge and messaging when backend is offline", () => {
   };
   sandbox.globalThis = sandbox;
   vm.createContext(sandbox);
+  vm.runInContext(statusSource, sandbox);
   vm.runInContext(source, sandbox);
   const api = sandbox.__lexiconSuggestions;
 
@@ -173,10 +179,71 @@ test("shows offline badge and messaging when backend is offline", () => {
   api.show(field, [], { offline: true });
   const state = api.state();
   const badgeEl = state.badgeEl;
-  assert.equal(badgeEl.textContent, "!");
-  assert.equal(badgeEl.classList.contains("offline"), true);
+  assert.equal(badgeEl.classList.contains("no-connection"), true);
   assert.equal(badgeEl.classList.contains("clean"), false);
-  assert.equal(badgeEl.title, "Lexicon isn't running — open Lexicon to check");
+  assert.equal(badgeEl.children[0].src, "icons/lex-no-connection.svg");
+  assert.equal(badgeEl.title, "I can’t reach the local engine.");
+});
+
+test("shows an operation error instead of an all-clear state", () => {
+  let rootEl = null;
+  const sandbox = {
+    document: {
+      documentElement: { appendChild() {} },
+      createElement(tag) {
+        const el = {
+          tagName: tag.toUpperCase(),
+          className: "",
+          classList: {
+            classes: new Set(),
+            add(...cls) { cls.forEach((c) => this.classes.add(c)); },
+            remove(...cls) { cls.forEach((c) => this.classes.delete(c)); },
+            toggle(cls, val) { if (val) this.classes.add(cls); else this.classes.delete(cls); },
+            contains(cls) { return this.classes.has(cls); },
+          },
+          style: {},
+          children: [],
+          textContent: "",
+          title: "",
+          hidden: false,
+          appendChild(child) { this.children.push(child); return child; },
+          replaceChildren(...nodes) { this.children = nodes; },
+          addEventListener() {},
+          removeEventListener() {},
+          setAttribute() {},
+          attachShadow() {
+            rootEl = {
+              children: [],
+              appendChild(c) { this.children.push(c); return c; },
+            };
+            return rootEl;
+          },
+        };
+        return el;
+      },
+    },
+    window: {
+      innerWidth: 1000,
+      innerHeight: 800,
+      addEventListener() {},
+      removeEventListener() {},
+    },
+    globalThis: {},
+  };
+  sandbox.globalThis = sandbox;
+  vm.createContext(sandbox);
+  vm.runInContext(statusSource, sandbox);
+  vm.runInContext(source, sandbox);
+  const api = sandbox.__lexiconSuggestions;
+
+  const field = {
+    getBoundingClientRect: () => ({ top: 100, bottom: 200, left: 50, right: 400 }),
+  };
+
+  api.show(field, [], { error: "Request failed: 500" });
+  const state = api.state();
+  assert.equal(state.badgeEl.classList.contains("error"), true);
+  assert.equal(state.badgeEl.title, "Something went wrong.");
 });
 
 test(
@@ -245,6 +312,7 @@ test(
   };
   sandbox.globalThis = sandbox;
   vm.createContext(sandbox);
+  vm.runInContext(statusSource, sandbox);
   vm.runInContext(source, sandbox);
   const api = sandbox.__lexiconSuggestions;
   const makeField = (top) => ({
@@ -278,9 +346,9 @@ test(
   api.showField(field2, []);
 
   assert.equal(api.fieldStates().length, 2);
-  assert.equal(api.fieldState(field1).badgeEl.textContent, "1");
-  assert.equal(api.fieldState(field2).badgeEl.textContent, "");
-  assert.match(api.fieldState(field2).badgeEl.children[0].innerHTML, /M232.49/);
+  assert.equal(api.fieldState(field1).badgeEl.children[1].textContent, "1");
+  assert.equal(api.fieldState(field1).badgeEl.children[0].src, "icons/lex-issues.svg");
+  assert.equal(api.fieldState(field2).badgeEl.children[0].src, "icons/lex-all-clear.svg");
   assert.ok(rootEl.children.length >= 7);
   const actions =
     api.fieldState(field1).panelEl.children[1].children[0].children[1];
@@ -309,6 +377,21 @@ test(
     stopPropagation() {},
   });
   assert.equal(addedMatch, match);
+  api.setCheckingField(field1);
+  assert.equal(
+    api.fieldState(field1).badgeEl.children[0].src,
+    "icons/lex-checking.svg",
+  );
+  api.updateField(field1, []);
+  assert.equal(
+    api.fieldState(field1).badgeEl.children[0].src,
+    "icons/lex-all-clear.svg",
+  );
+  api.showField(field1, [], { aiError: "model failed" });
+  assert.equal(
+    api.fieldState(field1).badgeEl.children[0].src,
+    "icons/lex-error.svg",
+  );
   api.hideField(field1);
   assert.equal(api.fieldStates().length, 1);
   },

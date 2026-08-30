@@ -1,6 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
+globalThis.fetch = async () => {
+  throw new Error("test backend unavailable");
+};
+
 const frameResponses = new Map([
   [0, { ok: true, fields: [] }],
   [2, { ok: true, fields: [{ id: "field-1" }], activeId: null }],

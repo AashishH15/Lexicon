@@ -1,7 +1,7 @@
 import SuggestionCard from "./SuggestionCard.jsx";
 import DocStats from "./DocStats.jsx";
 import { useEffect, useRef, useState } from "react";
-import { ArrowLineRight, CheckCircle, Info, Warning, Lightbulb, CircleNotch } from "@phosphor-icons/react";
+import { ArrowLineRight, Info, Lightbulb, CircleNotch } from "@phosphor-icons/react";
 
 import { openExternalUrl } from "./api.js";
 
@@ -179,17 +179,13 @@ export default function ReviewPanel({
               scan the draft, or run any tool from Actions — its suggestion
               appears here to review.
             </p>
-            <p className="font-mono text-xs lowercase tracking-[0.04em] text-muted mt-3">
-              status :: awaiting selection...
-            </p>
           </>
         ) : activeTool === "Proofread" ? (
           backendOffline ? (
             <div className="flex w-full flex-col gap-2 rounded-xl bg-pale-yellow-bg px-4 py-3 text-amber-900 border border-pale-yellow">
               <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2 min-w-0">
-                  <Warning size={18} weight="fill" className="shrink-0 text-amber-600" />
-                  <span className="font-sans text-sm font-medium truncate">
+                <div className="min-w-0 flex-1">
+                  <span className="block font-sans text-sm font-medium leading-snug">
                     Grammar engine unreachable. Reconnecting...
                   </span>
                 </div>
@@ -262,24 +258,25 @@ export default function ReviewPanel({
               <div className="mt-3 h-3 w-[90%] rounded lex-shimmer" />
               <div className="mt-3 h-3 w-[75%] rounded lex-shimmer" />
               <div className="mt-3 h-3 w-[40%] rounded lex-shimmer" />
-              <p className="mt-4 font-mono text-[10px] lowercase tracking-[0.04em] text-muted">
-                status :: scanning draft...
+              <p className="mt-4 font-sans text-xs text-muted">
+                I&rsquo;m checking your draft&hellip;
               </p>
             </div>
           ) : count === 0 ? (
             showBloom ? (
-              <div className="lex-bloom flex w-full items-center gap-2 rounded-xl bg-[#EDF3EC] px-4 py-3 text-[#346538] border border-[#D3E2D0]">
-                <CheckCircle size={18} weight="fill" />
+              <div className="lex-bloom flex w-full items-center rounded-xl bg-[#EDF3EC] px-4 py-3 text-[#346538] border border-[#D3E2D0]">
                 <span className="font-sans text-sm">{bloomMessageRef.current}</span>
               </div>
             ) : (
-              <p className="font-mono text-xs lowercase tracking-[0.04em] text-muted">
-                status :: {userResolvedAll ? "no issues remaining" : "no issues found"}
+              <p className="text-sm leading-relaxed text-muted">
+                {userResolvedAll
+                  ? "No issues remain in this draft."
+                  : "No issues found in this draft."}
               </p>
             )
           ) : (
             <>
-              <div className="mb-3 flex items-center gap-3">
+              <div className="mb-3 flex items-center justify-end gap-3">
                 <div ref={announceRef} aria-live="polite" aria-atomic="true" className="sr-only">
                   {checking ? "Proofreading in progress" : `${count} ${count === 1 ? "issue" : "issues"} found`}
                 </div>
@@ -388,11 +385,21 @@ export default function ReviewPanel({
   );
 }
 
-function TransformView({ tool, status, error, results, progress, running, onApply, onDismiss }) {
+function TransformView({
+  tool,
+  status,
+  error,
+  results,
+  progress,
+  running,
+  onApply,
+  onDismiss,
+}) {
   if (running) {
     const showProgress = progress && progress.total > 1;
     const pct = progress && progress.total > 0 ? Math.round((progress.current / progress.total) * 100) : 0;
-    const statusText = status === "warming" ? "warming up Lex..." : "generating draft...";
+    const statusText =
+      status === "warming" ? "Preparing your draft…" : "Generating your draft…";
     return (
       <>
         {results && results.length > 0 && (
@@ -425,7 +432,7 @@ function TransformView({ tool, status, error, results, progress, running, onAppl
             </p>
           )}
           <p className="mt-4 font-mono text-[10px] lowercase tracking-[0.04em] text-muted">
-            status :: {statusText}
+            {statusText}
           </p>
         </div>
       </>
@@ -439,16 +446,13 @@ function TransformView({ tool, status, error, results, progress, running, onAppl
 
     return (
       <div className="rounded-xl border border-pale-red bg-pale-red/40 px-4 py-4 lex-card-enter">
-        <div className="flex items-start gap-2.5">
-          <Warning size={16} weight="bold" className="mt-0.5 text-pale-red-text" />
-          <div>
-            <p className="font-sans text-sm font-medium text-pale-red-text">
-              {tool} couldn&rsquo;t run
-            </p>
-            <p className="font-sans text-xs leading-relaxed text-muted mt-1">
-              {error || "The local model returned an error. Try again, or check your AI setup."}
-            </p>
-          </div>
+        <div>
+          <p className="font-sans text-sm font-medium text-pale-red-text">
+            {tool} couldn&rsquo;t run
+          </p>
+          <p className="font-sans text-xs leading-relaxed text-muted mt-1">
+            {error || "The local model returned an error. Try again, or check your AI setup."}
+          </p>
         </div>
         {isContextOverflow && (
           <div className="mt-3 flex items-start gap-2 rounded-lg border border-hairline bg-canvas px-3 py-2.5">
@@ -506,8 +510,8 @@ function TransformView({ tool, status, error, results, progress, running, onAppl
 
   // Idle: tool selected, awaiting first run / result.
   return (
-    <p className="font-mono text-xs lowercase tracking-[0.04em] text-muted">
-      status :: awaiting transform<span className="lex-ellipsis">...</span>
+    <p className="text-sm leading-relaxed text-muted">
+      Run the tool to generate a suggestion.
     </p>
   );
 }
@@ -543,9 +547,6 @@ function TransformCard({ card, index, onApply, onDismiss }) {
           Dismiss
         </button>
       </div>
-      <p className="mt-3 font-mono text-[10px] lowercase tracking-[0.04em] text-muted">
-        status :: review the suggestion, then apply to replace this section
-      </p>
     </li>
   );
 }

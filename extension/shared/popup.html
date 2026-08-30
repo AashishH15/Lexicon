@@ -9,7 +9,17 @@
   <body>
     <header class="bar">
       <h1>Lexicon</h1>
-      <p id="status" class="status">Checking for Lexicon…</p>
+      <div
+        id="lex-status"
+        class="lex-status"
+        data-lex-status="checking"
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+      >
+        <img id="status-icon" class="status-icon" alt="" aria-hidden="true" />
+        <p id="status" class="status">I’m checking…</p>
+      </div>
     </header>
 
     <section class="settings" aria-label="Extension controls">
@@ -84,6 +94,7 @@
     </footer>
 
     <script src="vendor/browser-polyfill.min.js"></script>
+    <script src="lexStatus.js"></script>
     <script type="module" src="popup.js"></script>
   </body>
 </html>

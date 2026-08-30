@@ -640,6 +640,31 @@
     color: transparent;
   }
 
+  .lex-status-working {
+    animation: lex-status-pulse 1.25s ease-in-out infinite;
+    transform-origin: center;
+  }
+
+  @keyframes lex-status-pulse {
+    0%,
+    100% {
+      opacity: 0.78;
+      transform: scale(0.96);
+    }
+
+    50% {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .lex-status-working {
+      animation: none;
+      transform: none;
+    }
+  }
+
   @keyframes lex-progress-slide {
     0% {
       left: -35%;

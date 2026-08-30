@@ -42,8 +42,52 @@ h1 {
   color: #346538;
 }
 
-.status.offline {
+.lex-status {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 6px;
+}
+
+.lex-status .status-icon {
+  display: block;
+  width: 26px;
+  height: 26px;
+  flex: none;
+  object-fit: contain;
+}
+
+.lex-status.checking .status-icon {
+  animation: lex-status-pulse 1.25s ease-in-out infinite;
+}
+
+.lex-status.offline .status,
+.lex-status.no-connection .status,
+.lex-status.error .status {
   color: #9f2f2d;
+}
+
+.lex-status.disabled .status {
+  color: #5f5e5b;
+}
+
+@keyframes lex-status-pulse {
+  0%,
+  100% {
+    opacity: 0.78;
+    transform: scale(0.96);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lex-status.checking .status-icon {
+    animation: none;
+  }
 }
 
 .settings {

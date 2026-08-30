@@ -7,6 +7,7 @@ import {
   discoverBackend,
   getBackendBaseUrl,
   getDictionary,
+  getAiStatus,
   removeDictionaryWord,
   transformText,
 } from "./api.js";
@@ -350,6 +351,19 @@ async function listFieldsInFrames(tabId) {
   return { ok: false, error: "no-content-script", fields: [] };
 }
 
+function aiStatusIsConfigured(status) {
+  const preference = status?.preference || {};
+  if (preference.backend === "ollama") {
+    return Boolean(status?.ollama_available);
+  }
+  if (preference.backend === "lmstudio") {
+    return Boolean(status?.lmstudio_available);
+  }
+  return Boolean(
+    status?.models_ready?.[preference.model_key || status?.model_key],
+  );
+}
+
 if (browser.tabs.onRemoved) {
   browser.tabs.onRemoved.addListener((tabId) => {
     activeFrameByTab.delete(tabId);
@@ -409,6 +423,27 @@ browser.commands.onCommand.addListener(async (command) => {
 });
 
 browser.runtime.onMessage.addListener((msg, sender) => {
+  if (msg?.type === "lexicon:get-ai-status") {
+    return (async () => {
+      await discoverBackend();
+      if (!getBackendBaseUrl()) {
+        return { ok: false, error: "backend_unreachable", configured: false };
+      }
+      try {
+        const status = await getAiStatus();
+        return {
+          ok: true,
+          configured: aiStatusIsConfigured(status),
+        };
+      } catch (error) {
+        return {
+          ok: false,
+          error: error?.message || "ai-status-unavailable",
+        };
+      }
+    })();
+  }
+
   if (msg?.type === "lexicon:sync-dictionary") {
     return synchronizeDictionary({ force: true }).then((settings) => ({
       ok: true,

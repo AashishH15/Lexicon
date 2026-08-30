@@ -58,7 +58,17 @@ const builtinGroups = [
   },
 ];
 
-export default function Toolbar({ editor, activeTool, onToolClick, onAiSetup, aiConfigured, panelWidth, isMac, isWarming, transformStatus, transformRunning }) {
+export default function Toolbar({
+  editor,
+  activeTool,
+  onToolClick,
+  onAiSetup,
+  aiConfigured,
+  panelWidth,
+  isMac,
+  isWarming,
+  transformRunning,
+}) {
   const [customTools, setCustomTools] = useState(getCustomTools);
 
   useEffect(() => {
@@ -88,7 +98,10 @@ export default function Toolbar({ editor, activeTool, onToolClick, onAiSetup, ai
   const warmingTool = isWarming && activeTool && activeTool !== "Proofread";
   const runningTool = transformRunning && activeTool && activeTool !== "Proofread";
   return (
-    <nav aria-label="Tool actions" className="flex flex-col gap-6">
+    <nav
+      aria-label="Tool actions"
+      className="flex flex-col gap-6"
+    >
       {groups.map((group) => (
         <div key={group.label}>
           <p className="font-mono text-[10px] uppercase tracking-[0.08em] text-muted mb-2">

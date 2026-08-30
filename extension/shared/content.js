@@ -176,6 +176,7 @@
       checkedText: null,
       checking: false,
       offline: false,
+      error: "",
       visible: false,
       checkTimer: null,
       checkToken: 0,
@@ -252,6 +253,7 @@
       state.matches = null;
       state.checkedText = null;
       state.offline = false;
+      state.error = "";
       state.selection = null;
     }
     return changed;
@@ -444,6 +446,7 @@
   function showChecking(state) {
     state.checking = true;
     state.offline = false;
+    state.error = "";
     state.matches = [];
     squiggle.clearFieldSquiggles(state.field);
     suggestions.showField(state.field, [], {
@@ -456,12 +459,28 @@
     if (!state.visible || !fieldIsAttached(state.field)) return;
     state.checking = false;
     state.offline = true;
+    state.error = "";
     state.matches = [];
     state.checkedText = state.text;
     squiggle.clearFieldSquiggles(state.field);
     suggestions.showField(state.field, [], {
       ...suggestionHandlers(state),
       offline: true,
+      error: "",
+    });
+  }
+
+  function showError(state, message) {
+    if (!state.visible || !fieldIsAttached(state.field)) return;
+    state.checking = false;
+    state.offline = false;
+    state.error = String(message || "check_failed");
+    state.matches = [];
+    state.checkedText = state.text;
+    squiggle.clearFieldSquiggles(state.field);
+    suggestions.showField(state.field, [], {
+      ...suggestionHandlers(state),
+      error: state.error,
     });
   }
 
@@ -481,10 +500,14 @@
     state.matches = cleaned;
     state.checking = false;
     state.offline = false;
+    state.error = "";
     state.checkedText = state.text;
     if (cleaned.length === 0) {
       squiggle.clearFieldSquiggles(state.field);
-      suggestions.showField(state.field, [], suggestionHandlers(state));
+      suggestions.showField(state.field, [], {
+        ...suggestionHandlers(state),
+        error: "",
+      });
       return 0;
     }
     const ranges = rangesForMatches(state, cleaned);
@@ -494,7 +517,10 @@
       state.text,
       squiggleHandlers(state),
     );
-    suggestions.showField(state.field, cleaned, suggestionHandlers(state));
+    suggestions.showField(state.field, cleaned, {
+      ...suggestionHandlers(state),
+      error: "",
+    });
     return ranges.length;
   }
 
@@ -889,7 +915,11 @@
       ) {
         return;
       }
-      showOffline(state);
+      if (response.error === "backend_unreachable") {
+        showOffline(state);
+      } else {
+        showError(state, response.error);
+      }
       return;
     }
     if (response && response.ok === true && Array.isArray(response.matches)) {

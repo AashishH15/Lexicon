@@ -3,6 +3,45 @@
 (function () {
   "use strict";
 
+  const statusApi =
+    globalThis.__lexiconLexStatus || {
+      LEX_STATUS: {
+        IDLE: "idle",
+        CHECKING: "checking",
+        DISABLED: "disabled",
+        NO_CONNECTION: "no-connection",
+        ISSUES: "issues",
+        ALL_CLEAR: "all-clear",
+        ERROR: "error",
+      },
+      metaFor: (status) => ({
+        icon: `lex-${status}.svg`,
+        label: "Lex status",
+        ariaLabel: `Lex status: ${status}`,
+      }),
+      resolveLexStatus: ({
+        checking = false,
+        matches = [],
+        offline = false,
+        disabled = false,
+        aiBusy = false,
+        error = "",
+      } = {}) =>
+        error
+          ? "error"
+          : offline
+            ? "no-connection"
+            : disabled
+              ? "disabled"
+              : checking || aiBusy
+                ? "checking"
+                : matches.length
+                  ? "issues"
+                  : "all-clear",
+      messageFor: (status) => status,
+      iconUrl: (status) => `icons/lex-${status}.svg`,
+    };
+
   const BADGE_SIZE = 26;
   const PANEL_WIDTH = 320;
   const PANEL_MAX_HEIGHT = 360;
@@ -26,10 +65,8 @@
 
   const STYLE =
     `.badge{position:fixed;width:${BADGE_SIZE}px;height:${BADGE_SIZE}px;` +
-    "border-radius:50%;background:#111111;color:#ffffff;font:600 12px/1 -apple-system,BlinkMacSystemFont,\"Segoe UI\",Helvetica,Arial,sans-serif;" +
-    "display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.25);user-select:none;z-index:2}" +
-    ".badge.clean{background:#346538}" +
-    ".badge.offline{background:#71706c}" +
+    "border-radius:7px;background:transparent;color:#ffffff;font:600 12px/1 -apple-system,BlinkMacSystemFont,\"Segoe UI\",Helvetica,Arial,sans-serif;" +
+    "display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:none;user-select:none;z-index:2}" +
     `.badge-group{position:fixed;width:${BADGE_SIZE}px;height:${BADGE_SIZE}px;z-index:2}` +
     `.badge-group::before,.badge-group::after{content:"";position:absolute;top:0;height:${BADGE_SIZE}px;` +
     `width:${AI_TRIGGER_GAP + HOVER_BRIDGE}px;pointer-events:auto}` +
@@ -44,8 +81,11 @@
     ".badge-group .ai-trigger:hover{background:#edf3fa}" +
     ".badge-group .magic-icon{display:inline-flex;width:15px;height:15px;align-items:center;justify-content:center}" +
     ".badge-group .magic-icon svg{display:block;width:15px;height:15px;fill:currentColor}" +
-    ".badge .check-icon{display:inline-flex;width:15px;height:15px;align-items:center;justify-content:center}" +
-    ".badge .check-icon svg{display:block;width:15px;height:15px;fill:currentColor}" +
+    ".badge .status-icon{display:block;width:100%;height:100%;border-radius:7px;object-fit:contain;filter:drop-shadow(0 1px 1.5px rgba(0,0,0,0.18));pointer-events:none}" +
+    ".badge.checking .status-icon{animation:lex-status-pulse 1.25s ease-in-out infinite}" +
+    ".badge .issue-count{position:absolute;right:-4px;bottom:-4px;min-width:14px;height:14px;padding:0 3px;border:1px solid #ffffff;border-radius:7px;background:#9f2f2d;color:#ffffff;font:700 9px/12px -apple-system,BlinkMacSystemFont,\"Segoe UI\",Helvetica,Arial,sans-serif;text-align:center}" +
+    "@keyframes lex-status-pulse{0%,100%{opacity:.78;transform:scale(.96)}50%{opacity:1;transform:scale(1)}}" +
+    "@media (prefers-reduced-motion:reduce){.badge.checking .status-icon{animation:none}}" +
     `.panel{position:fixed;width:${PANEL_WIDTH}px;max-height:${PANEL_MAX_HEIGHT}px;` +
     "display:flex;flex-direction:column;background:#f7f6f3;border:1px solid #d8d7d3;border-radius:8px;box-shadow:0 6px 24px rgba(0,0,0,0.18);" +
     "font:13px/1.45 -apple-system,BlinkMacSystemFont,\"Segoe UI\",Helvetica,Arial,sans-serif;color:#111111;overflow:hidden;z-index:3}" +
@@ -304,29 +344,92 @@
     window.removeEventListener("resize", position);
   }
 
+  function statusForState(current) {
+    const error = String(current?.error || "");
+    const aiError = String(current?.aiError || "");
+    const operationError = error || aiError;
+    return statusApi.resolveLexStatus({
+      checking: Boolean(current?.checking),
+      matches: Array.isArray(current?.matches) ? current.matches : null,
+      offline:
+        Boolean(current?.offline) || operationError === "backend_unreachable",
+      disabled: Boolean(current?.disabled),
+      aiBusy: Boolean(current?.aiBusy),
+      error:
+        operationError && operationError !== "backend_unreachable"
+          ? operationError
+          : "",
+    });
+  }
+
+  function statusIcon(status, className = "status-icon") {
+    const image = document.createElement("img");
+    image.className = className;
+    image.src = statusApi.iconUrl(status);
+    image.alt = "";
+    image.setAttribute("aria-hidden", "true");
+    image.setAttribute("draggable", "false");
+    return image;
+  }
+
+  function bindBadgeActivation(badge, onActivate) {
+    badge.setAttribute("role", "button");
+    badge.setAttribute("tabindex", "0");
+    badge.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      onActivate();
+    });
+    badge.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault();
+      event.stopPropagation();
+      onActivate();
+    });
+  }
+
+  function setBadgeState(badge, current) {
+    const status = statusForState(current);
+    const count =
+      status === "issues" && Array.isArray(current.matches)
+        ? current.matches.length
+        : 0;
+    badge.classList.remove(
+      "clean",
+      "offline",
+      "checking",
+      "issues",
+      "all-clear",
+      "disabled",
+      "no-connection",
+      "error",
+    );
+    badge.classList.add(status);
+    badge.replaceChildren(statusIcon(status));
+    if (count > 0) {
+      const countEl = document.createElement("span");
+      countEl.className = "issue-count";
+      countEl.textContent = String(count);
+      countEl.setAttribute("aria-hidden", "true");
+      badge.appendChild(countEl);
+    }
+    if (badge.dataset) badge.dataset.lexStatus = status;
+    badge.title = statusApi.messageFor(status, {
+      issueCount: count,
+      aiBusy: Boolean(current.aiBusy),
+      selected: Boolean(current.aiBusy),
+    });
+    badge.setAttribute("aria-busy", status === "checking" ? "true" : "false");
+    badge.setAttribute(
+      "aria-label",
+      status === "issues"
+        ? `Lex found ${count} ${count === 1 ? "issue" : "issues"}.`
+        : statusApi.metaFor(status).ariaLabel,
+    );
+  }
+
   function updateBadge() {
-    if (state.checking) {
-      state.badgeEl.classList.remove("clean", "offline");
-      state.badgeEl.textContent = "…";
-      state.badgeEl.title = "Checking…";
-      return;
-    }
-    if (state.offline) {
-      state.badgeEl.classList.remove("clean");
-      state.badgeEl.classList.add("offline");
-      state.badgeEl.textContent = "!";
-      state.badgeEl.title = "Lexicon isn't running — open Lexicon to check";
-      return;
-    }
-    state.badgeEl.classList.remove("offline");
-    const count = state.matches.length;
-    const clean = count === 0;
-    state.badgeEl.classList.toggle("clean", clean);
-    if (clean) state.badgeEl.replaceChildren(checkIcon());
-    else state.badgeEl.textContent = String(count);
-    state.badgeEl.title = clean
-      ? "No issues found — click to review, hover for Tone"
-      : "Lexicon issues — click to review, hover for Tone";
+    if (state?.badgeEl) setBadgeState(state.badgeEl, state);
   }
 
   function renderPanel() {
@@ -336,14 +439,8 @@
     const head = document.createElement("div");
     head.className = "head";
     const title = document.createElement("span");
-    title.textContent = state.checking
-      ? "Checking…"
-      : state.offline
-        ? "Lexicon isn't running"
-        : state.matches.length === 0
-          ? "No issues found"
-          : `${state.matches.length} ` +
-            `${state.matches.length === 1 ? "issue" : "issues"} found`;
+    title.textContent = "Lexicon";
+    head.appendChild(title);
     const close = document.createElement("button");
     close.className = "close";
     close.appendChild(closeIcon());
@@ -352,7 +449,6 @@
       state.panelOpen = false;
       state.panelEl.hidden = true;
     });
-    head.appendChild(title);
     head.appendChild(close);
     panel.appendChild(head);
 
@@ -361,17 +457,27 @@
     if (state.checking) {
       const empty = document.createElement("p");
       empty.className = "empty";
-      empty.textContent = "Checking…";
+      empty.textContent = "I’m checking…";
       list.appendChild(empty);
     } else if (state.offline) {
       const empty = document.createElement("p");
       empty.className = "empty";
-      empty.textContent = "Open Lexicon to use grammar checking here.";
+      empty.textContent = "I can’t reach the local engine. Open Lexicon to reconnect.";
+      list.appendChild(empty);
+    } else if (state.disabled) {
+      const empty = document.createElement("p");
+      empty.className = "empty";
+      empty.textContent = "I’m paused.";
+      list.appendChild(empty);
+    } else if (state.error) {
+      const empty = document.createElement("p");
+      empty.className = "empty";
+      empty.textContent = "Something went wrong. Try proofreading again.";
       list.appendChild(empty);
     } else if (state.matches.length === 0) {
       const empty = document.createElement("p");
       empty.className = "empty";
-      empty.textContent = "No issues found.";
+      empty.textContent = "All clear — I found no issues.";
       list.appendChild(empty);
     } else {
       for (let i = 0; i < state.matches.length; i++) {
@@ -566,6 +672,10 @@
       matches: matches || [],
       checking: Boolean(opts.checking),
       offline: Boolean(opts.offline),
+      disabled: Boolean(opts.disabled),
+      error: String(opts.error || ""),
+      aiBusy: Boolean(opts.aiBusy),
+      aiError: String(opts.aiError || ""),
       onApply: opts.onApply || (() => {}),
       onDismiss: opts.onDismiss || (() => {}),
       onApplyReplacement: opts.onApplyReplacement || null,
@@ -579,11 +689,7 @@
 
     const badge = document.createElement("div");
     badge.className = "badge";
-    badge.addEventListener("click", (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      togglePanel();
-    });
+    bindBadgeActivation(badge, togglePanel);
     root.appendChild(badge);
     state.badgeEl = badge;
 
@@ -609,6 +715,10 @@
     if (!state) return;
     state.matches = matches || [];
     state.checking = false;
+    state.disabled = false;
+    state.error = "";
+    state.aiBusy = false;
+    state.aiError = "";
     hideMatchTooltip();
     updateBadge();
     renderPanel();
@@ -618,6 +728,7 @@
   function setChecking() {
     if (!state) return;
     state.checking = true;
+    state.error = "";
     state.matches = [];
     hideMatchTooltip();
     updateBadge();
@@ -740,28 +851,7 @@
   }
 
   function fieldUpdateBadge(state) {
-    if (state.checking) {
-      state.badgeEl.classList.remove("clean", "offline");
-      state.badgeEl.textContent = "…";
-      state.badgeEl.title = "Checking…";
-      return;
-    }
-    if (state.offline) {
-      state.badgeEl.classList.remove("clean");
-      state.badgeEl.classList.add("offline");
-      state.badgeEl.textContent = "!";
-      state.badgeEl.title = "Lexicon isn't running — open Lexicon to check";
-      return;
-    }
-    state.badgeEl.classList.remove("offline");
-    const count = state.matches.length;
-    const clean = count === 0;
-    state.badgeEl.classList.toggle("clean", clean);
-    if (clean) state.badgeEl.replaceChildren(checkIcon());
-    else state.badgeEl.textContent = String(count);
-    state.badgeEl.title = clean
-      ? "No issues found — click to review, hover for Tone"
-      : "Lexicon issues — click to review, hover for Tone";
+    if (state?.badgeEl) setBadgeState(state.badgeEl, state);
   }
 
   function fieldRenderPanel(state) {
@@ -771,14 +861,8 @@
     const head = document.createElement("div");
     head.className = "head";
     const title = document.createElement("span");
-    title.textContent = state.checking
-      ? "Checking…"
-      : state.offline
-        ? "Lexicon isn't running"
-        : state.matches.length === 0
-          ? "No issues found"
-          : `${state.matches.length} ` +
-            `${state.matches.length === 1 ? "issue" : "issues"} found`;
+    title.textContent = "Lexicon";
+    head.appendChild(title);
     const close = document.createElement("button");
     close.className = "close";
     close.appendChild(closeIcon());
@@ -787,7 +871,6 @@
       state.panelOpen = false;
       state.panelEl.hidden = true;
     });
-    head.appendChild(title);
     head.appendChild(close);
     panel.appendChild(head);
 
@@ -796,17 +879,27 @@
     if (state.checking) {
       const empty = document.createElement("p");
       empty.className = "empty";
-      empty.textContent = "Checking…";
+      empty.textContent = "I’m checking…";
       list.appendChild(empty);
     } else if (state.offline) {
       const empty = document.createElement("p");
       empty.className = "empty";
-      empty.textContent = "Open Lexicon to use grammar checking here.";
+      empty.textContent = "I can’t reach the local engine. Open Lexicon to reconnect.";
+      list.appendChild(empty);
+    } else if (state.disabled) {
+      const empty = document.createElement("p");
+      empty.className = "empty";
+      empty.textContent = "I’m paused.";
+      list.appendChild(empty);
+    } else if (state.error) {
+      const empty = document.createElement("p");
+      empty.className = "empty";
+      empty.textContent = "Something went wrong. Try proofreading again.";
       list.appendChild(empty);
     } else if (state.matches.length === 0) {
       const empty = document.createElement("p");
       empty.className = "empty";
-      empty.textContent = "No issues found.";
+      empty.textContent = "All clear — I found no issues.";
       list.appendChild(empty);
     } else {
       for (let i = 0; i < state.matches.length; i++) {
@@ -867,13 +960,6 @@
     icon.setAttribute("aria-hidden", "true");
     icon.innerHTML = `<svg viewBox="0 0 256 256" focusable="false"><path d="${path}"></path></svg>`;
     return icon;
-  }
-
-  function checkIcon() {
-    return phosphorIcon(
-      "check-icon",
-      "M232.49,80.49l-128,128a12,12,0,0,1-17,0l-56-56a12,12,0,1,1,17-17L96,183,215.51,63.51a12,12,0,0,1,17,17Z",
-    );
   }
 
   function closeIcon() {
@@ -937,12 +1023,16 @@
     run.className = "ai-run";
     run.type = "button";
     run.textContent = state.aiBusy ? "Working…" : "Run";
-    run.disabled = Boolean(state.aiBusy || state.checking || state.offline);
+    run.disabled = Boolean(
+      state.aiBusy || state.checking || state.offline || state.disabled,
+    );
     run.addEventListener("click", () => {
       const tool = select.value;
       state.aiTool = tool;
       state.aiBusy = true;
+      state.error = "";
       state.aiError = "";
+      fieldUpdateBadge(state);
       fieldRenderAiPanel(state);
       fieldPosition(state);
       Promise.resolve()
@@ -951,12 +1041,14 @@
           if (!result || result.ok === false) {
             state.aiError = result?.error || "AI tool failed.";
             state.aiResult = null;
+            fieldUpdateBadge(state);
             return;
           }
           const text = typeof result === "string" ? result : result.text;
           if (typeof text !== "string" || !text.trim()) {
             state.aiError = "AI tool returned no text.";
             state.aiResult = null;
+            fieldUpdateBadge(state);
             return;
           }
           state.aiResult = {
@@ -965,13 +1057,16 @@
             selectedText: result.selectedText || "",
             selection: result.selection || null,
           };
+          fieldUpdateBadge(state);
         })
         .catch((error) => {
           state.aiError = error?.message || "AI tool failed.";
           state.aiResult = null;
+          fieldUpdateBadge(state);
         })
         .finally(() => {
           state.aiBusy = false;
+          fieldUpdateBadge(state);
           fieldRenderAiPanel(state);
           fieldPosition(state);
         });
@@ -994,7 +1089,9 @@
         const pending = state.aiResult;
         if (!pending) return;
         state.aiBusy = true;
+        state.error = "";
         state.aiError = "";
+        fieldUpdateBadge(state);
         fieldRenderAiPanel(state);
         fieldPosition(state);
         Promise.resolve()
@@ -1012,12 +1109,15 @@
             } else {
               state.aiResult = null;
             }
+            fieldUpdateBadge(state);
           })
           .catch((error) => {
             state.aiError = error?.message || "The field could not be updated.";
+            fieldUpdateBadge(state);
           })
           .finally(() => {
             state.aiBusy = false;
+            fieldUpdateBadge(state);
             fieldRenderAiPanel(state);
             fieldPosition(state);
           });
@@ -1230,6 +1330,7 @@
         matches: matches || [],
         checking: Boolean(opts.checking),
         offline: Boolean(opts.offline),
+        disabled: Boolean(opts.disabled),
         onApply: opts.onApply || (() => {}),
         onDismiss: opts.onDismiss || (() => {}),
         onApplyReplacement: opts.onApplyReplacement || null,
@@ -1238,9 +1339,10 @@
         onTransform: opts.onTransform || null,
         onApplyTransform: opts.onApplyTransform || null,
         aiTool: "Friendly",
-        aiBusy: false,
+        aiBusy: Boolean(opts.aiBusy),
         aiResult: null,
-        aiError: "",
+        error: String(opts.error || ""),
+        aiError: String(opts.aiError || ""),
         host: fieldHost,
         panelOpen: false,
         aiPanelOpen: false,
@@ -1256,11 +1358,7 @@
 
       const badge = document.createElement("div");
       badge.className = "badge";
-      badge.addEventListener("click", (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        fieldTogglePanel(state);
-      });
+      bindBadgeActivation(badge, () => fieldTogglePanel(state));
       badgeGroup.appendChild(badge);
       state.badgeEl = badge;
 
@@ -1301,6 +1399,21 @@
       state.matches = matches || [];
       state.checking = Boolean(opts.checking);
       state.offline = Boolean(opts.offline);
+      state.disabled = Boolean(opts.disabled);
+      if (opts.error !== undefined) {
+        state.error = String(opts.error || "");
+      } else if (opts.checking || opts.offline || opts.disabled) {
+        state.error = "";
+      }
+      if (opts.aiBusy !== undefined) state.aiBusy = Boolean(opts.aiBusy);
+      if (opts.aiError !== undefined) {
+        state.aiError = String(opts.aiError || "");
+      } else if (opts.checking || opts.offline || opts.disabled) {
+        state.aiError = "";
+      }
+      if (opts.checking || opts.offline || opts.disabled) {
+        state.aiBusy = false;
+      }
       if (opts.onApply) state.onApply = opts.onApply;
       if (opts.onDismiss) state.onDismiss = opts.onDismiss;
       if (opts.onApplyReplacement) {
@@ -1314,6 +1427,8 @@
       if (opts.onApplyTransform) {
         state.onApplyTransform = opts.onApplyTransform;
       }
+      if (opts.aiBusy !== undefined) state.aiBusy = Boolean(opts.aiBusy);
+      if (opts.aiError !== undefined) state.aiError = String(opts.aiError || "");
       state.panelOpen = keepOpen;
       state.aiPanelOpen = keepAiOpen;
     }
@@ -1332,6 +1447,10 @@
     state.matches = matches || [];
     state.checking = false;
     state.offline = Boolean(opts.offline);
+    state.disabled = Boolean(opts.disabled);
+    state.error = String(opts.error || "");
+    if (opts.aiBusy !== undefined) state.aiBusy = Boolean(opts.aiBusy);
+    state.aiError = String(opts.aiError || "");
     if (opts.onTransform) state.onTransform = opts.onTransform;
     if (opts.onApplyTransform) state.onApplyTransform = opts.onApplyTransform;
     fieldHideMatchTooltip(state);
@@ -1347,6 +1466,9 @@
     if (!state) return fieldShow(field, [], { checking: true });
     state.checking = true;
     state.offline = false;
+    state.aiBusy = false;
+    state.error = "";
+    state.aiError = "";
     state.matches = [];
     fieldHideMatchTooltip(state);
     fieldUpdateBadge(state);
