@@ -71,7 +71,17 @@ function createHarness(options = {}) {
     clearTimeout() {},
     browser: {
       runtime: {
-        sendMessage: async (message) => {
+        sendMessage: (message) => {
+          if (
+            options.throwOnNotification &&
+            [
+              "lexicon:active-field",
+              "lexicon:frame-fields",
+              "lexicon:frame-ready",
+            ].includes(message.type)
+          ) {
+            throw new Error("Extension context invalidated.");
+          }
           if (message.type === "lexicon:get-settings") {
             return {
               paused: false,
@@ -233,4 +243,8 @@ test("AI transforms only the selected text and preserves the rest of the field",
   );
   assert.deepEqual(plain(applied), { ok: true });
   assert.equal(harness.field.value, "teh the");
+});
+
+test("ignores synchronous runtime errors from an invalidated extension context", () => {
+  assert.doesNotThrow(() => createHarness({ throwOnNotification: true }));
 });

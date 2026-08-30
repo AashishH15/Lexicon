@@ -57,6 +57,18 @@
     return isSiteEnabled() && !proofreadingPaused;
   }
 
+  function sendRuntimeMessage(message) {
+    try {
+      const pending = browser.runtime.sendMessage(message);
+      if (pending && typeof pending.catch === "function") {
+        pending.catch(() => {});
+      }
+    } catch {
+      // Chrome can synchronously throw here while an old content script is
+      // being torn down after the extension reloads.
+    }
+  }
+
   function applySettings(nextSettings) {
     const wasEnabled = isProofreadingEnabled();
     const nextDictionary = new Set(
@@ -102,18 +114,14 @@
   }
 
   function notifyActiveField() {
-    browser.runtime
-      .sendMessage({ type: "lexicon:active-field" })
-      .catch(() => {});
+    sendRuntimeMessage({ type: "lexicon:active-field" });
   }
 
   function notifyFrameFields(hasFields) {
     const value = Boolean(hasFields);
     if (frameHasFields === value) return;
     frameHasFields = value;
-    browser.runtime
-      .sendMessage({ type: "lexicon:frame-fields", hasFields: value })
-      .catch(() => {});
+    sendRuntimeMessage({ type: "lexicon:frame-fields", hasFields: value });
   }
 
   function matchKey(match, text) {
@@ -1347,9 +1355,7 @@
       applySettings({ paused: false, disabledSites: [] });
     }
   }
-  browser.runtime
-    .sendMessage({ type: "lexicon:frame-ready" })
-    .catch(() => {});
+  sendRuntimeMessage({ type: "lexicon:frame-ready" });
   loadSettings();
 })();
 
@@ -1387,10 +1393,19 @@
     );
   }
 
+  function sendRuntimeMessage(message) {
+    try {
+      const pending = browser.runtime.sendMessage(message);
+      if (pending && typeof pending.catch === "function") {
+        pending.catch(() => {});
+      }
+    } catch {
+      // Ignore messages from a legacy script while the extension reloads.
+    }
+  }
+
   function notifyActiveField() {
-    browser.runtime
-      .sendMessage({ type: "lexicon:active-field" })
-      .catch(() => {});
+    sendRuntimeMessage({ type: "lexicon:active-field" });
   }
 
   function fieldOwnsFocus(field) {
