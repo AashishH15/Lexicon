@@ -11,10 +11,13 @@ const source = readFileSync(
   "utf-8",
 );
 
-function createHarness() {
+const plain = (value) => JSON.parse(JSON.stringify(value));
+
+function createHarness(options = {}) {
   let messageHandler = null;
   let renderedMatches = [];
   let renderedOptions = null;
+  let transformRequest = null;
   const addedWords = [];
   const field = {
     tagName: "TEXTAREA",
@@ -80,6 +83,13 @@ function createHarness() {
             addedWords.push(message.word);
             return { ok: true, word: message.word };
           }
+          if (message.type === "lexicon:transform-text") {
+            transformRequest = message;
+            return {
+              ok: true,
+              text: options.transformResult || "THE",
+            };
+          }
           return { ok: true };
         },
         onMessage: {
@@ -98,6 +108,13 @@ function createHarness() {
         text: target.value,
         segments: null,
       }),
+      normalizeText: (text) => String(text).replace(/\r\n?/g, "\n"),
+      getSelection: () => options.selection || null,
+      replaceEditableRange: (target, _kind, start, end, text) => {
+        target.value =
+          target.value.slice(0, start) + text + target.value.slice(end);
+        return true;
+      },
       editableFromNode: () => field,
     },
     __lexiconSquiggle: {
@@ -120,6 +137,9 @@ function createHarness() {
     },
     get messageHandler() {
       return messageHandler;
+    },
+    get transformRequest() {
+      return transformRequest;
     },
   };
 }
@@ -185,4 +205,32 @@ test("canonical dictionary broadcasts remove matching field highlights", async (
 
   assert.equal(response.ok, true);
   assert.equal(harness.renderedMatches.length, 0);
+});
+
+test("AI transforms only the selected text and preserves the rest of the field", async () => {
+  const harness = createHarness({
+    selection: { start: 4, end: 7, text: "teh" },
+    transformResult: "the",
+  });
+  await new Promise((resolve) => setImmediate(resolve));
+
+  await harness.messageHandler({
+    type: "lexicon:highlight",
+    matches: [],
+  });
+  assert.equal(typeof harness.renderedOptions.onTransform, "function");
+
+  const result = await harness.renderedOptions.onTransform("Friendly");
+  assert.equal(harness.transformRequest.text, "teh");
+  assert.deepEqual(plain(result.selection), { start: 4, end: 7 });
+  assert.equal(result.sourceText, "teh teh");
+
+  const applied = await harness.renderedOptions.onApplyTransform(
+    result.text,
+    result.sourceText,
+    result.selection,
+    result.selectedText,
+  );
+  assert.deepEqual(plain(applied), { ok: true });
+  assert.equal(harness.field.value, "teh the");
 });

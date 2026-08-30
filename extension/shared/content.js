@@ -177,6 +177,7 @@
       programmaticClearTimer: null,
       inputHandlers: null,
       mutationObserver: null,
+      selection: null,
       dismissedKeys: new Set(),
     };
     fieldStates.set(field, state);
@@ -243,8 +244,99 @@
       state.matches = null;
       state.checkedText = null;
       state.offline = false;
+      state.selection = null;
     }
     return changed;
+  }
+
+  function selectionForState(state, sourceText = state?.text || "") {
+    if (!state || !fieldIsAttached(state.field)) return null;
+    const live =
+      typeof editable.getSelection === "function"
+        ? editable.getSelection(state.field)
+        : null;
+    if (
+      live &&
+      Number.isInteger(live.start) &&
+      Number.isInteger(live.end) &&
+      live.end > live.start &&
+      live.end <= sourceText.length
+    ) {
+      state.selection = {
+        start: live.start,
+        end: live.end,
+        text: sourceText.slice(live.start, live.end),
+        sourceText,
+      };
+      return state.selection;
+    }
+    if (
+      state.selection &&
+      state.selection.sourceText === sourceText &&
+      state.selection.start >= 0 &&
+      state.selection.end <= sourceText.length &&
+      state.selection.end > state.selection.start
+    ) {
+      return state.selection;
+    }
+    return null;
+  }
+
+  function selectionRange(selection, sourceText) {
+    if (
+      selection &&
+      Number.isInteger(selection.start) &&
+      Number.isInteger(selection.end) &&
+      selection.start >= 0 &&
+      selection.end > selection.start &&
+      selection.end <= sourceText.length
+    ) {
+      return {
+        start: selection.start,
+        end: selection.end,
+        text: sourceText.slice(selection.start, selection.end),
+      };
+    }
+    return {
+      start: 0,
+      end: sourceText.length,
+      text: sourceText,
+    };
+  }
+
+  function captureActiveSelection() {
+    if (!activeField) return;
+    const state = fieldStates.get(activeField);
+    if (!state) return;
+    const current = editable.extractEditableText(state.field);
+    const live =
+      typeof editable.getSelection === "function"
+        ? editable.getSelection(state.field)
+        : null;
+    if (
+      live &&
+      Number.isInteger(live.start) &&
+      Number.isInteger(live.end) &&
+      live.end > live.start &&
+      live.end <= current.text.length
+    ) {
+      state.selection = {
+        start: live.start,
+        end: live.end,
+        text: current.text.slice(live.start, live.end),
+        sourceText: current.text,
+      };
+      return;
+    }
+    const focused = editable.deepActiveElement
+      ? editable.deepActiveElement(document)
+      : document.activeElement;
+    if (
+      focused === state.field ||
+      Boolean(state.field.contains && state.field.contains(focused))
+    ) {
+      state.selection = null;
+    }
   }
 
   function invalidateCheck(state) {
@@ -437,8 +529,8 @@
       },
       onAddToDictionary: (match) => addMatchToDictionary(state, match),
       onTransform: (tool) => transformField(state, tool),
-      onApplyTransform: (text, sourceText) =>
-        applyTransform(state, text, sourceText),
+      onApplyTransform: (text, sourceText, selection, selectedText) =>
+        applyTransform(state, text, sourceText, selection, selectedText),
     };
   }
 
@@ -452,13 +544,16 @@
       onFieldInput(state);
       return { ok: false, error: "The field changed. Try again." };
     }
-    if (!state.text.trim()) {
+    const selection =
+      selectionForState(state, current.text) ||
+      selectionRange(null, current.text);
+    if (!selection.text.trim()) {
       return { ok: false, error: "The field is empty." };
     }
     const response = await browser.runtime.sendMessage({
       type: "lexicon:transform-text",
       tool,
-      text: state.text,
+      text: selection.text,
     });
     if (!response?.ok) {
       return {
@@ -469,11 +564,22 @@
     return {
       ok: true,
       text: response.text,
-      sourceText: state.text,
+      sourceText: current.text,
+      selectedText: selection.text,
+      selection: {
+        start: selection.start,
+        end: selection.end,
+      },
     };
   }
 
-  function applyTransform(state, text, sourceText) {
+  function applyTransform(
+    state,
+    text,
+    sourceText,
+    selection = null,
+    selectedText = null,
+  ) {
     if (!state.visible || !fieldIsAttached(state.field)) {
       return { ok: false, error: "The field is no longer visible." };
     }
@@ -482,13 +588,39 @@
       return { ok: false, error: "The field changed. Try again." };
     }
     const expected = editable.normalizeText(text);
+    const range = selectionRange(selection, sourceText);
+    if (
+      selectedText != null &&
+      range.text !== editable.normalizeText(String(selectedText))
+    ) {
+      return { ok: false, error: "The field changed. Try again." };
+    }
+    const nextText =
+      sourceText.slice(0, range.start) +
+      expected +
+      sourceText.slice(range.end);
     invalidateCheck(state);
     beginProgrammaticChange(state);
     let replaced = false;
     try {
       replaced =
-        editable.replaceEditableText(state.field, state.kind, expected) &&
-        editable.extractEditableText(state.field).text === expected;
+        editable.replaceEditableRange(
+          state.field,
+          state.kind,
+          range.start,
+          range.end,
+          expected,
+        ) &&
+        editable.extractEditableText(state.field).text === nextText;
+      if (
+        !replaced &&
+        range.start === 0 &&
+        range.end === sourceText.length
+      ) {
+        replaced =
+          editable.replaceEditableText(state.field, state.kind, expected) &&
+          editable.extractEditableText(state.field).text === expected;
+      }
       refreshStateText(state);
     } finally {
       endProgrammaticChange(state);
@@ -499,6 +631,7 @@
     state.matches = null;
     state.checkedText = null;
     state.offline = false;
+    state.selection = null;
     state.dismissedKeys.clear();
     if (state.text.trim()) scheduleFieldCheck(state);
     else hideStateVisuals(state);
@@ -1054,11 +1187,19 @@
           const selected = setActiveField(state.field);
           if (!selected) return { ok: false, error: "field-not-available" };
           refreshStateText(selected);
+          const selection = selectionForState(selected);
           return {
             ok: true,
             fieldId: selected.fieldId,
             text: selected.text,
             kind: selected.kind,
+            selection: selection
+              ? {
+                  start: selection.start,
+                  end: selection.end,
+                  text: selection.text,
+                }
+              : null,
           };
         }
         case "lexicon:get-text": {
@@ -1067,7 +1208,19 @@
           if (!state) return { ok: false, error: "no-editable-field" };
           refreshStateText(state);
           rememberField(state.field, state.kind, state.text, state.segments);
-          return { ok: true, text: state.text, kind: state.kind };
+          const selection = selectionForState(state);
+          return {
+            ok: true,
+            text: state.text,
+            kind: state.kind,
+            selection: selection
+              ? {
+                  start: selection.start,
+                  end: selection.end,
+                  text: selection.text,
+                }
+              : null,
+          };
         }
         case "lexicon:highlight": {
           if (siteDisabled) {
@@ -1120,6 +1273,39 @@
           else hideStateVisuals(state);
           return { ok: true };
         }
+        case "lexicon:replace-selection": {
+          if (siteDisabled || typeof msg.text !== "string") {
+            return {
+              ok: false,
+              error: siteDisabled ? "site-disabled" : "no-field",
+            };
+          }
+          const state = resolveActiveField(msg.fieldId);
+          if (!state) return { ok: false, error: "no-field" };
+          refreshStateText(state);
+          const sourceText =
+            typeof msg.sourceText === "string"
+              ? editable.normalizeText(msg.sourceText)
+              : state.text;
+          if (state.text !== sourceText) {
+            return { ok: false, error: "field-changed" };
+          }
+          const range = selectionRange(msg.selection, sourceText);
+          const selectedText =
+            typeof msg.selectedText === "string"
+              ? msg.selectedText
+              : range.text;
+          const result = applyTransform(
+            state,
+            msg.text,
+            sourceText,
+            range,
+            selectedText,
+          );
+          return result.ok
+            ? { ok: true, fieldId: state.fieldId }
+            : { ok: false, error: result.error || "replacement-failed" };
+        }
         default:
           return { ok: false, error: "unknown-message" };
       }
@@ -1149,6 +1335,7 @@
       subtree: true,
     });
   }
+  document.addEventListener("selectionchange", captureActiveSelection, true);
   browser.runtime.onMessage.addListener(onMessage);
   async function loadSettings() {
     try {

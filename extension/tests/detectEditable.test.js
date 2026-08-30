@@ -28,7 +28,9 @@ const {
   normalizeText,
   normalizeSegments,
   extractEditableText,
+  getSelection,
   replaceEditableText,
+  replaceEditableRange,
   replaceRangeDirect,
   replaceContentDirect,
   matchRanges,
@@ -305,6 +307,32 @@ test("extractEditableText reads a textarea value", () => {
   assert.equal(result.kind, "textarea");
   assert.equal(result.text, "Teh cat.");
   assert.equal(result.segments, null);
+});
+
+test("getSelection returns only the selected textarea text", () => {
+  const field = makeField({ tag: "TEXTAREA", ownerDocument: fakeDoc });
+  field.value = "Rewrite only this sentence.";
+  field.selectionStart = 8;
+  field.selectionEnd = 24;
+  assert.deepEqual(plain(getSelection(field)), {
+    start: 8,
+    end: 24,
+    text: "only this senten",
+  });
+});
+
+test("replaceEditableRange preserves unselected textarea text", () => {
+  const field = makeField({
+    tag: "TEXTAREA",
+    ownerDocument: { defaultView: null },
+  });
+  field.value = "Keep this. Rewrite this. Keep that.";
+  assert.equal(
+    replaceEditableRange(field, "textarea", 11, 24, "Update this."),
+    true,
+  );
+  assert.equal(field.value, "Keep this. Update this. Keep that.");
+  assert.equal(field.events.length, 1);
 });
 
 test("replaceRangeDirect replaces a mapped range and fires input", () => {

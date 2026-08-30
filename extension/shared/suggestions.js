@@ -962,6 +962,8 @@
           state.aiResult = {
             text,
             sourceText: result.sourceText || "",
+            selectedText: result.selectedText || "",
+            selection: result.selection || null,
           };
         })
         .catch((error) => {
@@ -986,7 +988,7 @@
       const replace = document.createElement("button");
       replace.className = "ai-replace";
       replace.type = "button";
-      replace.textContent = "Replace field";
+      replace.textContent = "Replace selection";
       replace.disabled = Boolean(state.aiBusy);
       replace.addEventListener("click", () => {
         const pending = state.aiResult;
@@ -997,7 +999,12 @@
         fieldPosition(state);
         Promise.resolve()
           .then(() =>
-            state.onApplyTransform(pending.text, pending.sourceText),
+            state.onApplyTransform(
+              pending.text,
+              pending.sourceText,
+              pending.selection,
+              pending.selectedText,
+            ),
           )
           .then((response) => {
             if (response === false || response?.ok === false) {

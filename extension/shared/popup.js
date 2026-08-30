@@ -28,6 +28,8 @@ const dictionaryStatusEl = document.getElementById("dictionary-status");
 const fieldSelectEl = document.getElementById("field-select");
 
 let fieldText = "";
+let selectedText = "";
+let selection = null;
 let fieldReady = false;
 let selectedFieldId = "";
 let selectedFrameId = null;
@@ -89,6 +91,8 @@ function clearFieldTarget(message) {
   selectedFrameId = null;
   fieldReady = false;
   fieldText = "";
+  selectedText = "";
+  selection = null;
   fieldSelectEl.value = "";
   inputEl.value = "";
   inputEl.placeholder = message;
@@ -119,9 +123,23 @@ async function selectField(fieldId) {
     }
     selectedFieldId = response.fieldId || fieldId;
     fieldText = String(response.text || "");
+    selection =
+      response.selection &&
+      Number.isInteger(response.selection.start) &&
+      Number.isInteger(response.selection.end) &&
+      response.selection.end > response.selection.start
+        ? {
+            start: response.selection.start,
+            end: response.selection.end,
+            text: String(response.selection.text || ""),
+          }
+        : null;
+    selectedText = selection?.text || fieldText;
     fieldReady = true;
-    inputEl.value = fieldText;
-    inputEl.placeholder = "Selected text field preview.";
+    inputEl.value = selectedText;
+    inputEl.placeholder = selection
+      ? "Selected text preview."
+      : "Selected text field preview.";
     refreshActions();
     return true;
   } catch {
@@ -390,6 +408,8 @@ async function refreshField() {
   const previousFieldId = selectedFieldId;
   fieldReady = false;
   fieldText = "";
+  selectedText = "";
+  selection = null;
   inputEl.value = "";
   if (settings.siteDisabled) {
     setFieldOptions([]);
@@ -422,6 +442,8 @@ async function refreshField() {
       "";
     if (!preferredId) {
       selectedFieldId = "";
+      selectedText = "";
+      selection = null;
       inputEl.placeholder = fields.length
         ? "Choose a visible text field above to use Tone."
         : "No visible text fields found on this page.";
@@ -450,7 +472,13 @@ function showEmpty(message) {
   resultsEl.appendChild(el);
 }
 
-function showRewrite(text, targetFieldId, targetFrameId) {
+function showRewrite(
+  text,
+  targetFieldId,
+  targetFrameId,
+  sourceText,
+  selectedRange,
+) {
   const box = document.createElement("div");
   box.className = "rewrite";
   box.textContent = text;
@@ -458,13 +486,16 @@ function showRewrite(text, targetFieldId, targetFrameId) {
 
   const replaceBtn = document.createElement("button");
   replaceBtn.type = "button";
-  replaceBtn.textContent = "Replace in field";
+  replaceBtn.textContent = "Replace selection";
   replaceBtn.addEventListener("click", async () => {
     replaceBtn.disabled = true;
     try {
       const response = await sendToContent({
-        type: "lexicon:replace-text",
+        type: "lexicon:replace-selection",
         text,
+        sourceText,
+        selectedText: selectedRange?.text || sourceText,
+        selection: selectedRange,
         fieldId: targetFieldId,
       }, targetFrameId);
       if (!response?.ok) {
@@ -541,17 +572,26 @@ async function onProofread() {
 
 async function onRewrite() {
   const text = fieldText.trim();
+  const transformTextValue = (selectedText || fieldText).trim();
   const targetFieldId = selectedFieldId;
   const targetFrameId = selectedFrameId;
-  if (!text || !targetFieldId || settings.siteDisabled) return;
+  if (!text || !transformTextValue || !targetFieldId || settings.siteDisabled) {
+    return;
+  }
   setActionsEnabled(false);
   clearResults();
   try {
     const rewritten = await transformText(
       getTransformPrompt(rewriteToolEl.value),
-      text,
+      transformTextValue,
     );
-    showRewrite(rewritten, targetFieldId, targetFrameId);
+    showRewrite(
+      rewritten,
+      targetFieldId,
+      targetFrameId,
+      fieldText,
+      selection,
+    );
   } catch (error) {
     showError(error.message);
   } finally {

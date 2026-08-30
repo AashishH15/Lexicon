@@ -241,6 +241,109 @@
     return { kind: "contenteditable", ...normalizeSegments(text, segments) };
   }
 
+  function isNodeInside(root, node) {
+    if (!root || !node) return false;
+    if (root === node) return true;
+    if (typeof root.contains === "function") return root.contains(node);
+    let current = node;
+    while (current) {
+      if (current === root) return true;
+      current = current.parentNode;
+    }
+    return false;
+  }
+
+  function selectionBoundaryOffset(field, node, offset, segments, text) {
+    for (const segment of segments || []) {
+      if (segment.node !== node) continue;
+      const length = segment.end - segment.start;
+      return segment.start + Math.max(0, Math.min(length, offset));
+    }
+
+    if (!isNodeInside(field, node)) return null;
+    try {
+      const range = field.ownerDocument.createRange();
+      range.selectNodeContents(field);
+      range.setEnd(node, offset);
+      const prefix = normalizeText(range.toString());
+      return Math.max(0, Math.min(text.length, prefix.length));
+    } catch {
+      return null;
+    }
+  }
+
+  // Return the current non-empty selection as offsets in the normalized field
+  // text. Textarea selectionStart/selectionEnd remain available after the
+  // browser popup takes focus; contenteditable selections are mapped from the
+  // document Selection range.
+  function getSelection(field) {
+    if (!field) return null;
+    const extracted = extractEditableText(field);
+
+    if (field.tagName === "TEXTAREA") {
+      const rawStart = Number(field.selectionStart);
+      const rawEnd = Number(field.selectionEnd);
+      if (
+        !Number.isInteger(rawStart) ||
+        !Number.isInteger(rawEnd) ||
+        rawStart === rawEnd
+      ) {
+        return null;
+      }
+      const start = normalizeText(
+        field.value.slice(0, Math.min(rawStart, rawEnd)),
+      ).length;
+      const end = normalizeText(
+        field.value.slice(0, Math.max(rawStart, rawEnd)),
+      ).length;
+      if (end <= start) return null;
+      return {
+        start,
+        end,
+        text: extracted.text.slice(start, end),
+      };
+    }
+
+    const doc = field.ownerDocument;
+    const view = doc && doc.defaultView;
+    const selection =
+      (view && view.getSelection && view.getSelection()) ||
+      (doc && doc.getSelection && doc.getSelection());
+    if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
+      return null;
+    }
+    const range = selection.getRangeAt(0);
+    if (
+      !isNodeInside(field, range.startContainer) ||
+      !isNodeInside(field, range.endContainer)
+    ) {
+      return null;
+    }
+    const start = selectionBoundaryOffset(
+      field,
+      range.startContainer,
+      range.startOffset,
+      extracted.segments,
+      extracted.text,
+    );
+    const end = selectionBoundaryOffset(
+      field,
+      range.endContainer,
+      range.endOffset,
+      extracted.segments,
+      extracted.text,
+    );
+    if (!Number.isInteger(start) || !Number.isInteger(end)) return null;
+    const first = Math.min(start, end);
+    const last = Math.max(start, end);
+    if (last <= first) return null;
+    return {
+      start: first,
+      end: last,
+      text: extracted.text.slice(first, last),
+    };
+  }
+
   // Rebuild contenteditable children as block elements.
   // Do not use this on framework editors.
   function replaceContentBlocks(field, text) {
@@ -486,6 +589,48 @@
     return true;
   }
 
+  // Replace only the requested normalized text range. This preserves the
+  // surrounding field content and works for both plain and framework-owned
+  // contenteditables.
+  function replaceEditableRange(field, kind, start, end, text) {
+    if (
+      !field ||
+      !Number.isInteger(start) ||
+      !Number.isInteger(end) ||
+      start < 0 ||
+      end <= start
+    ) {
+      return false;
+    }
+
+    if (kind === "textarea") {
+      const current = normalizeText(field.value);
+      if (end > current.length) return false;
+      const next = current.slice(0, start) + text + current.slice(end);
+      setTextareaValue(field, next);
+      if (typeof field.setSelectionRange === "function") {
+        const cursor = start + text.length;
+        field.setSelectionRange(cursor, cursor);
+      }
+      const view = field.ownerDocument && field.ownerDocument.defaultView;
+      const EventCtor = (view && view.Event) || globalThis.Event;
+      field.dispatchEvent(new EventCtor("input", { bubbles: true }));
+      return true;
+    }
+
+    const extracted = extractEditableText(field);
+    if (end > extracted.text.length || !extracted.segments) return false;
+    const mapped = matchRanges(
+      [{ offset: start, length: end - start }],
+      extracted.segments,
+    );
+    if (mapped.length === 0) return false;
+
+    if (replaceRangeViaInsertText(field, mapped[0], text)) return true;
+    if (isFrameworkEditor(field)) return false;
+    return replaceRangeDirect(field, mapped[0], text);
+  }
+
   // Map matches to DOM ranges. Drop matches that cannot be mapped.
   function matchRanges(matches, segments) {
     const out = [];
@@ -542,6 +687,8 @@
     isFrameworkEditor,
     isYoutubeEditor,
     replaceEditableText,
+    getSelection,
+    replaceEditableRange,
     replaceRangeViaInsertText,
     replaceRangeDirect,
     replaceContentDirect,
