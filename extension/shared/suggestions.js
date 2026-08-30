@@ -11,6 +11,7 @@
   const AI_TRIGGER_WIDTH = 76;
   const AI_TRIGGER_GAP = 5;
   const HOVER_BRIDGE = 4;
+  const TOOLTIP_HIDE_DELAY_MS = 200;
   const TONE_TOOLS = [
     "Friendly",
     "Professional",
@@ -98,6 +99,50 @@
   let state = null; // { field, matches, onApply, host, root, badgeEl, panelEl, tooltipEl, panelOpen, ... }
   let tooltipPinned = false;
   let tooltipOutsideBound = false;
+  let tooltipHideTimer = null;
+  let fieldTooltipHideTimer = null;
+
+  function cancelTooltipHideTimer() {
+    if (tooltipHideTimer) {
+      clearTimeout(tooltipHideTimer);
+      tooltipHideTimer = null;
+    }
+  }
+
+  function cancelFieldTooltipHideTimer() {
+    if (fieldTooltipHideTimer) {
+      clearTimeout(fieldTooltipHideTimer);
+      fieldTooltipHideTimer = null;
+    }
+  }
+
+  function scheduleHideMatchTooltip() {
+    if (tooltipPinned) return;
+    cancelTooltipHideTimer();
+    tooltipHideTimer = setTimeout(() => {
+      tooltipHideTimer = null;
+      hideMatchTooltip();
+    }, TOOLTIP_HIDE_DELAY_MS);
+  }
+
+  function scheduleHideFieldMatchTooltip(field) {
+    const target = field ? fieldStates.get(field) : fieldTooltipState;
+    if (!target || target.tooltipPinned) return;
+    cancelFieldTooltipHideTimer();
+    fieldTooltipHideTimer = setTimeout(() => {
+      fieldTooltipHideTimer = null;
+      fieldHideMatchTooltip(target);
+    }, TOOLTIP_HIDE_DELAY_MS);
+  }
+
+  function bindTooltipHoverHandlers(tip, { isPinned, scheduleHide, cancelHide }) {
+    tip.onmouseenter = () => {
+      cancelHide();
+    };
+    tip.onmouseleave = () => {
+      if (!isPinned()) scheduleHide();
+    };
+  }
 
   function onTooltipOutside(event) {
     if (!state || !tooltipPinned || !state.tooltipEl || state.tooltipEl.hidden) {
@@ -400,6 +445,7 @@
   }
 
   function hideMatchTooltip() {
+    cancelTooltipHideTimer();
     tooltipPinned = false;
     unbindTooltipOutside();
     if (!state || !state.tooltipEl) return;
@@ -420,6 +466,7 @@
     ) {
       return;
     }
+    cancelTooltipHideTimer();
     tooltipPinned = pinned;
     state.tooltipMatch = match;
 
@@ -495,9 +542,11 @@
     }
     tip.appendChild(tipActions);
 
-    tip.onmouseleave = () => {
-      if (!tooltipPinned) hideMatchTooltip();
-    };
+    bindTooltipHoverHandlers(tip, {
+      isPinned: () => tooltipPinned,
+      scheduleHide: scheduleHideMatchTooltip,
+      cancelHide: cancelTooltipHideTimer,
+    });
 
     const pos = tooltipPosition(rect);
     tip.style.left = `${pos.left}px`;
@@ -1055,7 +1104,9 @@
   function fieldHideMatchTooltip(state) {
     const target = state || fieldTooltipState;
     if (!target) return;
+    cancelFieldTooltipHideTimer();
     if (fieldTooltipState === target) fieldTooltipState = null;
+    target.tooltipPinned = false;
     target.tooltipEl.hidden = true;
     target.tooltipEl.replaceChildren();
     target.tooltipMatch = null;
@@ -1070,6 +1121,8 @@
       fieldHideMatchTooltip(fieldTooltipState);
     }
     const pinned = Boolean(opts.pinned);
+    cancelFieldTooltipHideTimer();
+    state.tooltipPinned = pinned;
     state.tooltipMatch = match;
     fieldTooltipState = state;
 
@@ -1145,9 +1198,11 @@
     }
     tip.appendChild(tipActions);
 
-    tip.onmouseleave = () => {
-      if (!pinned) fieldHideMatchTooltip(state);
-    };
+    bindTooltipHoverHandlers(tip, {
+      isPinned: () => Boolean(state.tooltipPinned),
+      scheduleHide: () => scheduleHideFieldMatchTooltip(field),
+      cancelHide: cancelFieldTooltipHideTimer,
+    });
     const pos = tooltipPosition(rect);
     tip.style.left = `${pos.left}px`;
     tip.style.top = `${pos.top}px`;
@@ -1337,6 +1392,7 @@
     hide,
     showMatchTooltip,
     hideMatchTooltip,
+    scheduleHideMatchTooltip,
     fieldInViewport,
     badgePosition,
     panelPosition,
@@ -1347,6 +1403,7 @@
     hideField: fieldHide,
     showFieldMatchTooltip: fieldShowMatchTooltip,
     hideFieldMatchTooltip: fieldHideMatchTooltip,
+    scheduleHideFieldMatchTooltip,
     fieldState: (field) => fieldStates.get(field) || null,
     fieldStates: () => [...fieldStates.values()],
     isSuggestionUiFocus,

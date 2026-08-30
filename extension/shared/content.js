@@ -518,7 +518,7 @@
         });
       },
       onDeactivate: () => {
-        suggestions.hideFieldMatchTooltip();
+        suggestions.scheduleHideFieldMatchTooltip(state.field);
       },
     };
   }
@@ -1445,7 +1445,7 @@
         });
       },
       onDeactivate: () => {
-        suggestions.hideMatchTooltip();
+        suggestions.scheduleHideMatchTooltip();
       },
     };
   }

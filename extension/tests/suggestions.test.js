@@ -314,6 +314,120 @@ test(
   },
 );
 
+test("tooltip stays open briefly after squiggle deactivation so the pointer can reach it", async () => {
+  let rootEl = null;
+  const makeElement = (tag) => ({
+    tagName: tag.toUpperCase(),
+    className: "",
+    classList: {
+      classes: new Set(),
+      add(...classes) {
+        classes.forEach((name) => this.classes.add(name));
+      },
+      remove(...classes) {
+        classes.forEach((name) => this.classes.delete(name));
+      },
+      toggle(name, value) {
+        if (value) this.classes.add(name);
+        else this.classes.delete(name);
+      },
+    },
+    style: {},
+    children: [],
+    hidden: false,
+    textContent: "",
+    title: "",
+    listeners: {},
+    offsetHeight: 100,
+    onmouseenter: null,
+    onmouseleave: null,
+    appendChild(child) {
+      this.children.push(child);
+      return child;
+    },
+    replaceChildren(...nodes) {
+      this.children = nodes;
+    },
+    addEventListener() {},
+    removeEventListener() {},
+    setAttribute() {},
+    remove() {},
+    attachShadow() {
+      rootEl = {
+        children: [],
+        appendChild(child) {
+          this.children.push(child);
+          return child;
+        },
+      };
+      return rootEl;
+    },
+  });
+  const sandbox = {
+    document: {
+      documentElement: { appendChild() {} },
+      createElement: makeElement,
+    },
+    window: {
+      innerWidth: 1000,
+      innerHeight: 800,
+      addEventListener() {},
+      removeEventListener() {},
+      setTimeout,
+      clearTimeout,
+    },
+    setTimeout,
+    clearTimeout,
+    globalThis: {},
+  };
+  sandbox.globalThis = sandbox;
+  vm.createContext(sandbox);
+  vm.runInContext(source, sandbox);
+  const api = sandbox.__lexiconSuggestions;
+  const field = {
+    tagName: "TEXTAREA",
+    getBoundingClientRect: () => ({
+      top: 100,
+      bottom: 180,
+      left: 50,
+      right: 400,
+      height: 80,
+    }),
+    addEventListener() {},
+    removeEventListener() {},
+  };
+  const match = {
+    offset: 0,
+    length: 3,
+    message: "Spelling issue",
+    replacements: ["The"],
+  };
+
+  api.showField(field, [match]);
+  api.showFieldMatchTooltip(
+    field,
+    match,
+    { top: 100, bottom: 120, left: 50, right: 120 },
+  );
+  const tooltip = api.fieldState(field).tooltipEl;
+  assert.equal(tooltip.hidden, false);
+
+  api.scheduleHideFieldMatchTooltip(field);
+  assert.equal(tooltip.hidden, false);
+  await new Promise((resolve) => setTimeout(resolve, 250));
+  assert.equal(tooltip.hidden, true);
+
+  api.showFieldMatchTooltip(
+    field,
+    match,
+    { top: 100, bottom: 120, left: 50, right: 120 },
+  );
+  api.scheduleHideFieldMatchTooltip(field);
+  tooltip.onmouseenter();
+  await new Promise((resolve) => setTimeout(resolve, 250));
+  assert.equal(tooltip.hidden, false);
+});
+
 test("Tone uses a dedicated badge popover and keeps the proofread panel clear", async () => {
   let rootEl = null;
   const makeElement = (tag) => ({
