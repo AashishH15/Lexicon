@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { X, Printer, DownloadSimple, PaintBrush, MagicWand, CircleNotch, Stop } from "@phosphor-icons/react";
+import { X, Printer, DownloadSimple, PaintBrush, MagicWand, Stop } from "@phosphor-icons/react";
 import {
   EXPORT_THEMES,
   getThemeById,
@@ -8,6 +8,8 @@ import {
 } from "./exportThemes.js";
 import { downloadBlob } from "./download.js";
 import { cancelTransform, transformText } from "./api.js";
+import LexStatus from "./LexStatus.jsx";
+import { LEX_STATUS } from "./lexStatus.js";
 
 const AI_PRESET_PROMPTS = [
   { label: "Navy Headings", prompt: "Make headings dark navy blue with a subtle bottom border." },
@@ -291,11 +293,15 @@ export default function ExportOptionsModal({ editor, mode, onClose }) {
             {aiGenerating && (
               <div className="mt-2.5 rounded-lg border border-hairline bg-white/90 p-2.5 shadow-[0_2px_8px_rgba(0,0,0,0.03)]">
                 <div className="flex items-center justify-between font-mono text-[11px] text-ink">
-                  <span className="flex items-center gap-1.5 font-medium">
-                    <CircleNotch size={13} weight="bold" className="animate-spin text-ink" />
-                    {getAiStatusText(generationTime)}
+                  <LexStatus
+                    status={LEX_STATUS.CHECKING}
+                    message={getAiStatusText(generationTime)}
+                    showCount={false}
+                    className="min-w-0"
+                  />
+                  <span className="ml-2 shrink-0 font-mono text-[10px] text-muted">
+                    {generationTime}s
                   </span>
-                  <span className="font-mono text-[10px] text-muted">{generationTime}s</span>
                 </div>
                 <div className="mt-2 h-1.5 w-full rounded-full bg-hairline/40 lex-progress-slide-bar" />
               </div>
@@ -320,9 +326,15 @@ export default function ExportOptionsModal({ editor, mode, onClose }) {
             </div>
 
             {aiError && (
-              <p className="mt-2 font-sans text-[11px] text-amber-800">
-                {aiError}
-              </p>
+              <div className="mt-2 flex items-center gap-2">
+                <LexStatus
+                  status={LEX_STATUS.ERROR}
+                  message={aiError}
+                  showLabel={false}
+                  showCount={false}
+                />
+                <p className="font-sans text-[11px] text-amber-800">{aiError}</p>
+              </div>
             )}
           </div>
 

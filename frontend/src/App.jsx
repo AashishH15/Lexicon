@@ -112,7 +112,6 @@ import {
 } from "./proseQualityEngine.js";
 import { DecorationSet } from "@tiptap/pm/view";
 import { globalGrammarCache } from "./grammarCache.js";
-import LexStatus from "./LexStatus.jsx";
 import {
   lexStatusMessage,
   resolveLexStatus,
@@ -2485,13 +2484,6 @@ export default function App() {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <LexStatus
-            status={lexStatus}
-            message={lexStatusLabel}
-            issueCount={grammarMatches.length}
-            showLabel={false}
-            className="max-w-[260px]"
-          />
           <ImportExportMenu
             editor={editor}
             onRequestConfirm={setConfirmConfig}
@@ -2714,6 +2706,8 @@ export default function App() {
               checking={checking}
               backendOffline={backendOffline}
               backendError={backendError}
+              lexStatus={lexStatus}
+              lexStatusLabel={lexStatusLabel}
               onRetry={() => runGrammarCheck(false, null, true)}
               userResolvedAll={userResolvedAll}
               activeErrorId={activeErrorId}

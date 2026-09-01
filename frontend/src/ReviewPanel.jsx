@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { ArrowLineRight, Info, Lightbulb, CircleNotch } from "@phosphor-icons/react";
 
 import { openExternalUrl } from "./api.js";
+import LexStatus from "./LexStatus.jsx";
 
 const BLOOM_MESSAGES = [
   "No issues detected. Your draft is clear.",
@@ -73,6 +74,8 @@ export default function ReviewPanel({
   checking,
   backendOffline,
   backendError,
+  lexStatus,
+  lexStatusLabel,
   onRetry,
   userResolvedAll,
   activeErrorId,
@@ -183,11 +186,17 @@ export default function ReviewPanel({
         ) : activeTool === "Proofread" ? (
           backendOffline ? (
             <div className="flex w-full flex-col gap-2 rounded-xl bg-pale-yellow-bg px-4 py-3 text-amber-900 border border-pale-yellow">
-              <div className="flex items-center justify-between gap-2">
-                <div className="min-w-0 flex-1">
-                  <span className="block font-sans text-sm font-medium leading-snug">
-                    Grammar engine unreachable. Reconnecting...
-                  </span>
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex min-w-0 items-start gap-2">
+                  <ReviewStatusMark
+                    status={lexStatus}
+                    message={lexStatusLabel}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <span className="block font-sans text-sm font-medium leading-snug">
+                      Grammar engine unreachable. Reconnecting...
+                    </span>
+                  </div>
                 </div>
                 {onRetry && (
                   <button
@@ -258,24 +267,50 @@ export default function ReviewPanel({
               <div className="mt-3 h-3 w-[90%] rounded lex-shimmer" />
               <div className="mt-3 h-3 w-[75%] rounded lex-shimmer" />
               <div className="mt-3 h-3 w-[40%] rounded lex-shimmer" />
-              <p className="mt-4 font-sans text-xs text-muted">
-                I&rsquo;m checking your draft&hellip;
-              </p>
+              <div className="mt-4 flex items-center gap-2">
+                <ReviewStatusMark
+                  status={lexStatus}
+                  message={lexStatusLabel}
+                />
+                <p className="font-sans text-xs text-muted">
+                  I&rsquo;m checking your draft&hellip;
+                </p>
+              </div>
             </div>
           ) : count === 0 ? (
             showBloom ? (
               <div className="lex-bloom flex w-full items-center rounded-xl bg-[#EDF3EC] px-4 py-3 text-[#346538] border border-[#D3E2D0]">
+                <ReviewStatusMark
+                  status={lexStatus}
+                  message={lexStatusLabel}
+                />
                 <span className="font-sans text-sm">{bloomMessageRef.current}</span>
               </div>
             ) : (
-              <p className="text-sm leading-relaxed text-muted">
-                {userResolvedAll
-                  ? "No issues remain in this draft."
-                  : "No issues found in this draft."}
-              </p>
+              <div className="flex items-center gap-2">
+                <ReviewStatusMark
+                  status={lexStatus}
+                  message={lexStatusLabel}
+                />
+                <p className="text-sm leading-relaxed text-muted">
+                  {userResolvedAll
+                    ? "No issues remain in this draft."
+                    : "No issues found in this draft."}
+                </p>
+              </div>
             )
           ) : (
             <>
+              <div className="mb-3 flex items-center gap-2">
+                <ReviewStatusMark
+                  status={lexStatus}
+                  message={lexStatusLabel}
+                  issueCount={count}
+                />
+                <span className="font-sans text-xs text-muted">
+                  {lexStatusLabel}
+                </span>
+              </div>
               <div className="mb-3 flex items-center justify-end gap-3">
                 <div ref={announceRef} aria-live="polite" aria-atomic="true" className="sr-only">
                   {checking ? "Proofreading in progress" : `${count} ${count === 1 ? "issue" : "issues"} found`}
@@ -374,6 +409,8 @@ export default function ReviewPanel({
             results={transformResults}
             progress={transformProgress}
             running={transformRunning}
+            lexStatus={lexStatus}
+            lexStatusLabel={lexStatusLabel}
             onApply={onApplyTransform}
             onDismiss={onDismissTransform}
           />
@@ -385,6 +422,20 @@ export default function ReviewPanel({
   );
 }
 
+function ReviewStatusMark({ status, message, issueCount = 0 }) {
+  if (!status || status === "idle") return null;
+  return (
+    <LexStatus
+      status={status}
+      message={message}
+      issueCount={issueCount}
+      showLabel={false}
+      showCount={false}
+      className="shrink-0"
+    />
+  );
+}
+
 function TransformView({
   tool,
   status,
@@ -392,6 +443,8 @@ function TransformView({
   results,
   progress,
   running,
+  lexStatus,
+  lexStatusLabel,
   onApply,
   onDismiss,
 }) {
@@ -431,9 +484,15 @@ function TransformView({
               This is a large section — generating it in {progress.total} parts may take a minute or two.
             </p>
           )}
-          <p className="mt-4 font-mono text-[10px] lowercase tracking-[0.04em] text-muted">
-            {statusText}
-          </p>
+          <div className="mt-4 flex items-center gap-2">
+            <ReviewStatusMark
+              status={lexStatus}
+              message={lexStatusLabel}
+            />
+            <p className="font-mono text-[10px] lowercase tracking-[0.04em] text-muted">
+              {statusText}
+            </p>
+          </div>
         </div>
       </>
     );
@@ -446,13 +505,19 @@ function TransformView({
 
     return (
       <div className="rounded-xl border border-pale-red bg-pale-red/40 px-4 py-4 lex-card-enter">
-        <div>
-          <p className="font-sans text-sm font-medium text-pale-red-text">
-            {tool} couldn&rsquo;t run
-          </p>
-          <p className="font-sans text-xs leading-relaxed text-muted mt-1">
-            {error || "The local model returned an error. Try again, or check your AI setup."}
-          </p>
+        <div className="flex items-start gap-2">
+          <ReviewStatusMark
+            status={lexStatus}
+            message={lexStatusLabel}
+          />
+          <div>
+            <p className="font-sans text-sm font-medium text-pale-red-text">
+              {tool} couldn&rsquo;t run
+            </p>
+            <p className="font-sans text-xs leading-relaxed text-muted mt-1">
+              {error || "The local model returned an error. Try again, or check your AI setup."}
+            </p>
+          </div>
         </div>
         {isContextOverflow && (
           <div className="mt-3 flex items-start gap-2 rounded-lg border border-hairline bg-canvas px-3 py-2.5">
