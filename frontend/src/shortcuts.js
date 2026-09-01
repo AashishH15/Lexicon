@@ -44,6 +44,7 @@ export const SHORTCUT_DEFINITIONS = Object.freeze([
     action: "Trigger Proofread",
     defaultShortcut: ["Mod", "Enter"],
     customizable: true,
+    scope: "app",
     keywords: ["scan", "check", "grammar"],
   },
   {
@@ -51,6 +52,7 @@ export const SHORTCUT_DEFINITIONS = Object.freeze([
     action: "Accept Suggestion",
     defaultShortcut: ["Mod", "Alt", "A"],
     customizable: true,
+    scope: "app",
     keywords: ["apply", "replace", "correction"],
   },
   {
@@ -58,6 +60,7 @@ export const SHORTCUT_DEFINITIONS = Object.freeze([
     action: "Dismiss Suggestion",
     defaultShortcut: ["Mod", "Alt", "D"],
     customizable: true,
+    scope: "app",
     keywords: ["reject", "ignore", "remove"],
   },
   {
@@ -65,13 +68,16 @@ export const SHORTCUT_DEFINITIONS = Object.freeze([
     action: "Toggle Settings",
     defaultShortcut: ["Mod", ","],
     customizable: true,
+    scope: "app",
     keywords: ["preferences", "configuration"],
   },
   {
     id: SHORTCUT_IDS.CLOSE_SETTINGS,
     action: "Close Settings",
     defaultShortcut: ["Esc"],
-    customizable: false,
+    customizable: true,
+    scope: "app",
+    allowedBareKeys: ["Esc"],
     keywords: ["dismiss", "exit"],
   },
   {
@@ -92,140 +98,162 @@ export const SHORTCUT_DEFINITIONS = Object.freeze([
     id: SHORTCUT_IDS.BOLD,
     action: "Bold",
     defaultShortcut: ["Mod", "B"],
-    customizable: false,
+    customizable: true,
+    scope: "editor",
     keywords: ["format", "strong"],
   },
   {
     id: SHORTCUT_IDS.ITALIC,
     action: "Italic",
     defaultShortcut: ["Mod", "I"],
-    customizable: false,
+    customizable: true,
+    scope: "editor",
     keywords: ["format", "emphasis"],
   },
   {
     id: SHORTCUT_IDS.UNDERLINE,
     action: "Underline",
     defaultShortcut: ["Mod", "U"],
-    customizable: false,
+    customizable: true,
+    scope: "editor",
     keywords: ["format"],
   },
   {
     id: SHORTCUT_IDS.STRIKETHROUGH,
     action: "Strikethrough",
     defaultShortcut: ["Mod", "Shift", "S"],
-    customizable: false,
+    customizable: true,
+    scope: "editor",
     keywords: ["format"],
   },
   {
     id: SHORTCUT_IDS.HIGHLIGHT,
     action: "Highlight",
     defaultShortcut: ["Mod", "Shift", "H"],
-    customizable: false,
+    customizable: true,
+    scope: "editor",
     keywords: ["format", "mark"],
   },
   {
     id: SHORTCUT_IDS.INLINE_CODE,
     action: "Inline code",
     defaultShortcut: ["Mod", "E"],
-    customizable: false,
+    customizable: true,
+    scope: "editor",
     keywords: ["format", "code"],
   },
   {
     id: SHORTCUT_IDS.ALIGN_LEFT,
     action: "Align left",
     defaultShortcut: ["Mod", "Shift", "L"],
-    customizable: false,
+    customizable: true,
+    scope: "editor",
     keywords: ["paragraph", "alignment"],
   },
   {
     id: SHORTCUT_IDS.ALIGN_CENTER,
     action: "Align center",
     defaultShortcut: ["Mod", "Shift", "E"],
-    customizable: false,
+    customizable: true,
+    scope: "editor",
     keywords: ["paragraph", "alignment"],
   },
   {
     id: SHORTCUT_IDS.ALIGN_RIGHT,
     action: "Align right",
     defaultShortcut: ["Mod", "Shift", "R"],
-    customizable: false,
+    customizable: true,
+    scope: "editor",
     keywords: ["paragraph", "alignment"],
   },
   {
     id: SHORTCUT_IDS.ALIGN_JUSTIFY,
     action: "Align justify",
     defaultShortcut: ["Mod", "Shift", "J"],
-    customizable: false,
+    customizable: true,
+    scope: "editor",
     keywords: ["paragraph", "alignment"],
   },
   {
     id: SHORTCUT_IDS.HEADING_1,
     action: "Heading 1",
     defaultShortcut: ["Mod", "Alt", "1"],
-    customizable: false,
+    customizable: true,
+    scope: "editor",
     keywords: ["title", "format"],
   },
   {
     id: SHORTCUT_IDS.HEADING_2,
     action: "Heading 2",
     defaultShortcut: ["Mod", "Alt", "2"],
-    customizable: false,
+    customizable: true,
+    scope: "editor",
     keywords: ["format"],
   },
   {
     id: SHORTCUT_IDS.HEADING_3,
     action: "Heading 3",
     defaultShortcut: ["Mod", "Alt", "3"],
-    customizable: false,
+    customizable: true,
+    scope: "editor",
     keywords: ["format"],
   },
   {
     id: SHORTCUT_IDS.HEADING_4,
     action: "Heading 4",
     defaultShortcut: ["Mod", "Alt", "4"],
-    customizable: false,
+    customizable: true,
+    scope: "editor",
     keywords: ["format"],
   },
   {
     id: SHORTCUT_IDS.HEADING_5,
     action: "Heading 5",
     defaultShortcut: ["Mod", "Alt", "5"],
-    customizable: false,
+    customizable: true,
+    scope: "editor",
     keywords: ["format"],
   },
   {
     id: SHORTCUT_IDS.HEADING_6,
     action: "Heading 6",
     defaultShortcut: ["Mod", "Alt", "6"],
-    customizable: false,
+    customizable: true,
+    scope: "editor",
     keywords: ["format"],
   },
   {
     id: SHORTCUT_IDS.UNDO,
     action: "Undo",
     defaultShortcut: ["Mod", "Z"],
-    customizable: false,
+    customizable: true,
+    scope: "editor",
     keywords: ["history", "edit"],
   },
   {
     id: SHORTCUT_IDS.REDO,
     action: "Redo",
     defaultShortcut: ["Mod", "Shift", "Z"],
-    customizable: false,
+    customizable: true,
+    scope: "editor",
     keywords: ["history", "edit"],
   },
   {
     id: SHORTCUT_IDS.INDENT_LIST_ITEM,
     action: "Indent list item",
     defaultShortcut: ["Tab"],
-    customizable: false,
+    customizable: true,
+    scope: "editor",
+    allowedBareKeys: ["Tab"],
     keywords: ["list", "nest"],
   },
   {
     id: SHORTCUT_IDS.OUTDENT_LIST_ITEM,
     action: "Outdent list item",
     defaultShortcut: ["Shift", "Tab"],
-    customizable: false,
+    customizable: true,
+    scope: "editor",
+    allowedBareKeys: ["Tab"],
     keywords: ["list", "nest"],
   },
 ]);
@@ -252,11 +280,8 @@ const KEY_ALIASES = Object.freeze({
 
 const RESERVED_SHORTCUTS = [
   ["Mod", "A"],
-  ["Mod", "B"],
   ["Mod", "C"],
-  ["Mod", "E"],
   ["Mod", "F"],
-  ["Mod", "I"],
   ["Mod", "L"],
   ["Mod", "N"],
   ["Mod", "O"],
@@ -264,12 +289,9 @@ const RESERVED_SHORTCUTS = [
   ["Mod", "R"],
   ["Mod", "S"],
   ["Mod", "T"],
-  ["Mod", "U"],
   ["Mod", "V"],
   ["Mod", "W"],
   ["Mod", "X"],
-  ["Mod", "Z"],
-  ["Mod", "Shift", "Z"],
   ["Alt", "F4"],
 ];
 
@@ -315,7 +337,10 @@ export function normalizeShortcut(shortcut) {
   return [...modifiers, keys[0]];
 }
 
-export function validateShortcut(shortcut, { requireModifier = true } = {}) {
+export function validateShortcut(
+  shortcut,
+  { requireModifier = true, allowedBareKeys = [] } = {},
+) {
   const normalized = normalizeShortcut(shortcut);
   if (!normalized) {
     return {
@@ -327,7 +352,8 @@ export function validateShortcut(shortcut, { requireModifier = true } = {}) {
 
   if (
     requireModifier &&
-    !normalized.some((token) => MODIFIER_SET.has(token))
+    !normalized.some((token) => MODIFIER_SET.has(token)) &&
+    !allowedBareKeys.includes(normalized[normalized.length - 1])
   ) {
     return {
       valid: false,
@@ -349,6 +375,12 @@ export function validateShortcut(shortcut, { requireModifier = true } = {}) {
   }
 
   return { valid: true, shortcut: normalized, error: "" };
+}
+
+export function validateShortcutForDefinition(definition, shortcut) {
+  return validateShortcut(shortcut, {
+    allowedBareKeys: definition.allowedBareKeys || [],
+  });
 }
 
 export function shortcutFromKeyboardEvent(event) {
@@ -431,57 +463,70 @@ export function shortcutBindingsAreDefault(bindings) {
 }
 
 export function loadShortcutBindings(storage = getDefaultStorage()) {
-  const defaults = getDefaultShortcutBindings();
-  if (!isStorageLike(storage)) return defaults;
+  if (!isStorageLike(storage)) return getDefaultShortcutBindings();
 
   let parsed;
   try {
     parsed = JSON.parse(storage.getItem(SHORTCUTS_STORAGE_KEY) || "null");
   } catch {
-    return defaults;
+    return getDefaultShortcutBindings();
   }
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-    return defaults;
+    return getDefaultShortcutBindings();
   }
 
-  const bindings = {};
-  const used = new Set();
-  for (const definition of CUSTOMIZABLE_DEFINITIONS) {
-    const result = validateShortcut(parsed[definition.id]);
-    const candidate = result.valid ? result.shortcut : null;
-    const fallback = defaults[definition.id];
-    const selected =
-      candidate && !used.has(shortcutKey(candidate)) ? candidate : fallback;
-    bindings[definition.id] = [...selected];
-    used.add(shortcutKey(selected));
-  }
-  return bindings;
+  return getNormalizedBindings(parsed);
 }
 
 export function saveShortcutBindings(
   bindings,
   storage = getDefaultStorage(),
 ) {
-  if (!isStorageLike(storage)) return;
+  if (!isStorageLike(storage)) return false;
+  if (shortcutBindingsHaveConflicts(bindings)) return false;
   try {
     storage.setItem(
       SHORTCUTS_STORAGE_KEY,
       JSON.stringify(getNormalizedBindings(bindings)),
     );
+    return true;
   } catch {
     // Keep the in-memory setting if storage is unavailable.
+    return false;
   }
 }
 
 export function getNormalizedBindings(bindings = {}) {
   const defaults = getDefaultShortcutBindings();
-  return Object.fromEntries(
+  const normalized = Object.fromEntries(
     CUSTOMIZABLE_DEFINITIONS.map((definition) => {
-      const result = validateShortcut(bindings[definition.id]);
+      const result = validateShortcutForDefinition(
+        definition,
+        bindings[definition.id],
+      );
       const candidate = result.valid ? result.shortcut : null;
       return [definition.id, [...(candidate || defaults[definition.id])]];
     }),
   );
+  return hasDuplicateShortcuts(normalized) ? defaults : normalized;
+}
+
+export function shortcutBindingsHaveConflicts(bindings = {}) {
+  const defaults = getDefaultShortcutBindings();
+  const normalized = Object.fromEntries(
+    CUSTOMIZABLE_DEFINITIONS.map((definition) => {
+      const result = validateShortcutForDefinition(
+        definition,
+        bindings[definition.id],
+      );
+      const candidate = result.valid ? result.shortcut : null;
+      return [
+        definition.id,
+        [...(candidate || defaults[definition.id])],
+      ];
+    }),
+  );
+  return hasDuplicateShortcuts(normalized);
 }
 
 export function findShortcutConflict(bindings, actionId, shortcut) {
@@ -530,4 +575,14 @@ export function shortcutsEqual(left, right) {
 
 function shortcutKey(shortcut) {
   return normalizeShortcut(shortcut)?.join("+") || "";
+}
+
+function hasDuplicateShortcuts(bindings) {
+  const used = new Set();
+  for (const shortcut of Object.values(bindings)) {
+    const key = shortcutKey(shortcut);
+    if (!key || used.has(key)) return true;
+    used.add(key);
+  }
+  return false;
 }

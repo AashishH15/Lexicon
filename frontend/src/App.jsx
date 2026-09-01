@@ -116,12 +116,15 @@ import {
   resolveLexStatus,
 } from "./lexStatus.js";
 import {
+  SHORTCUT_DEFINITIONS,
   SHORTCUT_IDS,
   SHORTCUTS_STORAGE_KEY,
   getDefaultShortcutBindings,
   loadShortcutBindings,
   saveShortcutBindings,
   shortcutMatchesEvent,
+  shortcutBindingsHaveConflicts,
+  shortcutsEqual,
 } from "./shortcuts.js";
 
 // Six-dot grip used for the drag handle
@@ -573,6 +576,9 @@ export default function App() {
   const proofreadRef = useRef(() => {});
   proofreadRef.current = (forceFullScan = true) =>
     runGrammarCheck(false, null, forceFullScan);
+  const editorShortcutRef = useRef(() => false);
+  editorShortcutRef.current = (event, view) =>
+    handleEditorShortcut(event, view);
   const activeErrorRef = useRef(null);
   const matchesRef = useRef([]);
   const activeToolRef = useRef(activeTool);
@@ -727,6 +733,8 @@ export default function App() {
         "aria-label": "Source Document Editor",
         spellcheck: "false",
       },
+      handleKeyDown: (view, event) =>
+        editorShortcutRef.current(event, view),
       // Accept images dropped/pasted from the local clipboard.
       handlePaste: (view, event) => {
         const clipboard = event.clipboardData;
@@ -1856,8 +1864,108 @@ export default function App() {
       ...shortcuts,
       [actionId]: shortcut,
     };
+    if (shortcutBindingsHaveConflicts(nextShortcuts)) return;
     setShortcuts(nextShortcuts);
     saveShortcutBindings(nextShortcuts);
+  }
+
+  function handleEditorShortcut(event) {
+    if (!editor || !editor.isEditable) return false;
+    const definition = SHORTCUT_DEFINITIONS.find(
+      (candidate) =>
+        candidate.scope === "editor" &&
+        shortcutMatchesEvent(shortcuts[candidate.id], event),
+    );
+    if (!definition) {
+      // Tiptap still installs its built-in keymap. Once a command has been
+      // customized, consume its former default so the old binding cannot
+      // trigger a second editor command.
+      const staleDefault = SHORTCUT_DEFINITIONS.find(
+        (candidate) =>
+          candidate.scope === "editor" &&
+          candidate.defaultShortcut &&
+          !shortcutsEqual(
+            shortcuts[candidate.id],
+            candidate.defaultShortcut,
+          ) &&
+          shortcutMatchesEvent(candidate.defaultShortcut, event),
+      );
+      if (!staleDefault) return false;
+      event.preventDefault();
+      return true;
+    }
+
+    const chain = editor.chain().focus();
+    let handled = true;
+    switch (definition.id) {
+      case SHORTCUT_IDS.BOLD:
+        chain.toggleBold();
+        break;
+      case SHORTCUT_IDS.ITALIC:
+        chain.toggleItalic();
+        break;
+      case SHORTCUT_IDS.UNDERLINE:
+        chain.toggleUnderline();
+        break;
+      case SHORTCUT_IDS.STRIKETHROUGH:
+        chain.toggleStrike();
+        break;
+      case SHORTCUT_IDS.HIGHLIGHT:
+        chain.toggleHighlight();
+        break;
+      case SHORTCUT_IDS.INLINE_CODE:
+        chain.toggleCode();
+        break;
+      case SHORTCUT_IDS.ALIGN_LEFT:
+        chain.setTextAlign("left");
+        break;
+      case SHORTCUT_IDS.ALIGN_CENTER:
+        chain.setTextAlign("center");
+        break;
+      case SHORTCUT_IDS.ALIGN_RIGHT:
+        chain.setTextAlign("right");
+        break;
+      case SHORTCUT_IDS.ALIGN_JUSTIFY:
+        chain.setTextAlign("justify");
+        break;
+      case SHORTCUT_IDS.HEADING_1:
+        chain.toggleHeading({ level: 1 });
+        break;
+      case SHORTCUT_IDS.HEADING_2:
+        chain.toggleHeading({ level: 2 });
+        break;
+      case SHORTCUT_IDS.HEADING_3:
+        chain.toggleHeading({ level: 3 });
+        break;
+      case SHORTCUT_IDS.HEADING_4:
+        chain.toggleHeading({ level: 4 });
+        break;
+      case SHORTCUT_IDS.HEADING_5:
+        chain.toggleHeading({ level: 5 });
+        break;
+      case SHORTCUT_IDS.HEADING_6:
+        chain.toggleHeading({ level: 6 });
+        break;
+      case SHORTCUT_IDS.UNDO:
+        chain.undo();
+        break;
+      case SHORTCUT_IDS.REDO:
+        chain.redo();
+        break;
+      case SHORTCUT_IDS.INDENT_LIST_ITEM:
+        chain.sinkListItem("listItem");
+        break;
+      case SHORTCUT_IDS.OUTDENT_LIST_ITEM:
+        chain.liftListItem("listItem");
+        break;
+      default:
+        handled = false;
+    }
+
+    if (!handled) return false;
+    chain.run();
+    event.preventDefault();
+    return true;
   }
 
   function handleResetShortcut(actionId) {
@@ -1920,6 +2028,15 @@ export default function App() {
       if (shortcutMatchesEvent(shortcuts[SHORTCUT_IDS.TOGGLE_SETTINGS], event)) {
         event.preventDefault();
         setSettingsOpen((current) => !current);
+        return;
+      }
+
+      if (
+        settingsOpen &&
+        shortcutMatchesEvent(shortcuts[SHORTCUT_IDS.CLOSE_SETTINGS], event)
+      ) {
+        event.preventDefault();
+        setSettingsOpen(false);
         return;
       }
 

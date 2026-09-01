@@ -42,7 +42,7 @@ import {
   shortcutFromKeyboardEvent,
   isModifierKey,
   findShortcutConflict,
-  validateShortcut,
+  validateShortcutForDefinition,
   getDefaultShortcutBindings,
   shortcutBindingsAreDefault,
   shortcutsEqual,
@@ -579,7 +579,7 @@ export default function Settings({
     }
 
     const candidate = shortcutFromKeyboardEvent(event);
-    const result = validateShortcut(candidate);
+    const result = validateShortcutForDefinition(definition, candidate);
     if (!result.valid) {
       setShortcutErrors((current) => ({
         ...current,
@@ -596,7 +596,7 @@ export default function Settings({
     if (conflict) {
       setShortcutErrors((current) => ({
         ...current,
-        [definition.id]: `Already used for ${conflict.action}.`,
+        [definition.id]: `That shortcut is already assigned to ${conflict.action}. Choose a different combination.`,
       }));
       return;
     }
@@ -2020,19 +2020,20 @@ export default function Settings({
                     </div>
                   </div>
                   <p className="mt-3 font-sans text-xs text-muted">
-                    Customize Lexicon commands. Native editor shortcuts are
-                    shown for reference.
+                    Customize Lexicon and editor commands. Type / and math
+                    triggers stay fixed; Escape always closes Settings.
                   </p>
                   {editingShortcuts && (
                     <p className="mt-2 font-sans text-[11px] text-pale-blue-text">
-                      Click a Lexicon shortcut to record a replacement. Press
+                      Click a shortcut to record a replacement. Press
                       Escape to cancel.
                     </p>
                   )}
                   <ShortcutSection
-                    title="Lexicon commands"
+                    title="Lexicon shortcuts"
                     definitions={SHORTCUT_DEFINITIONS.filter(
-                      (definition) => definition.customizable,
+                      (definition) =>
+                        definition.customizable && definition.scope === "app",
                     )}
                     shortcuts={shortcuts}
                     editing={editingShortcuts}
@@ -2044,7 +2045,23 @@ export default function Settings({
                     getHighlightClass={getHighlightClass}
                   />
                   <ShortcutSection
-                    title="Other shortcuts"
+                    title="Editor shortcuts"
+                    definitions={SHORTCUT_DEFINITIONS.filter(
+                      (definition) =>
+                        definition.customizable &&
+                        definition.scope === "editor",
+                    )}
+                    shortcuts={shortcuts}
+                    editing={editingShortcuts}
+                    recordingShortcutId={recordingShortcutId}
+                    shortcutErrors={shortcutErrors}
+                    onBeginRecording={beginShortcutRecording}
+                    onCancelRecording={cancelShortcutRecording}
+                    onShortcutKeyDown={handleShortcutKeyDown}
+                    getHighlightClass={getHighlightClass}
+                  />
+                  <ShortcutSection
+                    title="Fixed triggers"
                     definitions={SHORTCUT_DEFINITIONS.filter(
                       (definition) => !definition.customizable,
                     )}
