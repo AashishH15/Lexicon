@@ -29,7 +29,6 @@ import { TableKit } from "@tiptap/extension-table";
 import { InlineMathWithDollar, BlockMath } from "./mathematicsWithInputRules";
 import SlashCommand from "./slashCommand.js";
 import { createLowlight } from "lowlight";
-import { ProofreadShortcut } from "./proofreadShortcut.js";
 import { detectTone } from "./toneScore.js";
 import Toolbar from "./Toolbar.jsx";
 import Editor from "./Editor.jsx";
@@ -116,6 +115,14 @@ import {
   lexStatusMessage,
   resolveLexStatus,
 } from "./lexStatus.js";
+import {
+  SHORTCUT_IDS,
+  SHORTCUTS_STORAGE_KEY,
+  getDefaultShortcutBindings,
+  loadShortcutBindings,
+  saveShortcutBindings,
+  shortcutMatchesEvent,
+} from "./shortcuts.js";
 
 // Six-dot grip used for the drag handle
 const DRAG_HANDLE_GRIP_SVG = `
@@ -378,6 +385,7 @@ export default function App() {
   const [toneResult, setToneResult] = useState(null);
   const [editorFocused, setEditorFocused] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [shortcuts, setShortcuts] = useState(loadShortcutBindings);
   const [settingsFocusKey, setSettingsFocusKey] = useState(null);
   const [confirmConfig, setConfirmConfig] = useState(null);
   const [templateGalleryOpen, setTemplateGalleryOpen] = useState(false);
@@ -710,9 +718,6 @@ export default function App() {
           el.innerHTML = DRAG_HANDLE_GRIP_SVG;
           return el;
         },
-      }),
-      ProofreadShortcut.configure({
-        onProofread: () => proofreadRef.current(),
       }),
     ],
     editorProps: {
@@ -1846,6 +1851,31 @@ export default function App() {
     }
   }
 
+  function handleShortcutChange(actionId, shortcut) {
+    const nextShortcuts = {
+      ...shortcuts,
+      [actionId]: shortcut,
+    };
+    setShortcuts(nextShortcuts);
+    saveShortcutBindings(nextShortcuts);
+  }
+
+  function handleResetShortcut(actionId) {
+    const defaults = getDefaultShortcutBindings();
+    if (!defaults[actionId]) return;
+    const nextShortcuts = {
+      ...shortcuts,
+      [actionId]: defaults[actionId],
+    };
+    setShortcuts(nextShortcuts);
+    saveShortcutBindings(nextShortcuts);
+  }
+
+  function handleResetAllShortcuts() {
+    setShortcuts(getDefaultShortcutBindings());
+    localStorage.removeItem(SHORTCUTS_STORAGE_KEY);
+  }
+
   function handleResetDefaults() {
     setLanguage(SETTINGS_DEFAULTS.language);
     setFontSize(SETTINGS_DEFAULTS.fontSize);
@@ -1857,6 +1887,7 @@ export default function App() {
     setTypographyPreset(SETTINGS_DEFAULTS.typographyPreset);
     setPaperTexture(SETTINGS_DEFAULTS.paperTexture);
     setReadingMode(SETTINGS_DEFAULTS.readingMode);
+    setShortcuts(getDefaultShortcutBindings());
     localStorage.removeItem(languageKey);
     localStorage.removeItem(fontSizeKey);
     localStorage.removeItem(focusModeKey);
@@ -1867,6 +1898,7 @@ export default function App() {
     localStorage.removeItem(typographyPresetKey);
     localStorage.removeItem(paperTextureKey);
     localStorage.removeItem(readingModeKey);
+    localStorage.removeItem(SHORTCUTS_STORAGE_KEY);
   }
 
   useEffect(() => {
@@ -1883,50 +1915,59 @@ export default function App() {
 
   useEffect(() => {
     const handleKeyDown = (event) => {
-      const key = event.key.toLowerCase();
+      if (event.repeat) return;
+
+      if (shortcutMatchesEvent(shortcuts[SHORTCUT_IDS.TOGGLE_SETTINGS], event)) {
+        event.preventDefault();
+        setSettingsOpen((current) => !current);
+        return;
+      }
 
       if (event.key === "Escape") {
         setSettingsOpen((current) => (current ? false : current));
         return;
       }
 
-      if ((event.ctrlKey || event.metaKey) && event.key === ",") {
+      // Settings owns the rest of its keyboard interaction, including
+      // recording a replacement shortcut. Keep the background editor inert
+      // while that modal is open. Lexicon commands remain available while
+      // focus is on another part of the app window.
+      if (settingsOpen || !editor) return;
+
+      if (shortcutMatchesEvent(shortcuts[SHORTCUT_IDS.TRIGGER_PROOFREAD], event)) {
         event.preventDefault();
-        setSettingsOpen((current) => !current);
+        triggerProofread();
         return;
       }
 
       // Accept / dismiss the suggestion under the caret when one is active,
       // otherwise fall back to the first card in the stream. Values are read
       // through refs so this handler never acts on a stale closure.
-      if (
-        (event.ctrlKey || event.metaKey) &&
-        event.altKey &&
-        (key === "a" || key === "d")
-      ) {
-        const matches = matchesRef.current;
-        const activeId = activeErrorRef.current;
-        const target =
-          (activeId != null && matches.find((m) => m.id === activeId)) ||
-          matches[0];
-        if (!target) {
-          return;
-        }
+      const matches = matchesRef.current;
+      const activeId = activeErrorRef.current;
+      const target =
+        (activeId != null && matches.find((m) => m.id === activeId)) ||
+        matches[0];
+      if (!target) return;
+
+      if (shortcutMatchesEvent(shortcuts[SHORTCUT_IDS.ACCEPT_SUGGESTION], event)) {
         event.preventDefault();
-        if (key === "a") {
-          const replacement = target.replacements[0];
-          if (replacement) {
-            handleApplySuggestion(target, replacement);
-          }
-        } else {
-          handleDismiss(target);
+        const replacement = target.replacements[0];
+        if (replacement) {
+          handleApplySuggestion(target, replacement);
         }
+        return;
+      }
+
+      if (shortcutMatchesEvent(shortcuts[SHORTCUT_IDS.DISMISS_SUGGESTION], event)) {
+        event.preventDefault();
+        handleDismiss(target);
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [editor]);
+  }, [editor, settingsOpen, shortcuts]);
 
   function handleToolClick(name) {
     const nextTool = activeTool === name ? "" : name;
@@ -2577,6 +2618,7 @@ export default function App() {
                 aiConfigured={aiConfigured}
                 panelWidth={leftWidth}
                 isMac={isMac}
+                proofreadShortcut={shortcuts[SHORTCUT_IDS.TRIGGER_PROOFREAD]}
                 isWarming={isWarming}
                 transformRunning={transformRunning}
               />
@@ -2800,6 +2842,10 @@ export default function App() {
           onPaperTextureChange={handlePaperTextureChange}
           readingMode={readingMode}
           onReadingModeChange={handleReadingModeChange}
+          shortcuts={shortcuts}
+          onShortcutChange={handleShortcutChange}
+          onResetShortcut={handleResetShortcut}
+          onResetAllShortcuts={handleResetAllShortcuts}
           onResetDefaults={handleResetDefaults}
           onCheckForUpdates={() => runUpdateCheck()}
           updateState={updateState}

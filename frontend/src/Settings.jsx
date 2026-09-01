@@ -36,6 +36,17 @@ import { TYPOGRAPHY_PRESETS } from "./typographyPresets.js";
 import { PAPER_TEXTURES } from "./paperTextures.js";
 import { READING_MODES } from "./readingMode.js";
 import { setAiPreference, openExternalUrl } from "./api.js";
+import {
+  SHORTCUT_DEFINITIONS,
+  formatShortcutTokens,
+  shortcutFromKeyboardEvent,
+  isModifierKey,
+  findShortcutConflict,
+  validateShortcut,
+  getDefaultShortcutBindings,
+  shortcutBindingsAreDefault,
+  shortcutsEqual,
+} from "./shortcuts.js";
 
 const githubWeights = new Map([
   [
@@ -120,42 +131,6 @@ export const SETTINGS_DEFAULTS = {
   paperTexture: "plain-white",
   readingMode: "off",
 };
-
-const isMac =
-  typeof navigator !== "undefined" &&
-  /Mac|iPod|iPhone|iPad/.test(navigator.platform);
-const mod = isMac ? "⌘" : "Ctrl";
-
-const SHORTCUTS = [
-  { action: "Open command menu", keys: ["type /"] },
-  { action: "Trigger Proofread", keys: [mod, "Enter"] },
-  { action: "Accept Suggestion", keys: ["Ctrl", "Alt", "A"] },
-  { action: "Dismiss Suggestion", keys: ["Ctrl", "Alt", "D"] },
-  { action: "Toggle Settings", keys: [mod, ","] },
-  { action: "Close Settings", keys: ["Esc"] },
-  { action: "Inline math", keys: ["type $your latex$"] },
-  { action: "Block math", keys: ["type $$$your latex$$$"] },
-  { action: "Bold", keys: [mod, "B"] },
-  { action: "Italic", keys: [mod, "I"] },
-  { action: "Underline", keys: [mod, "U"] },
-  { action: "Strikethrough", keys: [mod, "Shift", "S"] },
-  { action: "Highlight", keys: [mod, "Shift", "H"] },
-  { action: "Inline code", keys: [mod, "E"] },
-  { action: "Align left", keys: [mod, "Shift", "L"] },
-  { action: "Align center", keys: [mod, "Shift", "E"] },
-  { action: "Align right", keys: [mod, "Shift", "R"] },
-  { action: "Align justify", keys: [mod, "Shift", "J"] },
-  { action: "Heading 1", keys: [mod, "Alt", "1"] },
-  { action: "Heading 2", keys: [mod, "Alt", "2"] },
-  { action: "Heading 3", keys: [mod, "Alt", "3"] },
-  { action: "Heading 4", keys: [mod, "Alt", "4"] },
-  { action: "Heading 5", keys: [mod, "Alt", "5"] },
-  { action: "Heading 6", keys: [mod, "Alt", "6"] },
-  { action: "Undo", keys: [mod, "Z"] },
-  { action: "Redo", keys: [mod, "Shift", "Z"] },
-  { action: "Indent list item", keys: ["Tab"] },
-  { action: "Outdent list item", keys: ["Shift", "Tab"] },
-];
 
 const TABS = [
   { id: "general", label: "General", icon: Sliders },
@@ -443,6 +418,13 @@ function snippet(text, max = 120) {
   return s.length > max ? s.slice(0, max) + "…" : s;
 }
 
+function shortcutKeysForDefinition(definition, bindings) {
+  if (definition.displayKeys) return definition.displayKeys;
+  return formatShortcutTokens(
+    bindings?.[definition.id] || definition.defaultShortcut,
+  );
+}
+
 export default function Settings({
   open,
   language,
@@ -465,6 +447,10 @@ export default function Settings({
   onPaperTextureChange,
   readingMode,
   onReadingModeChange,
+  shortcuts = getDefaultShortcutBindings(),
+  onShortcutChange,
+  onResetShortcut,
+  onResetAllShortcuts,
   onResetDefaults,
   onCheckForUpdates,
   updateState,
@@ -489,8 +475,13 @@ export default function Settings({
   const [activeTab, setActiveTab] = useState("general");
   const [searchQuery, setSearchQuery] = useState("");
   const [searchFocused, setSearchFocused] = useState(false);
+  const [editingShortcuts, setEditingShortcuts] = useState(false);
+  const [resetMenuOpen, setResetMenuOpen] = useState(false);
+  const [recordingShortcutId, setRecordingShortcutId] = useState(null);
+  const [shortcutErrors, setShortcutErrors] = useState({});
   const panelRef = useRef(null);
   const searchRef = useRef(null);
+  const resetMenuRef = useRef(null);
 
   const isDefault =
     language === SETTINGS_DEFAULTS.language &&
@@ -500,7 +491,8 @@ export default function Settings({
     proseScanEnabled === SETTINGS_DEFAULTS.proseScanEnabled &&
     typographyPreset === SETTINGS_DEFAULTS.typographyPreset &&
     paperTexture === SETTINGS_DEFAULTS.paperTexture &&
-    readingMode === SETTINGS_DEFAULTS.readingMode;
+    readingMode === SETTINGS_DEFAULTS.readingMode &&
+    shortcutBindingsAreDefault(shortcuts);
 
   const updateBusy = ["checking", "installing"].includes(updateState?.status);
   const updateButtonLabel =
@@ -510,11 +502,109 @@ export default function Settings({
         ? "Installing…"
         : "Check for updates";
 
+  const customizedShortcutDefinitions = SHORTCUT_DEFINITIONS.filter(
+    (definition) =>
+      definition.customizable &&
+      !shortcutsEqual(shortcuts?.[definition.id], definition.defaultShortcut),
+  );
+  const hasCustomizedShortcuts = customizedShortcutDefinitions.length > 0;
+
   useEffect(() => {
     const el = panelRef.current;
     if (!el) return;
     el.scrollTop = 0;
   }, [activeTab]);
+
+  useEffect(() => {
+    if (open) return;
+    setEditingShortcuts(false);
+    setResetMenuOpen(false);
+    setRecordingShortcutId(null);
+    setShortcutErrors({});
+  }, [open]);
+
+  useEffect(() => {
+    if (activeTab === "shortcuts") return;
+    setResetMenuOpen(false);
+    setRecordingShortcutId(null);
+    setShortcutErrors({});
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (!resetMenuOpen) return;
+    const handlePointerDown = (event) => {
+      if (!resetMenuRef.current?.contains(event.target)) {
+        setResetMenuOpen(false);
+      }
+    };
+    document.addEventListener("pointerdown", handlePointerDown);
+    return () =>
+      document.removeEventListener("pointerdown", handlePointerDown);
+  }, [resetMenuOpen]);
+
+  function beginShortcutRecording(actionId) {
+    if (!editingShortcuts) return;
+    setRecordingShortcutId(actionId);
+    setShortcutErrors((current) => ({ ...current, [actionId]: "" }));
+  }
+
+  function cancelShortcutRecording(actionId) {
+    setRecordingShortcutId((current) =>
+      current === actionId ? null : current,
+    );
+    setShortcutErrors((current) => ({ ...current, [actionId]: "" }));
+  }
+
+  function toggleShortcutEditing() {
+    if (editingShortcuts) {
+      setEditingShortcuts(false);
+      setRecordingShortcutId(null);
+      setShortcutErrors({});
+      return;
+    }
+    setEditingShortcuts(true);
+  }
+
+  function handleShortcutKeyDown(event, definition) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (event.key === "Escape") {
+      cancelShortcutRecording(definition.id);
+      return;
+    }
+
+    if (isModifierKey(event.key)) {
+      return;
+    }
+
+    const candidate = shortcutFromKeyboardEvent(event);
+    const result = validateShortcut(candidate);
+    if (!result.valid) {
+      setShortcutErrors((current) => ({
+        ...current,
+        [definition.id]: result.error,
+      }));
+      return;
+    }
+
+    const conflict = findShortcutConflict(
+      shortcuts,
+      definition.id,
+      result.shortcut,
+    );
+    if (conflict) {
+      setShortcutErrors((current) => ({
+        ...current,
+        [definition.id]: `Already used for ${conflict.action}.`,
+      }));
+      return;
+    }
+
+    onShortcutChange?.(definition.id, result.shortcut);
+    setRecordingShortcutId(null);
+    setShortcutErrors((current) => ({ ...current, [definition.id]: "" }));
+  }
 
   // ── Dictionary tab local state ──────────────────────────────────────
   const [dictNewWord, setDictNewWord] = useState("");
@@ -662,11 +752,17 @@ export default function Settings({
     if (!q) return [];
 
     // Build shortcut search items dynamically
-    const shortcutItems = SHORTCUTS.map((s) => ({
-      label: s.action,
+    const shortcutItems = SHORTCUT_DEFINITIONS.map((definition) => ({
+      label: definition.action,
       tab: "shortcuts",
-      settingKey: `shortcut-${s.action.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
-      keywords: [s.action.toLowerCase(), ...s.keys.map((k) => k.toLowerCase())],
+      settingKey: `shortcut-${definition.id}`,
+      keywords: [
+        definition.action.toLowerCase(),
+        ...(definition.keywords || []),
+        ...shortcutKeysForDefinition(definition, shortcuts).map((key) =>
+          key.toLowerCase(),
+        ),
+      ],
     }));
 
     const allItems = [
@@ -1845,46 +1941,122 @@ export default function Settings({
               {/* ── Shortcuts ── */}
               {activeTab === "shortcuts" && (
                 <div>
-                  <h2 className="font-serif text-xl font-bold text-ink">
-                    Shortcuts
-                  </h2>
-                  <p className="mt-3 font-sans text-xs text-muted">
-                    All available commands and their key bindings.
-                  </p>
-                  <div className="mt-5">
-                    {SHORTCUTS.map((shortcut) => {
-                      const key = `shortcut-${shortcut.action.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
-                      return (
-                        <div
-                          key={shortcut.action}
-                          data-setting-key={key}
-                          className={
-                            "flex items-center justify-between border-b border-hairline py-2.5 last:border-b-0 " +
-                            getHighlightClass(key)
-                          }
+                  <div className="flex items-center justify-between gap-4">
+                    <h2 className="font-serif text-xl font-bold text-ink">
+                      Shortcuts
+                    </h2>
+                    <div className="flex items-center gap-2">
+                      <div ref={resetMenuRef} className="relative">
+                        <button
+                          type="button"
+                          aria-haspopup="menu"
+                          aria-expanded={resetMenuOpen}
+                          disabled={!hasCustomizedShortcuts}
+                          onClick={() => setResetMenuOpen((current) => !current)}
+                          className="flex items-center gap-1.5 rounded border border-hairline px-2.5 py-1.5 font-sans text-[10px] font-medium text-muted transition-colors hover:border-muted hover:text-ink disabled:cursor-not-allowed disabled:opacity-40"
                         >
-                          <span className="font-mono text-xs text-ink">
-                            {shortcut.action}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            {shortcut.keys.map((keyStr, i) => (
-                              <span
-                                key={keyStr}
-                                className="flex items-center gap-1"
+                          <ArrowCounterClockwise size={12} weight="bold" />
+                          Reset
+                        </button>
+                        {resetMenuOpen && hasCustomizedShortcuts && (
+                          <div
+                            role="menu"
+                            aria-label="Reset shortcuts"
+                            className="absolute right-0 top-full z-30 mt-1 min-w-[230px] overflow-hidden rounded-lg border border-hairline bg-white py-1 shadow-lg"
+                          >
+                            <p className="px-3 py-1.5 font-mono text-[9px] uppercase tracking-widest text-muted">
+                              Reset customized command
+                            </p>
+                            {customizedShortcutDefinitions.map((definition) => (
+                              <button
+                                key={definition.id}
+                                type="button"
+                                role="menuitem"
+                                onClick={() => {
+                                  onResetShortcut?.(definition.id);
+                                  setResetMenuOpen(false);
+                                }}
+                                className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left font-sans text-xs text-ink transition-colors hover:bg-hairline/50"
                               >
-                                {i > 0 && (
-                                  <span className="text-[10px] text-muted">
-                                    +
-                                  </span>
-                                )}
-                                <kbd className="lex-kbd">{keyStr}</kbd>
-                              </span>
+                                <span className="truncate">
+                                  {definition.action}
+                                </span>
+                                <ShortcutKeys
+                                  keys={shortcutKeysForDefinition(
+                                    definition,
+                                    shortcuts,
+                                  )}
+                                />
+                              </button>
                             ))}
-                          </span>
-                        </div>
-                      );
-                    })}
+                            <div className="mt-1 border-t border-hairline pt-1">
+                              <button
+                                type="button"
+                                role="menuitem"
+                                onClick={() => {
+                                  onResetAllShortcuts?.();
+                                  setResetMenuOpen(false);
+                                }}
+                                className="flex w-full items-center gap-2 px-3 py-2 text-left font-sans text-xs font-medium text-pale-red-text transition-colors hover:bg-pale-red/30"
+                              >
+                                <ArrowCounterClockwise
+                                  size={12}
+                                  weight="bold"
+                                />
+                                Reset all shortcuts
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        aria-pressed={editingShortcuts}
+                        onClick={toggleShortcutEditing}
+                        className="rounded border border-hairline px-2.5 py-1.5 font-sans text-[10px] font-medium text-muted transition-colors hover:border-muted hover:text-ink"
+                      >
+                        {editingShortcuts ? "Done" : "Edit shortcuts"}
+                      </button>
+                    </div>
                   </div>
+                  <p className="mt-3 font-sans text-xs text-muted">
+                    Customize Lexicon commands. Native editor shortcuts are
+                    shown for reference.
+                  </p>
+                  {editingShortcuts && (
+                    <p className="mt-2 font-sans text-[11px] text-pale-blue-text">
+                      Click a Lexicon shortcut to record a replacement. Press
+                      Escape to cancel.
+                    </p>
+                  )}
+                  <ShortcutSection
+                    title="Lexicon commands"
+                    definitions={SHORTCUT_DEFINITIONS.filter(
+                      (definition) => definition.customizable,
+                    )}
+                    shortcuts={shortcuts}
+                    editing={editingShortcuts}
+                    recordingShortcutId={recordingShortcutId}
+                    shortcutErrors={shortcutErrors}
+                    onBeginRecording={beginShortcutRecording}
+                    onCancelRecording={cancelShortcutRecording}
+                    onShortcutKeyDown={handleShortcutKeyDown}
+                    getHighlightClass={getHighlightClass}
+                  />
+                  <ShortcutSection
+                    title="Other shortcuts"
+                    definitions={SHORTCUT_DEFINITIONS.filter(
+                      (definition) => !definition.customizable,
+                    )}
+                    shortcuts={shortcuts}
+                    editing={false}
+                    recordingShortcutId={recordingShortcutId}
+                    shortcutErrors={shortcutErrors}
+                    onBeginRecording={beginShortcutRecording}
+                    onCancelRecording={cancelShortcutRecording}
+                    onShortcutKeyDown={handleShortcutKeyDown}
+                    getHighlightClass={getHighlightClass}
+                  />
                 </div>
               )}
 
@@ -2178,5 +2350,116 @@ export default function Settings({
         </div>
       </div>
     </div>
+  );
+}
+
+function ShortcutSection({
+  title,
+  definitions,
+  shortcuts,
+  editing,
+  recordingShortcutId,
+  shortcutErrors,
+  onBeginRecording,
+  onCancelRecording,
+  onShortcutKeyDown,
+  getHighlightClass,
+}) {
+  return (
+    <section className="mt-6">
+      <p className="font-mono text-[10px] uppercase tracking-widest text-muted">
+        {title}
+      </p>
+      <div className="mt-1.5">
+        {definitions.map((definition) => {
+          const key = `shortcut-${definition.id}`;
+          const keys = shortcutKeysForDefinition(definition, shortcuts);
+          const isRecording = recordingShortcutId === definition.id;
+          const error = shortcutErrors[definition.id];
+          const canEdit = editing && definition.customizable;
+          return (
+            <div
+              key={definition.id}
+              data-setting-key={key}
+              className={
+                "border-b border-hairline py-2.5 last:border-b-0 " +
+                getHighlightClass(key)
+              }
+            >
+              <div className="flex items-center justify-between gap-4">
+                <span className="min-w-0 font-mono text-xs text-ink">
+                  {definition.action}
+                </span>
+                {canEdit ? (
+                  <button
+                    type="button"
+                    aria-pressed={isRecording}
+                    aria-label={
+                      isRecording
+                        ? `Recording ${definition.action} shortcut. Press Escape to cancel.`
+                        : `Edit ${definition.action} shortcut`
+                    }
+                    onClick={() =>
+                      isRecording
+                        ? onCancelRecording(definition.id)
+                        : onBeginRecording(definition.id)
+                    }
+                    onKeyDown={(event) =>
+                      isRecording && onShortcutKeyDown(event, definition)
+                    }
+                    className={
+                      "flex shrink-0 items-center rounded-md border px-1.5 py-0.5 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ink " +
+                      (isRecording
+                        ? "border-pale-blue-text bg-pale-blue/20 text-pale-blue-text"
+                        : "border-transparent hover:border-hairline hover:bg-canvas")
+                    }
+                  >
+                    {isRecording ? (
+                      <span className="px-1 font-sans text-[10px] font-medium">
+                        Press keys…
+                      </span>
+                    ) : (
+                      <ShortcutKeys keys={keys} />
+                    )}
+                  </button>
+                ) : (
+                  <ShortcutKeys keys={keys} />
+                )}
+              </div>
+              {isRecording && !error && (
+                <p className="mt-1.5 font-sans text-[10px] text-muted">
+                  Press a combination with Ctrl/⌘, Alt, or Shift.
+                </p>
+              )}
+              {error && (
+                <p
+                  role="alert"
+                  className="mt-1.5 font-sans text-[10px] text-pale-red-text"
+                >
+                  {error}
+                </p>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function ShortcutKeys({ keys }) {
+  return (
+    <span className="flex items-center gap-1">
+      {keys.map((keyStr, i) => (
+        <span key={`${keyStr}-${i}`} className="flex items-center gap-1">
+          {i > 0 && (
+            <span className="text-[10px] text-muted" aria-hidden="true">
+              +
+            </span>
+          )}
+          <kbd className="lex-kbd">{keyStr}</kbd>
+        </span>
+      ))}
+    </span>
   );
 }

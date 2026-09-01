@@ -23,6 +23,7 @@ import {
 } from "@phosphor-icons/react";
 import { getCustomTools } from "./prompts.js";
 import { CUSTOM_ICON_MAP } from "./CustomToolsSettings.jsx";
+import { formatShortcut } from "./shortcuts.js";
 
 const builtinGroups = [
   { label: "Analysis", tools: [{ name: "Proofread", icon: CheckCircle }] },
@@ -66,6 +67,7 @@ export default function Toolbar({
   aiConfigured,
   panelWidth,
   isMac,
+  proofreadShortcut,
   isWarming,
   transformRunning,
 }) {
@@ -93,7 +95,10 @@ export default function Toolbar({
   // Below this panel width the Proofread shortcut hint can't fit alongside
   // the label, so we drop it to keep the row from wrapping/cramping.
   const showProofreadHint = (panelWidth ?? 256) >= 220;
-  const proofreadHint = isMac ? "⌘ + ↵" : "Ctrl + ↵";
+  const proofreadHint = formatShortcut(proofreadShortcut, {
+    mac: isMac,
+    compact: true,
+  });
   const aiLocked = !aiConfigured;
   const warmingTool = isWarming && activeTool && activeTool !== "Proofread";
   const runningTool = transformRunning && activeTool && activeTool !== "Proofread";
