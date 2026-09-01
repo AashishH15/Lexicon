@@ -3,7 +3,6 @@ import {
   X,
   ShieldCheck,
   PencilLine,
-  Robot,
   ArrowRight,
   ArrowLeft,
   Check,
@@ -232,8 +231,12 @@ export default function OnboardingModal({
                 </div>
 
                 <div className="flex items-start gap-3.5 rounded-xl border border-hairline bg-canvas p-3.5 transition-colors">
-                  <div className="mt-0.5 rounded-lg bg-hairline/60 p-2 text-ink">
-                    <Robot size={20} weight="bold" />
+                  <div className="mt-0.5 shrink-0 rounded-lg bg-hairline/60 p-1 text-ink">
+                    <img
+                      src="/lex-idle.svg"
+                      alt="Lex"
+                      className="h-7 w-7 object-contain"
+                    />
                   </div>
                   <div>
                     <h3 className="font-sans text-sm font-semibold text-ink">Your Local Assistant (Lex)</h3>
