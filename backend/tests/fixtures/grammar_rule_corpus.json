@@ -1,0 +1,282 @@
+[
+  {
+    "id": "advice-used-as-verb",
+    "language": "en-US",
+    "text": "Please advice me before the meeting.",
+    "expected": [
+      {
+        "original": "advice",
+        "replacement": "advise"
+      }
+    ]
+  },
+  {
+    "id": "advise-used-as-noun",
+    "language": "en-US",
+    "text": "She gave me good advise.",
+    "expected": [
+      {
+        "original": "advise",
+        "replacement": "advice"
+      }
+    ]
+  },
+  {
+    "id": "breath-used-as-verb",
+    "language": "en-US",
+    "text": "Remember to breath slowly.",
+    "expected": [
+      {
+        "original": "breath",
+        "replacement": "breathe"
+      }
+    ]
+  },
+  {
+    "id": "breathe-used-as-noun",
+    "language": "en-US",
+    "text": "Take a deep breathe.",
+    "expected": [
+      {
+        "original": "breathe",
+        "replacement": "breath"
+      }
+    ]
+  },
+  {
+    "id": "principle-used-for-school-leader",
+    "language": "en-US",
+    "text": "The school principle addressed the students.",
+    "expected": [
+      {
+        "original": "principle",
+        "replacement": "principal"
+      }
+    ]
+  },
+  {
+    "id": "principal-used-for-guiding-idea",
+    "language": "en-US",
+    "text": "The guiding principal is fairness.",
+    "expected": [
+      {
+        "original": "principal",
+        "replacement": "principle"
+      }
+    ]
+  },
+  {
+    "id": "past-used-for-passed",
+    "language": "en-US",
+    "text": "She has past the exam.",
+    "expected": [
+      {
+        "original": "past",
+        "replacement": "passed"
+      }
+    ]
+  },
+  {
+    "id": "passed-used-for-past",
+    "language": "en-US",
+    "text": "We walked passed the store.",
+    "expected": [
+      {
+        "original": "passed",
+        "replacement": "past"
+      }
+    ]
+  },
+  {
+    "id": "lead-used-for-led",
+    "language": "en-US",
+    "text": "She lead the team yesterday.",
+    "expected": [
+      {
+        "original": "lead",
+        "replacement": "led"
+      }
+    ]
+  },
+  {
+    "id": "affect-used-as-noun",
+    "language": "en-US",
+    "text": "It had a strong affect on sales.",
+    "expected": [
+      {
+        "original": "affect",
+        "replacement": "effect"
+      }
+    ]
+  },
+  {
+    "id": "effect-used-as-verb",
+    "language": "en-US",
+    "text": "The policy will effect everyone.",
+    "expected": [
+      {
+        "original": "effect",
+        "replacement": "affect"
+      }
+    ]
+  },
+  {
+    "id": "plural-subject-with-singular-verb",
+    "language": "en-US",
+    "text": "The dogs in the yard barks loudly.",
+    "expected": [
+      {
+        "original": "barks",
+        "replacement": "bark"
+      }
+    ]
+  },
+  {
+    "id": "singular-subject-with-plural-verb",
+    "language": "en-US",
+    "text": "The report from the managers are incomplete.",
+    "expected": [
+      {
+        "original": "are",
+        "replacement": "is"
+      }
+    ]
+  },
+  {
+    "id": "unicode-offset-before-confusion",
+    "language": "en-US",
+    "text": "😀 Please advice me.",
+    "expected": [
+      {
+        "original": "advice",
+        "replacement": "advise",
+        "offset": 10
+      }
+    ]
+  },
+  {
+    "id": "unicode-offset-before-existing-rule",
+    "language": "en-US",
+    "text": "😀 Your going.",
+    "expected": [
+      {
+        "original": "Your",
+        "replacement": "You're",
+        "offset": 3
+      }
+    ]
+  },
+  {
+    "id": "valid-advice-verb",
+    "language": "en-US",
+    "text": "Please advise me before the meeting.",
+    "expected": []
+  },
+  {
+    "id": "valid-advice-noun",
+    "language": "en-US",
+    "text": "She gave me good advice.",
+    "expected": []
+  },
+  {
+    "id": "valid-breath-verb",
+    "language": "en-US",
+    "text": "Remember to breathe slowly.",
+    "expected": []
+  },
+  {
+    "id": "valid-breath-noun",
+    "language": "en-US",
+    "text": "Take a deep breath.",
+    "expected": []
+  },
+  {
+    "id": "valid-school-principal",
+    "language": "en-US",
+    "text": "The school principal addressed the students.",
+    "expected": []
+  },
+  {
+    "id": "valid-guiding-principle",
+    "language": "en-US",
+    "text": "The guiding principle is fairness.",
+    "expected": []
+  },
+  {
+    "id": "valid-past-passed",
+    "language": "en-US",
+    "text": "She has passed the exam.",
+    "expected": []
+  },
+  {
+    "id": "valid-passed-past",
+    "language": "en-US",
+    "text": "We walked past the store.",
+    "expected": []
+  },
+  {
+    "id": "valid-lead-past",
+    "language": "en-US",
+    "text": "She led the team yesterday.",
+    "expected": []
+  },
+  {
+    "id": "valid-affect-verb",
+    "language": "en-US",
+    "text": "The policy will affect everyone.",
+    "expected": []
+  },
+  {
+    "id": "valid-effect-noun",
+    "language": "en-US",
+    "text": "It had a strong effect on sales.",
+    "expected": []
+  },
+  {
+    "id": "valid-psychology-affect",
+    "language": "en-US",
+    "text": "The positive affect on mood was documented.",
+    "expected": []
+  },
+  {
+    "id": "valid-university-principle",
+    "language": "en-US",
+    "text": "The university principle of academic freedom is important.",
+    "expected": []
+  },
+  {
+    "id": "valid-plural-distance-agreement",
+    "language": "en-US",
+    "text": "The dogs in the yard bark loudly.",
+    "expected": []
+  },
+  {
+    "id": "valid-singular-distance-agreement",
+    "language": "en-US",
+    "text": "The report from the managers is incomplete.",
+    "expected": []
+  },
+  {
+    "id": "paragraph-boundary-is-not-subject-context",
+    "language": "en-US",
+    "text": "The dogs in the yard\nbarks loudly.",
+    "expected": []
+  },
+  {
+    "id": "british-collective-agreement",
+    "language": "en-GB",
+    "text": "The committee have reached a decision.",
+    "expected": []
+  },
+  {
+    "id": "american-collective-agreement",
+    "language": "en-US",
+    "text": "The committee have reached a decision.",
+    "expected": [
+      {
+        "original": "have",
+        "replacement": "has"
+      }
+    ]
+  }
+]

@@ -27,6 +27,64 @@ _COMPARATIVES = (
     "more|less|better|worse|taller|shorter|older|younger|faster|slower|"
     "higher|lower|greater|smaller|bigger|earlier|later"
 )
+_ADVICE_NOUN_MODIFIERS = (
+    "some|the|my|your|his|her|our|their|good|sound|useful|valuable|"
+    "professional|expert|helpful|practical"
+)
+_BREATH_ADJECTIVES = "deep|slow|long|short|single|full|last|next"
+_PRINCIPLE_ADJECTIVES = (
+    "guiding|basic|fundamental|core|moral|general|underlying|key|central"
+)
+_PAST_OBJECTS = (
+    "exam|test|deadline|limit|point|milestone|mark|threshold|goal|finish"
+)
+_MOTION_VERBS = (
+    "walked|ran|drove|rode|moved|traveled|travelled|went|strolled"
+)
+_DISTANCE_PREPOSITIONS = (
+    "in|on|at|by|near|with|from|under|over|behind|beside|between|among"
+)
+_DISTANCE_DETERMINERS = (
+    "the|a|an|my|your|his|her|our|their|this|that|these|those"
+)
+_PLURAL_DISTANCE_SUBJECTS = (
+    "dogs|cats|students|children|people|employees|managers|reports|items|"
+    "problems|cars|books|users|customers|workers|players|words|sentences|"
+    "rules|changes|results|files|documents|teams|groups|committees|"
+    "companies|families|organizations|organisations"
+)
+_SINGULAR_DISTANCE_SUBJECTS = (
+    "report|document|file|letter|result|answer|problem|plan|book|car|"
+    "manager|student|dog|cat|company|organization|organisation"
+)
+_PLURAL_VERB_REPLACEMENTS = {
+    "is": "are",
+    "was": "were",
+    "has": "have",
+    "does": "do",
+    "barks": "bark",
+    "runs": "run",
+    "works": "work",
+    "plays": "play",
+    "needs": "need",
+    "wants": "want",
+    "looks": "look",
+    "seems": "seem",
+    "goes": "go",
+    "eats": "eat",
+    "walks": "walk",
+    "lives": "live",
+    "makes": "make",
+    "takes": "take",
+    "comes": "come",
+    "uses": "use",
+}
+_SINGULAR_VERB_REPLACEMENTS = {
+    "are": "is",
+    "were": "was",
+    "have": "has",
+    "do": "does",
+}
 _PAST_FORMS = {
     "receive": "received",
     "walk": "walked",
@@ -75,6 +133,10 @@ def _preserve_case(original: str, replacement: str) -> str:
     return replacement
 
 
+def _utf16_units(value: str) -> int:
+    return len(value.encode("utf-16-le")) // 2
+
+
 def _make_match(
     text: str,
     start: int,
@@ -84,8 +146,8 @@ def _make_match(
 ) -> dict:
     original = text[start:end]
     return {
-        "offset": start,
-        "length": end - start,
+        "offset": _utf16_units(text[:start]),
+        "length": _utf16_units(original),
         "message": message,
         "replacements": [_preserve_case(original, replacement)],
         "rule": {
@@ -266,6 +328,145 @@ def _context_matches(text: str) -> list[dict]:
     return candidates
 
 
+def _confusion_matches(text: str) -> list[dict]:
+    candidates: list[dict] = []
+
+    _add_group_matches(
+        text,
+        candidates,
+        re.compile(
+            r"\b(?:please|kindly|can|could|would|should|will|must|to)"
+            r"(?:[ \t]+you)?[ \t]+(?P<word>advice)\b"
+            r"(?=[ \t]+(?:me|you|him|her|us|them)\b)",
+            re.IGNORECASE,
+        ),
+        "advise",
+        'Use "advise" as a verb.',
+    )
+    _add_group_matches(
+        text,
+        candidates,
+        re.compile(
+            rf"\b(?:{_ADVICE_NOUN_MODIFIERS})[ \t]+(?P<word>advise)\b",
+            re.IGNORECASE,
+        ),
+        "advice",
+        'Use "advice" as a noun.',
+    )
+
+    _add_group_matches(
+        text,
+        candidates,
+        re.compile(
+            r"\b(?:to|can|could|should|must|will|please|remember|try|need|"
+            r"want)[ \t]+(?P<word>breath)\b"
+            r"(?=[ \t]+(?:slowly|deeply|normally|quietly|easily|in|out)\b"
+            r"|[.!?,;:]|$)",
+            re.IGNORECASE,
+        ),
+        "breathe",
+        'Use "breathe" as a verb.',
+    )
+    _add_group_matches(
+        text,
+        candidates,
+        re.compile(
+            rf"\b(?:a|an|one|the|your|my|his|her|our|their)"
+            rf"(?:[ \t]+(?:{_BREATH_ADJECTIVES}))?"
+            rf"[ \t]+(?P<word>breathe)\b",
+            re.IGNORECASE,
+        ),
+        "breath",
+        'Use "breath" as a noun.',
+    )
+
+    _add_group_matches(
+        text,
+        candidates,
+        re.compile(
+            r"\b(?:(?:elementary|middle|high)[ \t]+)?school[ \t]+"
+            r"(?P<word>principle)\b",
+            re.IGNORECASE,
+        ),
+        "principal",
+        'Use "principal" for a school leader.',
+    )
+    _add_group_matches(
+        text,
+        candidates,
+        re.compile(
+            rf"\b(?:{_PRINCIPLE_ADJECTIVES})[ \t]+(?P<word>principal)\b",
+            re.IGNORECASE,
+        ),
+        "principle",
+        'Use "principle" for a guiding idea or rule.',
+    )
+
+    _add_group_matches(
+        text,
+        candidates,
+        re.compile(
+            rf"\b(?:has|have|had)[ \t]+(?P<word>past)[ \t]+"
+            rf"(?=(?:{_DISTANCE_DETERMINERS})[ \t]+(?:{_PAST_OBJECTS})\b)",
+            re.IGNORECASE,
+        ),
+        "passed",
+        'Use "passed" for the past tense of "pass".',
+    )
+    _add_group_matches(
+        text,
+        candidates,
+        re.compile(
+            rf"\b(?:{_MOTION_VERBS})[ \t]+(?P<word>passed)[ \t]+"
+            rf"(?=(?:{_DISTANCE_DETERMINERS})[ \t]+[a-z-]+\b)",
+            re.IGNORECASE,
+        ),
+        "past",
+        'Use "past" for movement beyond something.',
+    )
+    _add_group_matches(
+        text,
+        candidates,
+        re.compile(
+            rf"\b(?:i|you|he|she|we|they|the[ \t]+[a-z-]+)[ \t]+"
+            rf"(?P<word>lead)\b"
+            rf"(?=[^.!?\r\n]{{0,60}}\b{_PAST_MARKER}\b)",
+            re.IGNORECASE,
+        ),
+        "led",
+        'Use "led" for the past tense of "lead".',
+    )
+
+    _add_group_matches(
+        text,
+        candidates,
+        re.compile(
+            r"\b(?:a|an|the|its|this|that|their|his|her|our|your)"
+            r"[ \t]+(?:strong|major|lasting|direct|immediate|significant|"
+            r"profound)[ \t]+"
+            r"(?P<word>affect)[ \t]+on\b",
+            re.IGNORECASE,
+        ),
+        "effect",
+        'Use "effect" as a noun for a result.',
+    )
+    _add_group_matches(
+        text,
+        candidates,
+        re.compile(
+            r"\b(?:will|would|can|could|may|might|should|must|to)"
+            r"[ \t]+(?P<word>effect)[ \t]+"
+            r"(?=(?:me|you|him|her|us|them|everyone|someone|somebody|"
+            r"people|students|customers|users)\b)",
+            re.IGNORECASE,
+        ),
+        "affect",
+        'Use "affect" as a verb for an influence.',
+    )
+
+    return candidates
+
+
 def _to_too_two_matches(text: str) -> list[dict]:
     candidates: list[dict] = []
 
@@ -303,6 +504,24 @@ def _to_too_two_matches(text: str) -> list[dict]:
     )
 
     return candidates
+
+
+def _add_agreement_matches(
+    text: str,
+    candidates: list[dict],
+    pattern: re.Pattern,
+    replacements: dict[str, str],
+    message: str,
+) -> None:
+    for found in pattern.finditer(text):
+        original = found.group("word")
+        replacement = replacements.get(original.lower())
+        if replacement is None:
+            continue
+        start, end = found.span("word")
+        candidate = _make_match(text, start, end, replacement, message)
+        if not any(_overlaps(candidate, existing) for existing in candidates):
+            candidates.append(candidate)
 
 
 def _agreement_matches(text: str, language: str) -> list[dict]:
@@ -415,6 +634,37 @@ def _agreement_matches(text: str, language: str) -> list[dict]:
         if not any(_overlaps(candidate, existing) for existing in candidates):
             candidates.append(candidate)
 
+    _add_agreement_matches(
+        text,
+        candidates,
+        re.compile(
+            rf"\b(?:{_DISTANCE_DETERMINERS})[ \t]+"
+            rf"(?P<subject>{_PLURAL_DISTANCE_SUBJECTS})[ \t]+"
+            rf"(?:{_DISTANCE_PREPOSITIONS})[ \t]+"
+            rf"(?:(?:{_DISTANCE_DETERMINERS})[ \t]+)?"
+            rf"(?:[a-z-]+[ \t]+){{0,3}}"
+            rf"(?P<word>{'|'.join(_PLURAL_VERB_REPLACEMENTS)})\b",
+            re.IGNORECASE,
+        ),
+        _PLURAL_VERB_REPLACEMENTS,
+        "Use a plural verb with this plural subject.",
+    )
+    _add_agreement_matches(
+        text,
+        candidates,
+        re.compile(
+            rf"\b(?:{_DISTANCE_DETERMINERS})[ \t]+"
+            rf"(?P<subject>{_SINGULAR_DISTANCE_SUBJECTS})[ \t]+"
+            rf"(?:{_DISTANCE_PREPOSITIONS})[ \t]+"
+            rf"(?:(?:{_DISTANCE_DETERMINERS})[ \t]+)?"
+            rf"(?:[a-z-]+[ \t]+){{0,3}}"
+            rf"(?P<word>{'|'.join(_SINGULAR_VERB_REPLACEMENTS)})\b",
+            re.IGNORECASE,
+        ),
+        _SINGULAR_VERB_REPLACEMENTS,
+        "Use a singular verb with this singular subject.",
+    )
+
     return candidates
 
 
@@ -428,6 +678,7 @@ def enhance_matches(
         return matches
 
     candidates = _context_matches(text)
+    candidates.extend(_confusion_matches(text))
     candidates.extend(_to_too_two_matches(text))
     candidates.extend(_agreement_matches(text, language))
     candidates.sort(key=lambda item: (item["offset"], item["length"]))

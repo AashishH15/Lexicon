@@ -10,12 +10,15 @@ if str(BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(BACKEND_DIR))
 
 from grammar_enhancements import enhance_matches  # noqa: E402
+from grammar_rule_benchmark import _load_cases, _score_case  # noqa: E402
 
 
 def _corrections(text, matches):
     return [
         (
-            text[match["offset"] : match["offset"] + match["length"]],
+            text.encode("utf-16-le")[
+                match["offset"] * 2 : (match["offset"] + match["length"]) * 2
+            ].decode("utf-16-le"),
             match["replacements"][0],
         )
         for match in matches
@@ -135,3 +138,138 @@ def test_check_text_applies_enhancements_after_language_tool(monkeypatch):
 )
 def test_valid_context_is_not_flagged(text):
     assert enhance_matches(text, []) == []
+
+
+@pytest.mark.parametrize(
+    "text, expected",
+    [
+        (
+            "Please advice me before the meeting.",
+            ("advice", "advise"),
+        ),
+        (
+            "She gave me good advise.",
+            ("advise", "advice"),
+        ),
+        (
+            "Remember to breath slowly.",
+            ("breath", "breathe"),
+        ),
+        (
+            "Take a deep breathe.",
+            ("breathe", "breath"),
+        ),
+        (
+            "The school principle addressed the students.",
+            ("principle", "principal"),
+        ),
+        (
+            "The guiding principal is fairness.",
+            ("principal", "principle"),
+        ),
+        (
+            "She has past the exam.",
+            ("past", "passed"),
+        ),
+        (
+            "We walked passed the store.",
+            ("passed", "past"),
+        ),
+        (
+            "She lead the team yesterday.",
+            ("lead", "led"),
+        ),
+        (
+            "It had a strong affect on sales.",
+            ("affect", "effect"),
+        ),
+        (
+            "The policy will effect everyone.",
+            ("effect", "affect"),
+        ),
+    ],
+)
+def test_high_confidence_confusion_pairs_are_detected(text, expected):
+    assert _corrections(text, enhance_matches(text, [])) == [expected]
+
+
+@pytest.mark.parametrize(
+    "text, expected",
+    [
+        (
+            "The dogs in the yard barks loudly.",
+            ("barks", "bark"),
+        ),
+        (
+            "The report from the managers are incomplete.",
+            ("are", "is"),
+        ),
+    ],
+)
+def test_subject_verb_agreement_survives_intervening_prepositional_phrases(
+    text, expected
+):
+    assert _corrections(text, enhance_matches(text, [])) == [expected]
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Please advise me before the meeting.",
+        "She gave me good advice.",
+        "Remember to breathe slowly.",
+        "Take a deep breath.",
+        "The school principal addressed the students.",
+        "The guiding principle is fairness.",
+        "She has passed the exam.",
+        "We walked past the store.",
+        "She led the team yesterday.",
+        "It had a strong effect on sales.",
+        "The policy will affect everyone.",
+        "The dogs in the yard bark loudly.",
+        "The report from the managers is incomplete.",
+        "The news from the station is surprising.",
+        "The dogs in the yard\nbarks loudly.",
+    ],
+)
+def test_high_confidence_rules_do_not_flag_valid_contexts(text):
+    assert enhance_matches(text, []) == []
+
+
+def test_custom_rule_offsets_use_utf16_units():
+    text = "😀 Please advice me."
+    matches = enhance_matches(text, [])
+
+    assert _corrections(text, matches) == [("advice", "advise")]
+    assert matches[0]["offset"] == 10
+    assert matches[0]["length"] == len("advice")
+    encoded = text.encode("utf-16-le")
+    start = matches[0]["offset"] * 2
+    end = start + matches[0]["length"] * 2
+    assert encoded[start:end].decode("utf-16-le") == "advice"
+
+
+def test_custom_rule_is_filtered_by_user_dictionary(monkeypatch):
+    import languagetool
+
+    monkeypatch.setattr(languagetool, "CHECK_URL", None)
+    monkeypatch.setattr(languagetool, "_check_local", lambda *_args: [])
+
+    assert languagetool.check_text(
+        "Please advice me.",
+        ignore=["advice"],
+    ) == []
+
+
+@pytest.mark.parametrize(
+    "case",
+    _load_cases(),
+    ids=lambda case: case["id"],
+)
+def test_fixed_grammar_rule_corpus_has_no_regressions(case):
+    result = _score_case(case)
+
+    assert result["true_positives"] == result["expected"]
+    assert result["false_positives"] == 0
+    assert result["false_negatives"] == 0
+    assert result["offset_errors"] == 0
