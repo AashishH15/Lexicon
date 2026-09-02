@@ -96,7 +96,12 @@
     ".panel .close-icon svg{display:block;width:14px;height:14px;fill:currentColor}" +
     ".panel .list{overflow-y:auto;padding:6px}" +
     ".panel .empty{margin:0;padding:10px 9px;color:#5f5e5b}" +
-    ".panel .row{display:flex;align-items:flex-start;gap:8px;padding:7px 9px;margin-bottom:6px;border-left:3px solid #956400;border-radius:0 6px 6px 0;background:#fbf3db}" +
+    ".panel .row{display:flex;align-items:flex-start;gap:8px;padding:7px 9px;margin-bottom:6px;border-left:3px solid #956400;border-radius:0 6px 6px 0;background:#fbf3db;cursor:pointer}" +
+    ".panel .row:hover{background:#f7edcf}" +
+    ".panel .row.active{outline:1px solid #1f6c9f;outline-offset:-1px}" +
+    ".panel .row.lexicon-row-flash{animation:lexicon-row-flash 1200ms ease-in-out}" +
+    "@keyframes lexicon-row-flash{0%,100%{box-shadow:0 0 0 0 rgba(229,72,77,0);background:#fbf3db}25%,75%{box-shadow:0 0 0 3px rgba(229,72,77,.2);background:#f8dfd7}50%{box-shadow:0 0 0 4px rgba(229,72,77,.32);background:#f2c7c3}}" +
+    "@media (prefers-reduced-motion:reduce){.panel .row.lexicon-row-flash{animation:none;box-shadow:0 0 0 3px rgba(229,72,77,.24)}}" +
     ".panel .row .text{flex:1;min-width:0}" +
     ".panel .row .message{margin:0 0 2px}" +
     ".panel .row .suggestion{margin:0;color:#5f5e5b;font-size:12px}" +
@@ -432,6 +437,105 @@
     if (state?.badgeEl) setBadgeState(state.badgeEl, state);
   }
 
+  function bindMatchRowActivation(row, onActivate) {
+    row.setAttribute("role", "button");
+    row.setAttribute("tabindex", "0");
+    row.addEventListener("click", (event) => {
+      if (event.target?.closest?.("button")) return;
+      onActivate();
+    });
+    row.addEventListener("keydown", (event) => {
+      if (event.target?.closest?.("button")) return;
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault();
+      onActivate();
+    });
+  }
+
+  function panelList(panel) {
+    if (!panel) return null;
+    return (
+      panel.querySelector?.(".list") ||
+      panel.children?.[1] ||
+      null
+    );
+  }
+
+  function setActiveMatchRow(panelState, index) {
+    panelState.activeMatchIndex = index;
+    const list = panelList(panelState.panelEl);
+    for (const row of list?.children || []) {
+      row.classList?.remove("active");
+    }
+    const row = list?.children?.[index] || null;
+    row?.classList?.add("active");
+    return row;
+  }
+
+  function flashPanelRow(panelState, row) {
+    if (!row) return;
+    const token = (panelState.rowFlashToken || 0) + 1;
+    panelState.rowFlashToken = token;
+    if (
+      panelState.rowFlashTimer != null &&
+      typeof clearTimeout === "function"
+    ) {
+      clearTimeout(panelState.rowFlashTimer);
+      panelState.rowFlashTimer = null;
+    }
+    row.classList?.remove("lexicon-row-flash");
+    void row.offsetWidth;
+    row.classList?.add("lexicon-row-flash");
+    if (typeof setTimeout === "function") {
+      panelState.rowFlashTimer = setTimeout(() => {
+        if (panelState.rowFlashToken !== token) return;
+        row.classList?.remove("lexicon-row-flash");
+        panelState.rowFlashTimer = null;
+      }, 1200);
+      panelState.rowFlashTimer?.unref?.();
+    }
+  }
+
+  function cancelPanelRowFlash(panelState) {
+    if (!panelState) return;
+    panelState.rowFlashToken = (panelState.rowFlashToken || 0) + 1;
+    if (
+      panelState.rowFlashTimer != null &&
+      typeof clearTimeout === "function"
+    ) {
+      clearTimeout(panelState.rowFlashTimer);
+      panelState.rowFlashTimer = null;
+    }
+    for (const row of panelList(panelState.panelEl)?.children || []) {
+      row.classList?.remove("lexicon-row-flash");
+    }
+  }
+
+  function scrollPanelMatch(panelState, index, { flash = true } = {}) {
+    if (!panelState?.panelOpen || !Number.isInteger(index)) return false;
+    const row = setActiveMatchRow(panelState, index);
+    if (!row) return false;
+    try {
+      row.scrollIntoView?.({
+        behavior: "smooth",
+        block: "nearest",
+      });
+    } catch {
+      row.scrollIntoView?.();
+    }
+    if (flash) flashPanelRow(panelState, row);
+    return true;
+  }
+
+  function scrollFieldMatchIntoView(field, index) {
+    return scrollPanelMatch(fieldStates.get(field), index);
+  }
+
+  function scrollMatchIntoView(field, index) {
+    const panelState = state && state.field === field ? state : null;
+    return scrollPanelMatch(panelState, index);
+  }
+
   function renderPanel() {
     const panel = state.panelEl;
     panel.replaceChildren();
@@ -483,7 +587,14 @@
       for (let i = 0; i < state.matches.length; i++) {
         const match = state.matches[i];
         const row = document.createElement("div");
-        row.className = "row";
+        row.className =
+          state.activeMatchIndex === i ? "row active" : "row";
+        bindMatchRowActivation(row, () => {
+          setActiveMatchRow(state, i);
+          if (typeof state.onFocusMatch === "function") {
+            state.onFocusMatch(i);
+          }
+        });
 
         const text = document.createElement("div");
         text.className = "text";
@@ -680,11 +791,15 @@
       onDismiss: opts.onDismiss || (() => {}),
       onApplyReplacement: opts.onApplyReplacement || null,
       onDismissMatch: opts.onDismissMatch || null,
+      onFocusMatch: opts.onFocusMatch || null,
       onAddToDictionary: opts.onAddToDictionary || (() => false),
       host,
       root,
       panelOpen: keepOpen,
       tooltipMatch: null,
+      activeMatchIndex: null,
+      rowFlashToken: 0,
+      rowFlashTimer: null,
     };
 
     const badge = document.createElement("div");
@@ -714,6 +829,7 @@
   function update(matches) {
     if (!state) return;
     state.matches = matches || [];
+    state.activeMatchIndex = null;
     state.checking = false;
     state.disabled = false;
     state.error = "";
@@ -730,6 +846,7 @@
     state.checking = true;
     state.error = "";
     state.matches = [];
+    state.activeMatchIndex = null;
     hideMatchTooltip();
     updateBadge();
     renderPanel();
@@ -741,6 +858,7 @@
     hideMatchTooltip();
     unbindTooltipOutside();
     if (state) {
+      cancelPanelRowFlash(state);
       state.host.remove();
       state = null;
     }
@@ -905,7 +1023,14 @@
       for (let i = 0; i < state.matches.length; i++) {
         const match = state.matches[i];
         const row = document.createElement("div");
-        row.className = "row";
+        row.className =
+          state.activeMatchIndex === i ? "row active" : "row";
+        bindMatchRowActivation(row, () => {
+          setActiveMatchRow(state, i);
+          if (typeof state.onFocusMatch === "function") {
+            state.onFocusMatch(i);
+          }
+        });
 
         const text = document.createElement("div");
         text.className = "text";
@@ -1335,6 +1460,7 @@
         onDismiss: opts.onDismiss || (() => {}),
         onApplyReplacement: opts.onApplyReplacement || null,
         onDismissMatch: opts.onDismissMatch || null,
+        onFocusMatch: opts.onFocusMatch || null,
         onAddToDictionary: opts.onAddToDictionary || (() => false),
         onTransform: opts.onTransform || null,
         onApplyTransform: opts.onApplyTransform || null,
@@ -1347,6 +1473,9 @@
         panelOpen: false,
         aiPanelOpen: false,
         tooltipMatch: null,
+        activeMatchIndex: null,
+        rowFlashToken: 0,
+        rowFlashTimer: null,
         scrollHandler: null,
       };
       fieldStates.set(field, state);
@@ -1396,6 +1525,8 @@
       fieldRoot.appendChild(tooltip);
       state.tooltipEl = tooltip;
     } else {
+      cancelPanelRowFlash(state);
+      state.activeMatchIndex = null;
       state.matches = matches || [];
       state.checking = Boolean(opts.checking);
       state.offline = Boolean(opts.offline);
@@ -1420,6 +1551,7 @@
         state.onApplyReplacement = opts.onApplyReplacement;
       }
       if (opts.onDismissMatch) state.onDismissMatch = opts.onDismissMatch;
+      if (opts.onFocusMatch) state.onFocusMatch = opts.onFocusMatch;
       if (opts.onAddToDictionary) {
         state.onAddToDictionary = opts.onAddToDictionary;
       }
@@ -1444,6 +1576,8 @@
     const state = fieldStates.get(field);
     if (!state) return fieldShow(field, matches, options);
     const opts = options || {};
+    cancelPanelRowFlash(state);
+    state.activeMatchIndex = null;
     state.matches = matches || [];
     state.checking = false;
     state.offline = Boolean(opts.offline);
@@ -1464,6 +1598,8 @@
   function fieldSetChecking(field) {
     const state = fieldStates.get(field);
     if (!state) return fieldShow(field, [], { checking: true });
+    cancelPanelRowFlash(state);
+    state.activeMatchIndex = null;
     state.checking = true;
     state.offline = false;
     state.aiBusy = false;
@@ -1482,6 +1618,7 @@
     const state = fieldStates.get(field);
     if (!state) return;
     fieldHideMatchTooltip(state);
+    cancelPanelRowFlash(state);
     state.badgeGroupEl.remove();
     state.panelEl.remove();
     state.aiPanelEl.remove();
@@ -1525,11 +1662,13 @@
     fieldInViewport,
     badgePosition,
     panelPosition,
+    scrollMatchIntoView,
     state: () => state,
     showField: fieldShow,
     updateField: fieldUpdate,
     setCheckingField: fieldSetChecking,
     hideField: fieldHide,
+    scrollFieldMatchIntoView,
     showFieldMatchTooltip: fieldShowMatchTooltip,
     hideFieldMatchTooltip: fieldHideMatchTooltip,
     scheduleHideFieldMatchTooltip,

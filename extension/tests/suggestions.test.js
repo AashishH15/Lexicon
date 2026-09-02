@@ -265,6 +265,9 @@ test(
         if (value) this.classes.add(name);
         else this.classes.delete(name);
       },
+      contains(name) {
+        return this.classes.has(name);
+      },
     },
     style: {},
     children: [],
@@ -273,6 +276,7 @@ test(
     title: "",
     listeners: {},
     offsetHeight: 100,
+    scrollCalls: [],
     appendChild(child) {
       this.children.push(child);
       return child;
@@ -285,6 +289,9 @@ test(
     },
     removeEventListener() {},
     setAttribute() {},
+    scrollIntoView(options) {
+      this.scrollCalls.push(options);
+    },
     remove() {},
     attachShadow() {
       rootEl = {
@@ -337,7 +344,11 @@ test(
   };
 
   let addedMatch = null;
+  let focusedMatchIndex = null;
   api.showField(field1, [match], {
+    onFocusMatch: (index) => {
+      focusedMatchIndex = index;
+    },
     onAddToDictionary: async (selected) => {
       addedMatch = selected;
       return true;
@@ -352,6 +363,18 @@ test(
   assert.ok(rootEl.children.length >= 7);
   const actions =
     api.fieldState(field1).panelEl.children[1].children[0].children[1];
+  const row = api.fieldState(field1).panelEl.children[1].children[0];
+  api.fieldState(field1).badgeEl.listeners.click({
+    preventDefault() {},
+    stopPropagation() {},
+  });
+  assert.equal(api.fieldState(field1).panelOpen, true);
+  api.scrollFieldMatchIntoView(field1, 0);
+  assert.equal(row.classList.contains("active"), true);
+  assert.equal(row.scrollCalls.length, 1);
+  assert.equal(row.scrollCalls[0].block, "nearest");
+  row.listeners.click({ target: row });
+  assert.equal(focusedMatchIndex, 0);
   const dictionary = actions.children[actions.children.length - 1];
   assert.equal(dictionary.className, "dictionary");
   assert.equal(dictionary.textContent, "Add to Dictionary");

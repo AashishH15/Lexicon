@@ -561,6 +561,11 @@
       onDismissMatch: (match) => {
         dismissMatch(state, match);
       },
+      onFocusMatch: (index) => {
+        if (typeof squiggle.scrollToMatch === "function") {
+          squiggle.scrollToMatch(state.field, index, { flash: true });
+        }
+      },
       onAddToDictionary: (match) => addMatchToDictionary(state, match),
       onTransform: (tool) => transformField(state, tool),
       onApplyTransform: (text, sourceText, selection, selectedText) =>
@@ -677,6 +682,9 @@
       onActivate: (index, rect, meta) => {
         const match = state.matches && state.matches[index];
         if (!match) return;
+        if (typeof suggestions.scrollFieldMatchIntoView === "function") {
+          suggestions.scrollFieldMatchIntoView(state.field, index);
+        }
         suggestions.showFieldMatchTooltip(state.field, match, rect, {
           pinned: Boolean(meta && meta.pinned),
           onApply: (replacement) => applyMatch(state, match, replacement),
@@ -1660,6 +1668,14 @@
       onDismissMatch: (match) => {
         dismissMatch(match);
       },
+      onFocusMatch: (index) => {
+        if (
+          lastField &&
+          typeof squiggle.scrollToMatch === "function"
+        ) {
+          squiggle.scrollToMatch(lastField, index, { flash: true });
+        }
+      },
       onAddToDictionary: (match) => addMatchToDictionary(match),
     };
   }
@@ -1669,6 +1685,9 @@
       onActivate: (index, rect, meta) => {
         if (!lastMatches || !lastMatches[index]) return;
         const match = lastMatches[index];
+        if (typeof suggestions.scrollMatchIntoView === "function") {
+          suggestions.scrollMatchIntoView(lastField, index);
+        }
         suggestions.showMatchTooltip(match, rect, {
           pinned: Boolean(meta && meta.pinned),
           onApply: (replacement) => applyMatch(match, replacement),

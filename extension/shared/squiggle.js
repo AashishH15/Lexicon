@@ -10,6 +10,11 @@
   const STYLE =
     `#${LAYER_ID}{position:fixed;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:2147483645;overflow:hidden}` +
     `#${LAYER_ID} .lexicon-squiggle{position:absolute;height:4px;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='9' height='4'><path d='M0 3 Q 2.25 1 4.5 3 T 9 3' fill='none' stroke='%23e5484d' stroke-width='1.4'/></svg>");background-repeat:repeat-x;background-size:9px 4px}` +
+    `#${LAYER_ID} .lexicon-squiggle-flash{animation:lexicon-squiggle-flash 900ms ease-in-out;transform-origin:center}` +
+    `#${LAYER_ID} .lexicon-squiggle-flash::before{content:"";position:absolute;left:-2px;top:calc(3px - var(--lexicon-error-height, 16px));width:calc(100% + 4px);height:var(--lexicon-error-height, 16px);box-sizing:border-box;border:1px solid rgba(229,72,77,.56);border-radius:3px;background:rgba(229,72,77,.06);box-shadow:0 0 0 0 rgba(229,72,77,0);pointer-events:none;animation:lexicon-error-box-flash 900ms ease-in-out}` +
+    "@keyframes lexicon-squiggle-flash{0%,100%{filter:drop-shadow(0 0 0 rgba(229,72,77,0));transform:scaleY(1)}25%,75%{filter:drop-shadow(0 0 1px rgba(229,72,77,.55));transform:scaleY(1.1)}50%{filter:drop-shadow(0 0 2px rgba(229,72,77,.72));transform:scaleY(1.18)}}" +
+    "@keyframes lexicon-error-box-flash{0%,100%{opacity:0;box-shadow:0 0 0 0 rgba(229,72,77,0)}20%,80%{opacity:.58;box-shadow:0 0 0 1px rgba(229,72,77,.14)}50%{opacity:.7;box-shadow:0 0 2px 1px rgba(229,72,77,.18)}}" +
+    `@media (prefers-reduced-motion:reduce){#${LAYER_ID} .lexicon-squiggle-flash{animation:none;filter:drop-shadow(0 0 1px rgba(229,72,77,.55))}#${LAYER_ID} .lexicon-squiggle-flash::before{animation:none;opacity:.58;box-shadow:0 0 0 1px rgba(229,72,77,.14)}}` +
     `#${MIRROR_ID},.lexicon-squiggle-mirror{position:absolute;visibility:hidden;white-space:pre-wrap;overflow:hidden;pointer-events:none}`;
 
   let state = null; // { field, ranges, text, spans?, mirror?, onActivate, onDeactivate }
@@ -40,11 +45,18 @@
     el.style.left = `${rect.left}px`;
     el.style.top = `${rect.bottom - 3}px`;
     el.style.width = `${Math.max(2, rect.width)}px`;
+    if (typeof el.style.setProperty === "function") {
+      el.style.setProperty(
+        "--lexicon-error-height",
+        `${Math.max(1, Number(rect.height) || 1)}px`,
+      );
+    }
     layer.appendChild(el);
 
     if (typeof matchIndex === "number" && rect.width > 0 && rect.height > 0) {
       hitRegions.push({
         index: matchIndex,
+        el,
         left: rect.left,
         top: rect.top,
         right: rect.right,
@@ -218,6 +230,64 @@
     return null;
   }
 
+  function regionsForState(fieldState) {
+    return fieldState === state ? hitRegions : fieldState?.hitRegions || [];
+  }
+
+  function cancelStateFlash(fieldState) {
+    if (!fieldState) return;
+    fieldState.flashToken = (fieldState.flashToken || 0) + 1;
+    if (fieldState.flashTimer != null && typeof clearTimeout === "function") {
+      clearTimeout(fieldState.flashTimer);
+      fieldState.flashTimer = null;
+    }
+    for (const hit of regionsForState(fieldState)) {
+      hit.el?.classList?.remove("lexicon-squiggle-flash");
+    }
+  }
+
+  function flashStateMatch(fieldState, matchIndex) {
+    if (!fieldState || !Number.isInteger(matchIndex)) return false;
+    const token = (fieldState.flashToken || 0) + 1;
+    fieldState.flashToken = token;
+    if (fieldState.flashTimer != null && typeof clearTimeout === "function") {
+      clearTimeout(fieldState.flashTimer);
+      fieldState.flashTimer = null;
+    }
+
+    const apply = () => {
+      for (const hit of regionsForState(fieldState)) {
+        if (hit.index !== matchIndex || !hit.el?.classList) continue;
+        hit.el.classList.remove("lexicon-squiggle-flash");
+        void hit.el.offsetWidth;
+        hit.el.classList.add("lexicon-squiggle-flash");
+      }
+    };
+    const remove = () => {
+      for (const hit of regionsForState(fieldState)) {
+        if (hit.index === matchIndex) {
+          hit.el?.classList?.remove("lexicon-squiggle-flash");
+        }
+      }
+    };
+
+    apply();
+    if (typeof requestAnimationFrame === "function") {
+      requestAnimationFrame(() => {
+        if (fieldState.flashToken === token) apply();
+      });
+    }
+    if (typeof setTimeout === "function") {
+      fieldState.flashTimer = setTimeout(() => {
+        if (fieldState.flashToken !== token) return;
+        remove();
+        fieldState.flashTimer = null;
+      }, 1200);
+      fieldState.flashTimer?.unref?.();
+    }
+    return true;
+  }
+
   function activate(hit, pinned) {
     if (!state || !hit) return;
     activeIndex = hit.index;
@@ -288,6 +358,8 @@
         spans,
         onActivate: opts.onActivate || null,
         onDeactivate: opts.onDeactivate || null,
+        flashToken: 0,
+        flashTimer: null,
       };
       document.documentElement.appendChild(mirror);
     } else {
@@ -298,6 +370,8 @@
         text,
         onActivate: opts.onActivate || null,
         onDeactivate: opts.onDeactivate || null,
+        flashToken: 0,
+        flashTimer: null,
       };
     }
     bindReposition();
@@ -311,6 +385,7 @@
     if (state && typeof state.onDeactivate === "function") {
       state.onDeactivate();
     }
+    cancelStateFlash(state);
     activeIndex = null;
     hitRegions = [];
     const layer = document.getElementById(LAYER_ID);
@@ -334,12 +409,19 @@
     el.style.left = `${rect.left}px`;
     el.style.top = `${rect.bottom - 3}px`;
     el.style.width = `${Math.max(2, rect.width)}px`;
+    if (typeof el.style.setProperty === "function") {
+      el.style.setProperty(
+        "--lexicon-error-height",
+        `${Math.max(1, Number(rect.height) || 1)}px`,
+      );
+    }
     layer.appendChild(el);
     if (typeof matchIndex !== "number" || rect.width <= 0 || rect.height <= 0) {
       return;
     }
     fieldState.hitRegions.push({
       index: matchIndex,
+      el,
       left: rect.left,
       top: rect.top,
       right: rect.right,
@@ -510,6 +592,7 @@
     const fieldState = fieldStates.get(field);
     if (!fieldState) return;
     if (fieldActiveState === fieldState) deactivateFieldSquiggle();
+    cancelStateFlash(fieldState);
     if (fieldState.mirror) fieldState.mirror.remove();
     fieldStates.delete(field);
     unbindFieldListeners(fieldState);
@@ -521,6 +604,94 @@
       return;
     }
     scheduleFieldRender();
+  }
+
+  function scrollStateMatch(fieldState, matchIndex, options = {}) {
+    if (!fieldState || !Number.isInteger(matchIndex)) return false;
+    const shouldFlash = Boolean(options?.flash);
+    const field = fieldState.field;
+    const range = fieldState.ranges[matchIndex];
+    if (!range) return false;
+
+    if (fieldState.kind === "textarea") {
+      const mirrorSpan = fieldState.spans.find(
+        (item) => item.index === matchIndex,
+      );
+      let mirrorMeasured = false;
+      if (
+        mirrorSpan?.el?.getBoundingClientRect &&
+        typeof field.getBoundingClientRect === "function"
+      ) {
+        const fieldRect = field.getBoundingClientRect();
+        const spanRect = mirrorSpan.el.getBoundingClientRect();
+        mirrorMeasured = true;
+        let delta = 0;
+        if (spanRect.top < fieldRect.top) {
+          delta = spanRect.top - fieldRect.top - 4;
+        } else if (spanRect.bottom > fieldRect.bottom) {
+          delta = spanRect.bottom - fieldRect.bottom + 4;
+        }
+        if (delta && Number.isFinite(field.scrollTop)) {
+          field.scrollTop += delta;
+        }
+      }
+
+      // setSelectionRange is a fallback for browsers that do not expose the
+      // hidden mirror's line box while the textarea is internally scrolled.
+      if (
+        !mirrorMeasured &&
+        typeof field.setSelectionRange === "function" &&
+        typeof field.value === "string"
+      ) {
+        const start = Math.max(
+          0,
+          Math.min(field.value.length, Number(range.start) || 0),
+        );
+        const end = Math.max(
+          start,
+          Math.min(field.value.length, Number(range.end) || start),
+        );
+        try {
+          field.setSelectionRange(start, end);
+        } catch {
+          // Some managed fields reject programmatic selection changes.
+        }
+      }
+      if (fieldStates.has(fieldState.field)) scheduleFieldRender();
+      else scheduleRender();
+      if (shouldFlash) flashStateMatch(fieldState, matchIndex);
+      return true;
+    }
+
+    let target = range.startNode;
+    if (target && target.nodeType !== 1) target = target.parentElement;
+    try {
+      if (typeof target?.scrollIntoView === "function") {
+        target.scrollIntoView({ block: "center", inline: "nearest" });
+      } else if (typeof field.scrollIntoView === "function") {
+        field.scrollIntoView({ block: "center", inline: "nearest" });
+      } else {
+        return false;
+      }
+    } catch {
+      if (typeof target?.scrollIntoView === "function") {
+        target.scrollIntoView();
+      } else if (typeof field.scrollIntoView === "function") {
+        field.scrollIntoView();
+      } else {
+        return false;
+      }
+    }
+    if (fieldStates.has(fieldState.field)) scheduleFieldRender();
+    else scheduleRender();
+    if (shouldFlash) flashStateMatch(fieldState, matchIndex);
+    return true;
+  }
+
+  function scrollToMatch(field, matchIndex, options) {
+    const fieldState =
+      fieldStates.get(field) || (state && state.field === field ? state : null);
+    return scrollStateMatch(fieldState, matchIndex, options);
   }
 
   function clearAllFieldSquiggles() {
@@ -542,6 +713,8 @@
       activeIndex: null,
       onActivate: opts.onActivate || null,
       onDeactivate: opts.onDeactivate || null,
+      flashToken: 0,
+      flashTimer: null,
       scrollHandler: null,
     };
     fieldStates.set(field, fieldState);
@@ -563,5 +736,6 @@
     applyFieldSquiggles,
     clearFieldSquiggles,
     clearAllFieldSquiggles,
+    scrollToMatch,
   };
 })();

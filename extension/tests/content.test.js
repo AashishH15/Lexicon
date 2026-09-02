@@ -18,6 +18,7 @@ function createHarness(options = {}) {
   let renderedMatches = [];
   let renderedOptions = null;
   let transformRequest = null;
+  let focusedMatch = null;
   const addedWords = [];
   const field = {
     tagName: "TEXTAREA",
@@ -130,6 +131,10 @@ function createHarness(options = {}) {
     __lexiconSquiggle: {
       applyFieldSquiggles() {},
       clearFieldSquiggles() {},
+      scrollToMatch(target, index, options) {
+        focusedMatch = { target, index, options };
+        return true;
+      },
     },
     __lexiconSuggestions: suggestions,
   };
@@ -150,6 +155,9 @@ function createHarness(options = {}) {
     },
     get transformRequest() {
       return transformRequest;
+    },
+    get focusedMatch() {
+      return focusedMatch;
     },
   };
 }
@@ -215,6 +223,34 @@ test("canonical dictionary broadcasts remove matching field highlights", async (
 
   assert.equal(response.ok, true);
   assert.equal(harness.renderedMatches.length, 0);
+});
+
+test("error navigation delegates to the matching squiggle", async () => {
+  const harness = createHarness();
+  await new Promise((resolve) => setImmediate(resolve));
+
+  await harness.messageHandler({
+    type: "lexicon:highlight",
+    matches: [
+      {
+        offset: 0,
+        length: 3,
+        message: "Possible typo",
+        replacements: ["the"],
+      },
+      {
+        offset: 4,
+        length: 3,
+        message: "Another typo",
+        replacements: ["the"],
+      },
+    ],
+  });
+
+  harness.renderedOptions.onFocusMatch(1);
+  assert.equal(harness.focusedMatch.target, harness.field);
+  assert.equal(harness.focusedMatch.index, 1);
+  assert.equal(harness.focusedMatch.options.flash, true);
 });
 
 test("AI transforms only the selected text and preserves the rest of the field", async () => {
