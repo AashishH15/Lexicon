@@ -112,6 +112,10 @@ import {
 import { DecorationSet } from "@tiptap/pm/view";
 import { globalGrammarCache } from "./grammarCache.js";
 import {
+  createLatestWinsCoordinator,
+  scanGrammarWindows,
+} from "./grammarScan.js";
+import {
   lexStatusMessage,
   resolveLexStatus,
 } from "./lexStatus.js";
@@ -584,8 +588,10 @@ export default function App() {
   const activeToolRef = useRef(activeTool);
   const scheduleCheckRef = useRef(() => {});
   const checkTimer = useRef(null);
-  const checkAbortRef = useRef(null);
-  const checkingRef = useRef(false);
+  const grammarRunRef = useRef(null);
+  if (grammarRunRef.current === null) {
+    grammarRunRef.current = createLatestWinsCoordinator();
+  }
   const userDictionaryRef = useRef(userDictionary);
   const dictionaryRevisionRef = useRef(loadDictionaryRevision());
   const dictionaryQueueRef = useRef(loadDictionaryQueue());
@@ -1018,6 +1024,10 @@ export default function App() {
       if (historyTimerRef.current) {
         clearTimeout(historyTimerRef.current);
       }
+      if (checkTimer.current) {
+        clearTimeout(checkTimer.current);
+      }
+      grammarRunRef.current?.invalidate();
     };
   }, []);
 
@@ -1294,24 +1304,15 @@ export default function App() {
     if (!editor) {
       return;
     }
-    if (forceFullScan) {
-      checkingRef.current = false;
-    }
-    if (checkingRef.current) {
+    const run = grammarRunRef.current?.start();
+    if (!run) {
       return;
     }
-    // Cancel any prior in-flight fetch so a superseded check can't linger.
-    if (checkAbortRef.current) {
-      checkAbortRef.current.abort();
-    }
-    const abortController = new AbortController();
-    checkAbortRef.current = abortController;
-    checkingRef.current = true;
     if (!silent) {
       setChecking(true);
     }
     try {
-      const { text, map } = buildTextWithMap(editor.state.doc);
+      const { text } = buildTextWithMap(editor.state.doc);
       const ignore = ignoreOverride ?? userDictionaryRef.current;
       let rawMatches = [];
 
@@ -1321,80 +1322,53 @@ export default function App() {
           text,
           language,
           ignore,
-          abortController.signal
+          run.signal
         );
-        let currentOffset = 0;
-        let prevSuffix = "";
-        const paragraphTexts = text.split("\n");
-        for (const pText of paragraphTexts) {
-          const pLen = pText.length;
-          const pKey = globalGrammarCache.computeKey(
-            pText,
-            prevSuffix,
-            language,
-            ignore
-          );
-          const pMatches = rawMatches
-            .filter(
-              (m) =>
-                m.offset >= currentOffset &&
-                m.offset + m.length <= currentOffset + pLen
-            )
-            .map((m) => ({ ...m, offset: m.offset - currentOffset }));
-          globalGrammarCache.set(pKey, pMatches);
-          currentOffset += pLen + 1;
-          prevSuffix = pText.slice(-64);
-        }
       } else {
-        const paragraphTexts = text.split("\n");
-        let currentOffset = 0;
-        let prevSuffix = "";
+        const scan = await scanGrammarWindows({
+          text,
+          language,
+          ignore,
+          cache: globalGrammarCache,
+          checkGrammar,
+          signal: run.signal,
+        });
+        rawMatches = scan.matches;
+      }
 
-        for (const pText of paragraphTexts) {
-          const pLen = pText.length;
-          const pKey = globalGrammarCache.computeKey(
-            pText,
-            prevSuffix,
-            language,
-            ignore
-          );
-          let cached = globalGrammarCache.get(pKey);
-
-          if (!cached) {
-            if (pText.trim()) {
-              const freshMatches = await checkGrammar(
-                pText,
-                language,
-                ignore,
-                abortController.signal
-              );
-              cached = freshMatches;
-              globalGrammarCache.set(pKey, freshMatches);
-            } else {
-              cached = [];
-              globalGrammarCache.set(pKey, []);
-            }
-          }
-
-          for (const m of cached) {
-            rawMatches.push({
-              ...m,
-              offset: currentOffset + m.offset,
-            });
-          }
-
-          currentOffset += pLen + 1;
-          prevSuffix = pText.slice(-64);
-        }
+      if (!run.isCurrent()) {
+        return;
+      }
+      const currentSnapshot = buildTextWithMap(editor.state.doc);
+      if (currentSnapshot.text !== text) {
+        return;
       }
 
       // Discard matches whose text spans a newline — these are artifacts
       // from block-boundary concatenation (e.g. "Lexicon\nLexicon" flagged
       // as a repeated word when the two instances sit in different blocks).
-      rawMatches = rawMatches.filter((m) => {
-        const matchedText = text.slice(m.offset, m.offset + m.length);
-        return !matchedText.includes("\n");
-      });
+      rawMatches = (Array.isArray(rawMatches) ? rawMatches : [])
+        .map((match) => ({
+          ...match,
+          offset: Number(match?.offset),
+          length: Number(match?.length),
+        }))
+        .filter((match) => {
+          if (
+            !Number.isSafeInteger(match.offset) ||
+            !Number.isSafeInteger(match.length) ||
+            match.offset < 0 ||
+            match.length <= 0 ||
+            match.offset + match.length > text.length
+          ) {
+            return false;
+          }
+          const matchedText = text.slice(
+            match.offset,
+            match.offset + match.length
+          );
+          return !matchedText.includes("\n");
+        });
 
       const proseMatches = proseScanEnabled ? checkProseQuality(text) : [];
       for (const pm of proseMatches) {
@@ -1415,21 +1389,22 @@ export default function App() {
           category: match.category || categoryLabel(match),
         }));
       setGrammarMatches(matches);
-      applyGrammarDecorations(editor, matches, map, activeErrorId);
+      applyGrammarDecorations(
+        editor,
+        matches,
+        currentSnapshot.map,
+        activeErrorId
+      );
       setBackendOffline(false);
       setBackendError("");
     } catch (error) {
-      if (error?.name !== "AbortError") {
+      if (run.isCurrent() && error?.name !== "AbortError") {
         setBackendOffline(true);
         setBackendError(error?.message || String(error));
         console.warn("Grammar check unavailable:", error);
       }
     } finally {
-      if (checkAbortRef.current === abortController) {
-        checkAbortRef.current = null;
-      }
-      checkingRef.current = false;
-      if (!silent) {
+      if (run.isCurrent()) {
         setChecking(false);
       }
     }
@@ -2089,14 +2064,24 @@ export default function App() {
   function handleToolClick(name) {
     const nextTool = activeTool === name ? "" : name;
     setActiveTool(nextTool);
+    if (activeTool === "Proofread" && nextTool !== "Proofread") {
+      if (checkTimer.current) {
+        clearTimeout(checkTimer.current);
+        checkTimer.current = null;
+      }
+      grammarRunRef.current?.invalidate();
+      setChecking(false);
+      setGrammarMatches([]);
+      setActiveErrorId(null);
+      activeErrorRef.current = null;
+      setHoveredError(null);
+      if (editor) {
+        clearGrammarDecorations(editor);
+      }
+    }
     if (name === "Proofread") {
       if (nextTool === "Proofread") {
         runGrammarCheck(false, null, true);
-      } else if (editor) {
-        setGrammarMatches([]);
-        setActiveErrorId(null);
-        activeErrorRef.current = null;
-        clearGrammarDecorations(editor);
       }
       return;
     }
@@ -2369,7 +2354,7 @@ export default function App() {
   function triggerProofread() {
     setActiveTool("Proofread");
     setUserResolvedAll(false);
-    runGrammarCheck();
+    runGrammarCheck(false, null, true);
     // Snapshot the current draft before running a check.
     if (editor) {
       const html = editor.getHTML();
@@ -2404,12 +2389,24 @@ export default function App() {
     }
     if (checkTimer.current) {
       clearTimeout(checkTimer.current);
+      checkTimer.current = null;
+    }
+    grammarRunRef.current?.invalidate();
+    if (grammarMatches.length > 0 || activeErrorId != null) {
+      setGrammarMatches([]);
+      setActiveErrorId(null);
+      activeErrorRef.current = null;
+      setHoveredError(null);
+      if (editor) {
+        clearGrammarDecorations(editor);
+      }
     }
     if (immediate) {
       runGrammarCheck(true);
       return;
     }
     checkTimer.current = setTimeout(() => {
+      checkTimer.current = null;
       runGrammarCheck(true);
     }, GRAMMAR_DEBOUNCE_MS);
   }
@@ -2880,7 +2877,13 @@ export default function App() {
               onCollapse={handleCollapseRight}
               onAiRewrite={aiConfigured ? handleAiRewrite : null}
               onClear={() => {
+                if (checkTimer.current) {
+                  clearTimeout(checkTimer.current);
+                  checkTimer.current = null;
+                }
+                grammarRunRef.current?.invalidate();
                 setActiveTool("");
+                setChecking(false);
                 setGrammarMatches([]);
                 setActiveErrorId(null);
                 activeErrorRef.current = null;

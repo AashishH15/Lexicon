@@ -279,7 +279,7 @@ export default function ReviewPanel({
             </div>
           ) : count === 0 ? (
             showBloom ? (
-              <div className="lex-bloom flex w-full items-center rounded-xl bg-[#EDF3EC] px-4 py-3 text-[#346538] border border-[#D3E2D0]">
+              <div className="lex-bloom flex w-full items-center gap-2.5 rounded-xl bg-[#EDF3EC] px-4 py-3 text-[#346538] border border-[#D3E2D0]">
                 <ReviewStatusMark
                   status={lexStatus}
                   message={lexStatusLabel}
