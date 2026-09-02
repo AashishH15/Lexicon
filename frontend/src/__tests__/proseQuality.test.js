@@ -1,5 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { checkProseQuality, extractSentenceContext } from "../proseQualityEngine.js";
+import {
+  checkProseQuality,
+  extractSentenceContext,
+} from "../proseQualityEngine.js";
 import { computeReadability } from "../readability.js";
 
 describe("checkProseQuality / Passive Voice", () => {
@@ -8,52 +11,77 @@ describe("checkProseQuality / Passive Voice", () => {
     const result = checkProseQuality(text);
     expect(result.length).toBeGreaterThanOrEqual(1);
     const hit = result.find(
-      (m) => m.category === "Prose Style" && m.message?.toLowerCase().includes("passive voice")
+      (m) =>
+        m.category === "Prose Style" &&
+        m.message?.toLowerCase().includes("passive voice")
     );
     expect(hit).toBeTruthy();
-    expect(text.slice(hit.offset, hit.offset + hit.length).toLowerCase()).toBe("was made");
+    expect(text.slice(hit.offset, hit.offset + hit.length).toLowerCase()).toBe(
+      "was made"
+    );
   });
 
   it("flags 'were implemented' as passive", () => {
     const text = "The changes were implemented last week.";
     const result = checkProseQuality(text);
     const hit = result.find(
-      (m) => m.category === "Prose Style" && m.message?.toLowerCase().includes("passive voice")
+      (m) =>
+        m.category === "Prose Style" &&
+        m.message?.toLowerCase().includes("passive voice")
     );
     expect(hit).toBeTruthy();
-    expect(text.slice(hit.offset, hit.offset + hit.length).toLowerCase()).toBe("were implemented");
+    expect(text.slice(hit.offset, hit.offset + hit.length).toLowerCase()).toBe(
+      "were implemented"
+    );
   });
 
   it("flags 'is being reviewed' as passive", () => {
     const text = "The document is being reviewed by the editor.";
     const result = checkProseQuality(text);
     const hit = result.find(
-      (m) => m.category === "Prose Style" && m.message?.toLowerCase().includes("passive voice") &&
-        text.slice(m.offset, m.offset + m.length).toLowerCase().includes("reviewed")
+      (m) =>
+        m.category === "Prose Style" &&
+        m.message?.toLowerCase().includes("passive voice") &&
+        text
+          .slice(m.offset, m.offset + m.length)
+          .toLowerCase()
+          .includes("reviewed")
     );
     expect(hit).toBeTruthy();
   });
 
   it("flags irregular participles like 'was written' and 'have been taken'", () => {
-    const result = checkProseQuality("The report was written by her. The items have been taken.");
+    const result = checkProseQuality(
+      "The report was written by her. The items have been taken."
+    );
     const hits = result.filter(
-      (m) => m.category === "Prose Style" && m.message?.toLowerCase().includes("passive voice")
+      (m) =>
+        m.category === "Prose Style" &&
+        m.message?.toLowerCase().includes("passive voice")
     );
     expect(hits.length).toBeGreaterThanOrEqual(2);
   });
 
   it("does not flag stative adjective constructions like 'was excited about' or 'is interested in'", () => {
-    const result = checkProseQuality("She was excited about the project and he was interested in music.");
+    const result = checkProseQuality(
+      "She was excited about the project and he was interested in music."
+    );
     const hits = result.filter(
-      (m) => m.category === "Prose Style" && m.message?.toLowerCase().includes("passive voice")
+      (m) =>
+        m.category === "Prose Style" &&
+        m.message?.toLowerCase().includes("passive voice")
     );
     expect(hits).toHaveLength(0);
   });
 
   it("does not flag active voice sentences", () => {
-    const result = checkProseQuality("The committee made the decision yesterday.");
+    const result = checkProseQuality(
+      "The committee made the decision yesterday."
+    );
     const hits = result.filter(
-      (m) => m.category === "Prose Style" && m.message?.toLowerCase().includes("passive voice")
+      (m) =>
+        m.category === "Prose Style" &&
+        m.message?.toLowerCase().includes("passive voice")
     );
     expect(hits).toHaveLength(0);
   });
@@ -79,14 +107,18 @@ describe("checkProseQuality / Clichés & Wordiness", () => {
     const result = checkProseQuality(text);
     const hit = result.find((m) => m.replacements?.length >= 1);
     expect(hit).toBeTruthy();
-    expect(text.slice(hit.offset, hit.offset + hit.length).toLowerCase()).toBe("on a daily basis");
+    expect(text.slice(hit.offset, hit.offset + hit.length).toLowerCase()).toBe(
+      "on a daily basis"
+    );
   });
 
   it("flags 'at the end of the day' as wordy", () => {
     const text = "At the end of the day, it was the right call.";
     const result = checkProseQuality(text);
     const hit = result.find(
-      (m) => text.slice(m.offset, m.offset + m.length).toLowerCase() === "at the end of the day"
+      (m) =>
+        text.slice(m.offset, m.offset + m.length).toLowerCase() ===
+        "at the end of the day"
     );
     expect(hit).toBeTruthy();
   });
@@ -95,10 +127,220 @@ describe("checkProseQuality / Clichés & Wordiness", () => {
     const text = "We need to think outside the box on this one.";
     const result = checkProseQuality(text);
     const hit = result.find(
-      (m) => text.slice(m.offset, m.offset + m.length).toLowerCase() === "think outside the box"
+      (m) =>
+        text.slice(m.offset, m.offset + m.length).toLowerCase() ===
+        "think outside the box"
     );
     expect(hit).toBeTruthy();
     expect(hit.replacements.length).toBeGreaterThanOrEqual(1);
+  });
+});
+
+describe("checkProseQuality / High-confidence clichés", () => {
+  it.each([
+    [
+      "At this point in time, the plan is clear.",
+      "at this point in time",
+      "now",
+    ],
+    [
+      "At the present time, the system is stable.",
+      "at the present time",
+      "now",
+    ],
+    [
+      "The update will arrive in the near future.",
+      "in the near future",
+      "soon",
+    ],
+    [
+      "In the not too distant future, the tool will improve.",
+      "in the not too distant future",
+      "soon",
+    ],
+    [
+      "When all is said and done, the result matters.",
+      "when all is said and done",
+      "ultimately",
+    ],
+    ["In this day and age, privacy matters.", "in this day and age", "today"],
+    ["In today's world, privacy matters.", "in today's world", "today"],
+    [
+      "In the grand scheme of things, this is minor.",
+      "in the grand scheme of things",
+      "overall",
+    ],
+    ["In the long run, consistency wins.", "in the long run", "ultimately"],
+    [
+      "The same issue appears time and time again.",
+      "time and time again",
+      "repeatedly",
+    ],
+    ["The project grew by leaps and bounds.", "by leaps and bounds", "rapidly"],
+    [
+      "The team discussed the low-hanging fruit.",
+      "low-hanging fruit",
+      "easy opportunities",
+    ],
+    [
+      "The product's secret sauce is its simplicity.",
+      "secret sauce",
+      "key advantage",
+    ],
+    [
+      "There is no silver bullet for this problem.",
+      "silver bullet",
+      "simple solution",
+    ],
+    [
+      "We need a magic bullet for the issue.",
+      "magic bullet",
+      "simple solution",
+    ],
+    [
+      "The change was a paradigm shift for the team.",
+      "paradigm shift",
+      "major change",
+    ],
+    [
+      "This option offers the best of both worlds.",
+      "best of both worlds",
+      "advantages of both",
+    ],
+    [
+      "This is only the tip of the iceberg.",
+      "the tip of the iceberg",
+      "a small part",
+    ],
+    [
+      "We should address the elephant in the room.",
+      "the elephant in the room",
+      "an obvious issue",
+    ],
+    [
+      "There is a light at the end of the tunnel.",
+      "a light at the end of the tunnel",
+      "hope",
+    ],
+    [
+      "The new design is a breath of fresh air.",
+      "a breath of fresh air",
+      "a refreshing change",
+    ],
+    [
+      "The failure became a blessing in disguise.",
+      "a blessing in disguise",
+      "an unexpected benefit",
+    ],
+    ["These errors are a dime a dozen.", "a dime a dozen", "common"],
+    ["The exam was a piece of cake.", "a piece of cake", "easy"],
+    ["I felt under the weather.", "under the weather", "ill"],
+    ["That delay is par for the course.", "par for the course", "expected"],
+  ])(
+    "detects %s with a useful direct alternative",
+    (text, original, replacement) => {
+      const result = checkProseQuality(text);
+      const hit = result.find(
+        (m) =>
+          m.category === "Prose Style" &&
+          m.message?.toLowerCase().includes("clich") &&
+          text.slice(m.offset, m.offset + m.length).toLowerCase() === original
+      );
+
+      expect(hit).toBeTruthy();
+      expect(hit.replacements.map((value) => value.toLowerCase())).toContain(
+        replacement
+      );
+    }
+  );
+
+  it.each([
+    ["We need to go the extra mile.", "go the extra mile"],
+    ["This change will move the needle.", "move the needle"],
+    ["The new design will push the envelope.", "push the envelope"],
+    ["We should raise the bar.", "raise the bar"],
+    ["They keep moving the goalposts.", "moving the goalposts"],
+    ["The policy should level the playing field.", "level the playing field"],
+    ["Let's get on the same page.", "on the same page"],
+    ["She is in the driver's seat.", "in the driver's seat"],
+    ["This is an all hands on deck situation.", "all hands on deck"],
+    ["You need to read between the lines.", "read between the lines"],
+    ["Let's cut to the chase.", "cut to the chase"],
+    ["We have to bite the bullet.", "bite the bullet"],
+    ["The reset sent us back to square one.", "back to square one"],
+    ["They burn the midnight oil.", "burn the midnight oil"],
+    ["We will pull out all the stops.", "pull out all the stops"],
+    ["This search is a needle in a haystack.", "needle in a haystack"],
+    ["When push comes to shove, we will adapt.", "when push comes to shove"],
+    ["The company is on thin ice.", "on thin ice"],
+  ])(
+    "detects %s without guessing a context-sensitive replacement",
+    (text, original) => {
+      const result = checkProseQuality(text);
+      const hit = result.find(
+        (m) =>
+          m.category === "Prose Style" &&
+          m.message?.toLowerCase().includes("clich") &&
+          text.slice(m.offset, m.offset + m.length).toLowerCase() === original
+      );
+
+      expect(hit).toBeTruthy();
+      expect(hit.replacements).toEqual([]);
+    }
+  );
+
+  it("does not flag ordinary wording or partial phrase matches as clichés", () => {
+    const text =
+      "The meeting happened today. The present time zone is UTC. " +
+      "The near-future forecast is uncertain. The team agreed on the plan. " +
+      "The report describes a major change and a small part of the process.";
+    const result = checkProseQuality(text);
+
+    expect(
+      result.filter(
+        (m) =>
+          m.category === "Prose Style" &&
+          m.message?.toLowerCase().includes("clich")
+      )
+    ).toHaveLength(0);
+  });
+
+  it("preserves capitalization in direct cliché replacements", () => {
+    const text = "At this point in time, the plan is clear.";
+    const result = checkProseQuality(text);
+    const hit = result.find(
+      (m) =>
+        text.slice(m.offset, m.offset + m.length).toLowerCase() ===
+        "at this point in time"
+    );
+
+    expect(hit).toBeTruthy();
+    expect(hit.replacements[0]).toBe("Now");
+  });
+
+  it("does not double-flag the fixed expression 'when all is said and done' as passive", () => {
+    const result = checkProseQuality(
+      "When all is said and done, the result matters."
+    );
+
+    expect(
+      result.filter((m) => m.message?.toLowerCase().includes("passive voice"))
+    ).toHaveLength(0);
+  });
+
+  it("preserves UTF-16-compatible JavaScript offsets for new cliché matches", () => {
+    const text = "😀 At this point in time, the plan is clear.";
+    const result = checkProseQuality(text);
+    const hit = result.find(
+      (m) =>
+        m.message?.toLowerCase().includes("clich") &&
+        text.slice(m.offset, m.offset + m.length).toLowerCase() ===
+          "at this point in time"
+    );
+
+    expect(hit).toBeTruthy();
+    expect(hit.offset).toBe(3);
+    expect(hit.length).toBe("at this point in time".length);
   });
 });
 
@@ -114,7 +356,7 @@ describe("checkProseQuality / Filler & Hedging", () => {
       (m) =>
         m.category === "Prose Style" &&
         m.message?.toLowerCase().includes("filler") &&
-        text.slice(m.offset, m.offset + m.length) === original,
+        text.slice(m.offset, m.offset + m.length) === original
     );
 
     expect(hit).toBeTruthy();
@@ -134,7 +376,7 @@ describe("checkProseQuality / Filler & Hedging", () => {
       (m) =>
         m.category === "Prose Style" &&
         m.message?.toLowerCase().includes("hedg") &&
-        text.slice(m.offset, m.offset + m.length) === original,
+        text.slice(m.offset, m.offset + m.length) === original
     );
 
     expect(hit).toBeTruthy();
@@ -156,8 +398,8 @@ describe("checkProseQuality / Filler & Hedging", () => {
       result.filter(
         (m) =>
           m.message?.toLowerCase().includes("filler") ||
-          m.message?.toLowerCase().includes("hedg"),
-      ),
+          m.message?.toLowerCase().includes("hedg")
+      )
     ).toHaveLength(0);
   });
 
@@ -167,7 +409,7 @@ describe("checkProseQuality / Filler & Hedging", () => {
     const hit = result.find(
       (m) =>
         m.message?.toLowerCase().includes("filler") &&
-        text.slice(m.offset, m.offset + m.length) === "Actually",
+        text.slice(m.offset, m.offset + m.length) === "Actually"
     );
 
     expect(hit).toBeTruthy();
@@ -178,10 +420,13 @@ describe("checkProseQuality / Filler & Hedging", () => {
 
 describe("checkProseQuality / Repetitive Openers", () => {
   it("flags 3 consecutive sentences with the same opener", () => {
-    const text = "The cat sat on the mat. The dog ran outside. The bird flew away.";
+    const text =
+      "The cat sat on the mat. The dog ran outside. The bird flew away.";
     const result = checkProseQuality(text);
     const hit = result.find(
-      (m) => m.category === "Prose Style" && m.message?.toLowerCase().includes("repetitive sentence openers")
+      (m) =>
+        m.category === "Prose Style" &&
+        m.message?.toLowerCase().includes("repetitive sentence openers")
     );
     expect(hit).toBeTruthy();
   });
@@ -189,26 +434,30 @@ describe("checkProseQuality / Repetitive Openers", () => {
   it("does not flag 2 sentences with the same opener", () => {
     const text = "The cat sat on the mat. The dog ran outside.";
     const result = checkProseQuality(text);
-    const hits = result.filter(
-      (m) => m.message?.toLowerCase().includes("repetitive sentence openers")
+    const hits = result.filter((m) =>
+      m.message?.toLowerCase().includes("repetitive sentence openers")
     );
     expect(hits).toHaveLength(0);
   });
 
   it("flags 3 consecutive sentences with mixed-case openers", () => {
-    const text = "The cat sat on the mat. the dog ran outside. THE bird flew away.";
+    const text =
+      "The cat sat on the mat. the dog ran outside. THE bird flew away.";
     const result = checkProseQuality(text);
     const hit = result.find(
-      (m) => m.category === "Prose Style" && m.message?.toLowerCase().includes("repetitive sentence openers")
+      (m) =>
+        m.category === "Prose Style" &&
+        m.message?.toLowerCase().includes("repetitive sentence openers")
     );
     expect(hit).toBeTruthy();
   });
 
   it("does not flag varied openers even with many sentences", () => {
-    const text = "The cat sat on the mat. A dog ran outside. That bird flew away.";
+    const text =
+      "The cat sat on the mat. A dog ran outside. That bird flew away.";
     const result = checkProseQuality(text);
-    const hits = result.filter(
-      (m) => m.message?.toLowerCase().includes("repetitive sentence openers")
+    const hits = result.filter((m) =>
+      m.message?.toLowerCase().includes("repetitive sentence openers")
     );
     expect(hits).toHaveLength(0);
   });
@@ -281,12 +530,16 @@ describe("computeReadability", () => {
   });
 
   it("returns a reading time greater than zero for non-empty text", () => {
-    const result = computeReadability("The cat sat on the mat. The dog ran outside.");
+    const result = computeReadability(
+      "The cat sat on the mat. The dog ran outside."
+    );
     expect(result.readingTime).not.toBe("0:00");
   });
 
   it("returns a speaking time greater than zero for non-empty text", () => {
-    const result = computeReadability("The cat sat on the mat. The dog ran outside.");
+    const result = computeReadability(
+      "The cat sat on the mat. The dog ran outside."
+    );
     expect(result.speakingTime).not.toBe("0:00");
   });
 
@@ -321,7 +574,9 @@ describe("Edge Cases & Hygiene", () => {
   });
 
   it("returns empty array for text with no issues", () => {
-    const result = checkProseQuality("The quick brown fox jumps over the lazy dog.");
+    const result = checkProseQuality(
+      "The quick brown fox jumps over the lazy dog."
+    );
     expect(result).toEqual([]);
   });
 

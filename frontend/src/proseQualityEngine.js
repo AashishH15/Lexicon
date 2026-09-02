@@ -1,16 +1,26 @@
 function findMatches(re, text) {
   const results = [];
-  const regex = new RegExp(re.source, re.flags.includes("g") ? re.flags : re.flags + "g");
+  const regex = new RegExp(
+    re.source,
+    re.flags.includes("g") ? re.flags : re.flags + "g"
+  );
   let match;
   while ((match = regex.exec(text)) !== null) {
-    results.push({ offset: match.index, length: match[0].length, original: match[0] });
+    results.push({
+      offset: match.index,
+      length: match[0].length,
+      original: match[0],
+    });
   }
   return results;
 }
 
 function findCapturedMatches(re, text, captureIndex = 1) {
   const results = [];
-  const regex = new RegExp(re.source, re.flags.includes("g") ? re.flags : re.flags + "g");
+  const regex = new RegExp(
+    re.source,
+    re.flags.includes("g") ? re.flags : re.flags + "g"
+  );
   let match;
   while ((match = regex.exec(text)) !== null) {
     const original = match[captureIndex];
@@ -25,32 +35,122 @@ function findCapturedMatches(re, text, captureIndex = 1) {
   return results;
 }
 
+function preserveCase(original, replacement) {
+  if (!original || !replacement) return replacement;
+  if (
+    original === original.toUpperCase() &&
+    original !== original.toLowerCase()
+  ) {
+    return replacement.toUpperCase();
+  }
+  if (/^[A-Z]/.test(original)) {
+    return replacement[0].toUpperCase() + replacement.slice(1);
+  }
+  return replacement;
+}
+
 const AUXILIARY = "am|is|are|was|were|be|been|being";
 
 const IRREGULAR_PARTICIPLES = [
-  "built", "made", "written", "taken", "broken", "given", "driven", "known",
-  "shown", "spoken", "bought", "caught", "taught", "thought", "brought",
-  "kept", "left", "sent", "lost", "met", "run", "said", "seen", "told",
-  "understood", "won", "begun", "bitten", "blown", "chosen", "drawn",
-  "drunk", "eaten", "fallen", "flown", "forgotten", "frozen", "grown",
-  "hidden", "held", "led", "lent", "meant", "overcome", "ridden", "risen",
-  "shaken", "shut", "slept", "slid", "stolen", "struck", "swum", "torn",
-  "wept", "worn", "found", "dealt", "spent", "sold", "shot", "stuck",
-  "woken", "woven", "withdrawn", "undertaken", "spread", "set",
+  "built",
+  "made",
+  "written",
+  "taken",
+  "broken",
+  "given",
+  "driven",
+  "known",
+  "shown",
+  "spoken",
+  "bought",
+  "caught",
+  "taught",
+  "thought",
+  "brought",
+  "kept",
+  "left",
+  "sent",
+  "lost",
+  "met",
+  "run",
+  "said",
+  "seen",
+  "told",
+  "understood",
+  "won",
+  "begun",
+  "bitten",
+  "blown",
+  "chosen",
+  "drawn",
+  "drunk",
+  "eaten",
+  "fallen",
+  "flown",
+  "forgotten",
+  "frozen",
+  "grown",
+  "hidden",
+  "held",
+  "led",
+  "lent",
+  "meant",
+  "overcome",
+  "ridden",
+  "risen",
+  "shaken",
+  "shut",
+  "slept",
+  "slid",
+  "stolen",
+  "struck",
+  "swum",
+  "torn",
+  "wept",
+  "worn",
+  "found",
+  "dealt",
+  "spent",
+  "sold",
+  "shot",
+  "stuck",
+  "woken",
+  "woven",
+  "withdrawn",
+  "undertaken",
+  "spread",
+  "set",
 ];
 
 const PASSIVE_REGEX = new RegExp(
-  "\\b(" + AUXILIARY + ")\\s+(\\w+ed)\\b|\\b(" + AUXILIARY + ")\\s+(" + IRREGULAR_PARTICIPLES.join("|") + ")\\b",
+  "\\b(" +
+    AUXILIARY +
+    ")\\s+(\\w+ed)\\b|\\b(" +
+    AUXILIARY +
+    ")\\s+(" +
+    IRREGULAR_PARTICIPLES.join("|") +
+    ")\\b",
   "gi"
 );
 
 const STATIVE_PREPOSITIONS = /^\s+(about|in|with|at|of|for|to)\b/i;
+const PASSIVE_IDIOM_PATTERNS = [/\bwhen all is said and done\b/gi];
 
 function detectPassiveVoice(text) {
   const rawMatches = findMatches(PASSIVE_REGEX, text);
+  const idiomMatches = PASSIVE_IDIOM_PATTERNS.flatMap((pattern) =>
+    findMatches(pattern, text)
+  );
   const results = [];
 
   for (const m of rawMatches) {
+    const isInsideIdiom = idiomMatches.some(
+      (idiom) =>
+        m.offset >= idiom.offset &&
+        m.offset + m.length <= idiom.offset + idiom.length
+    );
+    if (isInsideIdiom) continue;
+
     const afterText = text.slice(m.offset + m.length);
     const beforeText = text.slice(Math.max(0, m.offset - 15), m.offset);
 
@@ -72,7 +172,8 @@ function detectPassiveVoice(text) {
     results.push({
       offset: m.offset,
       length: m.length,
-      message: "Passive voice: consider using active voice for clearer, more direct writing.",
+      message:
+        "Passive voice: consider using active voice for clearer, more direct writing.",
       replacements: [],
       category: "Prose Style",
     });
@@ -81,14 +182,30 @@ function detectPassiveVoice(text) {
   return results;
 }
 
+function cliche(pattern, replacement = null) {
+  return {
+    pattern,
+    replacement,
+    message: replacement
+      ? `Cliché phrase: consider using "${replacement.split(",")[0].trim()}".`
+      : "Cliché phrase: consider rewriting this in your own words.",
+  };
+}
+
 const CLICHE_PHRASES = [
-  { pattern: /\bat the end of the day\b/gi, replacement: "ultimately, finally" },
+  {
+    pattern: /\bat the end of the day\b/gi,
+    replacement: "ultimately, finally",
+  },
   { pattern: /\bin order to\b/gi, replacement: "to" },
   { pattern: /\bdue to the fact that\b/gi, replacement: "because" },
   { pattern: /\ba lot of\b/gi, replacement: "many, several" },
   { pattern: /\blots of\b/gi, replacement: "many, numerous" },
   { pattern: /\bin the event that\b/gi, replacement: "if" },
-  { pattern: /\bin spite of the fact that\b/gi, replacement: "although, despite" },
+  {
+    pattern: /\bin spite of the fact that\b/gi,
+    replacement: "although, despite",
+  },
   { pattern: /\bthe reason why is that\b/gi, replacement: "because" },
   { pattern: /\bon a daily basis\b/gi, replacement: "daily" },
   { pattern: /\bon a weekly basis\b/gi, replacement: "weekly" },
@@ -97,9 +214,15 @@ const CLICHE_PHRASES = [
   { pattern: /\bin the vicinity of\b/gi, replacement: "near, about" },
   { pattern: /\buntil such time as\b/gi, replacement: "until" },
   { pattern: /\bin the meantime\b/gi, replacement: "meanwhile" },
-  { pattern: /\ball things considered\b/gi, replacement: "overall, considering" },
+  {
+    pattern: /\ball things considered\b/gi,
+    replacement: "overall, considering",
+  },
   { pattern: /\bthe bottom line is that\b/gi, replacement: "essentially" },
-  { pattern: /\bthink outside the box\b/gi, replacement: "innovate, think creatively" },
+  {
+    pattern: /\bthink outside the box\b/gi,
+    replacement: "innovate, think creatively",
+  },
   { pattern: /\blet's circle back\b/gi, replacement: "let's revisit" },
   { pattern: /\bdrill down\b/gi, replacement: "examine, explore" },
   { pattern: /\bpain point\b/gi, replacement: "problem, challenge" },
@@ -107,7 +230,10 @@ const CLICHE_PHRASES = [
   { pattern: /\bhit the ground running\b/gi, replacement: "start efficiently" },
   { pattern: /\bdeep dive\b/gi, replacement: "examination, analysis" },
   { pattern: /\bgame changer\b/gi, replacement: "transformative" },
-  { pattern: /\btake it to the next level\b/gi, replacement: "advance, improve" },
+  {
+    pattern: /\btake it to the next level\b/gi,
+    replacement: "advance, improve",
+  },
   { pattern: /\bbandwidth\b/gi, replacement: "capacity" },
   { pattern: /\btouch base\b/gi, replacement: "check in, reconnect" },
   { pattern: /\bwin-win\b/gi, replacement: "mutually beneficial" },
@@ -115,24 +241,80 @@ const CLICHE_PHRASES = [
   { pattern: /\bin a nutshell\b/gi, replacement: "briefly, in short" },
   { pattern: /\bas a matter of fact\b/gi, replacement: "in fact" },
   { pattern: /\bthe fact of the matter is\b/gi, replacement: "the truth is" },
-  { pattern: /\bit goes without saying\b/gi, replacement: "clearly, obviously" },
+  {
+    pattern: /\bit goes without saying\b/gi,
+    replacement: "clearly, obviously",
+  },
   { pattern: /\blast but not least\b/gi, replacement: "finally" },
   { pattern: /\bfew and far between\b/gi, replacement: "rare" },
   { pattern: /\bbut at the same time\b/gi, replacement: "however, yet" },
   { pattern: /\beach and every\b/gi, replacement: "each, every" },
   { pattern: /\bfirst and foremost\b/gi, replacement: "first, primarily" },
+  // High-confidence additions. Phrases with context-dependent verb forms
+  // intentionally have no fixed replacement and use the Lex rewrite action.
+  cliche(/\bat this point in time\b/gi, "now"),
+  cliche(/\bat the present time\b/gi, "now"),
+  cliche(/\bin the near future\b/gi, "soon"),
+  cliche(/\bin the not too distant future\b/gi, "soon"),
+  cliche(/\bwhen all is said and done\b/gi, "ultimately"),
+  cliche(/\bin this day and age\b/gi, "today"),
+  cliche(/\bin today's world\b/gi, "today"),
+  cliche(/\bin the grand scheme of things\b/gi, "overall"),
+  cliche(/\bin the long run\b/gi, "ultimately"),
+  cliche(/\btime and time again\b/gi, "repeatedly"),
+  cliche(/\bby leaps and bounds\b/gi, "rapidly"),
+  cliche(/\blow-hanging fruit\b/gi, "easy opportunities"),
+  cliche(/\bsecret sauce\b/gi, "key advantage"),
+  cliche(/\bsilver bullet\b/gi, "simple solution"),
+  cliche(/\bmagic bullet\b/gi, "simple solution"),
+  cliche(/\bparadigm shift\b/gi, "major change"),
+  cliche(/\bbest of both worlds\b/gi, "advantages of both"),
+  cliche(/\bthe tip of the iceberg\b/gi, "a small part"),
+  cliche(/\bthe elephant in the room\b/gi, "an obvious issue"),
+  cliche(/\ba light at the end of the tunnel\b/gi, "hope"),
+  cliche(/\ba breath of fresh air\b/gi, "a refreshing change"),
+  cliche(/\ba blessing in disguise\b/gi, "an unexpected benefit"),
+  cliche(/\ba dime a dozen\b/gi, "common"),
+  cliche(/\ba piece of cake\b/gi, "easy"),
+  cliche(/\bunder the weather\b/gi, "ill"),
+  cliche(/\bpar for the course\b/gi, "expected"),
+  cliche(/\bgo the extra mile\b/gi),
+  cliche(/\bmove the needle\b/gi),
+  cliche(/\bpush the envelope\b/gi),
+  cliche(/\braise the bar\b/gi),
+  cliche(/\b(?:move|moves|moved|moving) the goalposts\b/gi),
+  cliche(/\blevel the playing field\b/gi),
+  cliche(/\bon the same page\b/gi),
+  cliche(/\bin the driver's seat\b/gi),
+  cliche(/\ball hands on deck\b/gi),
+  cliche(/\bread between the lines\b/gi),
+  cliche(/\bcut to the chase\b/gi),
+  cliche(/\bbite the bullet\b/gi),
+  cliche(/\bback to square one\b/gi),
+  cliche(/\bburn the midnight oil\b/gi),
+  cliche(/\bpull out all the stops\b/gi),
+  cliche(/\bneedle in a haystack\b/gi),
+  cliche(/\bwhen push comes to shove\b/gi),
+  cliche(/\bon thin ice\b/gi),
 ];
 
 function detectClichés(text) {
   const matches = [];
   for (const phrase of CLICHE_PHRASES) {
     const found = findMatches(phrase.pattern, text);
-    const replacements = phrase.replacement.split(", ").map((s) => s.trim());
+    const baseReplacements = phrase.replacement
+      ? phrase.replacement.split(",").map((s) => s.trim())
+      : [];
     for (const m of found) {
+      const replacements = baseReplacements.map((replacement) =>
+        preserveCase(m.original, replacement)
+      );
       matches.push({
         offset: m.offset,
         length: m.length,
-        message: 'Wordy phrase: consider simplifying to "' + replacements[0] + '"',
+        message:
+          phrase.message ||
+          'Wordy phrase: consider simplifying to "' + replacements[0] + '"',
         replacements,
         category: "Prose Style",
       });
@@ -143,17 +325,22 @@ function detectClichés(text) {
 
 const FILLER_PATTERNS = [
   {
-    pattern: /\b(very)\b(?=\s+(?:good|bad|important|big|small|large|difficult|hard|easy|clear|obvious|interesting|useful|helpful|simple|complex|likely|unlikely|necessary|possible|impossible|different|same|sure|true|certain|ready|happy|sad|tired|busy|nice|new|old)\b)/gi,
-    message: "Filler intensifier: consider using a stronger, more precise word.",
+    pattern:
+      /\b(very)\b(?=\s+(?:good|bad|important|big|small|large|difficult|hard|easy|clear|obvious|interesting|useful|helpful|simple|complex|likely|unlikely|necessary|possible|impossible|different|same|sure|true|certain|ready|happy|sad|tired|busy|nice|new|old)\b)/gi,
+    message:
+      "Filler intensifier: consider using a stronger, more precise word.",
     action: "remove",
   },
   {
-    pattern: /\b(really)\b(?=\s+(?:good|bad|important|interesting|useful|helpful|simple|complex|likely|unlikely|clear|obvious|like|love|want|need|think|believe|feel|know|understand|enjoy|hate|hope|wish|prefer|seem|matter|work|help)\b)/gi,
-    message: "Filler intensifier: consider using a stronger, more precise word.",
+    pattern:
+      /\b(really)\b(?=\s+(?:good|bad|important|interesting|useful|helpful|simple|complex|likely|unlikely|clear|obvious|like|love|want|need|think|believe|feel|know|understand|enjoy|hate|hope|wish|prefer|seem|matter|work|help)\b)/gi,
+    message:
+      "Filler intensifier: consider using a stronger, more precise word.",
     action: "remove",
   },
   {
-    pattern: /\b(just)\b(?=\s+(?:need|want|try|hope|think|feel|have|seem|mean|say|ask|wonder|look|use|make|start|started)\b)/gi,
+    pattern:
+      /\b(just)\b(?=\s+(?:need|want|try|hope|think|feel|have|seem|mean|say|ask|wonder|look|use|make|start|started)\b)/gi,
     message: "Possible filler word: remove it if it does not add meaning.",
     action: "remove",
   },
@@ -235,12 +422,20 @@ function detectRepetitiveOpeners(text) {
       const firstWord = words[0].replace(/[^a-zA-Z]/g, "").toLowerCase();
       openers.push(firstWord);
     }
-    if (openers.length === OPENER_STREAK_MIN && openers.every((w) => w === openers[0])) {
+    if (
+      openers.length === OPENER_STREAK_MIN &&
+      openers.every((w) => w === openers[0])
+    ) {
       const fullFirstWord = sentenceList[i].text.trim().match(/\S+/g)[0];
       matches.push({
         offset: sentenceList[i].offset,
         length: sentenceList[i].text.length,
-        message: 'Repetitive sentence openers: ' + OPENER_STREAK_MIN + ' consecutive sentences start with "' + fullFirstWord + '". Vary your sentence beginnings.',
+        message:
+          "Repetitive sentence openers: " +
+          OPENER_STREAK_MIN +
+          ' consecutive sentences start with "' +
+          fullFirstWord +
+          '". Vary your sentence beginnings.',
         replacements: [],
         category: "Prose Style",
       });
@@ -264,17 +459,22 @@ export function checkProseQuality(text) {
 export function extractSentenceContext(text, offset) {
   const before = text.slice(0, offset);
   const after = text.slice(offset);
-  const sentStart = Math.max(
-    before.lastIndexOf(". "),
-    before.lastIndexOf("! "),
-    before.lastIndexOf("? "),
-    before.lastIndexOf("\n"),
-  ) + 1;
+  const sentStart =
+    Math.max(
+      before.lastIndexOf(". "),
+      before.lastIndexOf("! "),
+      before.lastIndexOf("? "),
+      before.lastIndexOf("\n")
+    ) + 1;
   let sentEnd = after.search(/[.!?](?:\s|$)/);
   if (sentEnd === -1) sentEnd = after.length;
   else sentEnd += 1;
   const raw = text.slice(sentStart, offset + sentEnd);
   const trimmed = raw.trim();
   const leadingWS = raw.indexOf(trimmed[0]);
-  return { text: trimmed, offset: sentStart + leadingWS, length: trimmed.length };
+  return {
+    text: trimmed,
+    offset: sentStart + leadingWS,
+    length: trimmed.length,
+  };
 }

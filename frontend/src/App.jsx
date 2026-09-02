@@ -106,6 +106,7 @@ import {
   clearGrammarDecorations,
   applySuggestion,
   getSuggestionEdit,
+  shouldReplaceSentence,
   dismissError,
   focusError,
   findErrorAt,
@@ -1420,7 +1421,7 @@ export default function App() {
     }
     if (match.action === "remove") {
       applySuggestion(editor, match.id, "", match);
-    } else if (match.sentenceOffset != null && match.sentenceLength != null) {
+    } else if (shouldReplaceSentence(match)) {
       const { map } = buildTextWithMap(editor.state.doc);
       const from = map[match.sentenceOffset];
       const last = map[match.sentenceOffset + match.sentenceLength - 1];

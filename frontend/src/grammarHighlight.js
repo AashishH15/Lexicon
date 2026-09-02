@@ -213,6 +213,15 @@ export function getSuggestionEdit(editor, id, replacement, match = null) {
   return { ...editRange, replacement: appliedReplacement };
 }
 
+export function shouldReplaceSentence(match) {
+  return (
+    match?.action !== "remove" &&
+    match?.sentenceOffset != null &&
+    match?.sentenceLength != null &&
+    (!Array.isArray(match.replacements) || match.replacements.length === 0)
+  );
+}
+
 export function dismissError(editor, id) {
   const tr = editor.state.tr.setMeta(grammarPluginKey, { removeId: id });
   editor.view.dispatch(tr);

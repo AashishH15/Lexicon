@@ -9,6 +9,7 @@ import {
   applyGrammarDecorations,
   clearGrammarDecorations,
   applySuggestion,
+  shouldReplaceSentence,
   dismissError,
   GrammarHighlight,
 } from "../grammarHighlight.js";
@@ -168,6 +169,30 @@ describe("Proofread pass & decoration attachment", () => {
 
 // Scenario 3 – Suggestion Accept & Dismiss Workflow
 describe("Suggestion accept & dismiss", () => {
+  it("does not treat a direct prose replacement as a sentence rewrite", () => {
+    expect(
+      shouldReplaceSentence({
+        category: "Prose Style",
+        replacements: ["Now"],
+        sentence: "At this point in time, the plan is clear.",
+        sentenceOffset: 0,
+        sentenceLength: "At this point in time, the plan is clear.".length,
+      })
+    ).toBe(false);
+  });
+
+  it("treats a prose suggestion without a replacement as a sentence rewrite", () => {
+    expect(
+      shouldReplaceSentence({
+        category: "Prose Style",
+        replacements: [],
+        sentence: "The report was written by her.",
+        sentenceOffset: 0,
+        sentenceLength: "The report was written by her.".length,
+      })
+    ).toBe(true);
+  });
+
   it("applies a suggestion replacement via applySuggestion", () => {
     editor.commands.setContent("<p>teh</p>");
     const { map } = buildTextWithMap(editor.state.doc);
