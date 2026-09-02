@@ -275,6 +275,70 @@ def test_a_an_offsets_use_utf16_units():
     "text, expected",
     [
         (
+            "I don't have no money.",
+            ("no", "any"),
+        ),
+        (
+            "She doesn't know nothing.",
+            ("nothing", "anything"),
+        ),
+        (
+            "We didn't go nowhere.",
+            ("nowhere", "anywhere"),
+        ),
+        (
+            "He can't find nobody.",
+            ("nobody", "anybody"),
+        ),
+        (
+            "I do not have no reason to worry.",
+            ("no", "any"),
+        ),
+        (
+            "They never said nothing.",
+            ("nothing", "anything"),
+        ),
+    ],
+)
+def test_double_negatives_are_detected(text, expected):
+    assert _corrections(text, enhance_matches(text, [])) == [expected]
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "I don't have any money.",
+        "She doesn't know anything.",
+        "We didn't go anywhere.",
+        "He can't find anybody.",
+        "I have no reason to worry.",
+        "Nobody called.",
+        "The result is not impossible.",
+        "The change is not uncommon.",
+        "I don't know. Nobody called.",
+        "I don't know, nobody called.",
+        "I don't know whether nobody called.",
+        "I don't know if nothing changed.",
+        "I don't think it's no longer relevant.",
+    ],
+)
+def test_valid_negative_contexts_are_not_flagged(text):
+    assert enhance_matches(text, []) == []
+
+
+def test_double_negative_offsets_use_utf16_units():
+    text = "😀 I don't have no money."
+    matches = enhance_matches(text, [])
+
+    assert _corrections(text, matches) == [("no", "any")]
+    assert matches[0]["offset"] == 16
+    assert matches[0]["length"] == 2
+
+
+@pytest.mark.parametrize(
+    "text, expected",
+    [
+        (
             "The dogs in the yard barks loudly.",
             ("barks", "bark"),
         ),
@@ -336,6 +400,18 @@ def test_custom_rule_is_filtered_by_user_dictionary(monkeypatch):
     assert languagetool.check_text(
         "Please advice me.",
         ignore=["advice"],
+    ) == []
+
+
+def test_double_negative_rule_is_filtered_by_user_dictionary(monkeypatch):
+    import languagetool
+
+    monkeypatch.setattr(languagetool, "CHECK_URL", None)
+    monkeypatch.setattr(languagetool, "_check_local", lambda *_args: [])
+
+    assert languagetool.check_text(
+        "I don't have no money.",
+        ignore=["no"],
     ) == []
 
 

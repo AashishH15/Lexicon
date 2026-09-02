@@ -209,6 +209,94 @@
     ]
   },
   {
+    "id": "double-negative-no",
+    "language": "en-US",
+    "text": "I don't have no money.",
+    "expected": [
+      {
+        "original": "no",
+        "replacement": "any"
+      }
+    ]
+  },
+  {
+    "id": "double-negative-nothing",
+    "language": "en-US",
+    "text": "She doesn't know nothing.",
+    "expected": [
+      {
+        "original": "nothing",
+        "replacement": "anything"
+      }
+    ]
+  },
+  {
+    "id": "double-negative-nowhere",
+    "language": "en-US",
+    "text": "We didn't go nowhere.",
+    "expected": [
+      {
+        "original": "nowhere",
+        "replacement": "anywhere"
+      }
+    ]
+  },
+  {
+    "id": "double-negative-nobody",
+    "language": "en-US",
+    "text": "He can't find nobody.",
+    "expected": [
+      {
+        "original": "nobody",
+        "replacement": "anybody"
+      }
+    ]
+  },
+  {
+    "id": "double-negative-explicit-not",
+    "language": "en-US",
+    "text": "I do not have no reason to worry.",
+    "expected": [
+      {
+        "original": "no",
+        "replacement": "any"
+      }
+    ]
+  },
+  {
+    "id": "double-negative-never",
+    "language": "en-US",
+    "text": "They never said nothing.",
+    "expected": [
+      {
+        "original": "nothing",
+        "replacement": "anything"
+      }
+    ]
+  },
+  {
+    "id": "double-negative-neither",
+    "language": "en-US",
+    "text": "I don't like neither option.",
+    "expected": [
+      {
+        "original": "neither",
+        "replacement": "either"
+      }
+    ]
+  },
+  {
+    "id": "double-negative-never-after-modal",
+    "language": "en-US",
+    "text": "You shouldn't never skip backups.",
+    "expected": [
+      {
+        "original": "never",
+        "replacement": "ever"
+      }
+    ]
+  },
+  {
     "id": "plural-subject-with-singular-verb",
     "language": "en-US",
     "text": "The dogs in the yard barks loudly.",
@@ -378,6 +466,84 @@
     "id": "valid-a-before-pronounced-h",
     "language": "en-US",
     "text": "He made a hotel reservation.",
+    "expected": []
+  },
+  {
+    "id": "valid-double-negative-no",
+    "language": "en-US",
+    "text": "I don't have any money.",
+    "expected": []
+  },
+  {
+    "id": "valid-double-negative-nothing",
+    "language": "en-US",
+    "text": "She doesn't know anything.",
+    "expected": []
+  },
+  {
+    "id": "valid-double-negative-nowhere",
+    "language": "en-US",
+    "text": "We didn't go anywhere.",
+    "expected": []
+  },
+  {
+    "id": "valid-double-negative-nobody",
+    "language": "en-US",
+    "text": "He can't find anybody.",
+    "expected": []
+  },
+  {
+    "id": "valid-single-negative-no",
+    "language": "en-US",
+    "text": "I have no reason to worry.",
+    "expected": []
+  },
+  {
+    "id": "valid-single-negative-nobody",
+    "language": "en-US",
+    "text": "Nobody called.",
+    "expected": []
+  },
+  {
+    "id": "valid-double-negative-neither",
+    "language": "en-US",
+    "text": "I don't like either option.",
+    "expected": []
+  },
+  {
+    "id": "valid-double-negative-never",
+    "language": "en-US",
+    "text": "You should never skip backups.",
+    "expected": []
+  },
+  {
+    "id": "valid-negative-clause-boundary",
+    "language": "en-US",
+    "text": "I don't know. Nobody called.",
+    "expected": []
+  },
+  {
+    "id": "valid-negative-comma-boundary",
+    "language": "en-US",
+    "text": "I don't know, nobody called.",
+    "expected": []
+  },
+  {
+    "id": "valid-negative-whether-clause",
+    "language": "en-US",
+    "text": "I don't know whether nobody called.",
+    "expected": []
+  },
+  {
+    "id": "valid-negative-if-clause",
+    "language": "en-US",
+    "text": "I don't know if nothing changed.",
+    "expected": []
+  },
+  {
+    "id": "valid-negative-no-longer",
+    "language": "en-US",
+    "text": "I don't think it's no longer relevant.",
     "expected": []
   },
   {

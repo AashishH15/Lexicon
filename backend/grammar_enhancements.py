@@ -79,6 +79,22 @@ _A_AN_PATTERN = re.compile(
     r"\b(?P<article>a|an)[ \t]+(?P<word>[A-Za-z][A-Za-z'-]*)\b",
     re.IGNORECASE,
 )
+_DOUBLE_NEGATIVE_TRIGGER = (
+    r"(?:don't|doesn't|didn't|can't|cannot|couldn't|won't|wouldn't|"
+    r"shouldn't|mustn't|needn't|ain't|"
+    r"(?:do|does|did|is|are|was|were|has|have|had|can|could|will|"
+    r"would|should|must)[ \t]+not|never)"
+)
+_DOUBLE_NEGATIVE_TARGETS = (
+    ("no one", "anyone"),
+    ("nobody", "anybody"),
+    ("nothing", "anything"),
+    ("nowhere", "anywhere"),
+    ("neither", "either"),
+    ("never", "ever"),
+    ("none", "any"),
+    ("no", "any"),
+)
 _ADVICE_NOUN_MODIFIERS = (
     "some|the|my|your|his|her|our|their|good|sound|useful|valuable|"
     "professional|expert|helpful|practical"
@@ -634,6 +650,39 @@ def _article_matches(text: str, language: str) -> list[dict]:
     return candidates
 
 
+def _double_negative_matches(text: str) -> list[dict]:
+    candidates: list[dict] = []
+    for target, replacement in _DOUBLE_NEGATIVE_TARGETS:
+        target_pattern = re.escape(target)
+        if target == "no":
+            target_pattern += r"(?![ \t]+(?:longer|more|less|matter)\b)"
+        pattern = re.compile(
+            rf"\b(?P<trigger>{_DOUBLE_NEGATIVE_TRIGGER})\b"
+            rf"(?:(?![.!?,;:\n])[\s\S]){{0,60}}?"
+            rf"(?P<word>{target_pattern})\b",
+            re.IGNORECASE,
+        )
+        for found in pattern.finditer(text):
+            start, end = found.span("word")
+            trigger_end = found.end("trigger")
+            if re.search(
+                r"\b(?:if|whether)\b",
+                text[trigger_end:start],
+                re.IGNORECASE,
+            ):
+                continue
+            candidate = _make_match(
+                text,
+                start,
+                end,
+                replacement,
+                "Avoid using two negative words in the same clause.",
+            )
+            if not any(_overlaps(candidate, existing) for existing in candidates):
+                candidates.append(candidate)
+    return candidates
+
+
 def _to_too_two_matches(text: str) -> list[dict]:
     candidates: list[dict] = []
 
@@ -847,6 +896,7 @@ def enhance_matches(
     candidates = _context_matches(text)
     candidates.extend(_confusion_matches(text))
     candidates.extend(_article_matches(text, language))
+    candidates.extend(_double_negative_matches(text))
     candidates.extend(_to_too_two_matches(text))
     candidates.extend(_agreement_matches(text, language))
     candidates.sort(key=lambda item: (item["offset"], item["length"]))
