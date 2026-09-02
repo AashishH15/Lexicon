@@ -2,6 +2,8 @@ import re
 
 _RULE_ID = "LEXICON_CONTEXT"
 _RULE_DESCRIPTION = "Lexicon context rule"
+_PUNCTUATION_RULE_ID = "LEXICON_PUNCTUATION"
+_PUNCTUATION_RULE_DESCRIPTION = "Lexicon punctuation rule"
 
 _POSSESSIVE_NOUNS = (
     "book|car|coat|color|colour|company|document|desk|"
@@ -26,6 +28,20 @@ _PAST_MARKER = r"(?:yesterday|last\s+(?:night|week|month|year)|\d+\s+days?\s+ago
 _COMPARATIVES = (
     "more|less|better|worse|taller|shorter|older|younger|faster|slower|"
     "higher|lower|greater|smaller|bigger|earlier|later"
+)
+_INTRODUCTORY_TRANSITIONS = (
+    "however|therefore|moreover|furthermore|consequently|instead|"
+    "meanwhile|for example|in addition|on the other hand"
+)
+_COMMA_SPLICE_SUBJECTS = (
+    r"(?:i|you|he|she|it|we|they|this|that|these|those|there|"
+    r"everyone|someone|(?:the|a|an)[ \t]+[a-z][a-z'-]*)"
+)
+_COMMA_SPLICE_VERBS = (
+    r"(?:am|is|are|was|were|have|has|had|do|does|did|can|could|will|"
+    r"would|should|must|go|goes|went|left|stayed|came|arrived|ended|"
+    r"starts?|started|works?|worked|runs?|ran|looks?|seems?|needed|"
+    r"needs?|wanted|wants?)"
 )
 _LOOSE_ADJECTIVE_NOUNS = (
     "fit|grip|knot|thread|screw|tooth|button|rope|belt|connection|"
@@ -211,6 +227,9 @@ def _make_match(
     end: int,
     replacement: str,
     message: str,
+    *,
+    rule_id: str = _RULE_ID,
+    rule_description: str = _RULE_DESCRIPTION,
 ) -> dict:
     original = text[start:end]
     return {
@@ -219,10 +238,28 @@ def _make_match(
         "message": message,
         "replacements": [_preserve_case(original, replacement)],
         "rule": {
-            "id": _RULE_ID,
-            "description": _RULE_DESCRIPTION,
+            "id": rule_id,
+            "description": rule_description,
         },
     }
+
+
+def _make_punctuation_match(
+    text: str,
+    start: int,
+    end: int,
+    replacement: str,
+    message: str,
+) -> dict:
+    return _make_match(
+        text,
+        start,
+        end,
+        replacement,
+        message,
+        rule_id=_PUNCTUATION_RULE_ID,
+        rule_description=_PUNCTUATION_RULE_DESCRIPTION,
+    )
 
 
 def _overlaps(left: dict, right: dict) -> bool:
@@ -609,6 +646,94 @@ def _confusion_matches(text: str) -> list[dict]:
     return candidates
 
 
+def _punctuation_matches(text: str) -> list[dict]:
+    candidates: list[dict] = []
+
+    for found in re.finditer(
+        r"(?P<word>[ \t]+[,.!?;:\)\]])",
+        text,
+    ):
+        original = found.group("word")
+        start, end = found.span("word")
+        candidates.append(
+            _make_punctuation_match(
+                text,
+                start,
+                end,
+                original[-1],
+                "Remove the space before this punctuation mark.",
+            )
+        )
+
+    for found in re.finditer(r"(?P<word>[\(\[][ \t]+)", text):
+        original = found.group("word")
+        start, end = found.span("word")
+        candidate = _make_punctuation_match(
+            text,
+            start,
+            end,
+            original[0],
+            "Remove the space after this opening bracket.",
+        )
+        if not any(_overlaps(candidate, existing) for existing in candidates):
+            candidates.append(candidate)
+
+    for found in re.finditer(r"(?P<word>!{2,}|\?{2,})", text):
+        original = found.group("word")
+        start, end = found.span("word")
+        candidate = _make_punctuation_match(
+            text,
+            start,
+            end,
+            original[0],
+            "Use one terminal punctuation mark instead of repeating it.",
+        )
+        if not any(_overlaps(candidate, existing) for existing in candidates):
+            candidates.append(candidate)
+
+    introductory_pattern = re.compile(
+        rf"(?:^|(?<=\n)[ \t]*|(?<=[.!?])[ \t]+)"
+        rf"(?P<word>{_INTRODUCTORY_TRANSITIONS})"
+        rf"(?=[ \t]+[A-Za-z])",
+        re.IGNORECASE,
+    )
+    for found in introductory_pattern.finditer(text):
+        original = found.group("word")
+        start, end = found.span("word")
+        candidate = _make_punctuation_match(
+            text,
+            start,
+            end,
+            f"{original},",
+            "Add a comma after this introductory transition.",
+        )
+        if not any(_overlaps(candidate, existing) for existing in candidates):
+            candidates.append(candidate)
+
+    comma_splice_pattern = re.compile(
+        rf"(?:^|(?<=\n)[ \t]*|(?<=[.!?])[ \t]+)"
+        rf"{_COMMA_SPLICE_SUBJECTS}[ \t]+"
+        r"(?:(?![.!?,;:\n])[\s\S]){1,60}?"
+        r"(?P<word>,)[ \t]+"
+        rf"(?={_COMMA_SPLICE_SUBJECTS}[ \t]+"
+        rf"{_COMMA_SPLICE_VERBS}\b)",
+        re.IGNORECASE,
+    )
+    for found in comma_splice_pattern.finditer(text):
+        start, end = found.span("word")
+        candidate = _make_punctuation_match(
+            text,
+            start,
+            end,
+            ";",
+            "Join independent clauses with a semicolon or a conjunction.",
+        )
+        if not any(_overlaps(candidate, existing) for existing in candidates):
+            candidates.append(candidate)
+
+    return candidates
+
+
 def _article_matches(text: str, language: str) -> list[dict]:
     candidates: list[dict] = []
     normalized_language = language.lower()
@@ -895,6 +1020,7 @@ def enhance_matches(
 
     candidates = _context_matches(text)
     candidates.extend(_confusion_matches(text))
+    candidates.extend(_punctuation_matches(text))
     candidates.extend(_article_matches(text, language))
     candidates.extend(_double_negative_matches(text))
     candidates.extend(_to_too_two_matches(text))

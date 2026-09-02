@@ -339,6 +339,163 @@ def test_double_negative_offsets_use_utf16_units():
     "text, expected",
     [
         (
+            "Hello , world.",
+            (" ,", ","),
+        ),
+        (
+            "What ?",
+            (" ?", "?"),
+        ),
+        (
+            "Wait ; continue.",
+            (" ;", ";"),
+        ),
+        (
+            "See ( this",
+            ("( ", "("),
+        ),
+        (
+            "See [ item",
+            ("[ ", "["),
+        ),
+        (
+            "See item )",
+            (" )", ")"),
+        ),
+        (
+            "What??",
+            ("??", "?"),
+        ),
+        (
+            "Stop!!",
+            ("!!", "!"),
+        ),
+    ],
+)
+def test_punctuation_spacing_and_repetition_are_detected(text, expected):
+    assert _corrections(text, enhance_matches(text, [])) == [expected]
+
+
+@pytest.mark.parametrize(
+    "text, expected",
+    [
+        (
+            "However we left.",
+            ("However", "However,"),
+        ),
+        (
+            "It was late. Therefore we left.",
+            ("Therefore", "Therefore,"),
+        ),
+        (
+            "For example this works.",
+            ("For example", "For example,"),
+        ),
+        (
+            "I went home, it was late.",
+            (",", ";"),
+        ),
+        (
+            "The meeting ended, everyone left.",
+            (",", ";"),
+        ),
+    ],
+)
+def test_sentence_level_punctuation_is_detected(text, expected):
+    assert _corrections(text, enhance_matches(text, [])) == [expected]
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Hello, world.",
+        "What?",
+        "Wait; continue.",
+        "See (this).",
+        "See [item].",
+        "What?!",
+        "Wait...",
+        "However, we left.",
+        "For example, this works.",
+        "It was late. Therefore, we left.",
+        "I went home, and it was late.",
+        "When I arrived, it was late.",
+        "Although it rained, we left.",
+        "He said however we left.",
+    ],
+)
+def test_valid_punctuation_contexts_are_not_flagged(text):
+    assert enhance_matches(text, []) == []
+
+
+def test_punctuation_matches_use_punctuation_metadata():
+    matches = enhance_matches("Hello , world.", [])
+
+    assert matches[0]["rule"]["id"] == "LEXICON_PUNCTUATION"
+    assert matches[0]["rule"]["description"] == "Lexicon punctuation rule"
+
+
+def test_punctuation_match_replaces_an_overlapping_engine_match():
+    text = "Hello , world."
+    base_match = {
+        "offset": 6,
+        "length": 1,
+        "message": "Existing comma match",
+        "replacements": [","],
+        "rule": {"id": "PUNCT_BASE"},
+    }
+
+    matches = enhance_matches(text, [base_match])
+
+    assert _corrections(text, matches) == [(" ,", ",")]
+    assert matches[0]["rule"]["id"] == "LEXICON_PUNCTUATION"
+
+
+@pytest.mark.parametrize("language", ["en-US", "en-GB"])
+def test_punctuation_rules_run_for_selected_english_locales(language):
+    matches = enhance_matches("Hello , world.", [], language)
+
+    assert _corrections("Hello , world.", matches) == [(" ,", ",")]
+
+
+def test_punctuation_rules_do_not_run_for_non_english_text():
+    text = "Hello , world."
+    base_match = {
+        "offset": 0,
+        "length": 5,
+        "message": "Existing match",
+        "replacements": ["Hello"],
+        "rule": {"id": "TEST"},
+    }
+
+    assert enhance_matches(text, [base_match], "fr-FR") == [base_match]
+
+
+def test_punctuation_offsets_use_utf16_units():
+    text = "😀 Hello , world."
+    matches = enhance_matches(text, [])
+
+    assert _corrections(text, matches) == [(" ,", ",")]
+    assert matches[0]["offset"] == 8
+    assert matches[0]["length"] == 2
+
+
+def test_punctuation_rule_is_filtered_by_user_dictionary(monkeypatch):
+    import languagetool
+
+    monkeypatch.setattr(languagetool, "CHECK_URL", None)
+    monkeypatch.setattr(languagetool, "_check_local", lambda *_args: [])
+
+    assert languagetool.check_text(
+        "Hello , world.",
+        ignore=[","],
+    ) == []
+
+
+@pytest.mark.parametrize(
+    "text, expected",
+    [
+        (
             "The dogs in the yard barks loudly.",
             ("barks", "bark"),
         ),

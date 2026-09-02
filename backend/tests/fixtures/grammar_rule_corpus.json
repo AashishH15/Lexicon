@@ -592,5 +592,214 @@
         "replacement": "has"
       }
     ]
+  },
+  {
+    "id": "punctuation-space-before-comma",
+    "language": "en-US",
+    "text": "Hello , world.",
+    "expected": [
+      {
+        "original": " ,",
+        "replacement": ","
+      }
+    ]
+  },
+  {
+    "id": "punctuation-space-before-question",
+    "language": "en-US",
+    "text": "What ?",
+    "expected": [
+      {
+        "original": " ?",
+        "replacement": "?"
+      }
+    ]
+  },
+  {
+    "id": "punctuation-space-before-semicolon",
+    "language": "en-US",
+    "text": "Wait ; continue.",
+    "expected": [
+      {
+        "original": " ;",
+        "replacement": ";"
+      }
+    ]
+  },
+  {
+    "id": "punctuation-space-after-parenthesis",
+    "language": "en-US",
+    "text": "See ( this",
+    "expected": [
+      {
+        "original": "( ",
+        "replacement": "("
+      }
+    ]
+  },
+  {
+    "id": "punctuation-space-after-bracket",
+    "language": "en-US",
+    "text": "See [ item",
+    "expected": [
+      {
+        "original": "[ ",
+        "replacement": "["
+      }
+    ]
+  },
+  {
+    "id": "punctuation-space-before-parenthesis",
+    "language": "en-US",
+    "text": "See item )",
+    "expected": [
+      {
+        "original": " )",
+        "replacement": ")"
+      }
+    ]
+  },
+  {
+    "id": "punctuation-repeated-question",
+    "language": "en-US",
+    "text": "What??",
+    "expected": [
+      {
+        "original": "??",
+        "replacement": "?"
+      }
+    ]
+  },
+  {
+    "id": "punctuation-repeated-exclamation",
+    "language": "en-US",
+    "text": "Stop!!",
+    "expected": [
+      {
+        "original": "!!",
+        "replacement": "!"
+      }
+    ]
+  },
+  {
+    "id": "punctuation-introductory-however",
+    "language": "en-US",
+    "text": "However we left.",
+    "expected": [
+      {
+        "original": "However",
+        "replacement": "However,"
+      }
+    ]
+  },
+  {
+    "id": "punctuation-introductory-therefore",
+    "language": "en-US",
+    "text": "It was late. Therefore we left.",
+    "expected": [
+      {
+        "original": "Therefore",
+        "replacement": "Therefore,"
+      }
+    ]
+  },
+  {
+    "id": "punctuation-introductory-for-example",
+    "language": "en-US",
+    "text": "For example this works.",
+    "expected": [
+      {
+        "original": "For example",
+        "replacement": "For example,"
+      }
+    ]
+  },
+  {
+    "id": "punctuation-comma-splice-pronouns",
+    "language": "en-US",
+    "text": "I went home, it was late.",
+    "expected": [
+      {
+        "original": ",",
+        "replacement": ";"
+      }
+    ]
+  },
+  {
+    "id": "punctuation-comma-splice-noun",
+    "language": "en-US",
+    "text": "The meeting ended, everyone left.",
+    "expected": [
+      {
+        "original": ",",
+        "replacement": ";"
+      }
+    ]
+  },
+  {
+    "id": "valid-punctuation-spacing",
+    "language": "en-US",
+    "text": "Hello, world. What?",
+    "expected": []
+  },
+  {
+    "id": "valid-punctuation-brackets",
+    "language": "en-US",
+    "text": "See (this) and [item].",
+    "expected": []
+  },
+  {
+    "id": "valid-punctuation-mixed-ending",
+    "language": "en-US",
+    "text": "What?!",
+    "expected": []
+  },
+  {
+    "id": "valid-punctuation-ellipsis",
+    "language": "en-US",
+    "text": "Wait...",
+    "expected": []
+  },
+  {
+    "id": "valid-punctuation-introductory-comma",
+    "language": "en-US",
+    "text": "However, we left.",
+    "expected": []
+  },
+  {
+    "id": "valid-punctuation-for-example",
+    "language": "en-US",
+    "text": "For example, this works.",
+    "expected": []
+  },
+  {
+    "id": "valid-punctuation-dependent-clause",
+    "language": "en-US",
+    "text": "When I arrived, it was late.",
+    "expected": []
+  },
+  {
+    "id": "valid-punctuation-dependent-clause-although",
+    "language": "en-US",
+    "text": "Although it rained, we left.",
+    "expected": []
+  },
+  {
+    "id": "valid-punctuation-coordinating-conjunction",
+    "language": "en-US",
+    "text": "I went home, and it was late.",
+    "expected": []
+  },
+  {
+    "id": "valid-punctuation-mid-sentence-however",
+    "language": "en-US",
+    "text": "He said however we left.",
+    "expected": []
+  },
+  {
+    "id": "valid-punctuation-after-sentence",
+    "language": "en-US",
+    "text": "It was late. Therefore, we left.",
+    "expected": []
   }
 ]
