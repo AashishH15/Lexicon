@@ -27,6 +27,58 @@ _COMPARATIVES = (
     "more|less|better|worse|taller|shorter|older|younger|faster|slower|"
     "higher|lower|greater|smaller|bigger|earlier|later"
 )
+_LOOSE_ADJECTIVE_NOUNS = (
+    "fit|grip|knot|thread|screw|tooth|button|rope|belt|connection|"
+    "cover|lid|handle|wire|clothing|shirt|pants|leaf|change"
+)
+_EXCEPT_QUANTIFIERS = (
+    "all|everyone|everybody|everything|anyone|anybody|anything|"
+    "no one|nobody|nothing"
+)
+_COMPLIMENT_ADJECTIVES = (
+    "nice|great|kind|sincere|generous|lovely|flattering|backhanded|"
+    "wonderful|unexpected|well-deserved"
+)
+_COMPLEMENT_SUBJECTS = (
+    "color|colors|colour|colours|shoes|dress|outfit|flavor|flavors|"
+    "flavour|flavours|design|features|style|tone|background|furniture|"
+    "accessories|tie|shirt|jacket|music|wine"
+)
+_A_AN_SILENT_H_PREFIXES = (
+    "heir",
+    "heiress",
+    "honest",
+    "honor",
+    "honour",
+    "hour",
+)
+_A_AN_Y_SOUND_PREFIXES = (
+    "euro",
+    "ewe",
+    "euphem",
+    "eulog",
+    "eucalypt",
+    "uni",
+    "use",
+    "usual",
+    "one",
+    "once",
+    "ouija",
+)
+_A_AN_INITIAL_VOWEL_SOUND_WORDS = {
+    "fbi",
+    "hiv",
+    "mba",
+    "mri",
+    "nsa",
+    "sos",
+}
+_A_AN_INITIAL_CONSONANT_SOUND_PREFIXES = ("uk", "url", "usb", "ufo")
+_A_AN_VARIABLE_H_WORDS = {"historic", "historical"}
+_A_AN_PATTERN = re.compile(
+    r"\b(?P<article>a|an)[ \t]+(?P<word>[A-Za-z][A-Za-z'-]*)\b",
+    re.IGNORECASE,
+)
 _ADVICE_NOUN_MODIFIERS = (
     "some|the|my|your|his|her|our|their|good|sound|useful|valuable|"
     "professional|expert|helpful|practical"
@@ -464,6 +516,121 @@ def _confusion_matches(text: str) -> list[dict]:
         'Use "affect" as a verb for an influence.',
     )
 
+    _add_group_matches(
+        text,
+        candidates,
+        re.compile(
+            r"\b(?:to|will|would|can|could|may|might|should|must|do|does|did|"
+            r"don't|doesn't|didn't)[ \t]+(?P<word>loose)\b"
+            r"(?=[ \t]+(?:my|your|his|her|our|their|the|a|an|this|that|"
+            r"these|those)\b|[.!?,;:]|$)",
+            re.IGNORECASE,
+        ),
+        "lose",
+        'Use "lose" as the verb for misplacing or no longer having something.',
+    )
+    _add_group_matches(
+        text,
+        candidates,
+        re.compile(
+            rf"\b(?:a|an|the|very|too|quite|rather|some|more|less|this|that|"
+            rf"these|those)[ \t]+(?P<word>lose)\b"
+            rf"(?=[ \t]+(?:{_LOOSE_ADJECTIVE_NOUNS})\b)",
+            re.IGNORECASE,
+        ),
+        "loose",
+        'Use "loose" to describe something that is not tight or firmly fixed.',
+    )
+
+    _add_group_matches(
+        text,
+        candidates,
+        re.compile(
+            r"\b(?:please|kindly|to|will|would|can|could|may|might|should|must)"
+            r"[ \t]+(?P<word>except)\b"
+            r"(?=[ \t]+(?:my|your|his|her|our|their|the|a|an|this|that|"
+            r"me|you|him|her|us|them)\b|[.!?,;:]|$)",
+            re.IGNORECASE,
+        ),
+        "accept",
+        'Use "accept" as the verb for receiving or agreeing to something.',
+    )
+    _add_group_matches(
+        text,
+        candidates,
+        re.compile(
+            rf"\b(?:{_EXCEPT_QUANTIFIERS})[ \t]+(?P<word>accept)[ \t]+"
+            r"(?=(?:(?-i:[A-Z][a-z'-]*)|me|you|him|her|us|them)\b)",
+            re.IGNORECASE,
+        ),
+        "except",
+        'Use "except" to exclude someone or something.',
+    )
+
+    _add_group_matches(
+        text,
+        candidates,
+        re.compile(
+            rf"\b(?:{_COMPLIMENT_ADJECTIVES})[ \t]+(?P<word>complement)\b",
+            re.IGNORECASE,
+        ),
+        "compliment",
+        'Use "compliment" for praise.',
+    )
+    _add_group_matches(
+        text,
+        candidates,
+        re.compile(
+            rf"\b(?:{_COMPLEMENT_SUBJECTS})[ \t]+(?P<word>compliment)\b"
+            r"(?=[ \t]+(?:me|you|him|her|us|them|each[ \t]+other|the|a|an|"
+            r"my|your|his|our|their)\b)",
+            re.IGNORECASE,
+        ),
+        "complement",
+        'Use "complement" when something completes or goes well with something else.',
+    )
+
+    return candidates
+
+
+def _article_matches(text: str, language: str) -> list[dict]:
+    candidates: list[dict] = []
+    normalized_language = language.lower()
+    silent_h_prefixes = _A_AN_SILENT_H_PREFIXES
+    if normalized_language in {"en-us", "en-ca"}:
+        silent_h_prefixes = (*silent_h_prefixes, "herb")
+
+    for found in _A_AN_PATTERN.finditer(text):
+        article = found.group("article")
+        word = found.group("word").lower()
+        if word in _A_AN_VARIABLE_H_WORDS:
+            continue
+
+        if word in _A_AN_INITIAL_VOWEL_SOUND_WORDS or word.startswith(
+            silent_h_prefixes
+        ):
+            expected = "an"
+        elif word.startswith(
+            _A_AN_Y_SOUND_PREFIXES + _A_AN_INITIAL_CONSONANT_SOUND_PREFIXES
+        ):
+            expected = "a"
+        elif word[0] in "aeiou":
+            expected = "an"
+        else:
+            expected = "a"
+
+        if article.lower() == expected:
+            continue
+        start, end = found.span("article")
+        candidate = _make_match(
+            text,
+            start,
+            end,
+            expected,
+            f'Use "{expected}" before a word with this initial sound.',
+        )
+        if not any(_overlaps(candidate, existing) for existing in candidates):
+            candidates.append(candidate)
     return candidates
 
 
@@ -679,6 +846,7 @@ def enhance_matches(
 
     candidates = _context_matches(text)
     candidates.extend(_confusion_matches(text))
+    candidates.extend(_article_matches(text, language))
     candidates.extend(_to_too_two_matches(text))
     candidates.extend(_agreement_matches(text, language))
     candidates.sort(key=lambda item: (item["offset"], item["length"]))

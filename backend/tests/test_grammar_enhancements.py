@@ -197,6 +197,84 @@ def test_high_confidence_confusion_pairs_are_detected(text, expected):
     "text, expected",
     [
         (
+            "I don't want to loose my keys.",
+            ("loose", "lose"),
+        ),
+        (
+            "The shirt has a lose fit.",
+            ("lose", "loose"),
+        ),
+        (
+            "Please except my apology.",
+            ("except", "accept"),
+        ),
+        (
+            "Everyone accept John was invited.",
+            ("accept", "except"),
+        ),
+        (
+            "She gave me a nice complement.",
+            ("complement", "compliment"),
+        ),
+        (
+            "The red shoes compliment her outfit.",
+            ("compliment", "complement"),
+        ),
+    ],
+)
+def test_additional_high_confidence_confusion_pairs_are_detected(text, expected):
+    assert _corrections(text, enhance_matches(text, [])) == [expected]
+
+
+@pytest.mark.parametrize(
+    "text, expected",
+    [
+        (
+            "She ate a apple.",
+            ("a", "an"),
+        ),
+        (
+            "He is an university student.",
+            ("an", "a"),
+        ),
+    ],
+)
+def test_a_an_confusion_is_detected(text, expected):
+    assert _corrections(text, enhance_matches(text, [])) == [expected]
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "I don't want to lose my keys.",
+        "The shirt has a loose fit.",
+        "Please accept my apology.",
+        "Everyone except John was invited.",
+        "She gave me a nice compliment.",
+        "The red shoes complement her outfit.",
+        "She ate an apple.",
+        "He is a university student.",
+        "She waited for an hour.",
+        "He made a useful suggestion.",
+    ],
+)
+def test_new_confusion_rules_do_not_flag_valid_contexts(text):
+    assert enhance_matches(text, []) == []
+
+
+def test_a_an_offsets_use_utf16_units():
+    text = "😀 She ate a apple."
+    matches = enhance_matches(text, [])
+
+    assert _corrections(text, matches) == [("a", "an")]
+    assert matches[0]["offset"] == 11
+    assert matches[0]["length"] == 1
+
+
+@pytest.mark.parametrize(
+    "text, expected",
+    [
+        (
             "The dogs in the yard barks loudly.",
             ("barks", "bark"),
         ),

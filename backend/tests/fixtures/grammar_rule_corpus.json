@@ -121,6 +121,94 @@
     ]
   },
   {
+    "id": "loose-used-as-lose-verb",
+    "language": "en-US",
+    "text": "I don't want to loose my keys.",
+    "expected": [
+      {
+        "original": "loose",
+        "replacement": "lose"
+      }
+    ]
+  },
+  {
+    "id": "lose-used-as-loose-adjective",
+    "language": "en-US",
+    "text": "The shirt has a lose fit.",
+    "expected": [
+      {
+        "original": "lose",
+        "replacement": "loose"
+      }
+    ]
+  },
+  {
+    "id": "except-used-as-accept-verb",
+    "language": "en-US",
+    "text": "Please except my apology.",
+    "expected": [
+      {
+        "original": "except",
+        "replacement": "accept"
+      }
+    ]
+  },
+  {
+    "id": "accept-used-as-except-preposition",
+    "language": "en-US",
+    "text": "Everyone accept John was invited.",
+    "expected": [
+      {
+        "original": "accept",
+        "replacement": "except"
+      }
+    ]
+  },
+  {
+    "id": "complement-used-as-compliment",
+    "language": "en-US",
+    "text": "She gave me a nice complement.",
+    "expected": [
+      {
+        "original": "complement",
+        "replacement": "compliment"
+      }
+    ]
+  },
+  {
+    "id": "compliment-used-as-complement",
+    "language": "en-US",
+    "text": "The red shoes compliment her outfit.",
+    "expected": [
+      {
+        "original": "compliment",
+        "replacement": "complement"
+      }
+    ]
+  },
+  {
+    "id": "a-before-vowel-sound",
+    "language": "en-US",
+    "text": "She ate a apple.",
+    "expected": [
+      {
+        "original": "a",
+        "replacement": "an"
+      }
+    ]
+  },
+  {
+    "id": "an-before-y-sound",
+    "language": "en-US",
+    "text": "He is an university student.",
+    "expected": [
+      {
+        "original": "an",
+        "replacement": "a"
+      }
+    ]
+  },
+  {
     "id": "plural-subject-with-singular-verb",
     "language": "en-US",
     "text": "The dogs in the yard barks loudly.",
@@ -230,6 +318,66 @@
     "id": "valid-effect-noun",
     "language": "en-US",
     "text": "It had a strong effect on sales.",
+    "expected": []
+  },
+  {
+    "id": "valid-lose-verb",
+    "language": "en-US",
+    "text": "I don't want to lose my keys.",
+    "expected": []
+  },
+  {
+    "id": "valid-loose-adjective",
+    "language": "en-US",
+    "text": "The shirt has a loose fit.",
+    "expected": []
+  },
+  {
+    "id": "valid-accept-verb",
+    "language": "en-US",
+    "text": "Please accept my apology.",
+    "expected": []
+  },
+  {
+    "id": "valid-except-preposition",
+    "language": "en-US",
+    "text": "Everyone except John was invited.",
+    "expected": []
+  },
+  {
+    "id": "valid-compliment-noun",
+    "language": "en-US",
+    "text": "She gave me a nice compliment.",
+    "expected": []
+  },
+  {
+    "id": "valid-complement-verb",
+    "language": "en-US",
+    "text": "The red shoes complement her outfit.",
+    "expected": []
+  },
+  {
+    "id": "valid-a-before-y-sound",
+    "language": "en-US",
+    "text": "He is a university student.",
+    "expected": []
+  },
+  {
+    "id": "valid-an-before-vowel-sound",
+    "language": "en-US",
+    "text": "She ate an apple.",
+    "expected": []
+  },
+  {
+    "id": "valid-an-before-silent-h",
+    "language": "en-US",
+    "text": "She waited for an hour.",
+    "expected": []
+  },
+  {
+    "id": "valid-a-before-pronounced-h",
+    "language": "en-US",
+    "text": "He made a hotel reservation.",
     "expected": []
   },
   {
