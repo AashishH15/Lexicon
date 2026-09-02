@@ -98,6 +98,11 @@ export default function ReviewPanel({
   onDismissTransform,
 }) {
   const count = grammarMatches.length;
+  const actionableCount = grammarMatches.filter(
+    (match) =>
+      match.action === "remove" ||
+      (Array.isArray(match.replacements) && Boolean(match.replacements[0])),
+  ).length;
   const [showBloom, setShowBloom] = useState(false);
   const announceRef = useRef(null);
   const [folding, setFolding] = useState(false);
@@ -153,7 +158,7 @@ export default function ReviewPanel({
   }, [activeErrorId]);
 
   return (
-    <div className="flex h-full flex-col px-4 pb-6 pt-4">
+    <div className="lex-review-panel flex h-full min-w-0 flex-col px-4 pb-6 pt-4">
       <div className="flex items-center justify-between gap-3">
         {onCollapse && (
           <button
@@ -315,18 +320,27 @@ export default function ReviewPanel({
                 <div ref={announceRef} aria-live="polite" aria-atomic="true" className="sr-only">
                   {checking ? "Proofreading in progress" : `${count} ${count === 1 ? "issue" : "issues"} found`}
                 </div>
-                <button
-                  type="button"
-                  aria-label={`Accept all ${count} suggestions`}
-                  onClick={() => {
-                    if (folding) return;
-                    setFolding(true);
-                    setTimeout(() => { setFolding(false); onAcceptAll(); }, count * 45 + 350);
-                  }}
-                  className="rounded-full bg-pale-green px-2.5 py-px font-mono text-[10px] uppercase tracking-widest text-pale-green-text transition-colors hover:bg-pale-green/70 focus-visible:ring-1 focus-visible:ring-ink"
-                >
-                  Accept all {count} {count === 1 ? "Suggestion" : "Suggestions"}
-                </button>
+                {actionableCount > 0 && (
+                  <button
+                    type="button"
+                    aria-label={`Accept all ${actionableCount} suggestions`}
+                    onClick={() => {
+                      if (folding) return;
+                      setFolding(true);
+                      setTimeout(
+                        () => {
+                          setFolding(false);
+                          onAcceptAll();
+                        },
+                        actionableCount * 45 + 350,
+                      );
+                    }}
+                    className="rounded-full bg-pale-green px-2.5 py-px font-mono text-[10px] uppercase tracking-widest text-pale-green-text transition-colors hover:bg-pale-green/70 focus-visible:ring-1 focus-visible:ring-ink"
+                  >
+                    Accept all {actionableCount}{" "}
+                    {actionableCount === 1 ? "Suggestion" : "Suggestions"}
+                  </button>
+                )}
                 <button
                   type="button"
                   aria-label="Dismiss all suggestions"

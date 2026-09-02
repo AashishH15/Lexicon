@@ -102,6 +102,80 @@ describe("checkProseQuality / Clichés & Wordiness", () => {
   });
 });
 
+describe("checkProseQuality / Filler & Hedging", () => {
+  it.each([
+    ["This is very important.", "very"],
+    ["I really like this idea.", "really"],
+    ["Actually, the plan works.", "Actually"],
+    ["We just need a minute.", "just"],
+  ])("flags likely filler language in %s", (text, original) => {
+    const result = checkProseQuality(text);
+    const hit = result.find(
+      (m) =>
+        m.category === "Prose Style" &&
+        m.message?.toLowerCase().includes("filler") &&
+        text.slice(m.offset, m.offset + m.length) === original,
+    );
+
+    expect(hit).toBeTruthy();
+    expect(hit.replacements).toEqual([""]);
+    expect(hit.action).toBe("remove");
+  });
+
+  it.each([
+    ["I think this is useful.", "I think", false],
+    ["It seems that the plan works.", "It seems", false],
+    ["Perhaps we should wait.", "Perhaps", true],
+    ["The plan might be delayed.", "might be", false],
+    ["The result is probably correct.", "probably", true],
+  ])("flags hedging language in %s", (text, original, isRemovable) => {
+    const result = checkProseQuality(text);
+    const hit = result.find(
+      (m) =>
+        m.category === "Prose Style" &&
+        m.message?.toLowerCase().includes("hedg") &&
+        text.slice(m.offset, m.offset + m.length) === original,
+    );
+
+    expect(hit).toBeTruthy();
+    if (isRemovable) {
+      expect(hit.replacements).toEqual([""]);
+      expect(hit.action).toBe("remove");
+    } else {
+      expect(hit.replacements).toEqual([]);
+      expect(hit.action).toBeUndefined();
+    }
+  });
+
+  it("does not flag context-dependent words when they are not acting as filler or hedges", () => {
+    const text =
+      "The very idea surprised me. I just arrived. The system actually works. Could you review this?";
+    const result = checkProseQuality(text);
+
+    expect(
+      result.filter(
+        (m) =>
+          m.message?.toLowerCase().includes("filler") ||
+          m.message?.toLowerCase().includes("hedg"),
+      ),
+    ).toHaveLength(0);
+  });
+
+  it("preserves UTF-16-compatible JavaScript offsets for filler matches", () => {
+    const text = "😀 Actually, the plan works.";
+    const result = checkProseQuality(text);
+    const hit = result.find(
+      (m) =>
+        m.message?.toLowerCase().includes("filler") &&
+        text.slice(m.offset, m.offset + m.length) === "Actually",
+    );
+
+    expect(hit).toBeTruthy();
+    expect(hit.offset).toBe(3);
+    expect(hit.length).toBe("Actually".length);
+  });
+});
+
 describe("checkProseQuality / Repetitive Openers", () => {
   it("flags 3 consecutive sentences with the same opener", () => {
     const text = "The cat sat on the mat. The dog ran outside. The bird flew away.";

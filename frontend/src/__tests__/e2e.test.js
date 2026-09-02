@@ -182,6 +182,86 @@ describe("Suggestion accept & dismiss", () => {
     expect(editor.getText()).toBe("the");
   });
 
+  it("removes a filler word and its following space", () => {
+    const text = "This is very important.";
+    editor.commands.setContent(`<p>${text}</p>`);
+    const { map } = buildTextWithMap(editor.state.doc);
+    const match = {
+      id: 0,
+      offset: text.indexOf("very"),
+      length: "very".length,
+      message: "Filler word",
+      replacements: [""],
+      action: "remove",
+    };
+
+    applyGrammarDecorations(editor, [match], map, null);
+    applySuggestion(editor, 0, "", match);
+
+    expect(editor.getText()).toBe("This is important.");
+  });
+
+  it("removes an introductory filler and its comma", () => {
+    const text = "Actually, the plan works.";
+    editor.commands.setContent(`<p>${text}</p>`);
+    const { map } = buildTextWithMap(editor.state.doc);
+    const match = {
+      id: 0,
+      offset: 0,
+      length: "Actually".length,
+      message: "Filler word",
+      replacements: [""],
+      action: "remove",
+    };
+
+    applyGrammarDecorations(editor, [match], map, null);
+    applySuggestion(editor, 0, "", match);
+
+    expect(editor.getText()).toBe("The plan works.");
+  });
+
+  it("capitalizes a removed introductory filler after a paragraph break", () => {
+    const text = "First paragraph\nActually, the plan works.";
+    editor.commands.setContent(
+      "<p>First paragraph</p><p>Actually, the plan works.</p>",
+    );
+    const { map } = buildTextWithMap(editor.state.doc);
+    const match = {
+      id: 0,
+      offset: text.indexOf("Actually"),
+      length: "Actually".length,
+      message: "Filler word",
+      replacements: [""],
+      action: "remove",
+    };
+
+    applyGrammarDecorations(editor, [match], map, null);
+    applySuggestion(editor, 0, "", match);
+
+    expect(buildTextWithMap(editor.state.doc).text).toBe(
+      "First paragraph\nThe plan works.",
+    );
+  });
+
+  it("removes a trailing filler and its separating comma", () => {
+    const text = "The result works, actually.";
+    editor.commands.setContent(`<p>${text}</p>`);
+    const { map } = buildTextWithMap(editor.state.doc);
+    const match = {
+      id: 0,
+      offset: text.indexOf("actually"),
+      length: "actually".length,
+      message: "Filler word",
+      replacements: [""],
+      action: "remove",
+    };
+
+    applyGrammarDecorations(editor, [match], map, null);
+    applySuggestion(editor, 0, "", match);
+
+    expect(editor.getText()).toBe("The result works.");
+  });
+
   it("dismissError removes only the targeted decoration", () => {
     editor.commands.setContent("<p>teh wer</p>");
     const { map } = buildTextWithMap(editor.state.doc);

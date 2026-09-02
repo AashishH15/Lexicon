@@ -1086,9 +1086,9 @@ export default function Settings({
                         Scan Prose &amp; Style
                       </p>
                       <p className="mt-1 font-sans text-xs text-muted">
-                        Detects passive voice, wordy phrases, and repetitive
-                        sentence openers. Turn off to avoid subjective style
-                        flags in clean copy.
+                        Detects passive voice, wordy phrases, filler and
+                        hedging language, and repetitive sentence openers. Turn
+                        off to avoid subjective style flags in clean copy.
                       </p>
                     </div>
                     <div className="pt-0.5">

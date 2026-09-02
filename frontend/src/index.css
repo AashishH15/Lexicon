@@ -1542,6 +1542,26 @@
     overflow-anchor: none;
   }
 
+  /* Keep prose actions readable when the resizable review panel is at its
+     narrowest. Two horizontal buttons leave too little room for the AI label
+     and icon, so stack only prose actions below the compact-width threshold. */
+  .lex-review-panel {
+    container-type: inline-size;
+  }
+
+  @container (max-width: 18rem) {
+    .lex-review-panel .lex-prose-actions {
+      align-items: stretch;
+      flex-direction: column;
+    }
+
+    .lex-review-panel .lex-prose-actions > button {
+      flex: none;
+      min-width: 0;
+      width: 100%;
+    }
+  }
+
   @keyframes lex-card-slide-out {
     0% {
       opacity: 1;

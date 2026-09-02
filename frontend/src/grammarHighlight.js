@@ -123,6 +123,96 @@ export function findErrorRange(editor, id) {
   return { from: found.from, to: found.to };
 }
 
+export function getSuggestionRange(editor, id, match = null) {
+  const range = findErrorRange(editor, id);
+  if (!range || match?.action !== "remove") {
+    return range;
+  }
+
+  const doc = editor.state.doc;
+  let before = "";
+  if (range.from > 1) {
+    before = doc.textBetween(range.from - 2, range.from, "\n", "\n");
+  } else if (range.from > 0) {
+    before = doc.textBetween(range.from - 1, range.from, "\n", "\n");
+  }
+  const after =
+    range.to < doc.content.size
+      ? doc.textBetween(
+          range.to,
+          Math.min(doc.content.size, range.to + 32),
+          "\n",
+          "\n",
+        )
+      : "";
+
+  let from = range.from;
+  let to = range.to;
+  const punctuationSuffix = after.match(/^[,;:][ \t]*/);
+  const whitespaceSuffix = after.match(/^[ \t]+/);
+  const punctuationPrefix = before.match(/[,;:][ \t]$/);
+
+  if (punctuationSuffix) {
+    to += punctuationSuffix[0].length;
+  } else if (whitespaceSuffix) {
+    to += whitespaceSuffix[0].length;
+  } else if (
+    punctuationPrefix &&
+    (after === "" || /^[.!?]/.test(after))
+  ) {
+    from -= punctuationPrefix[0].length;
+  } else if (/[ \t]$/.test(before)) {
+    from -= 1;
+  }
+
+  return { from, to };
+}
+
+export function getSuggestionReplacement(editor, range, replacement, match = null) {
+  if (match?.action !== "remove") {
+    return replacement;
+  }
+
+  const doc = editor.state.doc;
+  const beforeText = doc.textBetween(0, range.from, "\n", "\n");
+  const before = beforeText.trimEnd();
+  const next = doc.textBetween(
+    range.to,
+    Math.min(doc.content.size, range.to + 1),
+    "\n",
+    "\n",
+  );
+  const startsSentence =
+    !before ||
+    /[.!?]$/.test(before) ||
+    /\n[ \t]*$/.test(beforeText);
+
+  if (startsSentence && /^[a-z]$/.test(next)) {
+    return next.toUpperCase();
+  }
+  return "";
+}
+
+export function getSuggestionEdit(editor, id, replacement, match = null) {
+  const range = getSuggestionRange(editor, id, match);
+  if (!range) {
+    return null;
+  }
+
+  const appliedReplacement = getSuggestionReplacement(
+    editor,
+    range,
+    replacement,
+    match,
+  );
+  const editRange =
+    match?.action === "remove" && appliedReplacement
+      ? { ...range, to: range.to + 1 }
+      : range;
+
+  return { ...editRange, replacement: appliedReplacement };
+}
+
 export function dismissError(editor, id) {
   const tr = editor.state.tr.setMeta(grammarPluginKey, { removeId: id });
   editor.view.dispatch(tr);
@@ -154,15 +244,18 @@ export function focusError(editor, id, category) {
   }, 1200);
 }
 
-export function applySuggestion(editor, id, replacement) {
-  const range = findErrorRange(editor, id);
-  if (!range) {
+export function applySuggestion(editor, id, replacement, match = null) {
+  const edit = getSuggestionEdit(editor, id, replacement, match);
+  if (!edit) {
     return;
   }
   editor
     .chain()
     .focus()
-    .insertContentAt({ from: range.from, to: range.to }, replacement)
+    .insertContentAt(
+      { from: edit.from, to: edit.to },
+      edit.replacement,
+    )
     .command(({ tr, dispatch }) => {
       if (dispatch) {
         tr.setMeta(grammarPluginKey, { removeId: id });

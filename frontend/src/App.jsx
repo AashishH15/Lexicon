@@ -41,7 +41,12 @@ import { SETTINGS_DEFAULTS } from "./Settings.jsx";
 const Settings = lazy(() => import("./Settings.jsx"));
 const AiSetupModal = lazy(() => import("./AiSetupModal.jsx"));
 import useTransform from "./useTransform.js";
-import { isAiTool, promptForTool, ACTIVE_VOICE_PROMPT } from "./prompts.js";
+import {
+  isAiTool,
+  promptForTool,
+  ACTIVE_VOICE_PROMPT,
+  PROSE_CLARITY_PROMPT,
+} from "./prompts.js";
 import { marked } from "marked";
 import {
   Gear,
@@ -100,6 +105,7 @@ import {
   applyGrammarDecorations,
   clearGrammarDecorations,
   applySuggestion,
+  getSuggestionEdit,
   dismissError,
   focusError,
   findErrorAt,
@@ -1372,12 +1378,10 @@ export default function App() {
 
       const proseMatches = proseScanEnabled ? checkProseQuality(text) : [];
       for (const pm of proseMatches) {
-        if (pm.message.toLowerCase().includes("passive voice")) {
-          const ctx = extractSentenceContext(text, pm.offset);
-          pm.sentence = ctx.text;
-          pm.sentenceOffset = ctx.offset;
-          pm.sentenceLength = ctx.length;
-        }
+        const ctx = extractSentenceContext(text, pm.offset);
+        pm.sentence = ctx.text;
+        pm.sentenceOffset = ctx.offset;
+        pm.sentenceLength = ctx.length;
       }
       const allRaw = [...rawMatches, ...proseMatches];
       const matches = allRaw
@@ -1414,7 +1418,9 @@ export default function App() {
     if (!editor) {
       return;
     }
-    if (match.sentenceOffset != null && match.sentenceLength != null) {
+    if (match.action === "remove") {
+      applySuggestion(editor, match.id, "", match);
+    } else if (match.sentenceOffset != null && match.sentenceLength != null) {
       const { map } = buildTextWithMap(editor.state.doc);
       const from = map[match.sentenceOffset];
       const last = map[match.sentenceOffset + match.sentenceLength - 1];
@@ -1429,10 +1435,10 @@ export default function App() {
           })
           .run();
       } else {
-        applySuggestion(editor, match.id, replacement);
+        applySuggestion(editor, match.id, replacement, match);
       }
     } else {
-      applySuggestion(editor, match.id, replacement);
+      applySuggestion(editor, match.id, replacement, match);
     }
     setGrammarMatches((current) => {
       const next = current.filter((m) => m.id !== match.id);
@@ -1520,19 +1526,19 @@ export default function App() {
     // all not-yet-applied matches, their original positions stay valid, so a
     // replacement of one length can't corrupt a later match's range the way
     // sequential left-to-right edits do.
-    const { map } = buildTextWithMap(editor.state.doc);
     const edits = grammarMatches
       .map((match) => {
-        const replacement = match.replacements && match.replacements[0];
-        if (!replacement) {
+        const isRemoval = match.action === "remove";
+        const suggestedReplacement = isRemoval ? "" : match.replacements?.[0];
+        if (!isRemoval && !suggestedReplacement) {
           return null;
         }
-        const from = map[match.offset];
-        const last = map[match.offset + match.length - 1];
-        if (from == null || last == null) {
-          return null;
-        }
-        return { from, to: last + 1, replacement };
+        return getSuggestionEdit(
+          editor,
+          match.id,
+          suggestedReplacement,
+          match,
+        );
       })
       .filter(Boolean)
       .sort((a, b) => b.from - a.from);
@@ -1566,11 +1572,12 @@ export default function App() {
     runGrammarCheck();
   }
 
-  async function handleAiRewrite(sentence) {
+  async function handleAiRewrite(sentence, mode = "activeVoice") {
     if (!aiConfigured) return null;
     try {
       const res = await transformText({
-        prompt: ACTIVE_VOICE_PROMPT,
+        prompt:
+          mode === "prose" ? PROSE_CLARITY_PROMPT : ACTIVE_VOICE_PROMPT,
         text: sentence,
         modelKey: null,
         backend: null,

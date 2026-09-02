@@ -190,6 +190,11 @@ export const ACTIVE_VOICE_PROMPT =
   "Rewrite the following sentence in the active voice. Make the subject perform the action directly. " +
   "Output only the rewritten sentence and nothing else. No preamble, no quotation marks.";
 
+export const PROSE_CLARITY_PROMPT =
+  "Rewrite the following sentence to be clearer, more direct, and more concise. Remove unnecessary filler and hedging, " +
+  "but preserve the original meaning and any uncertainty that is factually important. Output only the rewritten sentence " +
+  "and nothing else. No preamble, no quotation marks.";
+
 export function promptForTool(name) {
   // Check custom tools first
   const customTools = getCustomTools();

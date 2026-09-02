@@ -8,6 +8,23 @@ function findMatches(re, text) {
   return results;
 }
 
+function findCapturedMatches(re, text, captureIndex = 1) {
+  const results = [];
+  const regex = new RegExp(re.source, re.flags.includes("g") ? re.flags : re.flags + "g");
+  let match;
+  while ((match = regex.exec(text)) !== null) {
+    const original = match[captureIndex];
+    if (!original) continue;
+    const relativeOffset = match[0].indexOf(original);
+    results.push({
+      offset: match.index + relativeOffset,
+      length: original.length,
+      original,
+    });
+  }
+  return results;
+}
+
 const AUXILIARY = "am|is|are|was|were|be|been|being";
 
 const IRREGULAR_PARTICIPLES = [
@@ -124,6 +141,77 @@ function detectClichés(text) {
   return matches;
 }
 
+const FILLER_PATTERNS = [
+  {
+    pattern: /\b(very)\b(?=\s+(?:good|bad|important|big|small|large|difficult|hard|easy|clear|obvious|interesting|useful|helpful|simple|complex|likely|unlikely|necessary|possible|impossible|different|same|sure|true|certain|ready|happy|sad|tired|busy|nice|new|old)\b)/gi,
+    message: "Filler intensifier: consider using a stronger, more precise word.",
+    action: "remove",
+  },
+  {
+    pattern: /\b(really)\b(?=\s+(?:good|bad|important|interesting|useful|helpful|simple|complex|likely|unlikely|clear|obvious|like|love|want|need|think|believe|feel|know|understand|enjoy|hate|hope|wish|prefer|seem|matter|work|help)\b)/gi,
+    message: "Filler intensifier: consider using a stronger, more precise word.",
+    action: "remove",
+  },
+  {
+    pattern: /\b(just)\b(?=\s+(?:need|want|try|hope|think|feel|have|seem|mean|say|ask|wonder|look|use|make|start|started)\b)/gi,
+    message: "Possible filler word: remove it if it does not add meaning.",
+    action: "remove",
+  },
+  {
+    pattern: /(?:^|[.!?]\s+|,\s+|\n+\s*|^\W+)(actually)\b/gi,
+    message: "Possible filler word: remove it if it does not add meaning.",
+    action: "remove",
+  },
+];
+
+function detectFillerWords(text) {
+  const matches = [];
+  for (const filler of FILLER_PATTERNS) {
+    for (const match of findCapturedMatches(filler.pattern, text)) {
+      matches.push({
+        offset: match.offset,
+        length: match.length,
+        message: filler.message,
+        replacements: filler.action === "remove" ? [""] : [],
+        category: "Prose Style",
+        ...(filler.action ? { action: filler.action } : {}),
+      });
+    }
+  }
+  return matches;
+}
+
+const HEDGE_PATTERNS = [
+  { pattern: /\b(I\s+(?:think|believe))\b/gi },
+  { pattern: /\b(It\s+(?:seems?|appears?))\b/gi },
+  {
+    pattern: /(?:^|[.!?]\s+|,\s+|\n+\s*|^\W+)(perhaps|maybe)\b/gi,
+    action: "remove",
+  },
+  { pattern: /\b((?:might|may|could)\s+be)\b/gi },
+  {
+    pattern: /\b(probably|possibly|somewhat)\b/gi,
+    action: "remove",
+  },
+];
+
+function detectHedging(text) {
+  const matches = [];
+  for (const hedge of HEDGE_PATTERNS) {
+    for (const match of findCapturedMatches(hedge.pattern, text)) {
+      matches.push({
+        offset: match.offset,
+        length: match.length,
+        message: "Hedging language: state this more directly when you can.",
+        replacements: hedge.action === "remove" ? [""] : [],
+        category: "Prose Style",
+        ...(hedge.action ? { action: hedge.action } : {}),
+      });
+    }
+  }
+  return matches;
+}
+
 const OPENER_STREAK_MIN = 3;
 
 function detectRepetitiveOpeners(text) {
@@ -167,6 +255,8 @@ export function checkProseQuality(text) {
   return [
     ...detectPassiveVoice(text),
     ...detectClichés(text),
+    ...detectFillerWords(text),
+    ...detectHedging(text),
     ...detectRepetitiveOpeners(text),
   ];
 }

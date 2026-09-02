@@ -27,7 +27,10 @@ export default function SuggestionCard({
   onLocate,
   onAiRewrite,
 }) {
-  const replacement = match.replacements[0];
+  const hasReplacement =
+    Array.isArray(match.replacements) && match.replacements.length > 0;
+  const isRemoval = match.action === "remove";
+  const replacement = hasReplacement ? match.replacements[0] : null;
   const badgeStyle = getCategoryBadgeStyle(match.category);
   const [exiting, setExiting] = useState(false);
   const [entered, setEntered] = useState(false);
@@ -38,13 +41,20 @@ export default function SuggestionCard({
 
   const isPassive =
     match.category === "Prose Style" &&
-    match.message?.toLowerCase().includes("passive") &&
+    match.message?.toLowerCase().includes("passive");
+  const canAiRewrite =
+    match.category === "Prose Style" &&
+    !hasReplacement &&
+    !isRemoval &&
     match.sentence &&
     onAiRewrite;
 
   async function handleAiRewrite() {
     setAiLoading(true);
-    const result = await onAiRewrite(match.sentence);
+    const result = await onAiRewrite(
+      match.sentence,
+      isPassive ? "activeVoice" : "prose",
+    );
     setAiLoading(false);
     if (result) setAiResult(result);
   }
@@ -100,18 +110,23 @@ export default function SuggestionCard({
               </span>
             </>
           )}
-          {!aiResult && replacement && (
+          {!aiResult && (hasReplacement || isRemoval) && (
             <>
               <span className="mx-1 text-muted">&rarr;</span>
               <span className="rounded bg-pale-green px-1 text-pale-green-text">
-                {replacement}
+                {isRemoval ? "Remove" : replacement}
               </span>
             </>
           )}
         </p>
       </div>
 
-      <div className="mt-4 flex items-center gap-3">
+      <div
+        className={
+          "lex-suggestion-actions mt-4 flex min-w-0 items-center gap-3 " +
+          (match.category === "Prose Style" ? "lex-prose-actions" : "")
+        }
+      >
         {aiResult ? (
           <button
             type="button"
@@ -125,30 +140,39 @@ export default function SuggestionCard({
           >
             Accept
           </button>
-        ) : replacement && !isPassive ? (
+        ) : (hasReplacement || isRemoval) && !isPassive ? (
           <button
             type="button"
-            aria-label="Accept replacement"
+            aria-label={
+              isRemoval ? "Remove flagged language" : "Accept replacement"
+            }
             onClick={(event) => {
               event.stopPropagation();
               setExiting(true);
-              setTimeout(() => onApply(match, replacement), 280);
+              setTimeout(
+                () => onApply(match, isRemoval ? "" : replacement),
+                280,
+              );
             }}
             className="flex-1 rounded bg-ink py-2 font-sans text-sm font-medium text-white transition-transform duration-150 focus-visible:ring-1 focus-visible:ring-ink active:scale-[0.98]"
           >
-            Accept
+            {isRemoval ? "Remove" : "Accept"}
           </button>
         ) : null}
-        {isPassive && !aiResult && (
+        {canAiRewrite && !aiResult && (
           <button
             type="button"
-            aria-label="Rewrite in active voice with AI"
+            aria-label={
+              isPassive
+                ? "Rewrite in active voice with Lex"
+                : "Rewrite prose suggestion with Lex"
+            }
             disabled={aiLoading}
             onClick={(event) => {
               event.stopPropagation();
               handleAiRewrite();
             }}
-            className="flex-1 rounded border border-hairline bg-canvas py-2 font-sans text-xs font-medium text-ink transition-colors hover:bg-hairline/60 active:scale-[0.98] disabled:opacity-50"
+            className="min-w-0 flex-1 rounded border border-hairline bg-canvas py-2 font-sans text-xs font-medium text-ink transition-colors hover:bg-hairline/60 active:scale-[0.98] disabled:opacity-50"
           >
             {aiLoading ? (
               <span className="inline-flex items-center justify-center gap-1.5 text-muted">
@@ -156,9 +180,9 @@ export default function SuggestionCard({
                 Rewriting&hellip;
               </span>
             ) : (
-              <span className="inline-flex items-center justify-center gap-1.5">
+              <span className="inline-flex items-center justify-center gap-1.5 whitespace-nowrap">
                 <MagicWand size={13} weight="bold" className="text-muted" />
-                Active Voice
+                {isPassive ? "Active Voice" : "Rewrite with Lex"}
               </span>
             )}
           </button>
