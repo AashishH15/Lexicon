@@ -125,6 +125,7 @@ def test_http_client_posts_form_data_and_normalizes_response(
     }
     assert requests_seen[0]["text"] == ["The + emoji 😀"]
     assert requests_seen[0]["language"] == ["en-US"]
+    assert requests_seen[0]["level"] == ["picky"]
 
 
 def test_http_client_supports_server_url_with_v2_suffix(

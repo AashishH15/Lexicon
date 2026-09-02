@@ -359,7 +359,7 @@ def _post_check(url, text, language):
         raise RuntimeError("LanguageTool check URL is not configured.")
     response = requests.post(
         url,
-        data={"text": text, "language": language},
+        data={"text": text, "language": language, "level": "picky"},
         timeout=REQUEST_TIMEOUT,
     )
     response.raise_for_status()
