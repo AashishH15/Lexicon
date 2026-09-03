@@ -126,6 +126,19 @@ def test_http_client_posts_form_data_and_normalizes_response(
     assert requests_seen[0]["text"] == ["The + emoji 😀"]
     assert requests_seen[0]["language"] == ["en-US"]
     assert requests_seen[0]["level"] == ["picky"]
+    assert "disabledRules" not in requests_seen[0]
+
+
+def test_http_client_sends_disabled_rules_when_blocklist_is_set(
+    monkeypatch, fake_language_tool_server
+):
+    base_url, requests_seen = fake_language_tool_server
+    monkeypatch.setattr(languagetool, "CHECK_URL", f"{base_url}/v2/check")
+    monkeypatch.setattr(languagetool, "DISABLED_RULES", ("TEST_RULE", "OTHER_RULE"))
+
+    languagetool._post_check(f"{base_url}/v2/check", "text", "en-US")
+
+    assert requests_seen[0]["disabledRules"] == ["TEST_RULE,OTHER_RULE"]
 
 
 def test_http_client_supports_server_url_with_v2_suffix(

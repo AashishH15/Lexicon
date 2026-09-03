@@ -2,7 +2,7 @@
   {
     "id": "prose-clean-bandwidth",
     "original": "bandwidth",
-    "message": "Wordy phrase: consider simplifying to \"capacity\""
+    "message": "Cliché phrase: consider rewriting this in your own words."
   },
   {
     "id": "prose-clean-cogito",
@@ -17,7 +17,7 @@
   {
     "id": "prose-clean-practice",
     "original": "best practice",
-    "message": "Wordy phrase: consider simplifying to \"standard practice\""
+    "message": "Cliché phrase: consider rewriting this in your own words."
   },
   {
     "id": "prose-clean-idea",

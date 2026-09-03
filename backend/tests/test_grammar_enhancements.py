@@ -9,8 +9,9 @@ BACKEND_DIR = Path(__file__).resolve().parents[1]
 if str(BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(BACKEND_DIR))
 
-from grammar_enhancements import enhance_matches  # noqa: E402
 from grammar_rule_benchmark import _load_cases, _score_case  # noqa: E402
+
+from grammar_enhancements import enhance_matches  # noqa: E402
 
 
 def _corrections(text, matches):
@@ -241,6 +242,34 @@ def test_additional_high_confidence_confusion_pairs_are_detected(text, expected)
 )
 def test_a_an_confusion_is_detected(text, expected):
     assert _corrections(text, enhance_matches(text, [])) == [expected]
+
+
+@pytest.mark.parametrize(
+    "text, expected",
+    [
+        (
+            "She works a 8-hour day twice a week.",
+            ("a", "an"),
+        ),
+        (
+            "It was an 110-page report.",
+            ("an", "a"),
+        ),
+    ],
+)
+def test_a_an_confusion_before_numbers_is_detected(text, expected):
+    assert _corrections(text, enhance_matches(text, [])) == [expected]
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "She works an 8-hour day twice a week.",
+        "It was a 110-page report.",
+    ],
+)
+def test_a_an_before_numbers_does_not_flag_valid_contexts(text):
+    assert enhance_matches(text, []) == []
 
 
 @pytest.mark.parametrize(
@@ -566,6 +595,54 @@ def test_subject_verb_agreement_survives_intervening_prepositional_phrases(
 )
 def test_general_pos_lite_agreement_handles_unlisted_subjects(text, expected):
     assert _corrections(text, enhance_matches(text, [])) == [expected]
+
+
+@pytest.mark.parametrize(
+    "text, expected",
+    [
+        (
+            "Dogs in the yard barks loudly.",
+            ("barks", "bark"),
+        ),
+        (
+            "Students near the gym eats lunch.",
+            ("eats", "eat"),
+        ),
+        (
+            "Files on the server needs review.",
+            ("needs", "need"),
+        ),
+        (
+            "Children in the park is noisy.",
+            ("is", "are"),
+        ),
+        (
+            "People in the lobby has questions.",
+            ("has", "have"),
+        ),
+        (
+            "Managers in the office has concerns.",
+            ("has", "have"),
+        ),
+    ],
+)
+def test_bare_plural_subjects_use_plural_verbs(text, expected):
+    assert _corrections(text, enhance_matches(text, [])) == [expected]
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Dogs in the yard bark loudly.",
+        "Reports from the team arrive daily.",
+        "People in the lobby wait patiently.",
+        "News from the station is surprising.",
+        "Williams in the office works late.",
+        "The dogs in the yard bark loudly.",
+    ],
+)
+def test_bare_plural_agreement_does_not_flag_valid_contexts(text):
+    assert enhance_matches(text, []) == []
 
 
 @pytest.mark.parametrize(

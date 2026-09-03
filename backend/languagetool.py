@@ -17,6 +17,10 @@ LANGUAGETOOL_SERVER_CLASS = "org.languagetool.server.HTTPServer"
 LANGUAGETOOL_SERVER_JAR = "languagetool-server.jar"
 LOCAL_SERVER_HOST = "127.0.0.1"
 
+# Blocked LanguageTool rule IDs. Empty until clean-set data needs a block.
+# Add an ID only with a clean-set sentence that shows the false flag.
+DISABLED_RULES: tuple[str, ...] = ()
+
 SERVER_URL = os.environ.get("LANGUAGETOOL_SERVER", "").strip().rstrip("/")
 CHECK_URL = (
     SERVER_URL
@@ -350,9 +354,12 @@ def _check_local(text, language):
 def _post_check(url, text, language):
     if not url:
         raise RuntimeError("LanguageTool check URL is not configured.")
+    data = {"text": text, "language": language, "level": "picky"}
+    if DISABLED_RULES:
+        data["disabledRules"] = ",".join(DISABLED_RULES)
     response = requests.post(
         url,
-        data={"text": text, "language": language, "level": "picky"},
+        data=data,
         timeout=REQUEST_TIMEOUT,
     )
     response.raise_for_status()

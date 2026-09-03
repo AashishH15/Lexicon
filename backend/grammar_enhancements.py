@@ -92,7 +92,7 @@ _A_AN_INITIAL_VOWEL_SOUND_WORDS = {
 _A_AN_INITIAL_CONSONANT_SOUND_PREFIXES = ("uk", "url", "usb", "ufo")
 _A_AN_VARIABLE_H_WORDS = {"historic", "historical"}
 _A_AN_PATTERN = re.compile(
-    r"\b(?P<article>a|an)[ \t]+(?P<word>[A-Za-z][A-Za-z'-]*)\b",
+    r"\b(?P<article>a|an)[ \t]+(?P<word>[A-Za-z0-9][A-Za-z0-9'-]*)\b",
     re.IGNORECASE,
 )
 _DOUBLE_NEGATIVE_TRIGGER = (
@@ -921,7 +921,15 @@ def _article_matches(text: str, language: str) -> list[dict]:
         if word in _A_AN_VARIABLE_H_WORDS:
             continue
 
-        if word in _A_AN_INITIAL_VOWEL_SOUND_WORDS or word.startswith(
+        if word[0].isdigit():
+            # Eight and eighty sound start with a vowel. Exact 11 and 18
+            # sound like eleven and eighteen. Other numbers start with
+            # a consonant sound, even 110 (one hundred ten).
+            if re.match(r"8|(?:11|18)(?!\d)", word):
+                expected = "an"
+            else:
+                expected = "a"
+        elif word in _A_AN_INITIAL_VOWEL_SOUND_WORDS or word.startswith(
             silent_h_prefixes
         ):
             expected = "an"
@@ -1068,6 +1076,59 @@ def _pos_lite_subject_number(determiner: str, subject: str) -> str | None:
     if head.endswith("s"):
         return "plural"
     return "singular"
+
+
+_BARE_PLURAL_SUBJECTS = sorted(
+    set(_PLURAL_DISTANCE_SUBJECTS.split("|")) | _POS_LITE_IRREGULAR_PLURALS,
+    key=len,
+    reverse=True,
+)
+_BARE_PLURAL_VERBS = "|".join(
+    sorted(set(_PLURAL_VERB_REPLACEMENTS), key=len, reverse=True)
+)
+_BARE_PLURAL_PATTERN = re.compile(
+    rf"\b(?P<subject>{'|'.join(_BARE_PLURAL_SUBJECTS)})[ \t]+"
+    rf"(?:{_POS_LITE_PREPOSITIONS})[ \t]+"
+    rf"(?:(?:{_POS_LITE_DETERMINERS})[ \t]+)?"
+    rf"(?:[A-Za-z][A-Za-z'-]*[ \t]+){{0,8}}?"
+    rf"(?P<word>{_BARE_PLURAL_VERBS})\b",
+    re.IGNORECASE,
+)
+
+
+def _bare_plural_agreement_matches(text: str) -> list[dict]:
+    """Find plural-verb errors for bare plural subjects at sentence start."""
+    candidates: list[dict] = []
+    for sentence in re.finditer(r"[^.!?\r\n]+", text):
+        sentence_text = sentence.group(0)
+        leading = re.match(r"[^A-Za-z]*", sentence_text)
+        start = sentence.start() + (leading.end() if leading else 0)
+        found = _BARE_PLURAL_PATTERN.match(text, start)
+        if not found:
+            continue
+
+        matched_text = found.group(0)
+        if re.search(
+            r"\b(?:and|or|nor|but|that|which|who|whom|whose)\b",
+            matched_text,
+            re.IGNORECASE,
+        ):
+            continue
+        original = found.group("word").lower()
+        replacement = _PLURAL_VERB_REPLACEMENTS.get(original)
+        if replacement is None:
+            continue
+        verb_start, verb_end = found.span("word")
+        candidate = _make_match(
+            text,
+            verb_start,
+            verb_end,
+            replacement,
+            "Use a plural verb with this plural subject.",
+        )
+        if not any(_overlaps(candidate, existing) for existing in candidates):
+            candidates.append(candidate)
+    return candidates
 
 
 def _pos_lite_agreement_matches(text: str) -> list[dict]:
@@ -1264,6 +1325,7 @@ def _agreement_matches(text: str, language: str) -> list[dict]:
         "Use a singular verb with this singular subject.",
     )
     candidates.extend(_pos_lite_agreement_matches(text))
+    candidates.extend(_bare_plural_agreement_matches(text))
 
     return candidates
 
