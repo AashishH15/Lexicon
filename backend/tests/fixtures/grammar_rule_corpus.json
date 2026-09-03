@@ -319,6 +319,138 @@
     ]
   },
   {
+    "id": "generic-singular-distance-proposal",
+    "language": "en-US",
+    "text": "The proposal from the engineers are incomplete.",
+    "expected": [
+      {
+        "original": "are",
+        "replacement": "is"
+      }
+    ]
+  },
+  {
+    "id": "generic-plural-distance-engineers",
+    "language": "en-US",
+    "text": "The engineers in the laboratory works efficiently.",
+    "expected": [
+      {
+        "original": "works",
+        "replacement": "work"
+      }
+    ]
+  },
+  {
+    "id": "generic-plural-distance-results",
+    "language": "en-US",
+    "text": "The results of the latest experiment shows a problem.",
+    "expected": [
+      {
+        "original": "shows",
+        "replacement": "show"
+      }
+    ]
+  },
+  {
+    "id": "generic-singular-distance-result",
+    "language": "en-US",
+    "text": "The result of the latest experiments show a problem.",
+    "expected": [
+      {
+        "original": "show",
+        "replacement": "shows"
+      }
+    ]
+  },
+  {
+    "id": "generic-irregular-plural-distance-children",
+    "language": "en-US",
+    "text": "The children in the courtyard is noisy.",
+    "expected": [
+      {
+        "original": "is",
+        "replacement": "are"
+      }
+    ]
+  },
+  {
+    "id": "generic-singular-distance-device",
+    "language": "en-US",
+    "text": "The device from the labs have errors.",
+    "expected": [
+      {
+        "original": "have",
+        "replacement": "has"
+      }
+    ]
+  },
+  {
+    "id": "generic-singular-distance-researcher",
+    "language": "en-US",
+    "text": "The researcher in the labs do careful work.",
+    "expected": [
+      {
+        "original": "do",
+        "replacement": "does"
+      }
+    ]
+  },
+  {
+    "id": "generic-plural-distance-adjective",
+    "language": "en-US",
+    "text": "The senior researchers in the laboratory works efficiently.",
+    "expected": [
+      {
+        "original": "works",
+        "replacement": "work"
+      }
+    ]
+  },
+  {
+    "id": "generic-singular-distance-analysis",
+    "language": "en-US",
+    "text": "The analysis of the samples are complete.",
+    "expected": [
+      {
+        "original": "are",
+        "replacement": "is"
+      }
+    ]
+  },
+  {
+    "id": "generic-plural-distance-analyses",
+    "language": "en-US",
+    "text": "The analyses of the samples is complete.",
+    "expected": [
+      {
+        "original": "is",
+        "replacement": "are"
+      }
+    ]
+  },
+  {
+    "id": "generic-plural-determiner-researchers",
+    "language": "en-US",
+    "text": "Many researchers in the laboratory works efficiently.",
+    "expected": [
+      {
+        "original": "works",
+        "replacement": "work"
+      }
+    ]
+  },
+  {
+    "id": "generic-singular-determiner-researcher",
+    "language": "en-US",
+    "text": "Each researcher in the laboratory work efficiently.",
+    "expected": [
+      {
+        "original": "work",
+        "replacement": "works"
+      }
+    ]
+  },
+  {
     "id": "unicode-offset-before-confusion",
     "language": "en-US",
     "text": "😀 Please advice me.",
@@ -574,6 +706,72 @@
     "id": "paragraph-boundary-is-not-subject-context",
     "language": "en-US",
     "text": "The dogs in the yard\nbarks loudly.",
+    "expected": []
+  },
+  {
+    "id": "valid-generic-singular-distance",
+    "language": "en-US",
+    "text": "The proposal from the engineers is incomplete.",
+    "expected": []
+  },
+  {
+    "id": "valid-generic-plural-distance",
+    "language": "en-US",
+    "text": "The engineers in the laboratory work efficiently.",
+    "expected": []
+  },
+  {
+    "id": "valid-generic-plural-results",
+    "language": "en-US",
+    "text": "The results of the latest experiment show a problem.",
+    "expected": []
+  },
+  {
+    "id": "valid-generic-singular-result",
+    "language": "en-US",
+    "text": "The result of the latest experiments shows a problem.",
+    "expected": []
+  },
+  {
+    "id": "valid-generic-singular-analysis",
+    "language": "en-US",
+    "text": "The analysis of the samples is complete.",
+    "expected": []
+  },
+  {
+    "id": "valid-generic-singular-news",
+    "language": "en-US",
+    "text": "The news from the station is surprising.",
+    "expected": []
+  },
+  {
+    "id": "valid-generic-no-distance",
+    "language": "en-US",
+    "text": "The engineers work efficiently.",
+    "expected": []
+  },
+  {
+    "id": "valid-generic-object-noun",
+    "language": "en-US",
+    "text": "They reviewed the proposal from the engineers.",
+    "expected": []
+  },
+  {
+    "id": "valid-generic-relative-clause",
+    "language": "en-US",
+    "text": "The reports from the team that works are complete.",
+    "expected": []
+  },
+  {
+    "id": "valid-generic-series",
+    "language": "en-US",
+    "text": "The series of tests is complete.",
+    "expected": []
+  },
+  {
+    "id": "valid-generic-newline-boundary",
+    "language": "en-US",
+    "text": "The researchers in the lab\nworks efficiently.",
     "expected": []
   },
   {

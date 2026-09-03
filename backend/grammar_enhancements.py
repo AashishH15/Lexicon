@@ -169,6 +169,163 @@ _SINGULAR_VERB_REPLACEMENTS = {
     "have": "has",
     "do": "does",
 }
+_POS_LITE_DETERMINERS = (
+    "the|a|an|this|that|these|those|my|your|his|her|our|their|"
+    "each|every|either|neither|many|several|few|both"
+)
+_POS_LITE_SINGULAR_DETERMINERS = {
+    "a",
+    "an",
+    "this",
+    "that",
+    "each",
+    "every",
+    "either",
+    "neither",
+}
+_POS_LITE_PLURAL_DETERMINERS = {"these", "those", "many", "several", "few", "both"}
+_POS_LITE_PREPOSITIONS = (
+    "of|in|on|at|by|near|with|from|under|over|behind|beside|between|among|"
+    "inside|outside|within|without|during|after|before|against|into|around|"
+    "through"
+)
+_POS_LITE_IRREGULAR_PLURALS = {
+    "children",
+    "feet",
+    "geese",
+    "men",
+    "mice",
+    "people",
+    "teeth",
+    "women",
+}
+_POS_LITE_AMBIGUOUS_SUBJECTS = {
+    "audience",
+    "class",
+    "committee",
+    "company",
+    "data",
+    "department",
+    "family",
+    "group",
+    "government",
+    "media",
+    "news",
+    "organization",
+    "organisation",
+    "series",
+    "species",
+    "staff",
+    "team",
+}
+_POS_LITE_PLURAL_VERB_REPLACEMENTS = {
+    **_PLURAL_VERB_REPLACEMENTS,
+    "affects": "affect",
+    "allows": "allow",
+    "appears": "appear",
+    "applies": "apply",
+    "carries": "carry",
+    "causes": "cause",
+    "changes": "change",
+    "contains": "contain",
+    "controls": "control",
+    "creates": "create",
+    "depends": "depend",
+    "ends": "end",
+    "follows": "follow",
+    "helps": "help",
+    "improves": "improve",
+    "includes": "include",
+    "keeps": "keep",
+    "leads": "lead",
+    "means": "mean",
+    "matters": "matter",
+    "passes": "pass",
+    "provides": "provide",
+    "reads": "read",
+    "remains": "remain",
+    "requires": "require",
+    "says": "say",
+    "shows": "show",
+    "starts": "start",
+    "studies": "study",
+    "supports": "support",
+    "teaches": "teach",
+    "tries": "try",
+    "watches": "watch",
+    "writes": "write",
+}
+_POS_LITE_SINGULAR_VERB_REPLACEMENTS = {
+    **_SINGULAR_VERB_REPLACEMENTS,
+    "affect": "affects",
+    "allow": "allows",
+    "appear": "appears",
+    "apply": "applies",
+    "bark": "barks",
+    "carry": "carries",
+    "cause": "causes",
+    "change": "changes",
+    "contain": "contains",
+    "control": "controls",
+    "create": "creates",
+    "depend": "depends",
+    "eat": "eats",
+    "end": "ends",
+    "follow": "follows",
+    "help": "helps",
+    "improve": "improves",
+    "include": "includes",
+    "keep": "keeps",
+    "lead": "leads",
+    "live": "lives",
+    "look": "looks",
+    "make": "makes",
+    "matter": "matters",
+    "mean": "means",
+    "need": "needs",
+    "pass": "passes",
+    "play": "plays",
+    "provide": "provides",
+    "read": "reads",
+    "remain": "remains",
+    "require": "requires",
+    "run": "runs",
+    "say": "says",
+    "seem": "seems",
+    "show": "shows",
+    "start": "starts",
+    "study": "studies",
+    "support": "supports",
+    "take": "takes",
+    "teach": "teaches",
+    "try": "tries",
+    "use": "uses",
+    "walk": "walks",
+    "want": "wants",
+    "watch": "watches",
+    "work": "works",
+    "write": "writes",
+}
+_POS_LITE_VERBS = "|".join(
+    sorted(
+        {
+            *set(_POS_LITE_PLURAL_VERB_REPLACEMENTS),
+            *set(_POS_LITE_SINGULAR_VERB_REPLACEMENTS),
+        },
+        key=len,
+        reverse=True,
+    )
+)
+_POS_LITE_DISTANCE_PATTERN = re.compile(
+    rf"\b(?P<determiner>{_POS_LITE_DETERMINERS})[ \t]+"
+    rf"(?P<subject>(?:[A-Za-z][A-Za-z'-]*[ \t]+){{0,5}}?"
+    rf"[A-Za-z][A-Za-z'-]*)[ \t]+"
+    rf"(?:{_POS_LITE_PREPOSITIONS})[ \t]+"
+    rf"(?:(?:{_POS_LITE_DETERMINERS})[ \t]+)?"
+    rf"(?:[A-Za-z][A-Za-z'-]*[ \t]+){{0,8}}?"
+    rf"(?P<word>{_POS_LITE_VERBS})\b",
+    re.IGNORECASE,
+)
 _PAST_FORMS = {
     "receive": "received",
     "walk": "walked",
@@ -865,6 +1022,88 @@ def _add_agreement_matches(
             candidates.append(candidate)
 
 
+def _pos_lite_subject_number(determiner: str, subject: str) -> str | None:
+    """Infer number from a short determiner-plus-head-noun subject."""
+    words = re.findall(r"[A-Za-z][A-Za-z'-]*", subject)
+    if not words or re.search(r"\b(?:and|or|nor)\b", subject, re.IGNORECASE):
+        return None
+
+    head = words[-1].lower()
+    head = re.sub(r"(?:['’]s)$", "", head)
+    if head in _POS_LITE_AMBIGUOUS_SUBJECTS:
+        return None
+    if determiner.lower() in _POS_LITE_SINGULAR_DETERMINERS:
+        return "singular"
+    if determiner.lower() in _POS_LITE_PLURAL_DETERMINERS:
+        return "plural"
+    if head in _POS_LITE_IRREGULAR_PLURALS:
+        return "plural"
+    if head.endswith(("ss", "us", "is")) or head in {
+        "gas",
+        "mathematics",
+        "measles",
+        "physics",
+        "politics",
+        "series",
+        "species",
+    }:
+        return "singular"
+    if head.endswith("s"):
+        return "plural"
+    return "singular"
+
+
+def _pos_lite_agreement_matches(text: str) -> list[dict]:
+    """Find clear agreement errors across a bounded prepositional phrase."""
+    candidates: list[dict] = []
+    for sentence in re.finditer(r"[^.!?\r\n]+", text):
+        sentence_text = sentence.group(0)
+        leading = re.match(r"[^A-Za-z]*", sentence_text)
+        start = sentence.start() + (leading.end() if leading else 0)
+        found = _POS_LITE_DISTANCE_PATTERN.match(text, start)
+        if not found:
+            continue
+
+        matched_text = found.group(0)
+        if re.search(
+            r"\b(?:and|or|nor|but|that|which|who|whom|whose)\b",
+            matched_text,
+            re.IGNORECASE,
+        ):
+            continue
+        number = _pos_lite_subject_number(
+            found.group("determiner"),
+            found.group("subject"),
+        )
+        if number is None:
+            continue
+
+        original = found.group("word").lower()
+        replacements = (
+            _POS_LITE_SINGULAR_VERB_REPLACEMENTS
+            if number == "singular"
+            else _POS_LITE_PLURAL_VERB_REPLACEMENTS
+        )
+        replacement = replacements.get(original)
+        if replacement is None:
+            continue
+        verb_start, verb_end = found.span("word")
+        candidate = _make_match(
+            text,
+            verb_start,
+            verb_end,
+            replacement,
+            (
+                "Use the singular verb with this singular subject."
+                if number == "singular"
+                else "Use the plural verb with this plural subject."
+            ),
+        )
+        if not any(_overlaps(candidate, existing) for existing in candidates):
+            candidates.append(candidate)
+    return candidates
+
+
 def _agreement_matches(text: str, language: str) -> list[dict]:
     candidates: list[dict] = []
 
@@ -983,7 +1222,8 @@ def _agreement_matches(text: str, language: str) -> list[dict]:
             rf"(?P<subject>{_PLURAL_DISTANCE_SUBJECTS})[ \t]+"
             rf"(?:{_DISTANCE_PREPOSITIONS})[ \t]+"
             rf"(?:(?:{_DISTANCE_DETERMINERS})[ \t]+)?"
-            rf"(?:[a-z-]+[ \t]+){{0,3}}"
+            rf"(?:(?!(?:and|or|nor|but|that|which|who|whom|whose)\b)"
+            rf"[a-z-]+[ \t]+){{0,3}}"
             rf"(?P<word>{'|'.join(_PLURAL_VERB_REPLACEMENTS)})\b",
             re.IGNORECASE,
         ),
@@ -998,13 +1238,15 @@ def _agreement_matches(text: str, language: str) -> list[dict]:
             rf"(?P<subject>{_SINGULAR_DISTANCE_SUBJECTS})[ \t]+"
             rf"(?:{_DISTANCE_PREPOSITIONS})[ \t]+"
             rf"(?:(?:{_DISTANCE_DETERMINERS})[ \t]+)?"
-            rf"(?:[a-z-]+[ \t]+){{0,3}}"
+            rf"(?:(?!(?:and|or|nor|but|that|which|who|whom|whose)\b)"
+            rf"[a-z-]+[ \t]+){{0,3}}"
             rf"(?P<word>{'|'.join(_SINGULAR_VERB_REPLACEMENTS)})\b",
             re.IGNORECASE,
         ),
         _SINGULAR_VERB_REPLACEMENTS,
         "Use a singular verb with this singular subject.",
     )
+    candidates.extend(_pos_lite_agreement_matches(text))
 
     return candidates
 

@@ -512,6 +512,95 @@ def test_subject_verb_agreement_survives_intervening_prepositional_phrases(
 
 
 @pytest.mark.parametrize(
+    "text, expected",
+    [
+        (
+            "The proposal from the engineers are incomplete.",
+            ("are", "is"),
+        ),
+        (
+            "The engineers in the laboratory works efficiently.",
+            ("works", "work"),
+        ),
+        (
+            "The results of the latest experiment shows a problem.",
+            ("shows", "show"),
+        ),
+        (
+            "The result of the latest experiments show a problem.",
+            ("show", "shows"),
+        ),
+        (
+            "The children in the courtyard is noisy.",
+            ("is", "are"),
+        ),
+        (
+            "The device from the labs have errors.",
+            ("have", "has"),
+        ),
+        (
+            "The researcher in the labs do careful work.",
+            ("do", "does"),
+        ),
+        (
+            "The senior researchers in the laboratory works efficiently.",
+            ("works", "work"),
+        ),
+        (
+            "The analysis of the samples are complete.",
+            ("are", "is"),
+        ),
+        (
+            "The analyses of the samples is complete.",
+            ("is", "are"),
+        ),
+        (
+            "Many researchers in the laboratory works efficiently.",
+            ("works", "work"),
+        ),
+        (
+            "Each researcher in the laboratory work efficiently.",
+            ("work", "works"),
+        ),
+    ],
+)
+def test_general_pos_lite_agreement_handles_unlisted_subjects(text, expected):
+    assert _corrections(text, enhance_matches(text, [])) == [expected]
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "The proposal from the engineers is incomplete.",
+        "The engineers in the laboratory work efficiently.",
+        "The results of the latest experiment show a problem.",
+        "The result of the latest experiments shows a problem.",
+        "The analysis of the samples is complete.",
+        "The news from the station is surprising.",
+        "The engineers work efficiently.",
+        "They reviewed the proposal from the engineers.",
+        "The reports from the team that works are complete.",
+        "The series of tests is complete.",
+        "The researchers in the lab\nworks efficiently.",
+    ],
+)
+def test_general_pos_lite_agreement_does_not_flag_valid_contexts(text):
+    assert enhance_matches(text, []) == []
+
+
+def test_general_pos_lite_agreement_preserves_utf16_offsets():
+    text = "😀 The researchers in the laboratory works efficiently."
+    matches = enhance_matches(text, [])
+
+    assert _corrections(text, matches) == [("works", "work")]
+    expected_offset = len(
+        "😀 The researchers in the laboratory ".encode("utf-16-le")
+    ) // 2
+    assert matches[0]["offset"] == expected_offset
+    assert matches[0]["length"] == len("works")
+
+
+@pytest.mark.parametrize(
     "text",
     [
         "Please advise me before the meeting.",
