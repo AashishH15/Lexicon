@@ -1,0 +1,182 @@
+[
+  {
+    "id": "prose-clean-bandwidth",
+    "domain": "technical",
+    "text": "The network bandwidth supports ten video calls at once.",
+    "expected": []
+  },
+  {
+    "id": "prose-clean-restart",
+    "domain": "technical",
+    "text": "The server restarts every night at midnight.",
+    "expected": []
+  },
+  {
+    "id": "prose-clean-encrypt",
+    "domain": "technical",
+    "text": "Encrypt sensitive fields before saving them to disk.",
+    "expected": []
+  },
+  {
+    "id": "prose-clean-api",
+    "domain": "technical",
+    "text": "The API returns a response within two seconds.",
+    "expected": []
+  },
+  {
+    "id": "prose-clean-capacity",
+    "domain": "technical",
+    "text": "We need more capacity for video calls.",
+    "expected": []
+  },
+  {
+    "id": "prose-clean-cogito",
+    "domain": "academic",
+    "text": "I think therefore I am.",
+    "expected": []
+  },
+  {
+    "id": "prose-clean-hypothesis",
+    "domain": "academic",
+    "text": "The hypothesis predicts faster recovery with treatment.",
+    "expected": []
+  },
+  {
+    "id": "prose-clean-collected",
+    "domain": "academic",
+    "text": "Researchers collected data over six months.",
+    "expected": []
+  },
+  {
+    "id": "prose-clean-excited",
+    "domain": "academic",
+    "text": "She is excited about the results.",
+    "expected": []
+  },
+  {
+    "id": "prose-clean-interested",
+    "domain": "academic",
+    "text": "He was interested in the offer.",
+    "expected": []
+  },
+  {
+    "id": "prose-clean-budget",
+    "domain": "academic",
+    "text": "The committee approved the budget in May.",
+    "expected": []
+  },
+  {
+    "id": "prose-clean-believe",
+    "domain": "academic",
+    "text": "I believe in ghosts.",
+    "expected": []
+  },
+  {
+    "id": "prose-clean-practice",
+    "domain": "business",
+    "text": "Follow best practice for password storage.",
+    "expected": []
+  },
+  {
+    "id": "prose-clean-revenue",
+    "domain": "business",
+    "text": "Quarterly revenue grew by eight percent.",
+    "expected": []
+  },
+  {
+    "id": "prose-clean-agenda",
+    "domain": "business",
+    "text": "Send the agenda before noon tomorrow.",
+    "expected": []
+  },
+  {
+    "id": "prose-clean-ships",
+    "domain": "business",
+    "text": "Our team ships updates every two weeks.",
+    "expected": []
+  },
+  {
+    "id": "prose-clean-use",
+    "domain": "business",
+    "text": "We use solar power.",
+    "expected": []
+  },
+  {
+    "id": "prose-clean-idea",
+    "domain": "casual",
+    "text": "She has a very good idea for dinner.",
+    "expected": []
+  },
+  {
+    "id": "prose-clean-dogs",
+    "domain": "casual",
+    "text": "Dogs bark when the doorbell rings.",
+    "expected": []
+  },
+  {
+    "id": "prose-clean-shift",
+    "domain": "casual",
+    "text": "She works an 8-hour day twice a week.",
+    "expected": []
+  },
+  {
+    "id": "prose-clean-breath",
+    "domain": "casual",
+    "text": "Take a deep breath before you start.",
+    "expected": []
+  },
+  {
+    "id": "prose-clean-thinks",
+    "domain": "casual",
+    "text": "She thinks the plan works.",
+    "expected": []
+  },
+  {
+    "id": "prose-clean-justice",
+    "domain": "casual",
+    "text": "Justice matters.",
+    "expected": []
+  },
+  {
+    "id": "prose-clean-actually",
+    "domain": "casual",
+    "text": "He actually left.",
+    "expected": []
+  },
+  {
+    "id": "prose-clean-good",
+    "domain": "casual",
+    "text": "The idea is good.",
+    "expected": []
+  },
+  {
+    "id": "prose-clean-openers",
+    "domain": "casual",
+    "text": "The cat sat. The cat slept. A dog barked.",
+    "expected": []
+  },
+  {
+    "id": "prose-clean-scarf",
+    "domain": "casual",
+    "text": "The blue scarf complements his coat.",
+    "expected": []
+  },
+  {
+    "id": "prose-clean-receipt",
+    "domain": "casual",
+    "text": "Try not to lose the receipt.",
+    "expected": []
+  },
+  {
+    "id": "prose-clean-hour",
+    "domain": "casual",
+    "text": "She waited for an hour by the gate.",
+    "expected": []
+  },
+  {
+    "id": "prose-clean-picnic",
+    "domain": "casual",
+    "text": "They chose a sunny spot for the picnic.",
+    "expected": []
+  }
+]

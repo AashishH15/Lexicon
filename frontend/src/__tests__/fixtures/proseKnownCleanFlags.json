@@ -1,0 +1,27 @@
+[
+  {
+    "id": "prose-clean-bandwidth",
+    "original": "bandwidth",
+    "message": "Wordy phrase: consider simplifying to \"capacity\""
+  },
+  {
+    "id": "prose-clean-cogito",
+    "original": "I think",
+    "message": "Hedging language: state this more directly when you can."
+  },
+  {
+    "id": "prose-clean-believe",
+    "original": "I believe",
+    "message": "Hedging language: state this more directly when you can."
+  },
+  {
+    "id": "prose-clean-practice",
+    "original": "best practice",
+    "message": "Wordy phrase: consider simplifying to \"standard practice\""
+  },
+  {
+    "id": "prose-clean-idea",
+    "original": "very",
+    "message": "Filler intensifier: consider using a stronger, more precise word."
+  }
+]

@@ -1,0 +1,178 @@
+[
+  {
+    "id": "prose-err-passive-agent",
+    "domain": "academic",
+    "text": "The bridge was built by workers.",
+    "expected": [
+      {
+        "original": "was built",
+        "messageContains": "Passive voice"
+      }
+    ]
+  },
+  {
+    "id": "prose-err-passive-simple",
+    "domain": "academic",
+    "text": "The report was reviewed yesterday.",
+    "expected": [
+      {
+        "original": "was reviewed",
+        "messageContains": "Passive voice"
+      }
+    ]
+  },
+  {
+    "id": "prose-err-passive-compound",
+    "domain": "technical",
+    "text": "The road has been closed.",
+    "expected": [
+      {
+        "original": "been closed",
+        "messageContains": "Passive voice"
+      }
+    ]
+  },
+  {
+    "id": "prose-err-wordy-order",
+    "domain": "business",
+    "text": "In order to win, train daily.",
+    "expected": [
+      {
+        "original": "In order to",
+        "messageContains": "simplifying"
+      }
+    ]
+  },
+  {
+    "id": "prose-err-wordy-fact",
+    "domain": "business",
+    "text": "He failed due to the fact that he lied.",
+    "expected": [
+      {
+        "original": "due to the fact that",
+        "messageContains": "simplifying"
+      }
+    ]
+  },
+  {
+    "id": "prose-err-weak-use",
+    "domain": "business",
+    "text": "We make use of solar power.",
+    "expected": [
+      {
+        "original": "make use of",
+        "messageContains": "Weak verb"
+      }
+    ]
+  },
+  {
+    "id": "prose-err-weak-decision",
+    "domain": "business",
+    "text": "She made a decision to leave.",
+    "expected": [
+      {
+        "original": "made a decision to",
+        "messageContains": "Weak verb"
+      }
+    ]
+  },
+  {
+    "id": "prose-err-cliche-ground",
+    "domain": "casual",
+    "text": "She hit the ground running.",
+    "expected": [
+      {
+        "original": "hit the ground running",
+        "messageContains": "start efficiently"
+      }
+    ]
+  },
+  {
+    "id": "prose-err-cliche-nutshell",
+    "domain": "casual",
+    "text": "In a nutshell, we won.",
+    "expected": [
+      {
+        "original": "In a nutshell",
+        "messageContains": "Briefly"
+      }
+    ]
+  },
+  {
+    "id": "prose-err-cliche-touch",
+    "domain": "business",
+    "text": "Let's touch base next week.",
+    "expected": [
+      {
+        "original": "touch base",
+        "messageContains": "check in"
+      }
+    ]
+  },
+  {
+    "id": "prose-err-filler-very",
+    "domain": "casual",
+    "text": "It is very important.",
+    "expected": [
+      {
+        "original": "very",
+        "messageContains": "Filler intensifier"
+      }
+    ]
+  },
+  {
+    "id": "prose-err-filler-just",
+    "domain": "casual",
+    "text": "I just need help.",
+    "expected": [
+      {
+        "original": "just",
+        "messageContains": "filler word"
+      }
+    ]
+  },
+  {
+    "id": "prose-err-hedge-might",
+    "domain": "casual",
+    "text": "It might be late.",
+    "expected": [
+      {
+        "original": "might be",
+        "messageContains": "Hedging language"
+      }
+    ]
+  },
+  {
+    "id": "prose-err-hedge-perhaps",
+    "domain": "casual",
+    "text": "Perhaps we should leave.",
+    "expected": [
+      {
+        "original": "Perhaps",
+        "messageContains": "Hedging language"
+      }
+    ]
+  },
+  {
+    "id": "prose-err-long",
+    "domain": "academic",
+    "text": "The quick brown fox jumps over the lazy dog near the river bank every single morning before breakfast ends and the birds sing loudly in tall green trees.",
+    "expected": [
+      {
+        "original": "The quick brown fox jumps over the lazy dog near the river bank every single morning before breakfast ends and the birds sing loudly in tall green trees.",
+        "messageContains": "Long sentence"
+      }
+    ]
+  },
+  {
+    "id": "prose-err-openers",
+    "domain": "casual",
+    "text": "The cat sat. The cat slept. The cat ate.",
+    "expected": [
+      {
+        "original": "The cat sat.",
+        "messageContains": "Repetitive sentence openers"
+      }
+    ]
+  }
+]

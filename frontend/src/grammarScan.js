@@ -187,9 +187,15 @@ export async function scanGrammarWindows({
     maxContextChars,
   });
   const matches = [];
+  // Scan cost record. Read the clock only. Change no check logic.
+  const perWindow = [];
+  let requestCount = 0;
+  let requestMs = 0;
+  const scanStartedAt = performance.now();
 
   for (const window of windows) {
     throwIfAborted(signal);
+    const windowStartedAt = performance.now();
     const fingerprint = {
       requestText: window.requestText,
       coreOffset: window.coreOffset,
@@ -201,6 +207,7 @@ export async function scanGrammarWindows({
     };
     const key = cache?.computeKey(fingerprint);
     let relativeMatches = key ? cache?.get(key) : null;
+    const cacheHit = relativeMatches != null;
 
     if (relativeMatches == null) {
       const freshMatches = await checkGrammar(
@@ -222,14 +229,41 @@ export async function scanGrammarWindows({
       if (key) {
         cache.set(key, relativeMatches);
       }
+      requestCount += 1;
     }
+
+    // Time to serve one window. Miss time holds the request wait.
+    const windowMs = performance.now() - windowStartedAt;
+    if (!cacheHit) {
+      requestMs += windowMs;
+    }
+    perWindow.push({
+      coreIndex: window.coreIndex,
+      coreChars: window.coreLength,
+      requestChars: window.requestText.length,
+      cacheHit,
+      ms: windowMs,
+    });
 
     matches.push(...rebaseMatches(relativeMatches, window.requestStart));
   }
 
+  const finalMatches = deduplicateMatches(matches);
+  const cacheHits = perWindow.filter((entry) => entry.cacheHit).length;
+
   return {
     windows,
-    matches: deduplicateMatches(matches),
+    matches: finalMatches,
+    stats: {
+      windowCount: windows.length,
+      requestCount,
+      cacheHits,
+      cacheMisses: windows.length - cacheHits,
+      totalMs: performance.now() - scanStartedAt,
+      requestMs,
+      matchCount: finalMatches.length,
+      perWindow,
+    },
   };
 }
 

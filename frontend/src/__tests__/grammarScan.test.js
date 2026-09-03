@@ -200,6 +200,86 @@ describe("scanGrammarWindows", () => {
   });
 });
 
+describe("scanGrammarStats", () => {
+  function scanOptions(overrides = {}) {
+    return {
+      language: "en-US",
+      ignore: [],
+      cache: new GrammarCache(),
+      checkGrammar: async () => [],
+      ...overrides,
+    };
+  }
+
+  it("reports totals and per-window entries for a cold scan", async () => {
+    const calls = [];
+    const result = await scanGrammarWindows({
+      ...scanOptions(),
+      text: "first\nsecond\nthird",
+      checkGrammar: async (requestText) => {
+        calls.push(requestText);
+        return [];
+      },
+    });
+
+    expect(result.stats.windowCount).toBe(3);
+    expect(result.stats.requestCount).toBe(3);
+    expect(result.stats.requestCount).toBe(calls.length);
+    expect(result.stats.cacheHits).toBe(0);
+    expect(result.stats.cacheMisses).toBe(3);
+    expect(result.stats.totalMs).toBeGreaterThanOrEqual(0);
+    expect(result.stats.requestMs).toBeGreaterThanOrEqual(0);
+    expect(result.stats.matchCount).toBe(result.matches.length);
+    expect(result.stats.perWindow).toHaveLength(3);
+    expect(result.stats.perWindow.map((entry) => entry.coreIndex)).toEqual([0, 1, 2]);
+    for (const entry of result.stats.perWindow) {
+      expect(entry.cacheHit).toBe(false);
+      expect(entry.ms).toBeGreaterThanOrEqual(0);
+      expect(entry.requestChars).toBeGreaterThan(0);
+    }
+  });
+
+  it("reports hits when nothing changed", async () => {
+    const cache = new GrammarCache();
+    let calls = 0;
+    const options = scanOptions({
+      cache,
+      checkGrammar: async () => {
+        calls += 1;
+        return [];
+      },
+    });
+    await scanGrammarWindows({ ...options, text: "first\nsecond\nthird" });
+    const result = await scanGrammarWindows({ ...options, text: "first\nsecond\nthird" });
+
+    expect(calls).toBe(3);
+    expect(result.stats.requestCount).toBe(0);
+    expect(result.stats.cacheHits).toBe(3);
+    expect(result.stats.cacheMisses).toBe(0);
+  });
+
+  it("counts only rescanned windows as misses after an edit", async () => {
+    const cache = new GrammarCache();
+    const options = scanOptions({ cache, checkGrammar: async () => [] });
+    await scanGrammarWindows({ ...options, text: "first\nsecond\nthird" });
+    const result = await scanGrammarWindows({ ...options, text: "changed\nsecond\nthird" });
+
+    expect(result.stats.requestCount).toBe(2);
+    expect(result.stats.cacheHits).toBe(1);
+    expect(result.stats.cacheMisses).toBe(2);
+  });
+
+  it("treats every window as a miss without a cache", async () => {
+    const result = await scanGrammarWindows({
+      ...scanOptions({ cache: null }),
+      text: "first\nsecond",
+    });
+
+    expect(result.stats.cacheHits).toBe(0);
+    expect(result.stats.cacheMisses).toBe(2);
+  });
+});
+
 describe("createLatestWinsCoordinator", () => {
   it("aborts and invalidates an older run when a newer run starts", () => {
     const coordinator = createLatestWinsCoordinator();
