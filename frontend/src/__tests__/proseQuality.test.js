@@ -344,6 +344,143 @@ describe("checkProseQuality / High-confidence clichés", () => {
   });
 });
 
+describe("checkProseQuality / Weak verbs", () => {
+  it.each([
+    ["We make use of the tool.", "make use of", "use"],
+    ["Make use of the tool.", "Make use of", "Use"],
+    ["MAKE USE OF THE TOOL.", "MAKE USE OF", "USE"],
+    ["The team makes use of the tool.", "makes use of", "uses"],
+    ["The team made use of the tool.", "made use of", "used"],
+    ["The team is making use of the tool.", "making use of", "using"],
+    ["They make a decision to proceed.", "make a decision to", "decide to"],
+    ["She made a decision to proceed.", "made a decision to", "decided to"],
+    ["He makes a decision to proceed.", "makes a decision to", "decides to"],
+    [
+      "They are making a decision to proceed.",
+      "making a decision to",
+      "deciding to",
+    ],
+    ["They make an attempt to fix it.", "make an attempt to", "attempt to"],
+    ["She made an attempt to fix it.", "made an attempt to", "attempted to"],
+    ["He makes an attempt to fix it.", "makes an attempt to", "attempts to"],
+    [
+      "They are making an attempt to fix it.",
+      "making an attempt to",
+      "attempting to",
+    ],
+    [
+      "These changes have an effect on performance.",
+      "have an effect on",
+      "affect",
+    ],
+    [
+      "This change has an effect on performance.",
+      "has an effect on",
+      "affects",
+    ],
+    [
+      "The change had an effect on performance.",
+      "had an effect on",
+      "affected",
+    ],
+    [
+      "The change is having an effect on performance.",
+      "having an effect on",
+      "affecting",
+    ],
+    ["We have a discussion about scope.", "have a discussion about", "discuss"],
+    [
+      "She has a discussion about scope.",
+      "has a discussion about",
+      "discusses",
+    ],
+    [
+      "They had a discussion about scope.",
+      "had a discussion about",
+      "discussed",
+    ],
+    [
+      "They are having a discussion about scope.",
+      "having a discussion about",
+      "discussing",
+    ],
+    ["We do an analysis of the data.", "do an analysis of", "analyze"],
+    ["She does an analysis of the data.", "does an analysis of", "analyzes"],
+    ["They did an analysis of the data.", "did an analysis of", "analyzed"],
+    [
+      "They are doing an analysis of the data.",
+      "doing an analysis of",
+      "analyzing",
+    ],
+    ["We get in touch with support.", "get in touch with", "contact"],
+    ["She gets in touch with support.", "gets in touch with", "contacts"],
+    ["They got in touch with support.", "got in touch with", "contacted"],
+    [
+      "They are getting in touch with support.",
+      "getting in touch with",
+      "contacting",
+    ],
+  ])(
+    "flags %s with an inflection-safe replacement",
+    (text, original, replacement) => {
+      const result = checkProseQuality(text);
+      const hit = result.find(
+        (m) =>
+          m.category === "Prose Style" &&
+          m.message?.toLowerCase().includes("weak verb") &&
+          text.slice(m.offset, m.offset + m.length).toLowerCase() ===
+            original.toLowerCase()
+      );
+
+      expect(hit).toBeTruthy();
+      expect(hit.replacements).toEqual([replacement]);
+      expect(hit.action).toBeUndefined();
+    }
+  );
+
+  it.each([
+    ["She makes a cake.", "make"],
+    ["They made progress quickly.", "made"],
+    ["We get access to the report.", "get"],
+    ["I do research every day.", "do"],
+    ["They have a meeting today.", "have"],
+    ["We make a decision about the launch.", "make a decision"],
+    ["She makes an attempt at the fix.", "makes an attempt"],
+    ["We have a discussion with the vendor.", "have a discussion"],
+    ["They do an analysis for the report.", "do an analysis"],
+    ["We get in touch about the issue.", "get in touch"],
+    ["They made-use-of the tool.", "made-use-of"],
+    ["They attempted to fix it.", "attempted to"],
+    ["She discusses scope.", "discusses"],
+    ["They analyzed the data.", "analyzed"],
+    ["We contacted support.", "contacted"],
+    ["We make\nuse of the tool.", "make\nuse"],
+    ["We use the tool and contact support.", "use"],
+  ])("does not flag %s as a weak-verb collocation", (text) => {
+    const result = checkProseQuality(text);
+
+    expect(
+      result.filter((m) => m.message?.toLowerCase().includes("weak verb"))
+    ).toHaveLength(0);
+  });
+
+  it("preserves UTF-16-compatible offsets for weak-verb matches", () => {
+    const text = "😀 They got in touch with support.";
+    const result = checkProseQuality(text);
+    const hit = result.find(
+      (m) =>
+        m.message?.toLowerCase().includes("weak verb") &&
+        text.slice(m.offset, m.offset + m.length).toLowerCase() ===
+          "got in touch with"
+    );
+
+    expect(hit).toBeTruthy();
+    expect(hit.offset).toBe(8);
+    expect(hit.length).toBe("got in touch with".length);
+    expect(hit.replacements).toEqual(["contacted"]);
+  });
+});
+
 describe("checkProseQuality / Filler & Hedging", () => {
   it.each([
     ["This is very important.", "very"],

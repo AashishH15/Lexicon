@@ -38,11 +38,10 @@ function plainTextToHtml(text) {
 import { extractSentenceContext } from "../proseQualityEngine.js";
 
 function matchKey(match, text) {
-  const original = (
-    text && match.offset != null && match.length != null
+  const original =
+    (text && match.offset != null && match.length != null
       ? text.slice(match.offset, match.offset + match.length)
-      : match.original
-  ) || "";
+      : match.original) || "";
   let sentence = match.sentence || "";
   if (!sentence && text && match.offset != null) {
     sentence = extractSentenceContext(text, match.offset).text;
@@ -83,7 +82,7 @@ describe("Editor hydration", () => {
 
   it("buildTextWithMap returns correct text and offset map", () => {
     editor.commands.setContent(
-      "<p>The quick brown fox</p><p>jumps over the lazy dog.</p>",
+      "<p>The quick brown fox</p><p>jumps over the lazy dog.</p>"
     );
     const { text, map } = buildTextWithMap(editor.state.doc);
     expect(text).toBe("The quick brown fox\njumps over the lazy dog.");
@@ -99,7 +98,7 @@ describe("Editor hydration", () => {
     const { text, map } = buildTextWithMap(
       new Editor({
         extensions: [StarterKit.configure({ codeBlock: false })],
-      }).state.doc,
+      }).state.doc
     );
     expect(text).toBe("");
     expect(map).toEqual([]);
@@ -141,16 +140,25 @@ describe("Proofread pass & decoration attachment", () => {
     const { map } = buildTextWithMap(editor.state.doc);
     const matches = [
       {
-        offset: 0, length: 3, message: "Spelling: teh",
-        replacements: ["the"], rule: { id: "TEH", description: "Spelling" },
+        offset: 0,
+        length: 3,
+        message: "Spelling: teh",
+        replacements: ["the"],
+        rule: { id: "TEH", description: "Spelling" },
       },
       {
-        offset: 4, length: 3, message: "Spelling: wer",
-        replacements: ["we"], rule: { id: "WER", description: "Spelling" },
+        offset: 4,
+        length: 3,
+        message: "Spelling: wer",
+        replacements: ["we"],
+        rule: { id: "WER", description: "Spelling" },
       },
       {
-        offset: 8, length: 6, message: "Spelling: happpy",
-        replacements: ["happy"], rule: { id: "HAPPPY", description: "Spelling" },
+        offset: 8,
+        length: 6,
+        message: "Spelling: happpy",
+        replacements: ["happy"],
+        rule: { id: "HAPPPY", description: "Spelling" },
       },
     ];
     applyGrammarDecorations(editor, matches, map, null);
@@ -161,7 +169,20 @@ describe("Proofread pass & decoration attachment", () => {
   it("clearGrammarDecorations removes all decorations", () => {
     editor.commands.setContent("<p>test</p>");
     const { map } = buildTextWithMap(editor.state.doc);
-    applyGrammarDecorations(editor, [{ offset: 0, length: 4, message: "Test", replacements: ["tested"], rule: { id: "TEST", description: "Grammar" } }], map, null);
+    applyGrammarDecorations(
+      editor,
+      [
+        {
+          offset: 0,
+          length: 4,
+          message: "Test",
+          replacements: ["tested"],
+          rule: { id: "TEST", description: "Grammar" },
+        },
+      ],
+      map,
+      null
+    );
     clearGrammarDecorations(editor);
     expect(editor.getText()).toBe("test");
   });
@@ -173,10 +194,11 @@ describe("Suggestion accept & dismiss", () => {
     expect(
       shouldReplaceSentence({
         category: "Prose Style",
-        replacements: ["Now"],
-        sentence: "At this point in time, the plan is clear.",
+        replacements: ["used"],
+        sentence: "We made use of the tool, and the result was clear.",
         sentenceOffset: 0,
-        sentenceLength: "At this point in time, the plan is clear.".length,
+        sentenceLength: "We made use of the tool, and the result was clear."
+          .length,
       })
     ).toBe(false);
   });
@@ -198,13 +220,40 @@ describe("Suggestion accept & dismiss", () => {
     const { map } = buildTextWithMap(editor.state.doc);
     const matches = [
       {
-        id: 0, offset: 0, length: 3, message: "Spelling", replacements: ["the"],
+        id: 0,
+        offset: 0,
+        length: 3,
+        message: "Spelling",
+        replacements: ["the"],
         rule: { id: "TEH", description: "Spelling" },
       },
     ];
     applyGrammarDecorations(editor, matches, map, 0);
     applySuggestion(editor, 0, "the");
     expect(editor.getText()).toBe("the");
+  });
+
+  it("applies a weak-verb replacement without changing the surrounding sentence", () => {
+    const text = "We made use of the tool, and the result was clear.";
+    editor.commands.setContent(`<p>${text}</p>`);
+    const { map } = buildTextWithMap(editor.state.doc);
+    const match = {
+      id: 0,
+      offset: text.indexOf("made use of"),
+      length: "made use of".length,
+      message: "Weak verb phrase",
+      replacements: ["used"],
+      category: "Prose Style",
+      sentenceOffset: 0,
+      sentenceLength: text.length,
+    };
+
+    applyGrammarDecorations(editor, [match], map, null);
+    applySuggestion(editor, 0, "used", match);
+
+    expect(editor.getText()).toBe(
+      "We used the tool, and the result was clear."
+    );
   });
 
   it("removes a filler word and its following space", () => {
@@ -248,7 +297,7 @@ describe("Suggestion accept & dismiss", () => {
   it("capitalizes a removed introductory filler after a paragraph break", () => {
     const text = "First paragraph\nActually, the plan works.";
     editor.commands.setContent(
-      "<p>First paragraph</p><p>Actually, the plan works.</p>",
+      "<p>First paragraph</p><p>Actually, the plan works.</p>"
     );
     const { map } = buildTextWithMap(editor.state.doc);
     const match = {
@@ -264,7 +313,7 @@ describe("Suggestion accept & dismiss", () => {
     applySuggestion(editor, 0, "", match);
 
     expect(buildTextWithMap(editor.state.doc).text).toBe(
-      "First paragraph\nThe plan works.",
+      "First paragraph\nThe plan works."
     );
   });
 
@@ -292,11 +341,18 @@ describe("Suggestion accept & dismiss", () => {
     const { map } = buildTextWithMap(editor.state.doc);
     const matches = [
       {
-        id: 0, offset: 0, length: 3, message: "Spelling: teh", replacements: ["the"],
+        id: 0,
+        offset: 0,
+        length: 3,
+        message: "Spelling: teh",
+        replacements: ["the"],
         rule: { id: "TEH", description: "Spelling" },
       },
       {
-        offset: 4, length: 3, message: "Spelling: wer", replacements: ["we"],
+        offset: 4,
+        length: 3,
+        message: "Spelling: wer",
+        replacements: ["we"],
         rule: { id: "WER", description: "Spelling" },
       },
     ];
@@ -307,7 +363,12 @@ describe("Suggestion accept & dismiss", () => {
   });
 
   it("matchKey produces stable signature for dismissed-key tracking", () => {
-    const match = { offset: 0, length: 3, message: "Spelling error", original: "teh" };
+    const match = {
+      offset: 0,
+      length: 3,
+      message: "Spelling error",
+      original: "teh",
+    };
     const key = matchKey(match, null);
     expect(key).toBe("Spelling error::teh::");
   });
@@ -361,7 +422,8 @@ describe("Document import/export pipeline", () => {
   });
 
   it("TurndownService converts HTML to Markdown (atx headings, fenced code)", () => {
-    const html = "<h1>Title</h1><p>Body text.</p><pre><code>code block</code></pre>";
+    const html =
+      "<h1>Title</h1><p>Body text.</p><pre><code>code block</code></pre>";
     const md = turndown.turndown(html);
     expect(md).toContain("# Title");
     expect(md).toContain("Body text.");
@@ -371,7 +433,8 @@ describe("Document import/export pipeline", () => {
 
   it("TurndownService handles tables", () => {
     // Without turndown-plugin-gfm, tables are not converted to pipe syntax
-    const html = "<table><thead><tr><th>Name</th><th>Age</th></tr></thead><tbody><tr><td>Alice</td><td>30</td></tr></tbody></table>";
+    const html =
+      "<table><thead><tr><th>Name</th><th>Age</th></tr></thead><tbody><tr><td>Alice</td><td>30</td></tr></tbody></table>";
     const md = turndown.turndown(html);
     expect(md).toContain("Name");
     expect(md).toContain("Alice");
@@ -388,7 +451,8 @@ describe("Document import/export pipeline", () => {
     let originalHtml = "<h1>Hello</h1><p>This is a <strong>test</strong>.</p>";
     const md = turndown.turndown(originalHtml);
     const html = marked.parse(md);
-    const text = new DOMParser().parseFromString(html, "text/html").body.textContent;
+    const text = new DOMParser().parseFromString(html, "text/html").body
+      .textContent;
     // textContent preserves newlines between block elements from the parsed HTML
     expect(text.replace(/\n/g, "")).toBe("HelloThis is a test.");
   });

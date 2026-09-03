@@ -323,6 +323,61 @@ function detectClichés(text) {
   return matches;
 }
 
+const WEAK_VERB_PHRASES = [
+  // make use of
+  { pattern: /\bmake use of\b/gi, replacement: "use" },
+  { pattern: /\bmakes use of\b/gi, replacement: "uses" },
+  { pattern: /\bmade use of\b/gi, replacement: "used" },
+  { pattern: /\bmaking use of\b/gi, replacement: "using" },
+  // make a decision to
+  { pattern: /\bmake a decision to\b/gi, replacement: "decide to" },
+  { pattern: /\bmakes a decision to\b/gi, replacement: "decides to" },
+  { pattern: /\bmade a decision to\b/gi, replacement: "decided to" },
+  { pattern: /\bmaking a decision to\b/gi, replacement: "deciding to" },
+  // make an attempt to
+  { pattern: /\bmake an attempt to\b/gi, replacement: "attempt to" },
+  { pattern: /\bmakes an attempt to\b/gi, replacement: "attempts to" },
+  { pattern: /\bmade an attempt to\b/gi, replacement: "attempted to" },
+  { pattern: /\bmaking an attempt to\b/gi, replacement: "attempting to" },
+  // have an effect on
+  { pattern: /\bhave an effect on\b/gi, replacement: "affect" },
+  { pattern: /\bhas an effect on\b/gi, replacement: "affects" },
+  { pattern: /\bhad an effect on\b/gi, replacement: "affected" },
+  { pattern: /\bhaving an effect on\b/gi, replacement: "affecting" },
+  // have a discussion about
+  { pattern: /\bhave a discussion about\b/gi, replacement: "discuss" },
+  { pattern: /\bhas a discussion about\b/gi, replacement: "discusses" },
+  { pattern: /\bhad a discussion about\b/gi, replacement: "discussed" },
+  { pattern: /\bhaving a discussion about\b/gi, replacement: "discussing" },
+  // do an analysis of
+  { pattern: /\bdo an analysis of\b/gi, replacement: "analyze" },
+  { pattern: /\bdoes an analysis of\b/gi, replacement: "analyzes" },
+  { pattern: /\bdid an analysis of\b/gi, replacement: "analyzed" },
+  { pattern: /\bdoing an analysis of\b/gi, replacement: "analyzing" },
+  // get in touch with
+  { pattern: /\bget in touch with\b/gi, replacement: "contact" },
+  { pattern: /\bgets in touch with\b/gi, replacement: "contacts" },
+  { pattern: /\bgot in touch with\b/gi, replacement: "contacted" },
+  { pattern: /\bgetting in touch with\b/gi, replacement: "contacting" },
+];
+
+function detectWeakVerbs(text) {
+  const matches = [];
+  for (const phrase of WEAK_VERB_PHRASES) {
+    for (const m of findMatches(phrase.pattern, text)) {
+      const replacement = preserveCase(m.original, phrase.replacement);
+      matches.push({
+        offset: m.offset,
+        length: m.length,
+        message: `Weak verb phrase: consider "${replacement}".`,
+        replacements: [replacement],
+        category: "Prose Style",
+      });
+    }
+  }
+  return matches;
+}
+
 const FILLER_PATTERNS = [
   {
     pattern:
@@ -450,6 +505,7 @@ export function checkProseQuality(text) {
   return [
     ...detectPassiveVoice(text),
     ...detectClichés(text),
+    ...detectWeakVerbs(text),
     ...detectFillerWords(text),
     ...detectHedging(text),
     ...detectRepetitiveOpeners(text),
