@@ -1,0 +1,422 @@
+[
+  {
+    "id": "clean-tech-bandwidth",
+    "language": "en-US",
+    "domain": "technical",
+    "text": "The network bandwidth supports ten video calls at once.",
+    "expected": []
+  },
+  {
+    "id": "clean-tech-restart",
+    "language": "en-US",
+    "domain": "technical",
+    "text": "The server restarts every night at midnight.",
+    "expected": []
+  },
+  {
+    "id": "clean-tech-backups",
+    "language": "en-US",
+    "domain": "technical",
+    "text": "Store backups in three separate locations.",
+    "expected": []
+  },
+  {
+    "id": "clean-tech-api",
+    "language": "en-US",
+    "domain": "technical",
+    "text": "The API returns a response within two seconds.",
+    "expected": []
+  },
+  {
+    "id": "clean-tech-encrypt",
+    "language": "en-US",
+    "domain": "technical",
+    "text": "Encrypt sensitive fields before saving them to disk.",
+    "expected": []
+  },
+  {
+    "id": "clean-tech-build",
+    "language": "en-US",
+    "domain": "technical",
+    "text": "The build passed all checks on the first attempt.",
+    "expected": []
+  },
+  {
+    "id": "clean-tech-router",
+    "language": "en-US",
+    "domain": "technical",
+    "text": "Restart the router and wait for the lights to stabilize.",
+    "expected": []
+  },
+  {
+    "id": "clean-tech-driver",
+    "language": "en-US",
+    "domain": "technical",
+    "text": "Version two of the driver fixed the memory leak.",
+    "expected": []
+  },
+  {
+    "id": "clean-tech-cache",
+    "language": "en-US",
+    "domain": "technical",
+    "text": "The cache expires after sixty seconds of inactivity.",
+    "expected": []
+  },
+  {
+    "id": "clean-tech-request",
+    "language": "en-US",
+    "domain": "technical",
+    "text": "Each request carries a unique identifier for tracing.",
+    "expected": []
+  },
+  {
+    "id": "clean-tech-dashboard",
+    "language": "en-US",
+    "domain": "technical",
+    "text": "The dashboard shows latency across all regions.",
+    "expected": []
+  },
+  {
+    "id": "clean-tech-export",
+    "language": "en-US",
+    "domain": "technical",
+    "text": "Delete temporary files after the export finishes.",
+    "expected": []
+  },
+  {
+    "id": "clean-tech-suite",
+    "language": "en-US",
+    "domain": "technical",
+    "text": "The test suite covers login, checkout, and search.",
+    "expected": []
+  },
+  {
+    "id": "clean-tech-patch",
+    "language": "en-US",
+    "domain": "technical",
+    "text": "Security patches arrive on the second Tuesday of each month.",
+    "expected": []
+  },
+  {
+    "id": "clean-tech-sensor",
+    "language": "en-US",
+    "domain": "technical",
+    "text": "The sensor reports temperature every five minutes.",
+    "expected": []
+  },
+  {
+    "id": "clean-academic-study",
+    "language": "en-US",
+    "domain": "academic",
+    "text": "The study measured sleep quality across two hundred students.",
+    "expected": []
+  },
+  {
+    "id": "clean-academic-results",
+    "language": "en-US",
+    "domain": "academic",
+    "text": "Results remained consistent across all three trials.",
+    "expected": []
+  },
+  {
+    "id": "clean-academic-authors",
+    "language": "en-US",
+    "domain": "academic",
+    "text": "The authors reviewed every submission twice.",
+    "expected": []
+  },
+  {
+    "id": "clean-academic-hour",
+    "language": "en-US",
+    "domain": "academic",
+    "text": "An hour of interviews followed each workshop.",
+    "expected": []
+  },
+  {
+    "id": "clean-academic-university",
+    "language": "en-US",
+    "domain": "academic",
+    "text": "She is a university student studying biology.",
+    "expected": []
+  },
+  {
+    "id": "clean-academic-analysis",
+    "language": "en-US",
+    "domain": "academic",
+    "text": "The analysis controls for age and income.",
+    "expected": []
+  },
+  {
+    "id": "clean-academic-sample",
+    "language": "en-US",
+    "domain": "academic",
+    "text": "The sample included adults over the age of thirty.",
+    "expected": []
+  },
+  {
+    "id": "clean-academic-peer",
+    "language": "en-US",
+    "domain": "academic",
+    "text": "Peer review improves the quality of published work.",
+    "expected": []
+  },
+  {
+    "id": "clean-academic-survey",
+    "language": "en-US",
+    "domain": "academic",
+    "text": "The survey asked about exercise and diet.",
+    "expected": []
+  },
+  {
+    "id": "clean-academic-cogito",
+    "language": "en-US",
+    "domain": "academic",
+    "text": "I think therefore I am.",
+    "expected": []
+  },
+  {
+    "id": "clean-academic-hypothesis",
+    "language": "en-US",
+    "domain": "academic",
+    "text": "The hypothesis predicts faster recovery with treatment.",
+    "expected": []
+  },
+  {
+    "id": "clean-academic-data",
+    "language": "en-US",
+    "domain": "academic",
+    "text": "Data were collected over a period of six months.",
+    "expected": []
+  },
+  {
+    "id": "clean-academic-committee",
+    "language": "en-US",
+    "domain": "academic",
+    "text": "The committee published its findings in June.",
+    "expected": []
+  },
+  {
+    "id": "clean-academic-fieldwork",
+    "language": "en-US",
+    "domain": "academic",
+    "text": "Graduate students led the fieldwork in July.",
+    "expected": []
+  },
+  {
+    "id": "clean-academic-archive",
+    "language": "en-US",
+    "domain": "academic",
+    "text": "The library holds an extensive archive of maps.",
+    "expected": []
+  },
+  {
+    "id": "clean-business-practice",
+    "language": "en-US",
+    "domain": "business",
+    "text": "Follow best practice for password storage.",
+    "expected": []
+  },
+  {
+    "id": "clean-business-proposal",
+    "language": "en-US",
+    "domain": "business",
+    "text": "The proposal arrives on Friday morning.",
+    "expected": []
+  },
+  {
+    "id": "clean-business-revenue",
+    "language": "en-US",
+    "domain": "business",
+    "text": "Quarterly revenue grew by eight percent.",
+    "expected": []
+  },
+  {
+    "id": "clean-business-board",
+    "language": "en-US",
+    "domain": "business",
+    "text": "The board meets on the first Monday of each month.",
+    "expected": []
+  },
+  {
+    "id": "clean-business-invoice",
+    "language": "en-US",
+    "domain": "business",
+    "text": "Please review the attached invoice at your convenience.",
+    "expected": []
+  },
+  {
+    "id": "clean-business-contract",
+    "language": "en-US",
+    "domain": "business",
+    "text": "The contract starts on the first of May.",
+    "expected": []
+  },
+  {
+    "id": "clean-business-ships",
+    "language": "en-US",
+    "domain": "business",
+    "text": "Our team ships updates every two weeks.",
+    "expected": []
+  },
+  {
+    "id": "clean-business-scope",
+    "language": "en-US",
+    "domain": "business",
+    "text": "The client approved the scope yesterday.",
+    "expected": []
+  },
+  {
+    "id": "clean-business-leave",
+    "language": "en-US",
+    "domain": "business",
+    "text": "Annual leave requests need approval in advance.",
+    "expected": []
+  },
+  {
+    "id": "clean-business-thanked",
+    "language": "en-US",
+    "domain": "business",
+    "text": "The manager thanked everyone for their work.",
+    "expected": []
+  },
+  {
+    "id": "clean-business-hired",
+    "language": "en-US",
+    "domain": "business",
+    "text": "We hired two designers in March.",
+    "expected": []
+  },
+  {
+    "id": "clean-business-budget",
+    "language": "en-US",
+    "domain": "business",
+    "text": "The budget covers travel and training.",
+    "expected": []
+  },
+  {
+    "id": "clean-business-agenda",
+    "language": "en-US",
+    "domain": "business",
+    "text": "Send the agenda before noon tomorrow.",
+    "expected": []
+  },
+  {
+    "id": "clean-business-holidays",
+    "language": "en-US",
+    "domain": "business",
+    "text": "The office closes early on public holidays.",
+    "expected": []
+  },
+  {
+    "id": "clean-business-advice",
+    "language": "en-US",
+    "domain": "business",
+    "text": "She gave me good advice on hiring.",
+    "expected": []
+  },
+  {
+    "id": "clean-casual-idea",
+    "language": "en-US",
+    "domain": "casual",
+    "text": "She has a very good idea for dinner.",
+    "expected": []
+  },
+  {
+    "id": "clean-casual-dogs",
+    "language": "en-US",
+    "domain": "casual",
+    "text": "The dogs bark loudly at night.",
+    "expected": []
+  },
+  {
+    "id": "clean-casual-store",
+    "language": "en-US",
+    "domain": "casual",
+    "text": "We walked past the store on Main Street.",
+    "expected": []
+  },
+  {
+    "id": "clean-casual-led",
+    "language": "en-US",
+    "domain": "casual",
+    "text": "She led the team to victory yesterday.",
+    "expected": []
+  },
+  {
+    "id": "clean-casual-hotel",
+    "language": "en-US",
+    "domain": "casual",
+    "text": "He made a hotel reservation for eight.",
+    "expected": []
+  },
+  {
+    "id": "clean-casual-hour",
+    "language": "en-US",
+    "domain": "casual",
+    "text": "She waited for an hour by the gate.",
+    "expected": []
+  },
+  {
+    "id": "clean-casual-honest",
+    "language": "en-US",
+    "domain": "casual",
+    "text": "He is an honest person.",
+    "expected": []
+  },
+  {
+    "id": "clean-casual-picnic",
+    "language": "en-US",
+    "domain": "casual",
+    "text": "They chose a sunny spot for the picnic.",
+    "expected": []
+  },
+  {
+    "id": "clean-casual-breath",
+    "language": "en-US",
+    "domain": "casual",
+    "text": "Take a deep breath before you start.",
+    "expected": []
+  },
+  {
+    "id": "clean-casual-breathe",
+    "language": "en-US",
+    "domain": "casual",
+    "text": "Remember to breathe slowly during the stretch.",
+    "expected": []
+  },
+  {
+    "id": "clean-casual-scarf",
+    "language": "en-US",
+    "domain": "casual",
+    "text": "The blue scarf complements his coat.",
+    "expected": []
+  },
+  {
+    "id": "clean-casual-except",
+    "language": "en-US",
+    "domain": "casual",
+    "text": "Everyone except Maya stayed late.",
+    "expected": []
+  },
+  {
+    "id": "clean-casual-receipt",
+    "language": "en-US",
+    "domain": "casual",
+    "text": "Try not to lose the receipt.",
+    "expected": []
+  },
+  {
+    "id": "clean-casual-knot",
+    "language": "en-US",
+    "domain": "casual",
+    "text": "The knot has a loose thread.",
+    "expected": []
+  },
+  {
+    "id": "clean-casual-doorbell",
+    "language": "en-US",
+    "domain": "casual",
+    "text": "Dogs bark when the doorbell rings.",
+    "expected": []
+  }
+]

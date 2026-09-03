@@ -12,6 +12,17 @@ from typing import Any
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
 FIXTURE_PATH = Path(__file__).resolve().parent / "fixtures" / "grammar_rule_corpus.json"
+FIXTURE_DIR = Path(__file__).resolve().parent / "fixtures"
+
+# Extra corpora use the same case shape. Old callers use the default corpus.
+CORPORA = {
+    "grammar_rule_corpus": "grammar_rule_corpus.json",
+    "heldout_clean": "heldout_clean.json",
+    "heldout_errors": "heldout_errors.json",
+}
+
+# Scoring modes. Live modes need a local LanguageTool server.
+MODES = ("custom-only", "lt-normal", "lt-picky", "combined")
 
 if str(BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(BACKEND_DIR))
@@ -19,8 +30,35 @@ if str(BACKEND_DIR) not in sys.path:
 from grammar_enhancements import enhance_matches  # noqa: E402
 
 
-def _load_cases() -> list[dict[str, Any]]:
-    with FIXTURE_PATH.open(encoding="utf-8") as fixture:
+def _live_lt_matches(text, language="en-US", level="picky", timeout=30):
+    """Fetch matches from the local LanguageTool server.
+
+    Use this only for live measurement. Unit tests use a stub checker.
+    """
+    import requests
+
+    import languagetool
+
+    try:
+        base_url = languagetool._ensure_local_server()
+        data = {"text": text, "language": language}
+        if level == "picky":
+            data["level"] = "picky"
+        response = requests.post(f"{base_url}/v2/check", data=data, timeout=timeout)
+        response.raise_for_status()
+        return languagetool._normalize(response.json())
+    except Exception as exc:
+        raise RuntimeError(
+            f"Local LanguageTool server is unavailable: {exc}. "
+            "Start the backend first."
+        ) from exc
+
+
+def _load_cases(corpus="grammar_rule_corpus"):
+    if corpus not in CORPORA:
+        raise ValueError(f"Unknown corpus: {corpus}. Use one of {sorted(CORPORA)}.")
+    path = FIXTURE_DIR / CORPORA[corpus]
+    with path.open(encoding="utf-8") as fixture:
         cases = json.load(fixture)
     if not isinstance(cases, list):
         raise ValueError("The grammar benchmark fixture must contain a list.")
@@ -64,10 +102,14 @@ def _expected_signature(
 def _score_case(
     case: dict[str, Any], enhancer=enhance_matches
 ) -> dict[str, Any]:
+    return _score_with(case, lambda text, language: enhancer(text, [], language))
+
+
+def _score_with(case: dict[str, Any], get_matches) -> dict[str, Any]:
     text = str(case.get("text", ""))
     language = str(case.get("language", "en-US"))
     expected = [_expected_signature(item) for item in case.get("expected", [])]
-    actual_matches = enhancer(text, [], language)
+    actual_matches = get_matches(text, language)
     actual = [_match_signature(text, match) for match in actual_matches]
     remaining = list(actual)
     true_positives = 0
@@ -138,13 +180,38 @@ def _score_case(
     }
 
 
+def _resolve_match_fetcher(mode, enhancer, lt_checker):
+    """Return a (text, language) -> matches function for a mode."""
+    if mode not in MODES:
+        raise ValueError(f"Unknown mode: {mode}. Use one of {list(MODES)}.")
+    checker = lt_checker or _live_lt_matches
+    if mode == "custom-only":
+        return lambda text, language: enhancer(text, [], language)
+    if mode == "lt-normal":
+        return lambda text, language: checker(text, language, "default")
+    if mode == "lt-picky":
+        return lambda text, language: checker(text, language, "picky")
+    return lambda text, language: enhance_matches(
+        text, checker(text, language, "picky"), language
+    )
+
+
+def _count_words(cases: list[dict[str, Any]]) -> int:
+    return sum(len(str(case.get("text", "")).split()) for case in cases)
+
+
 def run_benchmark(
-    iterations: int = 100, enhancer=enhance_matches
+    iterations: int = 100,
+    enhancer=enhance_matches,
+    mode: str = "custom-only",
+    corpus: str = "grammar_rule_corpus",
+    lt_checker=None,
 ) -> dict[str, Any]:
     if iterations < 1:
         raise ValueError("iterations must be at least 1")
-    cases = _load_cases()
-    scored_cases = [_score_case(case, enhancer) for case in cases]
+    cases = _load_cases(corpus)
+    get_matches = _resolve_match_fetcher(mode, enhancer, lt_checker)
+    scored_cases = [_score_with(case, get_matches) for case in cases]
     expected = sum(case["expected"] for case in scored_cases)
     actual = sum(case["actual"] for case in scored_cases)
     true_positives = sum(case["true_positives"] for case in scored_cases)
@@ -160,9 +227,8 @@ def run_benchmark(
     for _ in range(iterations):
         started = time.perf_counter()
         for case in cases:
-            enhancer(
+            get_matches(
                 str(case.get("text", "")),
-                [],
                 str(case.get("language", "en-US")),
             )
         durations.append((time.perf_counter() - started) * 1000)
@@ -174,9 +240,12 @@ def run_benchmark(
         if precision + recall
         else 0.0
     )
+    total_words = _count_words(cases)
 
     return {
-        "fixture": str(FIXTURE_PATH),
+        "fixture": str(FIXTURE_DIR / CORPORA[corpus]),
+        "corpus": corpus,
+        "mode": mode,
         "cases": len(cases),
         "expected_matches": expected,
         "actual_matches": actual,
@@ -191,6 +260,10 @@ def run_benchmark(
             correct_replacements / original_hits if original_hits else 1.0
         ),
         "offset_errors": offset_errors,
+        "total_words": total_words,
+        "fp_per_1000_words": (
+            false_positives / total_words * 1000 if total_words else 0.0
+        ),
         "latency_ms_per_fixture": {
             "p50": statistics.median(durations),
             "p95": sorted(durations)[max(0, int(iterations * 0.95) - 1)],
@@ -202,8 +275,43 @@ def run_benchmark(
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--iterations", type=int, default=100)
+    parser.add_argument("--mode", default="custom-only", choices=list(MODES))
+    parser.add_argument(
+        "--corpus", default="grammar_rule_corpus", choices=[*sorted(CORPORA), "all"]
+    )
     args = parser.parse_args()
-    print(json.dumps(run_benchmark(args.iterations), indent=2))
+    try:
+        if args.corpus == "all":
+            suites = []
+            for name in sorted(CORPORA):
+                try:
+                    suites.append(
+                        run_benchmark(args.iterations, mode=args.mode, corpus=name)
+                    )
+                except Exception as exc:
+                    suites.append(
+                        {
+                            "skipped": True,
+                            "mode": args.mode,
+                            "corpus": name,
+                            "reason": str(exc),
+                        }
+                    )
+            print(json.dumps({"suites": suites}, indent=2))
+            raise SystemExit(1 if any("skipped" in suite for suite in suites) else 0)
+        print(
+            json.dumps(
+                run_benchmark(args.iterations, mode=args.mode, corpus=args.corpus),
+                indent=2,
+            )
+        )
+    except Exception as exc:
+        print(
+            json.dumps(
+                {"skipped": True, "mode": args.mode, "reason": str(exc)}, indent=2
+            )
+        )
+        raise SystemExit(1)
 
 
 if __name__ == "__main__":
