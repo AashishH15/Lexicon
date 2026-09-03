@@ -20,6 +20,13 @@ export function buildTextWithMap(doc) {
       }
       return true;
     }
+    if (node.type.name === "hardBreak") {
+      if (text.length > 0 && !text.endsWith("\n")) {
+        map[text.length] = pos;
+        text += "\n";
+      }
+      return false;
+    }
     // Put a newline between block boundaries so words from separate
     // paragraphs don't get glued together and flagged as errors.
     if (node.isBlock && text.length > 0 && !text.endsWith("\n")) {

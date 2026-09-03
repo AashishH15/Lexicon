@@ -378,6 +378,164 @@ function detectWeakVerbs(text) {
   return matches;
 }
 
+const LONG_SENTENCE_WORD_LIMIT = 25;
+const WORD_TOKEN_REGEX =
+  /[\p{L}\p{N}]+(?:['’][\p{L}\p{N}]+|[-‐‑–—][\p{L}\p{N}]+)*/gu;
+const SENTENCE_ABBREVIATIONS = new Set([
+  "e.g.",
+  "i.e.",
+  "inc.",
+  "ltd.",
+  "mr.",
+  "mrs.",
+  "ms.",
+  "dr.",
+  "prof.",
+  "sr.",
+  "jr.",
+  "st.",
+  "vs.",
+  "fig.",
+  "no.",
+  "jan.",
+  "feb.",
+  "mar.",
+  "apr.",
+  "jun.",
+  "jul.",
+  "aug.",
+  "sep.",
+  "sept.",
+  "oct.",
+  "nov.",
+  "dec.",
+  "u.s.",
+]);
+const NON_PROSE_PREFIX_REGEX =
+  /^(?:[-*+]\s+|\d+[.)]\s+|#{1,6}\s+|```|(?:const|let|var|function|class|import|export)\b)/;
+const LEADING_EMOJI_REGEX = /[\u{1f000}-\u{1faff}\u{2600}-\u{27bf}]/u;
+
+function isSentenceBoundary(text, start, index) {
+  const character = text[index];
+  if (!/[.!?]/.test(character)) return false;
+
+  const next = text[index + 1];
+  if (
+    character === "." &&
+    /\d/.test(text[index - 1] || "") &&
+    /\d/.test(next || "")
+  ) {
+    return false;
+  }
+
+  const prefix = text.slice(start, index + 1);
+  const token = prefix.match(/([a-z](?:[a-z.]*)\.)$/i)?.[1]?.toLowerCase();
+  if (token && SENTENCE_ABBREVIATIONS.has(token)) {
+    return false;
+  }
+  if (
+    character === "." &&
+    /^[a-z]\.$/i.test(prefix.trim().split(/\s+/).pop() || "") &&
+    /^\s+[A-Z]/.test(text.slice(index + 1))
+  ) {
+    return false;
+  }
+
+  if (character === "." && /^\s*\d+\.\s/.test(text.slice(start, index + 2))) {
+    return false;
+  }
+
+  let end = index + 1;
+  while (/[.!?]/.test(text[end] || "")) end += 1;
+  while (/["'”’)\]}]/.test(text[end] || "")) end += 1;
+  return end === text.length || /\s/.test(text[end]);
+}
+
+function getSentenceSpans(text) {
+  const spans = [];
+  let sentenceStart = 0;
+
+  const addSpan = (end) => {
+    const raw = text.slice(sentenceStart, end);
+    const leading = raw.search(/\S/);
+    if (leading === -1) return;
+    const trimmedEnd = raw.trimEnd().length;
+    if (trimmedEnd <= leading) return;
+    const firstWord = raw.search(/[\p{L}\p{N}]/u);
+    const leadingContent =
+      firstWord === -1 ? "" : raw.slice(leading, firstWord);
+    const contentStart =
+      firstWord >= 0 && LEADING_EMOJI_REGEX.test(leadingContent)
+        ? firstWord
+        : leading;
+    const offset = sentenceStart + contentStart;
+    spans.push({
+      offset,
+      length: trimmedEnd - contentStart,
+      text: text.slice(offset, sentenceStart + trimmedEnd),
+      prefix: raw.slice(0, contentStart),
+    });
+  };
+
+  let index = 0;
+  while (index < text.length) {
+    if (text[index] === "\n") {
+      addSpan(index);
+      sentenceStart = index + 1;
+      index += 1;
+      continue;
+    }
+
+    if (isSentenceBoundary(text, sentenceStart, index)) {
+      let end = index + 1;
+      while (/[.!?]/.test(text[end] || "")) end += 1;
+      while (/["'”’)\]}]/.test(text[end] || "")) end += 1;
+      addSpan(end);
+      sentenceStart = end;
+      index = end;
+      continue;
+    }
+
+    index += 1;
+  }
+
+  addSpan(text.length);
+  return spans;
+}
+
+function isLikelyNonProse(sentence) {
+  const value = `${sentence.prefix || ""}${sentence.text}`.trim();
+  return (
+    NON_PROSE_PREFIX_REGEX.test(value) ||
+    value.includes("```") ||
+    /^(?:https?:\/\/|www\.)\S+$/.test(value)
+  );
+}
+
+function countWords(text) {
+  return text.match(WORD_TOKEN_REGEX)?.length || 0;
+}
+
+function detectLongSentences(text) {
+  const matches = [];
+  for (const sentence of getSentenceSpans(text)) {
+    if (isLikelyNonProse(sentence)) continue;
+    const wordCount = countWords(sentence.text);
+    if (wordCount <= LONG_SENTENCE_WORD_LIMIT) continue;
+
+    matches.push({
+      offset: sentence.offset,
+      length: sentence.length,
+      message:
+        `Long sentence: ${wordCount} words may be harder to read. ` +
+        "Consider splitting it for clarity.",
+      replacements: [],
+      category: "Prose Style",
+    });
+  }
+  return matches;
+}
+
 const FILLER_PATTERNS = [
   {
     pattern:
@@ -506,6 +664,7 @@ export function checkProseQuality(text) {
     ...detectPassiveVoice(text),
     ...detectClichés(text),
     ...detectWeakVerbs(text),
+    ...detectLongSentences(text),
     ...detectFillerWords(text),
     ...detectHedging(text),
     ...detectRepetitiveOpeners(text),

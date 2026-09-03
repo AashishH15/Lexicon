@@ -35,7 +35,10 @@ function plainTextToHtml(text) {
   return paragraphs || "<p></p>";
 }
 
-import { extractSentenceContext } from "../proseQualityEngine.js";
+import {
+  checkProseQuality,
+  extractSentenceContext,
+} from "../proseQualityEngine.js";
 
 function matchKey(match, text) {
   const original =
@@ -91,6 +94,15 @@ describe("Editor hydration", () => {
     expect(text[n]).toBe("\n");
     expect(map[n]).toBeGreaterThan(0);
     expect(text[n + 1]).toBe("j");
+  });
+
+  it("buildTextWithMap preserves hard breaks as sentence boundaries", () => {
+    editor.commands.setContent("<p>First line<br>Second line.</p>");
+    const { text, map } = buildTextWithMap(editor.state.doc);
+
+    expect(text).toBe("First line\nSecond line.");
+    expect(map[text.indexOf("\n")]).toBeGreaterThan(0);
+    expect(text[text.indexOf("\n") + 1]).toBe("S");
   });
 
   it("handles empty content gracefully", () => {
@@ -211,6 +223,26 @@ describe("Suggestion accept & dismiss", () => {
         sentence: "The report was written by her.",
         sentenceOffset: 0,
         sentenceLength: "The report was written by her.".length,
+      })
+    ).toBe(true);
+  });
+
+  it("keeps a long-sentence warning rewrite-only", () => {
+    const text =
+      "The research team reviewed the proposal and identified several practical improvements before recommending approval to the board during Monday's meeting with stakeholders from every department today.";
+    const warning = checkProseQuality(text).find((match) =>
+      match.message?.toLowerCase().includes("long sentence")
+    );
+
+    expect(warning).toBeTruthy();
+    expect(warning.replacements).toEqual([]);
+    const context = extractSentenceContext(text, warning.offset);
+    expect(
+      shouldReplaceSentence({
+        ...warning,
+        sentence: context.text,
+        sentenceOffset: context.offset,
+        sentenceLength: context.length,
       })
     ).toBe(true);
   });

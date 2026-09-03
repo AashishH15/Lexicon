@@ -481,6 +481,95 @@ describe("checkProseQuality / Weak verbs", () => {
   });
 });
 
+describe("checkProseQuality / Sentence length", () => {
+  const twentyWordSentence =
+    "The research team reviewed the proposal and identified several practical improvements before recommending approval to the board during Monday's meeting.";
+  const twentyFiveWordSentence =
+    "The research team reviewed the proposal and identified several practical improvements before recommending approval to the board during Monday's meeting with stakeholders from every department.";
+  const twentySixWordSentence =
+    "The research team reviewed the proposal and identified several practical improvements before recommending approval to the board during Monday's meeting with stakeholders from every department today.";
+
+  function findLongSentenceHit(text) {
+    return checkProseQuality(text).find(
+      (match) =>
+        match.category === "Prose Style" &&
+        match.message?.toLowerCase().includes("long sentence")
+    );
+  }
+
+  it("flags a sentence longer than 25 words", () => {
+    const hit = findLongSentenceHit(twentySixWordSentence);
+
+    expect(hit).toBeTruthy();
+    expect(hit.offset).toBe(0);
+    expect(hit.length).toBe(twentySixWordSentence.length);
+    expect(
+      twentySixWordSentence.slice(hit.offset, hit.offset + hit.length)
+    ).toBe(twentySixWordSentence);
+    expect(hit.replacements).toEqual([]);
+    expect(hit.action).toBeUndefined();
+  });
+
+  it("does not flag a sentence at the 25-word threshold", () => {
+    expect(findLongSentenceHit(twentyFiveWordSentence)).toBeUndefined();
+  });
+
+  it("does not flag a 20-word sentence", () => {
+    expect(findLongSentenceHit(twentyWordSentence)).toBeUndefined();
+  });
+
+  it("flags only the long sentence and preserves its document offset", () => {
+    const text = `Short opening. ${twentySixWordSentence} Final note.`;
+    const hit = findLongSentenceHit(text);
+
+    expect(hit).toBeTruthy();
+    expect(hit.offset).toBe("Short opening. ".length);
+    expect(hit.length).toBe(twentySixWordSentence.length);
+  });
+
+  it("handles a final sentence without terminal punctuation", () => {
+    const text = twentySixWordSentence.slice(0, -1);
+    const hit = findLongSentenceHit(text);
+
+    expect(hit).toBeTruthy();
+    expect(hit.length).toBe(text.length);
+  });
+
+  it("does not combine separate paragraphs into one long sentence", () => {
+    const text =
+      "The research team reviewed the proposal and identified\n" +
+      "several improvements before recommending approval to the board during Monday's meeting";
+
+    expect(findLongSentenceHit(text)).toBeUndefined();
+  });
+
+  it("does not split long sentences at abbreviations or decimal numbers", () => {
+    const text =
+      "The review by Dr. Smith covered the proposal, the implementation details, the migration risks, and the testing strategy before the team approved version 3.14 for release today.";
+    const hit = findLongSentenceHit(text);
+
+    expect(hit).toBeTruthy();
+    expect(hit.offset).toBe(0);
+    expect(hit.length).toBe(text.length);
+  });
+
+  it.each([
+    `- Review the proposal and identify several practical improvements before recommending approval to the board during Monday's meeting with stakeholders tomorrow morning during the final review session`,
+    `# Review the proposal and identify several practical improvements before recommending approval to the board during Monday's meeting with stakeholders tomorrow during the final review session`,
+  ])("does not flag non-prose lines: %s", (text) => {
+    expect(findLongSentenceHit(text)).toBeUndefined();
+  });
+
+  it("preserves UTF-16-compatible offsets for long sentences", () => {
+    const text = `😀 ${twentySixWordSentence}`;
+    const hit = findLongSentenceHit(text);
+
+    expect(hit).toBeTruthy();
+    expect(hit.offset).toBe(3);
+    expect(hit.length).toBe(twentySixWordSentence.length);
+  });
+});
+
 describe("checkProseQuality / Filler & Hedging", () => {
   it.each([
     ["This is very important.", "very"],
