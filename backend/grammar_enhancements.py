@@ -378,6 +378,23 @@ def _utf16_units(value: str) -> int:
     return len(value.encode("utf-16-le")) // 2
 
 
+def _slice_utf16(text: str, offset: int, length: int) -> str:
+    """Return text for UTF-16 offset and length."""
+    if not isinstance(offset, int) or not isinstance(length, int):
+        return ""
+    if offset < 0 or length <= 0:
+        return ""
+    encoded = text.encode("utf-16-le")
+    start = offset * 2
+    end = start + length * 2
+    if start < 0 or end > len(encoded):
+        return ""
+    try:
+        return encoded[start:end].decode("utf-16-le")
+    except UnicodeDecodeError:
+        return ""
+
+
 def _make_match(
     text: str,
     start: int,
@@ -1256,7 +1273,10 @@ def enhance_matches(
     matches: list[dict],
     language: str = "en-US",
 ) -> list[dict]:
-    """Add high-confidence English matches and resolve conflicting matches."""
+    """Add high-confidence English matches and resolve conflicting matches.
+
+    All offsets use UTF-16 units. Convert to Python indexes only to slice.
+    """
     if not language.lower().startswith("en"):
         return matches
 

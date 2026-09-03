@@ -8,7 +8,7 @@ from pathlib import Path
 
 import requests
 
-from grammar_enhancements import enhance_matches
+from grammar_enhancements import _slice_utf16, enhance_matches
 
 REQUEST_TIMEOUT = 30
 READINESS_TIMEOUT = 20
@@ -301,31 +301,24 @@ def close_tool():
 
 
 def _filter_ignored(matches, text, ignore):
-    """Drop matches whose flagged word is in the user's dictionary."""
+    """Drop matches whose flagged word is in the user dictionary.
+
+    All offsets use UTF-16 units. Convert only to read match text.
+    """
     if not ignore:
         return matches
     ignored = {word.lower() for word in ignore}
     kept = []
     for match in matches:
-        words = _match_text_variants(text, match["offset"], match["length"])
-        if not any(word.strip().lower() in ignored for word in words):
+        word = _match_text(text, match["offset"], match["length"])
+        if word.strip().lower() not in ignored:
             kept.append(match)
     return kept
 
 
-def _match_text_variants(text, offset, length):
-    """Return Python and UTF-16 slices for a match."""
-    words = [text[offset : offset + length]]
-    encoded = text.encode("utf-16-le")
-    start = offset * 2
-    end = (offset + length) * 2
-    try:
-        utf16_word = encoded[start:end].decode("utf-16-le")
-    except UnicodeDecodeError:
-        utf16_word = ""
-    if utf16_word not in words:
-        words.append(utf16_word)
-    return words
+def _match_text(text, offset, length):
+    """Return match text for UTF-16 offset and length."""
+    return _slice_utf16(text, offset, length)
 
 
 def check_text(text, language="en-US", ignore=None):

@@ -637,6 +637,108 @@ def test_custom_rule_offsets_use_utf16_units():
     assert encoded[start:end].decode("utf-16-le") == "advice"
 
 
+def _utf16_offset(text, python_index):
+    return len(text[:python_index].encode("utf-16-le")) // 2
+
+
+def test_filter_ignored_keeps_match_when_ignore_matches_python_slice_only():
+    import languagetool
+
+    text = "😀 bad"
+    match = {
+        "offset": 3,
+        "length": 3,
+        "message": "Ignored",
+        "replacements": [],
+        "rule": {"id": "RULE", "description": ""},
+    }
+
+    assert languagetool._filter_ignored([match], text, ["ad"]) == [match]
+
+
+def test_filter_ignored_removes_ignored_word_after_emoji():
+    import languagetool
+
+    text = "😀 bad"
+    match = {
+        "offset": 3,
+        "length": 3,
+        "message": "Ignored",
+        "replacements": [],
+        "rule": {"id": "RULE", "description": ""},
+    }
+
+    assert languagetool._filter_ignored([match], text, ["bad"]) == []
+
+
+def test_check_text_keeps_match_when_ignore_matches_python_slice_only(
+    monkeypatch,
+):
+    import languagetool
+
+    monkeypatch.setattr(languagetool, "CHECK_URL", None)
+    monkeypatch.setattr(languagetool, "_check_local", lambda *_args: [])
+    text = "😀 Please advice me."
+
+    matches = languagetool.check_text(text, ignore=["dvice"])
+
+    assert _corrections(text, matches) == [("advice", "advise")]
+
+
+def test_check_text_filters_ignored_word_after_emoji(monkeypatch):
+    import languagetool
+
+    monkeypatch.setattr(languagetool, "CHECK_URL", None)
+    monkeypatch.setattr(languagetool, "_check_local", lambda *_args: [])
+    text = "😀 Please advice me."
+
+    assert languagetool.check_text(text, ignore=["advice"]) == []
+
+
+def test_overlapping_engine_match_uses_utf16_offsets():
+    text = "😀 They are over they're."
+    python_start = text.rfind("they're")
+    base_match = {
+        "offset": _utf16_offset(text, python_start),
+        "length": len("they're"),
+        "message": "Contraction at sentence end",
+        "replacements": ["they are"],
+        "rule": {"id": "CONTRACTION_ENDS"},
+    }
+
+    matches = enhance_matches(text, [base_match])
+
+    assert _corrections(text, matches) == [("they're", "there")]
+
+
+def test_combined_pipeline_match_decodes_with_utf16_slice(monkeypatch):
+    import languagetool
+
+    monkeypatch.setattr(languagetool, "CHECK_URL", None)
+
+    def _fake_local(_text, _language="en-US"):
+        return [
+            {
+                "offset": 3,
+                "length": 3,
+                "message": "Spelling",
+                "replacements": ["bad"],
+                "rule": {"id": "SPELL", "description": ""},
+            }
+        ]
+
+    monkeypatch.setattr(languagetool, "_check_local", _fake_local)
+    text = "😀 bad"
+
+    matches = languagetool.check_text(text)
+
+    assert len(matches) == 1
+    encoded = text.encode("utf-16-le")
+    start = matches[0]["offset"] * 2
+    end = start + matches[0]["length"] * 2
+    assert encoded[start:end].decode("utf-16-le") == "bad"
+
+
 def test_custom_rule_is_filtered_by_user_dictionary(monkeypatch):
     import languagetool
 
