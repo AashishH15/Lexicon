@@ -20,13 +20,21 @@ import {
   CircleNotch,
   X,
   Sparkle,
+  ListMagnifyingGlass,
 } from "@phosphor-icons/react";
 import { getCustomTools } from "./prompts.js";
+import { DEEP_PROOFREAD_TOOL } from "./deepProofread.js";
 import { CUSTOM_ICON_MAP } from "./CustomToolsSettings.jsx";
 import { formatShortcut } from "./shortcuts.js";
 
 const builtinGroups = [
-  { label: "Analysis", tools: [{ name: "Proofread", icon: CheckCircle }] },
+  {
+    label: "Analysis",
+    tools: [
+      { name: "Proofread", icon: CheckCircle },
+      { name: DEEP_PROOFREAD_TOOL, icon: ListMagnifyingGlass },
+    ],
+  },
   {
     label: "Refinement",
     tools: [
@@ -70,6 +78,8 @@ export default function Toolbar({
   proofreadShortcut,
   isWarming,
   transformRunning,
+  deepRunning = false,
+  deepWarming = false,
 }) {
   const [customTools, setCustomTools] = useState(getCustomTools);
 
@@ -115,18 +125,21 @@ export default function Toolbar({
           <ul className="flex flex-col">
             {group.tools.map(({ name, icon: Icon }) => {
               const isProofread = name === "Proofread";
+              const isDeep = name === DEEP_PROOFREAD_TOOL;
               const locked = aiLocked && !isProofread;
-              const isWarmingThis = warmingTool === name;
-              const isRunningThis = runningTool === name;
+              const canOpenSetup = locked && isDeep;
+              const isWarmingThis = warmingTool === name || (isDeep && deepWarming);
+              const isRunningThis = runningTool === name || (isDeep && deepRunning);
               return (
                 <li key={name}>
                   <button
                     type="button"
-                    disabled={locked || (isWarmingThis && !isRunningThis)}
+                    disabled={(locked && !canOpenSetup) || (isWarmingThis && !isRunningThis)}
                     onClick={() => (locked ? onAiSetup() : onToolClick(name))}
                     aria-pressed={activeTool === name}
+                    aria-disabled={canOpenSetup ? true : undefined}
                     aria-busy={isWarmingThis || isRunningThis}
-                    title={locked ? "Set up Lexicon AI to use this tool" : isRunningThis ? "Click to cancel" : undefined}
+                    title={locked ? (canOpenSetup ? "Set up Lexicon AI to use Deep Proofread" : "Set up Lexicon AI to use this tool") : isRunningThis ? "Click to cancel" : undefined}
                     className={
                       "group flex w-full items-center gap-2.5 rounded px-2 py-1.5 text-left text-sm transition-colors focus-visible:ring-1 focus-visible:ring-ink " +
                       (locked

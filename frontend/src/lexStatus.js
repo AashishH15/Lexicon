@@ -1,3 +1,5 @@
+import { DEEP_PROOFREAD_TOOL } from "./deepProofread.js";
+
 export const LEX_STATUS = Object.freeze({
   IDLE: "idle",
   CHECKING: "checking",
@@ -66,7 +68,18 @@ export function resolveLexStatus({
   transformError = "",
   aiConfigured = true,
   hasContent = true,
+  deepMatches = [],
+  deepRunning = false,
+  deepError = "",
 } = {}) {
+  const deepActive = activeTool === DEEP_PROOFREAD_TOOL;
+  const deepFailed = deepActive && Boolean(deepError);
+  if (deepFailed && isConnectionError(deepError)) {
+    return LEX_STATUS.NO_CONNECTION;
+  }
+  if (deepFailed) {
+    return LEX_STATUS.ERROR;
+  }
   const transformFailed =
     activeTool !== "" &&
     activeTool !== "Proofread" &&
@@ -88,6 +101,7 @@ export function resolveLexStatus({
   if (
     checking ||
     transformRunning ||
+    deepRunning ||
     transformStatus === "warming" ||
     transformStatus === "working"
   ) {
@@ -99,6 +113,12 @@ export function resolveLexStatus({
   if (activeTool === "Proofread" && hasContent) {
     return LEX_STATUS.ALL_CLEAR;
   }
+  if (deepActive && hasContent && deepMatches.length > 0) {
+    return LEX_STATUS.ISSUES;
+  }
+  if (deepActive && hasContent) {
+    return LEX_STATUS.ALL_CLEAR;
+  }
   return LEX_STATUS.IDLE;
 }
 
@@ -108,7 +128,9 @@ export function lexStatusMessage(
 ) {
   switch (status) {
     case LEX_STATUS.CHECKING:
-      return activeTool && activeTool !== "Proofread"
+      return activeTool &&
+        activeTool !== "Proofread" &&
+        activeTool !== DEEP_PROOFREAD_TOOL
         ? "I’m working on your selection…"
         : "I’m checking your draft…";
     case LEX_STATUS.ISSUES:

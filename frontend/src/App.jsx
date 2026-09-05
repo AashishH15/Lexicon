@@ -66,6 +66,7 @@ import {
   removeDictionaryWord,
   openExternalUrl,
   transformText,
+  cancelTransform as cancelBackendTransform,
 } from "./api.js";
 import {
   loadDictionaryCache,
@@ -116,6 +117,18 @@ import {
   checkProseQuality,
   extractSentenceContext,
 } from "./proseQualityEngine.js";
+import {
+  DEEP_PROOFREAD_TOOL,
+  buildDeepChunks,
+  dedupeDeepMatches,
+  dedupeIdenticalDeepMatches,
+  evaluateDeepRunOutcome,
+  executeDeepScan,
+  isDeepSnapshotStale,
+  mergeHybridDeepMatches,
+  relocateDeepMatches,
+  shouldClearDeepResults,
+} from "./deepProofread.js";
 import { DecorationSet } from "@tiptap/pm/view";
 import { globalGrammarCache } from "./grammarCache.js";
 import {
@@ -510,6 +523,22 @@ export default function App() {
   const [transformResults, setTransformResults] = useState([]); // [{ tool, text, from, to, part, total }]
   const [transformProgress, setTransformProgress] = useState(null); // { current, total } | null
   const [transformRunning, setTransformRunning] = useState(false);
+  const [deepMatches, setDeepMatches] = useState([]);
+  const [deepRunning, setDeepRunning] = useState(false);
+  const [deepWarming, setDeepWarming] = useState(false);
+  const [deepProgress, setDeepProgress] = useState(null); // { current, total } | null
+  const [deepError, setDeepError] = useState("");
+  const [deepWarning, setDeepWarning] = useState("");
+  const deepMatchesRef = useRef([]);
+  const deepRunningRef = useRef(false);
+  const deepRunIdRef = useRef(0);
+  const deepCancelRef = useRef(false);
+  const deepApplyRef = useRef(false);
+  const deepWarmedRef = useRef(false);
+  const deepSnapshotRef = useRef(null);
+  const deepBaselineRequestRef = useRef(null);
+  const deepRequestRef = useRef(null);
+  const grammarSnapshotRef = useRef("");
   const transformRunningRef = useRef(false);
   const cancelTransformRef = useRef(false);
   const runIdRef = useRef(0);
@@ -609,6 +638,8 @@ export default function App() {
   activeToolRef.current = activeTool;
   userDictionaryRef.current = userDictionary;
   dismissedKeysRef.current = dismissedKeys;
+  deepMatchesRef.current = deepMatches;
+  deepRunningRef.current = deepRunning;
 
   const lowlightRef = useRef(createLowlight());
   const [lowlightReady, setLowlightReady] = useState(false);
@@ -900,6 +931,33 @@ export default function App() {
       }
       setDocText(text);
       setToneResult(detectTone(text));
+      // A deep run is snapshot-bound, so any edit cancels it. Finished
+      // deep results clear on edit too, unless the edit is our own apply.
+      if (deepRunningRef.current) {
+        cancelDeepProofread();
+      } else {
+        const ownApply = deepApplyRef.current;
+        deepApplyRef.current = false;
+        if (
+          shouldClearDeepResults({
+            running: false,
+            matchCount: deepMatchesRef.current.length,
+            snapshotText: deepSnapshotRef.current ? deepSnapshotRef.current.text : null,
+            currentText: text,
+            ownApply,
+          })
+        ) {
+          setDeepMatches([]);
+          deepMatchesRef.current = [];
+          deepSnapshotRef.current = null;
+          setDeepWarning("");
+          if (activeToolRef.current === DEEP_PROOFREAD_TOOL) {
+            clearGrammarDecorations(editor);
+            activeToolRef.current = "";
+            setActiveTool("");
+          }
+        }
+      }
       // Smart trigger: once a word or sentence is clearly finished
       const smartTrigger = /[.?\s]$/.test(text);
       scheduleCheckRef.current(smartTrigger);
@@ -1035,6 +1093,15 @@ export default function App() {
         clearTimeout(checkTimer.current);
       }
       grammarRunRef.current?.invalidate();
+      deepRunIdRef.current += 1;
+      deepBaselineRequestRef.current?.ctrl.abort();
+      const pendingDeepRequest = deepRequestRef.current;
+      deepBaselineRequestRef.current = null;
+      deepRequestRef.current = null;
+      pendingDeepRequest?.ctrl.abort();
+      if (pendingDeepRequest?.requestId) {
+        cancelBackendTransform(pendingDeepRequest.requestId).catch(() => {});
+      }
     };
   }, []);
 
@@ -1135,18 +1202,24 @@ export default function App() {
       if (!target) {
         return;
       }
-      const id = Number(target.getAttribute("data-error-id"));
+      const match = findVisibleMatch(target.getAttribute("data-error-id"));
+      if (!match) {
+        return;
+      }
       const rect = target.getBoundingClientRect();
-      setHoveredError({ id, rect });
+      setHoveredError({ id: match.id, rect });
     };
     const handleClick = (event) => {
       const target = event.target.closest(".lex-error");
       if (!target) {
         return;
       }
-      const id = Number(target.getAttribute("data-error-id"));
-      activeErrorRef.current = id;
-      setActiveErrorId(id);
+      const match = findVisibleMatch(target.getAttribute("data-error-id"));
+      if (!match) {
+        return;
+      }
+      activeErrorRef.current = match.id;
+      setActiveErrorId(match.id);
     };
     dom.addEventListener("mouseover", handleOver);
     dom.addEventListener("click", handleClick);
@@ -1155,6 +1228,14 @@ export default function App() {
       dom.removeEventListener("click", handleClick);
     };
   }, [editor]);
+  function findVisibleMatch(id) {
+    const list =
+      activeToolRef.current === DEEP_PROOFREAD_TOOL
+        ? deepMatchesRef.current
+        : matchesRef.current;
+    return list.find((match) => String(match.id) === String(id));
+  }
+
   function matchKey(match, text) {
     const original =
       (text && match.offset != null && match.length != null
@@ -1303,6 +1384,252 @@ export default function App() {
 
   dictionarySyncRef.current = syncDictionary;
 
+  function renderModeDecorations() {
+    if (!editor) {
+      return;
+    }
+    const { map } = buildTextWithMap(editor.state.doc);
+    if (activeToolRef.current === DEEP_PROOFREAD_TOOL) {
+      applyGrammarDecorations(editor, deepMatchesRef.current, map, activeErrorRef.current);
+    } else if (activeToolRef.current === "Proofread") {
+      applyGrammarDecorations(editor, matchesRef.current, map, activeErrorRef.current);
+    } else {
+      clearGrammarDecorations(editor);
+    }
+  }
+
+  function publishDeepMatches(matches, snapshot) {
+    if (!editor || activeToolRef.current !== DEEP_PROOFREAD_TOOL) {
+      return;
+    }
+    const current = buildTextWithMap(editor.state.doc);
+    if (isDeepSnapshotStale(current.text, snapshot.text)) {
+      return;
+    }
+    let next = dedupeIdenticalDeepMatches(matches);
+    if (grammarSnapshotRef.current === snapshot.text) {
+      next = dedupeDeepMatches(next, matchesRef.current);
+    }
+    next = next.filter(
+      (match) => !dismissedKeysRef.current.has(matchKey(match, snapshot.text)),
+    );
+    const numbered = next.map((match, index) => ({ ...match, id: `deep-${index}` }));
+    setDeepMatches(numbered);
+    deepMatchesRef.current = numbered;
+    renderModeDecorations();
+  }
+
+  function cancelDeepProofread() {
+    deepCancelRef.current = true;
+    deepRunIdRef.current += 1;
+    const baseline = deepBaselineRequestRef.current;
+    deepBaselineRequestRef.current = null;
+    if (baseline) {
+      baseline.ctrl.abort();
+    }
+    const pending = deepRequestRef.current;
+    deepRequestRef.current = null;
+    if (pending) {
+      pending.ctrl.abort();
+      cancelBackendTransform(pending.requestId).catch(() => {});
+    }
+    deepRunningRef.current = false;
+    setDeepRunning(false);
+    setDeepWarming(false);
+    setDeepProgress(null);
+    setDeepWarning("");
+    setDeepMatches([]);
+    deepMatchesRef.current = [];
+    deepSnapshotRef.current = null;
+    if (activeToolRef.current === DEEP_PROOFREAD_TOOL) {
+      activeToolRef.current = "";
+      setActiveTool("");
+      if (editor) {
+        clearGrammarDecorations(editor);
+      }
+    }
+  }
+
+  async function runDeepProofread() {
+    if (!editor) {
+      return;
+    }
+    if (!aiConfigured) {
+      setAiSetupOpen(true);
+      return;
+    }
+    if (transformRunningRef.current) {
+      cancelTransform();
+    }
+    const snapshot = buildTextWithMap(editor.state.doc);
+    if (!snapshot.text.trim()) {
+      return;
+    }
+    const chunks = buildDeepChunks(snapshot);
+    const runId = ++deepRunIdRef.current;
+    const isCurrent = () => deepRunIdRef.current === runId && !deepCancelRef.current;
+    deepCancelRef.current = false;
+    deepRunningRef.current = true;
+    setDeepRunning(true);
+    setDeepWarming(!deepWarmedRef.current);
+    setDeepMatches([]);
+    deepMatchesRef.current = [];
+    setDeepError("");
+    setDeepWarning("");
+    setDeepProgress(chunks.length > 0 ? { current: 0, total: chunks.length } : null);
+    deepSnapshotRef.current = snapshot;
+
+    // Stage 1: Collect deterministic baseline matches immediately
+    let baselineMatches = [];
+    let baselineError = null;
+    const baselineCtrl = new AbortController();
+    deepBaselineRequestRef.current = { runId, ctrl: baselineCtrl };
+    try {
+      const ignore = userDictionaryRef.current;
+      const scan = await scanGrammarWindows({
+        text: snapshot.text,
+        language,
+        ignore,
+        cache: globalGrammarCache,
+        checkGrammar,
+        signal: baselineCtrl.signal,
+      });
+      let rawBase = Array.isArray(scan.matches) ? scan.matches : [];
+      // Guarantee exact parity with standard Proofread: filter newline artifacts and check bounds
+      rawBase = rawBase
+        .map((match) => ({
+          ...match,
+          offset: Number(match?.offset),
+          length: Number(match?.length),
+        }))
+        .filter((match) => {
+          if (
+            !Number.isSafeInteger(match.offset) ||
+            !Number.isSafeInteger(match.length) ||
+            match.offset < 0 ||
+            match.length <= 0 ||
+            match.offset + match.length > snapshot.text.length
+          ) {
+            return false;
+          }
+          const matchedText = snapshot.text.slice(
+            match.offset,
+            match.offset + match.length
+          );
+          return !matchedText.includes("\n");
+        });
+      const prose = proseScanEnabled ? checkProseQuality(snapshot.text) : [];
+      for (const pm of prose) {
+        const ctx = extractSentenceContext(snapshot.text, pm.offset);
+        pm.sentence = ctx.text;
+        pm.sentenceOffset = ctx.offset;
+        pm.sentenceLength = ctx.length;
+      }
+      baselineMatches = [...rawBase, ...prose]
+        .filter((m) => !dismissedKeysRef.current.has(matchKey(m, snapshot.text)))
+        .map((m, i) => ({
+          ...m,
+          id: i,
+          engine: "proofread",
+          original: snapshot.text.slice(m.offset, m.offset + m.length),
+          category: m.category || categoryLabel(m),
+        }));
+    } catch (err) {
+      baselineError = err?.message || "Grammar engine was unreachable";
+      baselineMatches = [];
+    } finally {
+      if (
+        deepBaselineRequestRef.current &&
+        deepBaselineRequestRef.current.runId === runId
+      ) {
+        deepBaselineRequestRef.current = null;
+      }
+    }
+
+    if (!isCurrent()) {
+      return;
+    }
+
+    // Publish baseline matches right away so user sees instant grammar results across the whole document
+    if (baselineMatches.length > 0) {
+      publishDeepMatches(baselineMatches, snapshot);
+    }
+
+    // Stage 2: Asynchronous AI augmentation scan with progressive chunk yielding
+    let attempts = 0;
+    const result = await executeDeepScan({
+      snapshot,
+      chunks,
+      callModel: async ({ prompt, text, requestId }) => {
+        attempts += 1;
+        const ctrl = new AbortController();
+        deepRequestRef.current = { requestId, ctrl };
+        try {
+          const res = await transformText({
+            prompt,
+            text,
+            modelKey: null,
+            backend: null,
+            requestId,
+            temperature: 0.0,
+            signal: ctrl.signal,
+          });
+          return res && res.text;
+        } finally {
+          if (deepRequestRef.current && deepRequestRef.current.requestId === requestId) {
+            deepRequestRef.current = null;
+          }
+        }
+      },
+      isCancelled: () => deepCancelRef.current || deepRunIdRef.current !== runId,
+      readCurrentText: () => buildTextWithMap(editor.state.doc).text,
+      onProgress: (progress) => setDeepProgress(progress),
+      onChunkMatches: (progressiveDeepMatches) => {
+        if (!isCurrent()) return;
+        const progressiveHybrid = mergeHybridDeepMatches({
+          baselineMatches,
+          deepMatches: progressiveDeepMatches,
+        });
+        publishDeepMatches(progressiveHybrid, snapshot);
+      },
+      noteActivity: () => ensureBackend().catch(() => {}),
+    });
+    if (attempts > 0) {
+      deepWarmedRef.current = true;
+    }
+    deepRunningRef.current = false;
+    setDeepRunning(false);
+    setDeepWarming(false);
+    setDeepProgress(null);
+    if (!isCurrent()) {
+      return;
+    }
+    if (activeToolRef.current !== DEEP_PROOFREAD_TOOL) {
+      return;
+    }
+
+    const outcome = evaluateDeepRunOutcome({
+      baselineError,
+      baselineMatches,
+      deepMatches: result.matches,
+      scanStatus: result.status,
+      scanError: result.error,
+    });
+    if (outcome.outcome === "cancelled") {
+      return;
+    }
+    if (outcome.outcome === "error") {
+      setDeepError(outcome.error);
+      return;
+    }
+    if (outcome.warning) {
+      setDeepWarning(outcome.warning);
+    } else {
+      setDeepWarning("");
+    }
+    publishDeepMatches(outcome.matches, snapshot);
+  }
+
   async function runGrammarCheck(
     silent = false,
     ignoreOverride = null,
@@ -1350,6 +1677,7 @@ export default function App() {
       if (currentSnapshot.text !== text) {
         return;
       }
+      grammarSnapshotRef.current = text;
 
       // Discard matches whose text spans a newline — these are artifacts
       // from block-boundary concatenation (e.g. "Lexicon\nLexicon" flagged
@@ -1419,6 +1747,10 @@ export default function App() {
     if (!editor) {
       return;
     }
+    const isDeep = activeToolRef.current === DEEP_PROOFREAD_TOOL;
+    if (isDeep) {
+      deepApplyRef.current = true;
+    }
     if (match.action === "remove") {
       applySuggestion(editor, match.id, "", match);
     } else if (shouldReplaceSentence(match)) {
@@ -1450,6 +1782,22 @@ export default function App() {
       return next;
     });
     setHoveredError(null);
+    if (isDeep) {
+      const fresh = buildTextWithMap(editor.state.doc);
+      const next = relocateDeepMatches(
+        fresh.text,
+        deepMatchesRef.current.filter((m) => m.id !== match.id),
+      );
+      setDeepMatches(next);
+      deepMatchesRef.current = next;
+      deepSnapshotRef.current = fresh;
+      if (next.length === 0) {
+        setActiveErrorId(null);
+        activeErrorRef.current = null;
+      }
+      renderModeDecorations();
+      return;
+    }
     runGrammarCheck();
   }
 
@@ -1474,6 +1822,17 @@ export default function App() {
     const { text } = buildTextWithMap(editor.state.doc);
     rememberDismissed(match, text);
     dismissError(editor, match.id);
+    if (activeToolRef.current === DEEP_PROOFREAD_TOOL) {
+      const next = deepMatchesRef.current.filter((m) => m.id !== match.id);
+      setDeepMatches(next);
+      deepMatchesRef.current = next;
+      if (next.length === 0) {
+        setActiveErrorId(null);
+        activeErrorRef.current = null;
+      }
+      setHoveredError(null);
+      return;
+    }
     setGrammarMatches((current) => {
       const next = current.filter((m) => m.id !== match.id);
       if (next.length === 0) {
@@ -1522,12 +1881,19 @@ export default function App() {
     if (!editor) {
       return;
     }
+    if (activeToolRef.current === DEEP_PROOFREAD_TOOL) {
+      deepApplyRef.current = true;
+    }
     // Apply every replacement in a single transaction, processed right-to-left
     // (descending document position). Because each edit sits to the right of
     // all not-yet-applied matches, their original positions stay valid, so a
     // replacement of one length can't corrupt a later match's range the way
     // sequential left-to-right edits do.
-    const edits = grammarMatches
+    const sourceMatches =
+      activeToolRef.current === DEEP_PROOFREAD_TOOL
+        ? deepMatchesRef.current
+        : matchesRef.current;
+    const edits = sourceMatches
       .map((match) => {
         const isRemoval = match.action === "remove";
         const suggestedReplacement = isRemoval ? "" : match.replacements?.[0];
@@ -1551,25 +1917,37 @@ export default function App() {
     tr.setMeta(grammarPluginKey, { decorations: DecorationSet.empty });
     editor.view.dispatch(tr);
 
-    setGrammarMatches([]);
     setActiveErrorId(null);
     activeErrorRef.current = null;
     setHoveredError(null);
     setUserResolvedAll(true);
+    if (activeToolRef.current === DEEP_PROOFREAD_TOOL) {
+      setDeepMatches([]);
+      deepMatchesRef.current = [];
+      return;
+    }
+    setGrammarMatches([]);
     runGrammarCheck();
   }
 
   function handleDismissAll() {
     const text = editor ? buildTextWithMap(editor.state.doc).text : null;
-    grammarMatches.forEach((match) => rememberDismissed(match, text));
+    const isDeep = activeToolRef.current === DEEP_PROOFREAD_TOOL;
+    const sourceMatches = isDeep ? deepMatchesRef.current : matchesRef.current;
+    sourceMatches.forEach((match) => rememberDismissed(match, text));
     if (editor) {
       clearGrammarDecorations(editor);
     }
-    setGrammarMatches([]);
     setActiveErrorId(null);
     activeErrorRef.current = null;
     setHoveredError(null);
     setUserResolvedAll(true);
+    if (isDeep) {
+      setDeepMatches([]);
+      deepMatchesRef.current = [];
+      return;
+    }
+    setGrammarMatches([]);
     runGrammarCheck();
   }
 
@@ -1630,7 +2008,7 @@ export default function App() {
     }
     setActiveErrorId(match.id);
     activeErrorRef.current = match.id;
-    focusError(editor, match.id, match.category);
+    focusError(editor, match.id, match.category, match.engine);
   }
 
   // Persist history to localStorage whenever it changes.
@@ -2072,14 +2450,27 @@ export default function App() {
   function handleToolClick(name) {
     const nextTool = activeTool === name ? "" : name;
     setActiveTool(nextTool);
-    if (activeTool === "Proofread" && nextTool !== "Proofread") {
+    const leavingProofread = activeTool === "Proofread" && nextTool !== "Proofread";
+    const leavingDeep =
+      activeTool === DEEP_PROOFREAD_TOOL && nextTool !== DEEP_PROOFREAD_TOOL;
+    if (leavingProofread || leavingDeep) {
       if (checkTimer.current) {
         clearTimeout(checkTimer.current);
         checkTimer.current = null;
       }
       grammarRunRef.current?.invalidate();
       setChecking(false);
-      setGrammarMatches([]);
+      if (leavingDeep) {
+        cancelDeepProofread();
+        setDeepMatches([]);
+        deepMatchesRef.current = [];
+        setDeepProgress(null);
+        setDeepError("");
+        setDeepWarning("");
+      }
+      if (leavingProofread) {
+        setGrammarMatches([]);
+      }
       setActiveErrorId(null);
       activeErrorRef.current = null;
       setHoveredError(null);
@@ -2090,6 +2481,12 @@ export default function App() {
     if (name === "Proofread") {
       if (nextTool === "Proofread") {
         runGrammarCheck(false, null, true);
+      }
+      return;
+    }
+    if (name === DEEP_PROOFREAD_TOOL) {
+      if (nextTool === DEEP_PROOFREAD_TOOL) {
+        runDeepProofread();
       }
       return;
     }
@@ -2181,6 +2578,9 @@ export default function App() {
   async function runAiTool(name) {
     if (!editor) {
       return;
+    }
+    if (deepRunningRef.current) {
+      cancelDeepProofread();
     }
     const { from, to } = editor.state.selection;
     const hasSelection = from !== to;
@@ -2434,10 +2834,13 @@ export default function App() {
     transformError,
     aiConfigured,
     hasContent: !emptyDoc,
+    deepMatches,
+    deepRunning,
+    deepError,
   });
   const lexStatusLabel = lexStatusMessage(lexStatus, {
     activeTool,
-    issueCount: grammarMatches.length,
+    issueCount: activeTool === DEEP_PROOFREAD_TOOL ? deepMatches.length : grammarMatches.length,
     aiConfigured,
   });
   const errorMatches = grammarMatches.filter(
@@ -2743,6 +3146,8 @@ export default function App() {
                 proofreadShortcut={shortcuts[SHORTCUT_IDS.TRIGGER_PROOFREAD]}
                 isWarming={isWarming}
                 transformRunning={transformRunning}
+                deepRunning={deepRunning}
+                deepWarming={deepWarming}
               />
               {!aiConfigured && (
                 <div className="mt-2 rounded-lg border border-dashed border-hairline bg-canvas px-3 py-2.5">
@@ -2890,9 +3295,15 @@ export default function App() {
                   checkTimer.current = null;
                 }
                 grammarRunRef.current?.invalidate();
+                cancelDeepProofread();
                 setActiveTool("");
                 setChecking(false);
                 setGrammarMatches([]);
+                setDeepMatches([]);
+                deepMatchesRef.current = [];
+                setDeepProgress(null);
+                setDeepError("");
+                setDeepWarning("");
                 setActiveErrorId(null);
                 activeErrorRef.current = null;
                 setHoveredError(null);
@@ -2909,6 +3320,13 @@ export default function App() {
               transformError={transformError}
               onApplyTransform={applyTransformResult}
               onDismissTransform={dismissTransformResult}
+              deepMatches={deepMatches}
+              deepRunning={deepRunning}
+              deepProgress={deepProgress}
+              deepError={deepError}
+              deepWarning={deepWarning}
+              onCancelDeep={cancelDeepProofread}
+              onRetryDeep={runDeepProofread}
             />
           </aside>
         </div>
@@ -2940,7 +3358,7 @@ export default function App() {
 
       {hoveredError && (
         <GrammarTooltip
-          match={grammarMatches.find((m) => m.id === hoveredError.id)}
+          match={findVisibleMatch(hoveredError.id)}
           rect={hoveredError.rect}
           onApply={handleApplySuggestion}
           onDismiss={() => setHoveredError(null)}

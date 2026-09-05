@@ -386,8 +386,13 @@ describe("Grammar category classification", () => {
   it("classifies everything else as style", () => {
     expect(getCategoryClass("Style")).toBe("lex-error-style");
     expect(getCategoryClass("Tone")).toBe("lex-error-style");
-    expect(getCategoryClass("Clarity")).toBe("lex-error-style");
+    expect(getCategoryClass("Clarity")).toBe("lex-error-ai");
     expect(getCategoryClass("")).toBe("lex-error-style");
+  });
+
+  it("classifies AI-engine matches as the purple AI decoration", () => {
+    expect(getCategoryClass("Style", "ai")).toBe("lex-error-ai");
+    expect(getCategoryClass("Deep Proofread")).toBe("lex-error-ai");
   });
 
   it("is case-insensitive", () => {

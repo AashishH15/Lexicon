@@ -16,12 +16,12 @@ import os
 import re
 import sys
 from collections.abc import Callable
-from threading import Event
+from threading import Event, Lock
 
 import requests
 
 from ai_prefs import load_prefs
-from model_manager import model_path
+from model_manager import is_model_file_available, model_path
 
 OLLAMA_SERVER = os.environ.get("OLLAMA_SERVER", "http://localhost:11434")
 LM_STUDIO_SERVER = os.environ.get("LM_STUDIO_SERVER", "http://localhost:1234")
@@ -39,6 +39,11 @@ GENERATE_TIMEOUT = 120
 # must stay under it. The frontend chunks input to ~1800 tokens, leaving headroom
 # for ~2048 output. Overridable per-call via opts["max_tokens"].
 TRANSFORM_MAX_TOKENS = 2048
+
+# One bundled generation at a time. Backend instances are per request,
+# so the lock must be global. Concurrent calls share one model session
+# and can wedge or crash it.
+_BUNDLED_GENERATION_LOCK = Lock()
 
 SYSTEM_PROMPT = (
     "You are a writing assistant. Follow the user's "
@@ -490,8 +495,9 @@ class BundledBackend(InferenceBackend):
         return model_path(self.model_key)
 
     def available(self) -> bool:
-        # Available iff the downloaded GGUF for this key exists on disk.
-        return os.path.exists(self._path())
+        # Availability must reject partial/corrupt files and may fall back to
+        # a verified legacy file for this same tier.
+        return is_model_file_available(self.model_key)
 
     def _ensure_loaded(self):
         if self._llm is not None:
@@ -556,36 +562,56 @@ class BundledBackend(InferenceBackend):
     def complete(self, prompt: str, text: str, **opts) -> str:
         cancel_event, _ = _take_cancellation_opts(opts)
         _raise_if_cancelled(cancel_event)
-        self._ensure_loaded()
-        max_tokens = int(opts.pop("max_tokens", TRANSFORM_MAX_TOKENS))
-        messages = [
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": f"{prompt}\n\n{text}"},
-        ]
-        try:
-            out = self._llm.create_chat_completion(
-                messages=messages,
-                max_tokens=max_tokens,
-                temperature=0.3,
-                **opts,
-            )
-        except Exception:  # noqa: BLE001 - surface engine errors clearly
-            # A decode can wedge the session if the client aborts mid-generation
-            # (e.g. cancelling a run). Rebuild the session once and retry so the
-            # next request self-heals instead of persisting a -1 failure.
-            self._llm = None
-            try:
-                self._ensure_loaded()
-                out = self._llm.create_chat_completion(
+        with _BUNDLED_GENERATION_LOCK:
+            _raise_if_cancelled(cancel_event)
+            self._ensure_loaded()
+            max_tokens = int(opts.pop("max_tokens", TRANSFORM_MAX_TOKENS))
+            temperature = float(opts.pop("temperature", 0.3))
+            messages = [
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": f"{prompt}\n\n{text}"},
+            ]
+            def _consume_completion(session_llm, call_opts) -> str:
+                result = session_llm.create_chat_completion(
                     messages=messages,
                     max_tokens=max_tokens,
-                    temperature=0.3,
-                    **opts,
+                    temperature=temperature,
+                    stream=True,
+                    **call_opts,
                 )
-            except Exception as exc2:
-                raise InferenceUnavailable(f"Bundled model failed: {exc2}") from exc2
-        content = out["choices"][0]["message"]["content"]
-        return _clean_completion(content, "The bundled model")
+                if isinstance(result, dict):
+                    return result["choices"][0]["message"]["content"]
+                chunks = []
+                for chunk in result:
+                    _raise_if_cancelled(cancel_event)
+                    choices = chunk.get("choices") or []
+                    if choices:
+                        delta = choices[0].get("delta") or {}
+                        text_part = delta.get("content") or ""
+                        if text_part:
+                            chunks.append(text_part)
+                return "".join(chunks)
+
+            try:
+                content = _consume_completion(self._llm, opts)
+            except InferenceCancelled:
+                self._llm = None
+                raise
+            except Exception:  # noqa: BLE001 - surface engine errors clearly
+                # Reset the session to remove wedged state.
+                self._llm = None
+                # Do not retry if cancelled.
+                _raise_if_cancelled(cancel_event)
+                try:
+                    self._ensure_loaded()
+                    _raise_if_cancelled(cancel_event)
+                    content = _consume_completion(self._llm, opts)
+                except InferenceCancelled:
+                    self._llm = None
+                    raise
+                except Exception as exc2:
+                    raise InferenceUnavailable(f"Bundled model failed: {exc2}") from exc2
+            return _clean_completion(content, "The bundled model")
 
 
 _backend = None
@@ -616,7 +642,7 @@ def get_backend(
                 api_key=prefs.get("lmstudio_api_key") or None,
             )
         else:
-            _backend = BundledBackend()
+            _backend = BundledBackend(model_key=prefs.get("model_key") or "2b")
         return _backend
 
     choice = prefs["backend"]
@@ -676,12 +702,13 @@ def get_backend(
         if bundled.available():
             _backend = bundled
             return _backend
-        # Chosen tier missing — try the other tier, then Ollama as last resort.
-        other = "0.8b" if key == "2b" else "2b"
-        alt = BundledBackend(model_key=other)
-        if alt.available():
-            _backend = alt
-            return _backend
+        # Chosen tier missing — try other available bundled tiers, then Ollama as last resort.
+        fallback_keys = [k for k in ("2b", "quality", "0.8b") if k != key]
+        for alt_key in fallback_keys:
+            alt = BundledBackend(model_key=alt_key)
+            if alt.available():
+                _backend = alt
+                return _backend
         ollama = make_ollama()
         if ollama.available():
             _backend = ollama
@@ -706,13 +733,14 @@ def get_backend(
 def unload_active_backend():
     """Unload cached backend model weights from memory."""
     global _backend
-    if _backend is not None:
-        if hasattr(_backend, "unload"):
-            _backend.unload()
-        _backend = None
-    import gc
+    with _BUNDLED_GENERATION_LOCK:
+        if _backend is not None:
+            if hasattr(_backend, "unload"):
+                _backend.unload()
+            _backend = None
+        import gc
 
-    gc.collect()
+        gc.collect()
 
 
 if __name__ == "__main__":

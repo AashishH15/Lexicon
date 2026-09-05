@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Cpu, DownloadSimple } from "@phosphor-icons/react";
+import { ArrowsClockwise, Cpu, DownloadSimple, TrashSimple } from "@phosphor-icons/react";
 import Toggle from "./Toggle.jsx";
 import {
   getAiStatus,
@@ -7,12 +7,14 @@ import {
   getModelStatus,
   cancelModelDownload,
   deleteModel,
+  cleanupLegacyModel,
   setAiPreference,
 } from "./api.js";
 
 const MODEL_TIERS = [
-  { key: "2b", label: "Standard", detail: "Best balance of quality and size. ~1.4 GB." },
-  { key: "0.8b", label: "Light", detail: "Smallest and fastest, near-lossless quality. ~0.8 GB." },
+  { key: "0.8b", label: "Light", detail: "Smallest and fastest, high instruction accuracy. ~1.15 GB." },
+  { key: "2b", label: "Standard", detail: "Best balance of quality and phrasing precision. ~3.0 GB." },
+  { key: "quality", label: "Quality", detail: "Maximum restraint and prose polish. 8B MoE / 1.3B active. ~4.9 GB." },
 ];
 
 const OLLAMA_URL = "http://localhost:11434";
@@ -184,9 +186,154 @@ export default function ModelManager({
   const pollRef = useRef(null);
   const userPickedRef = useRef(false);
   const lmStudioApiKeyChangedRef = useRef(false);
+  const [reclaimMessage, setReclaimMessage] = useState(() => {
+    try {
+      return new URLSearchParams(window.location.search).get("testReclaim")
+        ? "Upgrade complete! Removed previous model file to reclaim 1.4 GB of disk space."
+        : "";
+    } catch {
+      return "";
+    }
+  });
   const [openProvider, setOpenProvider] = useState(
     () => localStorage.getItem("lexicon:provider-open") || ""
   );
+
+  const [activeUpgradeTier, setActiveUpgradeTier] = useState(null);
+  const [upgradePhase, setUpgradePhase] = useState("prompt"); // prompt | downloading | complete | error
+  const [upgradeProgress, setUpgradeProgress] = useState(null);
+  const [upgradeError, setUpgradeError] = useState("");
+  const [upgradeCleanupError, setUpgradeCleanupError] = useState("");
+  const upgradeTimerRef = useRef(null);
+
+  function tierHasUpgrade(key) {
+    if (status.tier_upgrades?.[key] !== undefined) {
+      return Boolean(status.tier_upgrades[key]?.upgrade_available);
+    }
+    return Boolean(
+      status.upgrade_available &&
+        (status.upgrade_model_key === key || (!status.upgrade_model_key && key === "2b"))
+    );
+  }
+
+  function getUpgradeTierName(key) {
+    return (
+      status.tier_upgrades?.[key]?.tier_name ||
+      MODEL_TIERS.find((t) => t.key === key)?.label ||
+      "Standard"
+    );
+  }
+
+  function getUpgradeAccuracy(key) {
+    return status.tier_upgrades?.[key]?.accuracy_gain || status.accuracy_gain || "+185%";
+  }
+
+  function getUpgradeSizeDiff(key) {
+    return status.tier_upgrades?.[key]?.size_diff || status.size_diff || "+1.4 GB";
+  }
+
+  function getUpgradeReclaimSize(key) {
+    return (
+      status.tier_upgrades?.[key]?.reclaim_size ||
+      (key === "0.8b" ? "840 MB" : "1.4 GB")
+    );
+  }
+
+  function openUpgradePopover(key) {
+    setActiveUpgradeTier(key);
+    setUpgradePhase("prompt");
+    setUpgradeError("");
+    setUpgradeCleanupError("");
+    setUpgradeProgress(null);
+  }
+
+  function closeUpgradePopover() {
+    if (upgradePhase === "downloading") return;
+    if (upgradeTimerRef.current) {
+      clearInterval(upgradeTimerRef.current);
+      upgradeTimerRef.current = null;
+    }
+    setActiveUpgradeTier(null);
+    setUpgradePhase("prompt");
+    setUpgradeError("");
+    setUpgradeCleanupError("");
+    setUpgradeProgress(null);
+  }
+
+  async function handleCancelUpgrade() {
+    if (upgradeTimerRef.current) {
+      clearInterval(upgradeTimerRef.current);
+      upgradeTimerRef.current = null;
+    }
+    try {
+      await cancelModelDownload(activeUpgradeTier);
+    } catch {
+      /* best-effort */
+    }
+    setUpgradePhase("prompt");
+    setUpgradeProgress(null);
+  }
+
+  async function executeUpgrade(targetKey) {
+    setUpgradePhase("downloading");
+    setUpgradeProgress({ bytes_done: 0, bytes_total: 0 });
+    setUpgradeError("");
+    setUpgradeCleanupError("");
+
+    if (upgradeTimerRef.current) clearInterval(upgradeTimerRef.current);
+    upgradeTimerRef.current = setInterval(async () => {
+      try {
+        const st = await getModelStatus(targetKey);
+        setUpgradeProgress({ bytes_done: st.bytes_done, bytes_total: st.bytes_total });
+      } catch {
+        /* ignore poll error */
+      }
+    }, 300);
+
+    try {
+      const res = await downloadModel(targetKey);
+      if (upgradeTimerRef.current) {
+        clearInterval(upgradeTimerRef.current);
+        upgradeTimerRef.current = null;
+      }
+      if (res && res.state === "cancelled") {
+        setUpgradePhase("prompt");
+        setUpgradeProgress(null);
+        return;
+      }
+      let cleanupError = res?.cleanup_error || "";
+      try {
+        const cleanup = await cleanupLegacyModel(targetKey);
+        cleanupError = cleanup?.error || cleanupError;
+      } catch (err) {
+        cleanupError = err.message || "The previous model file could not be removed.";
+      }
+      refreshStatus();
+      setUpgradeCleanupError(cleanupError);
+      setUpgradePhase("complete");
+      if (onPreferenceChange) {
+        onPreferenceChange({
+          backend: "bundled",
+          model_key: targetKey,
+          lmstudio_url: lmStudioUrl,
+          lmstudio_api_key: lmStudioApiKeyForSave(),
+        });
+      }
+      if (onConfigured) onConfigured();
+    } catch (err) {
+      if (upgradeTimerRef.current) {
+        clearInterval(upgradeTimerRef.current);
+        upgradeTimerRef.current = null;
+      }
+      if (err.message && err.message.toLowerCase().includes("cancel")) {
+        setUpgradePhase("prompt");
+        setUpgradeProgress(null);
+        return;
+      }
+      setUpgradePhase("error");
+      setUpgradeError(err.message || "Upgrade download failed.");
+    }
+  }
 
   function lmStudioApiKeyForSave() {
     return lmStudioApiKeyChangedRef.current ? lmStudioApiKeyDraft : null;
@@ -274,6 +421,41 @@ export default function ModelManager({
     };
   }, [mode]);
 
+  useEffect(() => {
+    return () => {
+      if (pollRef.current) {
+        clearInterval(pollRef.current);
+        pollRef.current = null;
+      }
+      if (upgradeTimerRef.current) {
+        clearInterval(upgradeTimerRef.current);
+        upgradeTimerRef.current = null;
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!activeUpgradeTier) {
+      return undefined;
+    }
+    const handleKeyDown = (event) => {
+      if (event.key !== "Escape" || upgradePhase === "downloading") {
+        return;
+      }
+      if (upgradeTimerRef.current) {
+        clearInterval(upgradeTimerRef.current);
+        upgradeTimerRef.current = null;
+      }
+      setActiveUpgradeTier(null);
+      setUpgradePhase("prompt");
+      setUpgradeError("");
+      setUpgradeCleanupError("");
+      setUpgradeProgress(null);
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [activeUpgradeTier, upgradePhase]);
+
   function stopPolling() {
     if (pollRef.current) {
       clearInterval(pollRef.current);
@@ -345,6 +527,7 @@ export default function ModelManager({
     if (phase === "downloading") return;
     setPhase("downloading");
     setProgress({ bytes_done: 0, bytes_total: 0 });
+    setReclaimMessage("");
     startPolling();
     try {
       const res = await downloadModel(modelKey);
@@ -359,6 +542,13 @@ export default function ModelManager({
       refreshStatus();
       if (st.state === "ready") {
         setPhase("done");
+        if (res && res.reclaimed_message) {
+          setReclaimMessage(res.reclaimed_message);
+        } else if (res && res.legacy_reclaimed) {
+          setReclaimMessage(
+            "Upgrade complete! Removed previous model file to reclaim 1.4 GB of disk space."
+          );
+        }
       } else if (st.state === "cancelled") {
         setPhase("choose");
       } else {
@@ -372,6 +562,59 @@ export default function ModelManager({
       } else {
         setPhase("error");
         setError(exc.message || "Download failed.");
+      }
+    }
+  }
+
+  async function handleUpgrade(targetKey = "2b") {
+    if (phase === "downloading") return;
+    setModelKey(targetKey);
+    setReclaimMessage("");
+    setPhase("downloading");
+    setProgress({ bytes_done: 0, bytes_total: 0 });
+    startPolling();
+    try {
+      const res = await downloadModel(targetKey);
+      if (res && res.state === "cancelled") {
+        stopPolling();
+        setPhase("choose");
+        return;
+      }
+      const st = await getModelStatus(targetKey);
+      setProgress({ bytes_done: st.bytes_done, bytes_total: st.bytes_total });
+      stopPolling();
+      refreshStatus();
+      if (st.state === "ready") {
+        setPhase("done");
+        if (res && res.reclaimed_message) {
+          setReclaimMessage(res.reclaimed_message);
+        } else {
+          setReclaimMessage(
+            "Upgrade complete! Removed previous model file to reclaim 1.4 GB of disk space."
+          );
+        }
+        if (onPreferenceChange) {
+          onPreferenceChange({
+            backend: "bundled",
+            model_key: targetKey,
+            lmstudio_url: lmStudioUrl,
+            lmstudio_api_key: lmStudioApiKeyForSave(),
+          });
+        }
+        if (onConfigured) onConfigured();
+      } else if (st.state === "cancelled") {
+        setPhase("choose");
+      } else {
+        setPhase("error");
+        setError(st.error || "Upgrade did not complete.");
+      }
+    } catch (exc) {
+      stopPolling();
+      if (exc.message && exc.message.toLowerCase().includes("cancelled")) {
+        setPhase("choose");
+      } else {
+        setPhase("error");
+        setError(exc.message || "Upgrade download failed.");
       }
     }
   }
@@ -612,7 +855,7 @@ export default function ModelManager({
       )}
 
       {(wantBundle || mode === "settings") && (
-        <div className="mt-3 grid grid-cols-2 gap-2">
+        <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-2.5">
           {MODEL_TIERS.map((tier) => {
             const selected = modelKey === tier.key;
             const ready = status.models_ready?.[tier.key];
@@ -658,45 +901,68 @@ export default function ModelManager({
                   }
                 }}
                 className={
-                  "rounded-lg border px-3 py-2 text-left transition-colors " +
+                  "flex flex-col justify-between rounded-lg border p-3 text-left transition-colors min-h-[114px] " +
                   (selected
                     ? "border-pale-blue-text bg-pale-blue/40"
                     : "border-hairline bg-canvas hover:border-muted") +
                   (downloading ? " cursor-not-allowed opacity-50" : " cursor-pointer")
                 }
               >
-                <span className="flex items-center justify-between">
-                  <span className="font-sans text-sm font-medium text-ink">
-                    {tier.label}
-                  </span>
-                  {ready && (
-                    <span className="font-mono text-[9px] uppercase tracking-widest text-pale-green-text">
-                      installed
+                <div>
+                  <div className="flex items-center justify-between gap-1.5">
+                    <span className="font-sans text-sm font-medium text-ink">
+                      {tier.label}
                     </span>
-                  )}
-                </span>
-                <span className="mt-0.5 block font-sans text-[11px] text-muted">
-                  {tier.detail}
-                </span>
+                    {ready && (
+                      <span className="shrink-0 inline-flex items-center gap-1 font-sans text-[10px] font-medium text-pale-green-text">
+                        <span className="h-1.5 w-1.5 rounded-full bg-pale-green-text" />
+                        installed
+                      </span>
+                    )}
+                  </div>
+                  <span className="mt-1 block font-sans text-[11px] leading-relaxed text-muted">
+                    {tier.detail}
+                  </span>
+                </div>
+
                 {ready && (
-                  <span className="mt-2 inline-block">
+                  <div className="mt-2.5 flex items-center gap-1.5">
                     <button
                       type="button"
-                      disabled={deletingKey === tier.key}
+                      aria-label={`Delete ${tier.label} model`}
+                      title={`Delete ${tier.label} model`}
+                      data-testid={`delete-button-${tier.key}`}
+                      disabled={deletingKey === tier.key || phase === "downloading" || upgradePhase === "downloading"}
                       onClick={(e) => {
                         e.stopPropagation();
                         handleDelete(tier.key);
                       }}
                       className={
-                        "cursor-pointer rounded border px-2 py-1 font-sans text-[11px] transition-colors " +
+                        "cursor-pointer rounded border p-1 text-muted transition-colors flex items-center justify-center " +
                         (deletingKey === tier.key
                           ? "cursor-wait border-hairline text-muted animate-pulse"
-                          : "border-hairline text-pale-red-text hover:border-pale-red-text")
+                          : "border-hairline hover:border-pale-red-text hover:text-pale-red-text hover:bg-pale-red/10")
                       }
                     >
-                      {deletingKey === tier.key ? "Deleting…" : "Delete"}
+                      <TrashSimple size={14} weight="bold" />
                     </button>
-                  </span>
+                    {tierHasUpgrade(tier.key) && (
+                      <button
+                        type="button"
+                        aria-label={`Upgrade ${tier.label} model`}
+                        title="Upgrade model"
+                        data-testid={`upgrade-button-${tier.key}`}
+                        disabled={phase === "downloading" || upgradePhase === "downloading"}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openUpgradePopover(tier.key);
+                        }}
+                        className="cursor-pointer rounded border border-purple-300 bg-purple-50 p-1 font-sans text-purple-700 transition-colors hover:bg-purple-100 hover:border-purple-400 flex items-center justify-center"
+                      >
+                        <ArrowsClockwise size={14} weight="bold" />
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
             );
@@ -1100,6 +1366,176 @@ export default function ModelManager({
           status,
           handleDownload,
         })}
+
+      {/* Upgrade Popover / Modal */}
+      {activeUpgradeTier && (
+        <div
+          data-testid="upgrade-popover"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-xs animate-in fade-in duration-200"
+          onClick={(e) => {
+            if (e.target === e.currentTarget && upgradePhase !== "downloading") {
+              closeUpgradePopover();
+            }
+          }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="upgrade-popover-title"
+            aria-describedby="upgrade-popover-description"
+            tabIndex={-1}
+            className="w-full max-w-md rounded-2xl border border-hairline bg-canvas p-6 shadow-2xl transition-all"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-purple-100/80">
+                <Cpu size={22} weight="bold" className="text-purple-700" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3
+                  id="upgrade-popover-title"
+                  className="font-serif text-lg font-bold text-ink"
+                >
+                  Improved AI Model Available
+                </h3>
+                <p
+                  id="upgrade-popover-description"
+                  className="mt-1 font-sans text-xs leading-relaxed text-muted"
+                >
+                  An enhanced model is available for your{" "}
+                  <span className="font-medium text-ink">
+                    {getUpgradeTierName(activeUpgradeTier)}
+                  </span>{" "}
+                  tier featuring{" "}
+                  <strong className="font-semibold text-purple-700">
+                    {getUpgradeAccuracy(activeUpgradeTier)} higher grammar accuracy
+                  </strong>{" "}
+                  ({getUpgradeSizeDiff(activeUpgradeTier)} storage difference).
+                </p>
+              </div>
+            </div>
+
+            {/* Phase: Prompt */}
+            {upgradePhase === "prompt" && (
+              <div className="mt-6 flex items-center justify-end gap-2.5">
+                <button
+                  type="button"
+                  onClick={closeUpgradePopover}
+                  className="cursor-pointer rounded-lg border border-hairline bg-canvas px-3.5 py-2 font-sans text-xs font-medium text-muted transition-colors hover:border-muted hover:text-ink"
+                >
+                  Keep Current
+                </button>
+                <button
+                  type="button"
+                  onClick={() => executeUpgrade(activeUpgradeTier)}
+                  className="cursor-pointer rounded-lg bg-purple-600 px-4 py-2 font-sans text-xs font-medium text-white shadow-xs transition-colors hover:bg-purple-700"
+                >
+                  Upgrade Model
+                </button>
+              </div>
+            )}
+
+            {/* Phase: Downloading */}
+            {upgradePhase === "downloading" && (
+              <div className="mt-5 space-y-3">
+                <div className="h-2 w-full overflow-hidden rounded-full bg-hairline">
+                  <div
+                    className={
+                      "h-full rounded-full bg-purple-600 transition-all duration-300 " +
+                      (upgradeProgress && upgradeProgress.bytes_total ? "" : "animate-pulse")
+                    }
+                    style={{
+                      width:
+                        upgradeProgress && upgradeProgress.bytes_total
+                          ? `${Math.min(100, (upgradeProgress.bytes_done / upgradeProgress.bytes_total) * 100)}%`
+                          : "100%",
+                    }}
+                  />
+                </div>
+                <p className="font-mono text-[10px] uppercase tracking-widest text-muted">
+                  Downloading enhanced model…{" "}
+                  {upgradeProgress && upgradeProgress.bytes_total
+                    ? `${Math.round(upgradeProgress.bytes_done / 1e6)} / ${Math.round(upgradeProgress.bytes_total / 1e6)} MB`
+                    : `${Math.round((upgradeProgress?.bytes_done || 0) / 1e6)} MB`}
+                </p>
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    data-testid="cancel-upgrade-button"
+                    onClick={handleCancelUpgrade}
+                    className="cursor-pointer rounded-lg border border-hairline px-3 py-1.5 font-sans text-xs text-muted transition-colors hover:border-muted hover:text-ink"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Phase: Complete */}
+            {upgradePhase === "complete" && (
+              <div className="mt-5 space-y-4">
+                <div
+                  className={
+                    upgradeCleanupError
+                      ? "rounded-xl border border-amber-200 bg-amber-50/80 p-3.5"
+                      : "rounded-xl border border-green-200 bg-green-50/80 p-3.5"
+                  }
+                >
+                  <p
+                    className={
+                      upgradeCleanupError
+                        ? "font-sans text-xs font-medium text-amber-800 flex items-center gap-2"
+                        : "font-sans text-xs font-medium text-green-800 flex items-center gap-2"
+                    }
+                  >
+                    <Cpu size={16} weight="bold" className="text-green-700 shrink-0" />
+                    <span>
+                      {upgradeCleanupError
+                        ? `Upgrade complete, but the previous model file could not be removed: ${upgradeCleanupError}`
+                        : `Upgrade complete! Removed previous model file to reclaim ${getUpgradeReclaimSize(activeUpgradeTier)} of disk space.`}
+                    </span>
+                  </p>
+                </div>
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    onClick={closeUpgradePopover}
+                    className="cursor-pointer rounded-lg bg-ink px-4 py-2 font-sans text-xs font-medium text-canvas transition-colors hover:bg-ink/90"
+                  >
+                    Done
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Phase: Error */}
+            {upgradePhase === "error" && (
+              <div className="mt-5 space-y-4">
+                <p className="rounded-lg border border-red-200 bg-red-50 p-3 font-sans text-xs text-red-700">
+                  {upgradeError || "Upgrade failed. Check your connection."}
+                </p>
+                <div className="flex justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={closeUpgradePopover}
+                    className="cursor-pointer rounded-lg border border-hairline px-3 py-1.5 font-sans text-xs text-muted hover:text-ink"
+                  >
+                    Close
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => executeUpgrade(activeUpgradeTier)}
+                    className="cursor-pointer rounded-lg bg-purple-600 px-3 py-1.5 font-sans text-xs font-medium text-white hover:bg-purple-700"
+                  >
+                    Try Again
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

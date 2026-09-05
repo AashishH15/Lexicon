@@ -48,10 +48,13 @@ from inference import (
 from languagetool import check_text, close_tool
 from model_manager import (
     cancel_download,
+    cleanup_legacy_model,
     delete_model,
     download_model,
+    get_upgrade_info,
     model_state,
     models_ready,
+    verify_model_runs,
 )
 
 
@@ -145,6 +148,7 @@ class TransformRequest(BaseModel):
     model_key: str | None = None
     backend: str | None = None  # Backend name, or None for automatic selection.
     request_id: str | None = None
+    temperature: float | None = None
 
 
 class TransformCancelRequest(BaseModel):
@@ -333,6 +337,19 @@ def ai_status():
             "lmstudio_loaded": lmstudio_loaded_models,
         }
     )
+    pref_model_key = prefs.get("model_key") or "2b"
+    tier_upgrades = {
+        key: get_upgrade_info(key)
+        for key in ("2b", "0.8b", "quality")
+    }
+    upgrade_info = tier_upgrades.get(pref_model_key, {})
+    if not upgrade_info.get("upgrade_available"):
+        for key in ("2b", "0.8b", "quality"):
+            alt_info = tier_upgrades.get(key, {})
+            if alt_info.get("upgrade_available"):
+                upgrade_info = alt_info
+                break
+
     return {
         "ollama_available": ollama_available,
         "ollama_models": ollama_models,
@@ -345,6 +362,14 @@ def ai_status():
         "model_key": prefs["model_key"],
         "preference": public_prefs(prefs),
         "active_backend": active.name,
+        "active_model_key": getattr(active, "model_key", None),
+        "upgrade_available": upgrade_info.get("upgrade_available", False),
+        "accuracy_gain": upgrade_info.get("accuracy_gain"),
+        "size_diff": upgrade_info.get("size_diff"),
+        "upgrade_model_key": upgrade_info.get("model_key"),
+        "upgrade_tier_name": upgrade_info.get("tier_name"),
+        "upgrade_info": upgrade_info,
+        "tier_upgrades": tier_upgrades,
     }
 
 
@@ -356,7 +381,7 @@ def ai_preference_get():
 
 class AiPreferenceRequest(BaseModel):
     backend: str  # Backend name: auto, ollama, lmstudio, or bundled.
-    model_key: str = "2b"  # Bundled model tier: 2b or 0.8b.
+    model_key: str = "2b"  # Bundled model tier: 2b, 0.8b, or quality.
     ollama_model: str = ""  # Selected Ollama model name.
     lmstudio_model: str = ""  # Selected LM Studio model name.
     lmstudio_url: str = ""  # LM Studio server URL.
@@ -406,7 +431,39 @@ def model_delete(request: ModelDownloadRequest):
         delete_model(request.model_key)
     except ValueError as exc:
         return JSONResponse(status_code=400, content={"error": str(exc)})
+    except OSError as exc:
+        return JSONResponse(status_code=500, content={"error": str(exc)})
     return {"deleted": request.model_key}
+
+
+@app.post("/model/cleanup-legacy")
+def model_cleanup_legacy(request: ModelDownloadRequest):
+    """Remove an obsolete previous-generation model file to reclaim disk space,
+    strictly guarded by verifying that the primary model runs correctly.
+    """
+    if not verify_model_runs(request.model_key):
+        return JSONResponse(
+            status_code=400,
+            content={
+                "error": (
+                    "Cannot cleanup legacy model: primary model failed execution verification."
+                )
+            },
+        )
+    try:
+        result = cleanup_legacy_model(request.model_key, primary_verified=True)
+    except ValueError as exc:
+        return JSONResponse(status_code=400, content={"error": str(exc)})
+    if result.get("error"):
+        return JSONResponse(status_code=500, content=result)
+    return result
+
+
+@app.post("/model/verify")
+def model_verify(request: ModelDownloadRequest):
+    """Verify whether the downloaded primary model executes correctly."""
+    ok = verify_model_runs(request.model_key)
+    return {"verified": ok, "model_key": request.model_key}
 
 
 @app.post("/model/download")
@@ -459,11 +516,16 @@ def transform(request: TransformRequest):
             )
         else:
             backend = get_backend()
+        opts = {
+            "cancel_event": job.cancel_event,
+            "on_response": job.set_response,
+        }
+        if request.temperature is not None:
+            opts["temperature"] = request.temperature
         result = backend.complete(
             request.prompt,
             request.text,
-            cancel_event=job.cancel_event,
-            on_response=job.set_response,
+            **opts,
         )
     except InferenceCancelled as exc:
         return JSONResponse(

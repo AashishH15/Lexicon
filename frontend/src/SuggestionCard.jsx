@@ -1,7 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import { BookBookmark, CircleNotch, MagicWand } from "@phosphor-icons/react";
+import { BookBookmark, CircleNotch, MagicWand, Sparkle } from "@phosphor-icons/react";
 
-function getCategoryBadgeStyle(category = "") {
+function getCategoryBadgeStyle(category = "", engine = "") {
+  if (engine === "ai" || category.toLowerCase().includes("clarity") || category.toLowerCase().includes("deep")) {
+    return "bg-[#F3E8FF] text-[#6B21A8] border-[#E9D5FF]";
+  }
   const cat = category.toLowerCase();
   if (cat.includes("spell") || cat.includes("typo")) {
     return "bg-[#FDEBEC] text-[#9F2F2D] border-[#F8C9C8]";
@@ -27,11 +30,15 @@ export default function SuggestionCard({
   onLocate,
   onAiRewrite,
 }) {
+  const isAiMatch =
+    match.engine === "ai" ||
+    match.category === "Clarity" ||
+    match.category === "Deep Proofread";
   const hasReplacement =
     Array.isArray(match.replacements) && match.replacements.length > 0;
   const isRemoval = match.action === "remove";
   const replacement = hasReplacement ? match.replacements[0] : null;
-  const badgeStyle = getCategoryBadgeStyle(match.category);
+  const badgeStyle = getCategoryBadgeStyle(match.category, match.engine);
   const [exiting, setExiting] = useState(false);
   const [entered, setEntered] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
@@ -89,11 +96,20 @@ export default function SuggestionCard({
       }
       style={{ animationDelay: exiting ? "0ms" : folding ? `${foldDelay}ms` : `${index * 80}ms` }}
     >
-      <span
-        className={`inline-block rounded border px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.08em] ${badgeStyle}`}
-      >
-        {match.category === "Prose Style" ? "Prose Style" : `${match.category} Suggestion`}
-      </span>
+      {isAiMatch ? (
+        <span
+          className={`inline-flex items-center gap-1 rounded border px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.08em] ${badgeStyle}`}
+        >
+          <Sparkle size={10} weight="fill" className="text-[#6B21A8]" />
+          <span>Clarity &amp; Flow</span>
+        </span>
+      ) : (
+        <span
+          className={`inline-block rounded border px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.08em] ${badgeStyle}`}
+        >
+          {match.category === "Prose Style" ? "Prose Style" : `${match.category} Suggestion`}
+        </span>
+      )}
 
       <p className="mt-3 font-sans text-sm italic text-muted">{match.message}</p>
 
@@ -199,7 +215,7 @@ export default function SuggestionCard({
         >
           Dismiss
         </button>
-        {!match.category?.toLowerCase().includes("prose") && (
+        {!match.noDictionary && !match.category?.toLowerCase().includes("prose") && (
           <button
             type="button"
             aria-label="Add to dictionary"

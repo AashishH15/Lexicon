@@ -365,3 +365,307 @@ def test_saved_lmstudio_preference_selects_lmstudio_backend(tmp_path, monkeypatc
 
     assert isinstance(backend, LMStudioBackend)
     assert backend.base_url == "http://192.168.1.25:1234"
+
+
+def test_quality_model_preference_round_trips(tmp_path, monkeypatch):
+    monkeypatch.setattr(ai_prefs, "PREFS_PATH", str(tmp_path / "ai_prefs.json"))
+
+    saved = ai_prefs.save_prefs("bundled", "quality")
+
+    assert saved["model_key"] == "quality"
+    assert ai_prefs.load_prefs()["model_key"] == "quality"
+
+
+def test_forced_bundled_backend_uses_saved_quality_tier(monkeypatch):
+    monkeypatch.setattr(
+        inference,
+        "load_prefs",
+        lambda: {"backend": "auto", "model_key": "quality"},
+    )
+    monkeypatch.setattr(inference, "FORCE_BACKEND", "bundled")
+    monkeypatch.setattr(inference, "_backend", None)
+
+    backend = inference.get_backend(force_refresh=True)
+
+    assert isinstance(backend, inference.BundledBackend)
+    assert backend.model_key == "quality"
+
+
+def test_explicit_bundled_fallback_exposes_selected_tier(monkeypatch):
+    monkeypatch.setattr(
+        inference,
+        "load_prefs",
+        lambda: {"backend": "bundled", "model_key": "quality"},
+    )
+    monkeypatch.setattr(inference, "FORCE_BACKEND", "")
+    monkeypatch.setattr(inference, "_backend", None)
+
+    monkeypatch.setattr(
+        inference.BundledBackend,
+        "available",
+        lambda backend: backend.model_key == "2b",
+    )
+    monkeypatch.setattr(inference.OllamaBackend, "available", lambda _backend: False)
+    monkeypatch.setattr(inference.LMStudioBackend, "available", lambda _backend: False)
+
+    backend = inference.get_backend(force_refresh=True)
+
+    assert isinstance(backend, inference.BundledBackend)
+    assert backend.model_key == "2b"
+
+
+def test_bundled_generations_run_one_at_a_time():
+    backend = inference.BundledBackend(model_key="0.8b")
+    active = 0
+    peak = 0
+    guard = threading.Lock()
+
+    class FakeSession:
+        def create_chat_completion(self, **kwargs):
+            nonlocal active, peak
+            with guard:
+                active += 1
+                peak = max(peak, active)
+            time.sleep(0.05)
+            with guard:
+                active -= 1
+            return {"choices": [{"message": {"content": "[]"}}]}
+
+    backend._llm = FakeSession()
+    backend._ensure_loaded = lambda: None
+    errors = []
+
+    def run_one():
+        try:
+            assert backend.complete("prompt", "text") == "[]"
+        except Exception as exc:  # noqa: BLE001 - collect thread errors
+            errors.append(exc)
+
+    threads = [threading.Thread(target=run_one) for _ in range(6)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join(timeout=30)
+
+    assert not errors
+    assert peak == 1
+
+
+def test_bundled_skips_queued_work_after_cancel():
+    backend = inference.BundledBackend(model_key="0.8b")
+    backend._ensure_loaded = lambda: None
+    event = threading.Event()
+    event.set()
+
+    with pytest.raises(InferenceCancelled):
+        backend.complete("prompt", "text", cancel_event=event)
+
+
+def test_bundled_complete_does_not_retry_if_cancelled():
+    backend = inference.BundledBackend(model_key="0.8b")
+    event = threading.Event()
+    call_count = 0
+
+    class FailingSession:
+        def create_chat_completion(self, **kwargs):
+            nonlocal call_count
+            call_count += 1
+            event.set()
+            raise RuntimeError("generation interrupted")
+
+    backend._llm = FailingSession()
+    backend._ensure_loaded = lambda: setattr(backend, "_llm", FailingSession())
+
+    with pytest.raises(InferenceCancelled):
+        backend.complete("prompt", "text", cancel_event=event)
+
+    assert call_count == 1
+
+
+def test_bundled_complete_raises_inference_cancelled_in_retry_guard():
+    backend = inference.BundledBackend(model_key="0.8b")
+    event = threading.Event()
+
+    class FirstFailSession:
+        def create_chat_completion(self, **kwargs):
+            raise RuntimeError("first fail")
+
+    backend._llm = FirstFailSession()
+
+    def fake_reload():
+        backend._llm = FirstFailSession()
+
+    backend._ensure_loaded = fake_reload
+
+    class RetryFailSession:
+        def create_chat_completion(self, **kwargs):
+            event.set()
+            raise inference.InferenceCancelled("cancelled mid-retry")
+
+    # In retry, completion raises InferenceCancelled
+    def fake_reload_cancel():
+        backend._llm = RetryFailSession()
+
+    backend._ensure_loaded = fake_reload_cancel
+
+    with pytest.raises(InferenceCancelled) as exc_info:
+        backend.complete("prompt", "text", cancel_event=event)
+
+    assert type(exc_info.value) is inference.InferenceCancelled
+
+
+def test_bundled_complete_direct_cancellation_not_wrapped_in_unavailable():
+    backend = inference.BundledBackend(model_key="0.8b")
+    event = threading.Event()
+
+    class DirectCancelSession:
+        def create_chat_completion(self, **kwargs):
+            raise inference.InferenceCancelled("cancelled during first call")
+
+    backend._llm = DirectCancelSession()
+    backend._ensure_loaded = lambda: None
+
+    with pytest.raises(InferenceCancelled) as exc_info:
+        backend.complete("prompt", "text", cancel_event=event)
+
+    assert type(exc_info.value) is inference.InferenceCancelled
+    assert backend._llm is None
+
+
+def test_bundled_complete_streaming_cancellation_aborts_early():
+    backend = inference.BundledBackend(model_key="0.8b")
+    event = threading.Event()
+    yielded_count = 0
+
+    class StreamingSession:
+        def create_chat_completion(self, **kwargs):
+            assert kwargs.get("stream") is True
+
+            def token_generator():
+                nonlocal yielded_count
+                for i in range(10):
+                    yielded_count += 1
+                    if i == 2:
+                        event.set()
+                    yield {"choices": [{"delta": {"content": f"token_{i} "}}]}
+
+            return token_generator()
+
+    backend._llm = StreamingSession()
+    backend._ensure_loaded = lambda: None
+
+    with pytest.raises(InferenceCancelled) as exc_info:
+        backend.complete("prompt", "text", cancel_event=event)
+
+    assert type(exc_info.value) is inference.InferenceCancelled
+    assert yielded_count < 10
+    assert backend._llm is None
+
+
+def test_unload_active_backend_acquires_generation_lock(monkeypatch):
+    unloaded = False
+
+    class DummyBackend:
+        def unload(self):
+            nonlocal unloaded
+            unloaded = True
+
+    monkeypatch.setattr(inference, "_backend", DummyBackend())
+
+    started = threading.Event()
+
+    def try_unload():
+        started.set()
+        inference.unload_active_backend()
+
+    with inference._BUNDLED_GENERATION_LOCK:
+        thread = threading.Thread(target=try_unload)
+        thread.start()
+        assert started.wait(timeout=2)
+        # Give thread time to attempt acquisition
+        time.sleep(0.05)
+        # Unload must not have completed while lock is held
+        assert unloaded is False
+        assert inference._backend is not None
+
+    thread.join(timeout=5)
+    assert unloaded is True
+    assert inference._backend is None
+
+
+def test_bundled_complete_assembles_streaming_tokens_byte_for_byte():
+    backend = inference.BundledBackend(model_key="2b")
+    expected = '[{"source": "She don\'t know", "replacement": "She doesn\'t know"}]'
+    slices = [
+        '[{"source": ',
+        '"She ',
+        "don't ",
+        'know", ',
+        '"replacement": ',
+        '"She doesn\'t ',
+        'know"}]',
+    ]
+
+    class MockStreamingSession:
+        def create_chat_completion(self, **kwargs):
+            def token_gen():
+                for s in slices:
+                    yield {"choices": [{"delta": {"content": s}}]}
+            return token_gen()
+
+    backend._llm = MockStreamingSession()
+    backend._ensure_loaded = lambda: None
+    result = backend.complete("prompt", "text")
+    assert result == expected
+
+
+def test_bundled_complete_streaming_multibyte_utf8_integrity():
+    backend = inference.BundledBackend(model_key="2b")
+    expected = "“Café au lait” — résumé for 🌟 and 日本語"
+    slices = [
+        "“Caf",
+        "é au ",
+        "lait” ",
+        "— rés",
+        "umé for ",
+        "🌟 and ",
+        "日",
+        "本",
+        "語",
+    ]
+
+    class MockUtf8Session:
+        def create_chat_completion(self, **kwargs):
+            def token_gen():
+                for s in slices:
+                    yield {"choices": [{"delta": {"content": s}}]}
+            return token_gen()
+
+    backend._llm = MockUtf8Session()
+    backend._ensure_loaded = lambda: None
+    result = backend.complete("prompt", "text")
+    assert result == expected
+
+
+def test_bundled_complete_streaming_empty_and_null_chunk_tolerance():
+    backend = inference.BundledBackend(model_key="2b")
+    chunks = [
+        {"choices": []},
+        {"choices": [{"delta": {}}]},
+        {"choices": [{"delta": {"content": None}}]},
+        {"choices": [{"delta": {"content": ""}}]},
+        {"choices": [{"delta": {"content": "valid"}}, {"delta": {"content": "ignored"}}]},
+        {"choices": [{"delta": {"content": " result"}}]},
+        {"choices": []},
+    ]
+
+    class MockFringeSession:
+        def create_chat_completion(self, **kwargs):
+            def token_gen():
+                yield from chunks
+            return token_gen()
+
+    backend._llm = MockFringeSession()
+    backend._ensure_loaded = lambda: None
+    result = backend.complete("prompt", "text")
+    assert result == "valid result"

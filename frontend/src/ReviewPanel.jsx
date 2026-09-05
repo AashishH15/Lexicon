@@ -96,9 +96,19 @@ export default function ReviewPanel({
   transformError,
   onApplyTransform,
   onDismissTransform,
+  deepMatches = [],
+  deepRunning = false,
+  deepProgress = null,
+  deepError = "",
+  deepWarning = "",
+  onCancelDeep = null,
+  onRetryDeep = null,
 }) {
-  const count = grammarMatches.length;
-  const actionableCount = grammarMatches.filter(
+  const isDeepProofread = activeTool === "Deep Proofread";
+  const listMatches = isDeepProofread ? deepMatches : grammarMatches;
+  const runningCheck = isDeepProofread ? deepRunning : checking;
+  const count = listMatches.length;
+  const actionableCount = listMatches.filter(
     (match) =>
       match.action === "remove" ||
       (Array.isArray(match.replacements) && Boolean(match.replacements[0])),
@@ -188,7 +198,7 @@ export default function ReviewPanel({
               appears here to review.
             </p>
           </>
-        ) : activeTool === "Proofread" ? (
+        ) : activeTool === "Proofread" || isDeepProofread ? (
           backendOffline ? (
             <div className="flex w-full flex-col gap-2 rounded-xl bg-pale-yellow-bg px-4 py-3 text-amber-900 border border-pale-yellow">
               <div className="flex items-start justify-between gap-2">
@@ -266,7 +276,7 @@ export default function ReviewPanel({
                 );
               })()}
             </div>
-          ) : checking ? (
+          ) : runningCheck ? (
             <div className="lex-paper-surface rounded-xl border border-hairline p-6 pb-4 lex-card-enter">
               <div className="h-3 w-full rounded lex-shimmer" />
               <div className="mt-3 h-3 w-[90%] rounded lex-shimmer" />
@@ -281,6 +291,46 @@ export default function ReviewPanel({
                   I&rsquo;m checking your draft&hellip;
                 </p>
               </div>
+              {isDeepProofread && deepProgress && deepProgress.total > 1 && (
+                <div className="mt-4 h-1.5 w-full overflow-hidden rounded-full bg-hairline">
+                  <div
+                    className="h-full bg-ink transition-all duration-300 ease-out"
+                    style={{ width: `${Math.round((deepProgress.current / deepProgress.total) * 100)}%` }}
+                  />
+                </div>
+              )}
+              {isDeepProofread && deepProgress && deepProgress.total > 1 && (
+                <p className="mt-3 font-sans text-xs leading-relaxed text-muted">
+                  Checking part {deepProgress.current} of {deepProgress.total}&hellip;
+                </p>
+              )}
+              {isDeepProofread && onCancelDeep && (
+                <button
+                  type="button"
+                  onClick={onCancelDeep}
+                  className="mt-4 rounded-full px-2.5 py-px font-mono text-[10px] uppercase tracking-widest text-ink transition-colors hover:bg-pale-red hover:text-pale-red-text focus-visible:ring-1 focus-visible:ring-ink"
+                >
+                  Cancel
+                </button>
+              )}
+            </div>
+          ) : isDeepProofread && deepError ? (
+            <div className="rounded-xl border border-pale-red bg-pale-red/40 px-4 py-4 lex-card-enter">
+              <p className="font-sans text-sm font-medium text-pale-red-text">
+                Deep proofread couldn&rsquo;t run
+              </p>
+              <p className="font-sans text-xs leading-relaxed text-muted mt-1">
+                {deepError}
+              </p>
+              {onRetryDeep && (
+                <button
+                  type="button"
+                  onClick={onRetryDeep}
+                  className="mt-3 rounded-full bg-pale-green px-2.5 py-px font-mono text-[10px] uppercase tracking-widest text-pale-green-text transition-colors hover:bg-pale-green/70 focus-visible:ring-1 focus-visible:ring-ink"
+                >
+                  Retry
+                </button>
+              )}
             </div>
           ) : count === 0 ? (
             showBloom ? (
@@ -298,9 +348,11 @@ export default function ReviewPanel({
                   message={lexStatusLabel}
                 />
                 <p className="text-sm leading-relaxed text-muted">
-                  {userResolvedAll
-                    ? "No issues remain in this draft."
-                    : "No issues found in this draft."}
+                  {isDeepProofread
+                    ? "No deep issues found in this draft."
+                    : userResolvedAll
+                      ? "No issues remain in this draft."
+                      : "No issues found in this draft."}
                 </p>
               </div>
             )
@@ -316,9 +368,15 @@ export default function ReviewPanel({
                   {lexStatusLabel}
                 </span>
               </div>
+              {isDeepProofread && deepWarning && (
+                <div className="mb-3 rounded-xl border border-amber-300/80 bg-amber-50/70 p-3 text-xs leading-relaxed text-amber-900">
+                  <span className="font-semibold text-amber-950">Notice: </span>
+                  {deepWarning}
+                </div>
+              )}
               <div className="mb-3 flex items-center justify-end gap-3">
                 <div ref={announceRef} aria-live="polite" aria-atomic="true" className="sr-only">
-                  {checking ? "Proofreading in progress" : `${count} ${count === 1 ? "issue" : "issues"} found`}
+                  {runningCheck ? "Proofreading in progress" : `${count} ${count === 1 ? "issue" : "issues"} found`}
                 </div>
                 {actionableCount > 0 && (
                   <button
@@ -393,11 +451,18 @@ export default function ReviewPanel({
                       <span className="font-medium text-ink">Prose Style</span>
                       <span className="ml-auto text-[10px] text-muted font-mono uppercase tracking-[0.08em]">LAVENDER</span>
                     </div>
+                    {isDeepProofread && (
+                      <div className="flex items-center gap-2">
+                        <span className="h-2 w-2 rounded-full bg-[#6B21A8]" />
+                        <span className="font-medium text-ink">AI Clarity & Flow</span>
+                        <span className="ml-auto text-[10px] text-muted font-mono uppercase tracking-[0.08em]">PURPLE</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
               <ul className="flex flex-col gap-3">
-                {grammarMatches.map((match, i) => (
+                {listMatches.map((match, i) => (
                   <SuggestionCard
                     key={match.id}
                     match={match}

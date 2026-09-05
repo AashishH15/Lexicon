@@ -39,8 +39,15 @@ export function buildTextWithMap(doc) {
   return { text, map };
 }
 
-export function getCategoryClass(category) {
+export function getCategoryClass(category, engine = "") {
   const cat = (category || "").toString().toLowerCase();
+  if (
+    engine === "ai" ||
+    cat.includes("clarity") ||
+    cat.includes("deep proofread")
+  ) {
+    return "lex-error-ai";
+  }
   if (cat.includes("spell") || cat.includes("typo")) {
     return "lex-error-spelling";
   }
@@ -63,7 +70,7 @@ function decorationsFromMatches(doc, matches, map, activeId) {
     }
     const to = (lastCharPos ?? from) + 1;
     const isActive = activeId != null && match.id === activeId;
-    const catClass = getCategoryClass(match.category);
+    const catClass = getCategoryClass(match.category, match.engine);
     decorations.push(
       Decoration.inline(
         from,
@@ -238,7 +245,7 @@ export function dismissError(editor, id) {
 // see where in the document the suggestion applies. The flash is applied as a
 // ProseMirror decoration rather than a raw DOM class, because ProseMirror owns
 // the decoration spans and would otherwise repaint over a manual class.
-export function focusError(editor, id, category) {
+export function focusError(editor, id, category, engine = "") {
   const range = findErrorRange(editor, id);
   if (!range) {
     return;
@@ -249,7 +256,9 @@ export function focusError(editor, id, category) {
   if (errorEl) {
     errorEl.scrollIntoView({ behavior: "smooth", block: "center" });
   }
-  const cls = category ? "lex-error-flash " + getCategoryClass(category) : "lex-error-flash";
+  const cls = category || engine
+    ? "lex-error-flash " + getCategoryClass(category, engine)
+    : "lex-error-flash";
   editor.view.dispatch(
     editor.state.tr.setMeta(grammarPluginKey, { flash: { ...range, class: cls } }),
   );

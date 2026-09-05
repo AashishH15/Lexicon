@@ -451,7 +451,7 @@ function isSentenceBoundary(text, start, index) {
   return end === text.length || /\s/.test(text[end]);
 }
 
-function getSentenceSpans(text) {
+export function getSentenceSpans(text) {
   const spans = [];
   let sentenceStart = 0;
 
@@ -503,7 +503,7 @@ function getSentenceSpans(text) {
   return spans;
 }
 
-function isLikelyNonProse(sentence) {
+export function isLikelyNonProse(sentence) {
   const value = `${sentence.prefix || ""}${sentence.text}`.trim();
   return (
     NON_PROSE_PREFIX_REGEX.test(value) ||

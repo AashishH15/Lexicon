@@ -1,0 +1,385 @@
+[
+  {
+    "id": "relative-what",
+    "kind": "error",
+    "category": "relative clause",
+    "confidence": "high",
+    "text": "The dog what was barking all night kept me awake.",
+    "expected": [
+      {
+        "anchor": "what",
+        "accepted_replacements": ["that"]
+      }
+    ]
+  },
+  {
+    "id": "dangling-tv",
+    "kind": "error",
+    "category": "dangling modifier",
+    "confidence": "high",
+    "text": "Having finished the assignment, the TV was turned on by Mark.",
+    "expected": [
+      {
+        "anchor": "Having finished the assignment",
+        "accepted_replacements": [
+          "After finishing the assignment, Mark turned on the TV."
+        ]
+      }
+    ]
+  },
+  {
+    "id": "dangling-rain",
+    "kind": "error",
+    "category": "dangling modifier",
+    "confidence": "high",
+    "text": "Walking to the station, the rain soaked my clothes.",
+    "expected": [
+      {
+        "anchor": "Walking to the station",
+        "accepted_replacements": [
+          "While I was walking to the station, the rain soaked my clothes."
+        ]
+      }
+    ]
+  },
+  {
+    "id": "embedded-question",
+    "kind": "error",
+    "category": "embedded question",
+    "confidence": "high",
+    "text": "He asked me where was I going.",
+    "expected": [
+      {
+        "anchor": "where was I going",
+        "accepted_replacements": ["where I was going"]
+      }
+    ]
+  },
+  {
+    "id": "embedded-question-2",
+    "kind": "error",
+    "category": "embedded question",
+    "confidence": "high",
+    "text": "I do not know what is the answer.",
+    "expected": [
+      {
+        "anchor": "what is the answer",
+        "accepted_replacements": ["what the answer is"]
+      }
+    ]
+  },
+  {
+    "id": "conditional",
+    "kind": "error",
+    "category": "conditional",
+    "confidence": "high",
+    "text": "If I would have known, I would have called you.",
+    "expected": [
+      {
+        "anchor": "would have known",
+        "accepted_replacements": ["had known"]
+      }
+    ]
+  },
+  {
+    "id": "no-sooner",
+    "kind": "error",
+    "category": "correlative conjunction",
+    "confidence": "high",
+    "text": "No sooner had he arrived when the meeting started.",
+    "expected": [
+      {
+        "anchor": "No sooner had he arrived when",
+        "accepted_replacements": ["No sooner had he arrived than"]
+      }
+    ]
+  },
+  {
+    "id": "hardly",
+    "kind": "error",
+    "category": "correlative conjunction",
+    "confidence": "high",
+    "text": "Hardly had she arrived than the lights went out.",
+    "expected": [
+      {
+        "anchor": "Hardly had she arrived than",
+        "accepted_replacements": ["Hardly had she arrived when"]
+      }
+    ]
+  },
+  {
+    "id": "subj-complement",
+    "kind": "error",
+    "category": "mandative subjunctive",
+    "confidence": "variant",
+    "text": "It is essential that every applicant submits the form.",
+    "expected": [
+      {
+        "anchor": "every applicant submits",
+        "accepted_replacements": ["every applicant submit the form"]
+      }
+    ],
+    "manual_note": "The bare subjunctive is preferred in formal American English; submits is accepted in some varieties."
+  },
+  {
+    "id": "suggest-complement",
+    "kind": "error",
+    "category": "verb complementation",
+    "confidence": "high",
+    "text": "She suggested me to apply for the position.",
+    "expected": [
+      {
+        "anchor": "suggested me to apply",
+        "accepted_replacements": ["suggested that I apply"]
+      }
+    ]
+  },
+  {
+    "id": "capable-complement",
+    "kind": "error",
+    "category": "verb complementation",
+    "confidence": "high",
+    "text": "He is capable to solve the problem alone.",
+    "expected": [
+      {
+        "anchor": "capable to solve",
+        "accepted_replacements": ["capable of solving"]
+      }
+    ]
+  },
+  {
+    "id": "arrive-preposition",
+    "kind": "error",
+    "category": "preposition",
+    "confidence": "high",
+    "text": "We arrived to the hotel after midnight.",
+    "expected": [
+      {
+        "anchor": "arrived to the hotel",
+        "accepted_replacements": ["arrived at the hotel"]
+      }
+    ]
+  },
+  {
+    "id": "inversion",
+    "kind": "error",
+    "category": "inversion",
+    "confidence": "high",
+    "text": "Only after the review was completed the team approved the release.",
+    "expected": [
+      {
+        "anchor": "the team approved the release",
+        "accepted_replacements": ["did the team approve"]
+      }
+    ]
+  },
+  {
+    "id": "less-count",
+    "kind": "error",
+    "category": "count noun",
+    "confidence": "variant",
+    "text": "There were less people at the event this year.",
+    "expected": [
+      {
+        "anchor": "less people",
+        "accepted_replacements": ["fewer people"]
+      }
+    ],
+    "manual_note": "Fewer is the formal prescriptive choice; less with count nouns is common in informal usage."
+  },
+  {
+    "id": "amount-count",
+    "kind": "error",
+    "category": "count noun",
+    "confidence": "variant",
+    "text": "A large amount of people attended the event.",
+    "expected": [
+      {
+        "anchor": "amount of people",
+        "accepted_replacements": ["number of people"]
+      }
+    ],
+    "manual_note": "Number is the formal choice for count nouns; amount is common in informal usage."
+  },
+  {
+    "id": "information-plural",
+    "kind": "error",
+    "category": "noncount noun",
+    "confidence": "high",
+    "text": "The report contains many useful informations.",
+    "expected": [
+      {
+        "anchor": "many useful informations",
+        "accepted_replacements": [
+          "much useful information",
+          "many useful pieces of information"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "equipment-plural",
+    "kind": "error",
+    "category": "noncount noun",
+    "confidence": "high",
+    "text": "The new equipments arrived this morning.",
+    "expected": [
+      {
+        "anchor": "new equipments",
+        "accepted_replacements": ["new equipment"]
+      }
+    ]
+  },
+  {
+    "id": "double-negative",
+    "kind": "error",
+    "category": "double negative",
+    "confidence": "variant",
+    "text": "I did not hardly notice the warning.",
+    "expected": [
+      {
+        "anchor": "did not hardly notice",
+        "accepted_replacements": ["I hardly noticed"]
+      }
+    ],
+    "manual_note": "The target preserves the intended 'barely noticed' meaning; removing hardly changes the degree of notice."
+  },
+  {
+    "id": "article-missed",
+    "kind": "error",
+    "category": "article",
+    "confidence": "high",
+    "text": "I bought new laptop yesterday.",
+    "expected": [
+      {
+        "anchor": "bought new laptop",
+        "accepted_replacements": ["bought a new laptop"]
+      }
+    ]
+  },
+  {
+    "id": "past-passed",
+    "kind": "error",
+    "category": "confusion pair",
+    "confidence": "high",
+    "text": "He has past the deadline.",
+    "expected": [
+      {
+        "anchor": "has past the deadline",
+        "accepted_replacements": ["has passed the deadline"]
+      }
+    ]
+  },
+  {
+    "id": "modal-perfect",
+    "kind": "error",
+    "category": "modal perfect",
+    "confidence": "high",
+    "text": "They should of told us earlier.",
+    "expected": [
+      {
+        "anchor": "should of told",
+        "accepted_replacements": ["should have told"]
+      }
+    ]
+  },
+  {
+    "id": "parallel",
+    "kind": "error",
+    "category": "parallelism",
+    "confidence": "variant",
+    "text": "She likes hiking, swimming, and to ride bicycles.",
+    "expected": [
+      {
+        "anchor": "hiking, swimming, and to ride bicycles",
+        "accepted_replacements": ["hiking, swimming, and riding bicycles"]
+      }
+    ],
+    "manual_note": "The original is understandable; the expected change enforces parallel gerund forms."
+  },
+  {
+    "id": "pronoun-case",
+    "kind": "error",
+    "category": "pronoun case",
+    "confidence": "high",
+    "text": "The manager gave the report to James and I.",
+    "expected": [
+      {
+        "anchor": "James and I",
+        "accepted_replacements": ["James and me"]
+      }
+    ]
+  },
+  {
+    "id": "subject-complement",
+    "kind": "error",
+    "category": "subject agreement",
+    "confidence": "high",
+    "text": "The list of required documents are on the website.",
+    "expected": [
+      {
+        "anchor": "documents are",
+        "accepted_replacements": ["documents is"]
+      }
+    ]
+  },
+  {
+    "id": "clean-technical",
+    "kind": "clean",
+    "category": "technical",
+    "confidence": "high",
+    "text": "The network bandwidth supports ten video calls at once.",
+    "expected": []
+  },
+  {
+    "id": "clean-valid-passive",
+    "kind": "clean",
+    "category": "business",
+    "confidence": "high",
+    "text": "The project was completed by the team.",
+    "expected": [],
+    "manual_note": "Grammatically valid passive voice; a style preference may suggest active voice."
+  },
+  {
+    "id": "clean-advice",
+    "kind": "clean",
+    "category": "business",
+    "confidence": "high",
+    "text": "She gave me good advice on hiring.",
+    "expected": []
+  },
+  {
+    "id": "clean-data",
+    "kind": "clean",
+    "category": "academic",
+    "confidence": "high",
+    "text": "The data were collected over six months.",
+    "expected": []
+  },
+  {
+    "id": "clean-cogito",
+    "kind": "clean",
+    "category": "academic",
+    "confidence": "high",
+    "text": "I think therefore I am.",
+    "expected": [],
+    "manual_note": "The punctuation is a stylistic choice in this well-known quotation."
+  },
+  {
+    "id": "clean-decision",
+    "kind": "clean",
+    "category": "business",
+    "confidence": "high",
+    "text": "The committee made a decision after reviewing the evidence.",
+    "expected": []
+  },
+  {
+    "id": "clean-relative-agreement",
+    "kind": "clean",
+    "category": "agreement",
+    "confidence": "high",
+    "text": "She is one of those people who always complain.",
+    "expected": [],
+    "manual_note": "The plural relative clause is grammatical because who refers to people, not she."
+  }
+]

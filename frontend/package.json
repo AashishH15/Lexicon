@@ -8,6 +8,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "lint": "eslint .",
+    "benchmark:deep": "node scripts/deepProofreadBenchmarkCli.mjs",
     "format": "prettier --write .",
     "test": "vitest run",
     "test:watch": "vitest",

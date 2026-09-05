@@ -165,8 +165,14 @@ export async function getModelStatus(modelKey = "2b") {
 }
 
 // Abort an in-flight download.
-export async function cancelModelDownload() {
-  const response = await request("/model/cancel", { method: "POST" });
+export async function cancelModelDownload(modelKey) {
+  const body = modelKey ? JSON.stringify({ model_key: modelKey }) : undefined;
+  const headers = modelKey ? { "Content-Type": "application/json" } : {};
+  const response = await request("/model/cancel", {
+    method: "POST",
+    headers,
+    body,
+  });
   if (!response.ok) {
     throw new Error(`Model cancel failed: ${response.status}`);
   }
@@ -183,6 +189,20 @@ export async function deleteModel(modelKey = "2b") {
   if (!response.ok) {
     const data = await response.json().catch(() => ({}));
     throw new Error(data.error || `Model delete failed: ${response.status}`);
+  }
+  return response.json();
+}
+
+// Remove an obsolete previous-generation model file to reclaim disk space.
+export async function cleanupLegacyModel(modelKey = "2b") {
+  const response = await request("/model/cleanup-legacy", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ model_key: modelKey }),
+  });
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.error || `Legacy cleanup failed: ${response.status}`);
   }
   return response.json();
 }
@@ -207,6 +227,7 @@ export async function transformText({
   modelKey,
   backend,
   requestId,
+  temperature,
   signal,
 }) {
   const response = await request("/transform", {
@@ -218,6 +239,7 @@ export async function transformText({
       model_key: modelKey,
       backend,
       request_id: requestId || null,
+      temperature: temperature != null ? temperature : undefined,
     }),
     signal,
   });

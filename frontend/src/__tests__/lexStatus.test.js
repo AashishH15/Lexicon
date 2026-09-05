@@ -85,5 +85,48 @@ describe("Lex status resolver", () => {
     expect(
       lexStatusMessage(LEX_STATUS.CHECKING, { activeTool: "Rewrite" }),
     ).toBe("I’m working on your selection…");
+    expect(
+      lexStatusMessage(LEX_STATUS.CHECKING, { activeTool: "Deep Proofread" }),
+    ).toBe("I’m checking your draft…");
+  });
+
+  it("tracks the Deep Proofread mode like proofreading", () => {
+    expect(
+      resolveLexStatus({ activeTool: "Deep Proofread", deepRunning: true }),
+    ).toBe(LEX_STATUS.CHECKING);
+    expect(
+      resolveLexStatus({
+        activeTool: "Deep Proofread",
+        deepError: "model failed",
+        hasContent: true,
+      }),
+    ).toBe(LEX_STATUS.ERROR);
+    expect(
+      resolveLexStatus({
+        activeTool: "Deep Proofread",
+        deepError: "Failed to fetch",
+      }),
+    ).toBe(LEX_STATUS.NO_CONNECTION);
+    expect(
+      resolveLexStatus({
+        activeTool: "Deep Proofread",
+        aiConfigured: false,
+        hasContent: true,
+      }),
+    ).toBe(LEX_STATUS.DISABLED);
+    expect(
+      resolveLexStatus({
+        activeTool: "Deep Proofread",
+        hasContent: true,
+        deepMatches: [{}],
+      }),
+    ).toBe(LEX_STATUS.ISSUES);
+    expect(
+      resolveLexStatus({
+        activeTool: "Deep Proofread",
+        hasContent: true,
+        deepMatches: [],
+      }),
+    ).toBe(LEX_STATUS.ALL_CLEAR);
   });
 });

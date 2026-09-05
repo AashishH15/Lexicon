@@ -23,7 +23,7 @@ DEFAULT_PREFS = {
 }
 
 _VALID_BACKENDS = ("auto", "ollama", "lmstudio", "bundled")
-_VALID_KEYS = ("2b", "0.8b")
+_VALID_KEYS = ("2b", "0.8b", "quality")
 
 
 def load_prefs() -> dict:
