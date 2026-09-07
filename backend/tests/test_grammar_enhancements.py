@@ -852,3 +852,96 @@ def test_fixed_grammar_rule_corpus_has_no_regressions(case):
     assert result["false_positives"] == 0
     assert result["false_negatives"] == 0
     assert result["offset_errors"] == 0
+
+# --- Phase 1: ESL mass nouns ---
+
+
+@pytest.mark.parametrize(
+    ('text', 'expected'),
+    [
+        ('She gave me many informations about the course.', [('informations', 'information')]),
+        ('Please send your feedbacks after the meeting.', [('feedbacks', 'feedback')]),
+        ('The lab bought new equipments last week.', [('equipments', 'equipment')]),
+        ('He offered useful advices to the team.', [('advices', 'advice')]),
+        ('They stored the furnitures in the warehouse.', [('furnitures', 'furniture')]),
+        ('We checked our luggages at the counter.', [('luggages', 'luggage')]),
+        ('Students submitted their homeworks on time.', [('homeworks', 'homework')]),
+        ('The company updated several softwares.', [('softwares', 'software')]),
+        ('The factory installed new machineries.', [('machineries', 'machinery')]),
+        ('The report cites several evidences.', [('evidences', 'evidence')]),
+        ('Their researches on climate were thorough.', [('researches', 'research')]),
+    ],
+)
+def test_mass_noun_invalid_plurals_are_corrected(text, expected):
+    assert _corrections(text, enhance_matches(text, [])) == expected
+
+
+@pytest.mark.parametrize(
+    ('text', 'expected'),
+    [
+        ('She gave me an advice yesterday.', [('an advice', 'advice')]),
+        ('They purchased an equipment for the lab.', [('an equipment', 'equipment')]),
+        ('He shared a feedback with the class.', [('a feedback', 'feedback')]),
+        ('We need an information before we decide.', [('an information', 'information')]),
+        ('She bought a furniture for the office.', [('a furniture', 'furniture')]),
+        ('Please bring a luggage to the desk.', [('a luggage', 'luggage')]),
+        ('He completed a homework before dinner.', [('a homework', 'homework')]),
+        ('They installed a software on the laptop.', [('a software', 'software')]),
+        ('The plant uses a machinery for cutting.', [('a machinery', 'machinery')]),
+        ('She presented a research at the conference.', [('a research', 'research')]),
+        ('The jury heard an evidence today.', [('an evidence', 'evidence')]),
+    ],
+)
+def test_mass_noun_indefinite_articles_are_corrected(text, expected):
+    assert _corrections(text, enhance_matches(text, [])) == expected
+
+
+def test_mass_noun_rules_do_not_fire_on_valid_usage():
+    text = (
+        'She gave me advice and some feedback about the equipment. '
+        'Their research and evidence support the software plan.'
+    )
+    assert enhance_matches(text, []) == []
+
+
+def test_mass_noun_rules_do_not_flag_verb_researches():
+    text = 'She researches climate patterns every summer.'
+    assert enhance_matches(text, []) == []
+
+
+# --- Phase 1: Stative progressive ---
+
+
+@pytest.mark.parametrize(
+    ('text', 'expected'),
+    [
+        ('I am knowing the answer now.', [('am knowing', 'know')]),
+        ('He is knowing the answer.', [('is knowing', 'knows')]),
+        ('They are owning two houses.', [('are owning', 'own')]),
+        ('This is resembling the old design.', [('is resembling', 'resembles')]),
+        ('The kit is consisting of three parts.', [('is consisting', 'consists')]),
+        ('She is understanding the lesson.', [('is understanding', 'understands')]),
+        ('We are believing the story.', [('are believing', 'believe')]),
+        ('The book is belonging to Sara.', [('is belonging', 'belongs')]),
+        ('He is preferring tea to coffee.', [('is preferring', 'prefers')]),
+        ('I was knowing the truth then.', [('was knowing', 'knew')]),
+        ('They were owning the land.', [('were owning', 'owned')]),
+    ],
+)
+def test_stative_progressive_is_corrected(text, expected):
+    assert _corrections(text, enhance_matches(text, [])) == expected
+
+
+@pytest.mark.parametrize(
+    'text',
+    [
+        'I am having lunch with friends.',
+        'We are thinking about the offer.',
+        'He is tasting the soup carefully.',
+        'The bread is smelling wonderful.',
+        'I am feeling better today.',
+        'She is looking at the painting.',
+    ],
+)
+def test_stative_progressive_allows_dynamic_polysemes(text):
+    assert enhance_matches(text, []) == []

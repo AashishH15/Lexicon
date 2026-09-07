@@ -1,4 +1,5 @@
 import os
+import re
 import shutil
 import socket
 import subprocess
@@ -20,6 +21,22 @@ LOCAL_SERVER_HOST = "127.0.0.1"
 # Blocked LanguageTool rule IDs. Empty until clean-set data needs a block.
 # Add an ID only with a clean-set sentence that shows the false flag.
 DISABLED_RULES: tuple[str, ...] = ()
+
+# Compact high-frequency English list for TitleCase typo rescue (edit distance <= 1).
+_COMMON_ENGLISH_WORDS = frozenset(
+    """
+    a about after again all also am an and another any are as at back be because
+    been before being between both but by can come could day did do does down each
+    even every first for from get go good great had has have he her here him his
+    how i if in into is it its just know last life like little long look made make
+    man many may me might more most much must my need new no not now of off old on
+    once one only or other our out over own part people place put right said same
+    see she should so some still such take than that the their them then there
+    these they thing think this those three through time to too two under up us
+    use very want was way we well were what when where which while who will with
+    work would year you your receive received weird
+    """.split()
+)
 
 SERVER_URL = os.environ.get("LANGUAGETOOL_SERVER", "").strip().rstrip("/")
 CHECK_URL = (
@@ -325,6 +342,151 @@ def _match_text(text, offset, length):
     return _slice_utf16(text, offset, length)
 
 
+def _is_spelling_rule(rule_id: str) -> bool:
+    rid = (rule_id or "").upper()
+    return (
+        "MORFOLOGIK" in rid
+        or "HUNSPELL" in rid
+        or "SPELLING" in rid
+        or rid.startswith("SPELL")
+    )
+
+
+def _levenshtein(left: str, right: str) -> int:
+    """Damerau-Levenshtein distance (substitutions, inserts, deletes, transpositions)."""
+    if left == right:
+        return 0
+    if not left:
+        return len(right)
+    if not right:
+        return len(left)
+
+    previous_previous = list(range(len(right) + 1))
+    previous = [1] + [0] * len(right)
+    for j, right_ch in enumerate(right, start=1):
+        previous[j] = min(
+            previous[j - 1] + 1,
+            previous_previous[j] + 1,
+            previous_previous[j - 1] + (left[0] != right_ch),
+        )
+
+    for i, left_ch in enumerate(left[1:], start=2):
+        current = [i] + [0] * len(right)
+        for j, right_ch in enumerate(right, start=1):
+            cost = left_ch != right_ch
+            current[j] = min(
+                current[j - 1] + 1,
+                previous[j] + 1,
+                previous[j - 1] + cost,
+            )
+            if (
+                j > 1
+                and left_ch == right[j - 2]
+                and left[i - 2] == right_ch
+            ):
+                current[j] = min(current[j], previous_previous[j - 2] + 1)
+        previous_previous, previous = previous, current
+    return previous[-1]
+
+
+def _is_sentence_start_offset(text: str, char_offset: int) -> bool:
+    if char_offset <= 0:
+        return True
+    before = text[:char_offset]
+    stripped = before.rstrip()
+    if not stripped:
+        return True
+    return stripped[-1] in ".?!"
+
+
+def _utf16_to_py_index(text: str, utf16_offset: int) -> int:
+    encoded = text.encode("utf-16-le")
+    byte_offset = max(0, utf16_offset) * 2
+    if byte_offset >= len(encoded):
+        return len(text)
+    return len(encoded[:byte_offset].decode("utf-16-le"))
+
+
+def _is_title_case_token(token: str) -> bool:
+    if not token or not token[0].isalpha():
+        return False
+    if token.isupper() and len(token) > 1:
+        return False
+    return token[0].isupper() and token[1:].islower()
+
+
+def _near_common_word(token: str) -> bool:
+    lowered = token.lower()
+    if lowered in _COMMON_ENGLISH_WORDS:
+        return True
+    return any(
+        _levenshtein(lowered, word) <= 1
+        for word in _COMMON_ENGLISH_WORDS
+        if abs(len(word) - len(lowered)) <= 1
+    )
+
+
+def _title_case_token_stats(text: str) -> tuple[dict[str, int], dict[str, int]]:
+    """Return occurrence counts and first character offsets for TitleCase tokens."""
+    counts: dict[str, int] = {}
+    first_offsets: dict[str, int] = {}
+    for found in re.finditer(r"\b[A-Z][a-z]+\b", text):
+        token = found.group(0)
+        counts[token] = counts.get(token, 0) + 1
+        first_offsets.setdefault(token, found.start())
+    return counts, first_offsets
+
+
+def filter_proper_noun_spelling_matches(text: str, matches: list[dict]) -> list[dict]:
+    """Suppress mid-sentence TitleCase spelling FPs while keeping real typos.
+
+    - Suppress LanguageTool spelling suggestions on mid-sentence TitleCase tokens.
+    - Keep sentence-initial flags.
+    - Keep flags when the token is within edit distance 1 of a common word.
+    - If a TitleCase token repeats in the document, suppress later spelling flags.
+    """
+    if not matches:
+        return matches
+
+    title_counts, first_offsets = _title_case_token_stats(text)
+    kept: list[dict] = []
+    for match in matches:
+        rule_id = ((match.get("rule") or {}).get("id")) or ""
+        if not _is_spelling_rule(rule_id):
+            kept.append(match)
+            continue
+
+        token = _match_text(text, match["offset"], match["length"]).strip()
+        if not _is_title_case_token(token):
+            kept.append(match)
+            continue
+
+        char_offset = _utf16_to_py_index(text, match["offset"])
+        if _is_sentence_start_offset(text, char_offset):
+            kept.append(match)
+            continue
+
+        if _near_common_word(token):
+            kept.append(match)
+            continue
+
+        # Subsequent occurrences of a repeated TitleCase entity → suppress.
+        if title_counts.get(token, 0) >= 2 and char_offset > first_offsets.get(
+            token, char_offset
+        ):
+            continue
+
+        # Unique mid-sentence TitleCase spelling suggestion → suppress.
+        if title_counts.get(token, 0) == 1:
+            continue
+
+        # First occurrence of a repeated entity that is mid-sentence: suppress
+        # as a likely proper noun unless earlier guards already kept it.
+        continue
+
+    return kept
+
+
 def check_text(text, language="en-US", ignore=None):
     ignore = ignore or []
     if CHECK_URL:
@@ -332,6 +494,7 @@ def check_text(text, language="en-US", ignore=None):
     else:
         matches = _check_local(text, language)
     matches = enhance_matches(text, matches, language)
+    matches = filter_proper_noun_spelling_matches(text, matches)
     return _filter_ignored(matches, text, ignore)
 
 

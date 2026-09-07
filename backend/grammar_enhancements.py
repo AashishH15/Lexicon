@@ -1335,6 +1335,133 @@ def _agreement_matches(text: str, language: str) -> list[dict]:
     return candidates
 
 
+_MASS_NOUNS = (
+    "advice",
+    "equipment",
+    "furniture",
+    "luggage",
+    "feedback",
+    "homework",
+    "information",
+    "software",
+    "machinery",
+    "research",
+    "evidence",
+)
+_MASS_NOUN_PLURALS = {
+    "advices": "advice",
+    "equipments": "equipment",
+    "furnitures": "furniture",
+    "luggages": "luggage",
+    "feedbacks": "feedback",
+    "homeworks": "homework",
+    "informations": "information",
+    "softwares": "software",
+    "machineries": "machinery",
+    "researches": "research",
+    "evidences": "evidence",
+}
+_MASS_NOUN_VERB_SAFE_PLURALS = frozenset({"researches", "evidences"})
+_MASS_NOUN_DETERMINERS = (
+    "a|an|the|some|many|several|few|these|those|this|that|"
+    "my|your|his|her|our|their|its"
+)
+_MASS_NOUN_ARTICLE_PATTERN = re.compile(
+    rf"\b(?P<span>(?P<article>a|an)[ \t]+(?P<noun>{'|'.join(_MASS_NOUNS)}))\b",
+    re.IGNORECASE,
+)
+_MASS_NOUN_PLURAL_PATTERN = re.compile(
+    rf"\b(?:(?P<det>{_MASS_NOUN_DETERMINERS})[ \t]+)?"
+    rf"(?P<word>{'|'.join(sorted(_MASS_NOUN_PLURALS, key=len, reverse=True))})\b",
+    re.IGNORECASE,
+)
+
+# (base, 3sg present, past). Polysemes with valid progressive uses are omitted.
+_STATIVE_PROGRESSIVE = {
+    "knowing": ("know", "knows", "knew"),
+    "owning": ("own", "owns", "owned"),
+    "resembling": ("resemble", "resembles", "resembled"),
+    "consisting": ("consist", "consists", "consisted"),
+    "understanding": ("understand", "understands", "understood"),
+    "believing": ("believe", "believes", "believed"),
+    "belonging": ("belong", "belongs", "belonged"),
+    "preferring": ("prefer", "prefers", "preferred"),
+}
+_STATIVE_PROGRESSIVE_PATTERN = re.compile(
+    rf"\b(?P<span>(?P<aux>am|is|are|was|were)[ \t]+"
+    rf"(?P<verb>{'|'.join(_STATIVE_PROGRESSIVE)}))\b",
+    re.IGNORECASE,
+)
+
+
+def _mass_noun_matches(text: str) -> list[dict]:
+    """Flag invalid ESL mass-noun plurals and indefinite articles."""
+    candidates: list[dict] = []
+
+    for found in _MASS_NOUN_ARTICLE_PATTERN.finditer(text):
+        start, end = found.span("span")
+        noun = found.group("noun")
+        candidate = _make_match(
+            text,
+            start,
+            end,
+            noun.lower(),
+            f'"{noun.lower()}" is uncountable. Avoid using "a/an" before it.',
+        )
+        if not any(_overlaps(candidate, existing) for existing in candidates):
+            candidates.append(candidate)
+
+    for found in _MASS_NOUN_PLURAL_PATTERN.finditer(text):
+        word = found.group("word")
+        key = word.lower()
+        det = found.group("det")
+        if key in _MASS_NOUN_VERB_SAFE_PLURALS and not det:
+            continue
+        singular = _MASS_NOUN_PLURALS[key]
+        start, end = found.span("word")
+        candidate = _make_match(
+            text,
+            start,
+            end,
+            singular,
+            f'"{singular}" is uncountable and does not take a plural form.',
+        )
+        if not any(_overlaps(candidate, existing) for existing in candidates):
+            candidates.append(candidate)
+
+    return candidates
+
+
+def _stative_progressive_form(aux: str, verb_ing: str) -> str:
+    base, third, past = _STATIVE_PROGRESSIVE[verb_ing.lower()]
+    aux_key = aux.lower()
+    if aux_key in {"am", "are"}:
+        return base
+    if aux_key == "is":
+        return third
+    return past
+
+
+def _stative_progressive_matches(text: str) -> list[dict]:
+    """Flag progressive forms of non-dynamic stative verbs."""
+    candidates: list[dict] = []
+    for found in _STATIVE_PROGRESSIVE_PATTERN.finditer(text):
+        aux = found.group("aux")
+        verb = found.group("verb")
+        replacement = _stative_progressive_form(aux, verb)
+        start, end = found.span("span")
+        candidate = _make_match(
+            text,
+            start,
+            end,
+            replacement,
+            "Avoid the progressive form with this stative verb.",
+        )
+        if not any(_overlaps(candidate, existing) for existing in candidates):
+            candidates.append(candidate)
+    return candidates
+
+
 def enhance_matches(
     text: str,
     matches: list[dict],
@@ -1351,6 +1478,8 @@ def enhance_matches(
     candidates.extend(_confusion_matches(text))
     candidates.extend(_punctuation_matches(text))
     candidates.extend(_article_matches(text, language))
+    candidates.extend(_mass_noun_matches(text))
+    candidates.extend(_stative_progressive_matches(text))
     candidates.extend(_double_negative_matches(text))
     candidates.extend(_to_too_two_matches(text))
     candidates.extend(_agreement_matches(text, language))
