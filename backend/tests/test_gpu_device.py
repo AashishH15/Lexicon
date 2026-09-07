@@ -6,8 +6,8 @@ BACKEND_DIR = Path(__file__).resolve().parents[1]
 if str(BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(BACKEND_DIR))
 
-import ai_prefs
-import inference
+import ai_prefs  # noqa: E402
+import inference  # noqa: E402
 
 
 def test_detect_gpu_hardware_with_nvidia_smi():

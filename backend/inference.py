@@ -1061,7 +1061,13 @@ class BundledBackend(InferenceBackend):
                 except Exception as exc3:
                     raise InferenceUnavailable(f"Bundled model failed: {exc3}") from exc3
             finally:
-                if has_abort and _noop_abort is not None and hasattr(self._llm, "ctx") and self._llm.ctx is not None:
+                can_clear_abort = (
+                    has_abort
+                    and _noop_abort is not None
+                    and hasattr(self._llm, "ctx")
+                    and self._llm.ctx is not None
+                )
+                if can_clear_abort:
                     try:
                         import llama_cpp
                         llama_cpp.llama_set_abort_callback(self._llm.ctx, _noop_abort, None)
