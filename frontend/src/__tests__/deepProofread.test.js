@@ -13,6 +13,7 @@ import {
   evaluateDeepRunOutcome,
   executeDeepScan,
   extractDeepJson,
+  getDeepProofreadPrompt,
   hasNegativePolarity,
   isDeepSnapshotStale,
   isPrepositionChurn,
@@ -738,10 +739,11 @@ describe("evaluateDeepRunOutcome baseline error guard", () => {
       baselineMatches: [],
       deepMatches: [],
       scanStatus: "complete",
+      language: "en-US",
     });
-    expect(res.outcome).toBe("error");
+    expect(res.outcome).toBe("warning");
     expect(res.matches).toEqual([]);
-    expect(res.error).toMatch(/grammar engine was unreachable/i);
+    expect(res.warning).toMatch(/grammar engine was unreachable/i);
   });
 
   it("warns user if baseline engine failed but AI found clarity suggestions", () => {
@@ -756,16 +758,19 @@ describe("evaluateDeepRunOutcome baseline error guard", () => {
     expect(res.warning).toMatch(/grammar engine was unreachable/i);
   });
 
-  it("reports error when both baseline and AI fail", () => {
+  it("soft-warns when both baseline and AI fail, with non-English notice", () => {
     const res = evaluateDeepRunOutcome({
       baselineError: "Connection refused",
       baselineMatches: [],
       deepMatches: [],
       scanStatus: "failed",
       scanError: "Model offline",
+      language: "pt-BR",
     });
-    expect(res.outcome).toBe("error");
-    expect(res.error).toMatch(/grammar engine was unreachable/i);
+    expect(res.outcome).toBe("warning");
+    expect(res.matches).toEqual([]);
+    expect(res.warning).toMatch(/grammar engine was unreachable/i);
+    expect(res.warning).toMatch(/not been thoroughly tested/i);
   });
 
   it("merges baseline and AI matches cleanly when both succeed", () => {
@@ -778,6 +783,138 @@ describe("evaluateDeepRunOutcome baseline error guard", () => {
     expect(res.outcome).toBe("complete");
     expect(res.matches).toHaveLength(2);
     expect(res.warning).toBe("");
+  });
+
+  it("adds a non-English AI caution notice on successful deep runs", () => {
+    const english = evaluateDeepRunOutcome({
+      baselineError: null,
+      baselineMatches: [{ offset: 0, length: 2, message: "Grammar rule" }],
+      deepMatches: [],
+      scanStatus: "complete",
+      language: "en-US",
+    });
+    expect(english.outcome).toBe("complete");
+    expect(english.warning).toBe("");
+
+    const french = evaluateDeepRunOutcome({
+      baselineError: null,
+      baselineMatches: [{ offset: 0, length: 2, message: "Grammar rule" }],
+      deepMatches: [],
+      scanStatus: "complete",
+      language: "fr",
+    });
+    expect(french.outcome).toBe("complete");
+    expect(french.warning).toMatch(/not been thoroughly tested/i);
+    expect(french.warning).toMatch(/French/i);
+  });
+
+  it("soft-fails when AI output is unusable and LanguageTool found nothing", () => {
+    const tamil = evaluateDeepRunOutcome({
+      baselineError: null,
+      baselineMatches: [],
+      deepMatches: [],
+      scanStatus: "incomplete",
+      language: "ta",
+    });
+    expect(tamil.outcome).toBe("warning");
+    expect(tamil.matches).toEqual([]);
+    expect(tamil.error).toBeUndefined();
+    expect(tamil.warning).toMatch(/could not produce usable suggestions/i);
+    expect(tamil.warning).toMatch(/LanguageTool found no grammar issues/i);
+    expect(tamil.warning).toMatch(/not been thoroughly tested/i);
+    expect(tamil.warning).toMatch(/Tamil/i);
+
+    const romanianFailed = evaluateDeepRunOutcome({
+      baselineError: null,
+      baselineMatches: [],
+      deepMatches: [],
+      scanStatus: "failed",
+      scanError: "Deep proofread failed.",
+      language: "ro",
+    });
+    expect(romanianFailed.outcome).toBe("warning");
+    expect(romanianFailed.matches).toEqual([]);
+    expect(romanianFailed.warning).toMatch(/LanguageTool found no grammar issues/i);
+    expect(romanianFailed.warning).toMatch(/Romanian/i);
+  });
+});
+
+describe("multilingual deep proofread guardrails", () => {
+  it("detects French, German, and Spanish negative polarity markers", () => {
+    expect(hasNegativePolarity("Il n'est pas prêt", "fr")).toBe(true);
+    expect(hasNegativePolarity("Il est prêt", "fr")).toBe(false);
+    expect(hasNegativePolarity("Er ist nicht gekommen", "de-DE")).toBe(true);
+    expect(hasNegativePolarity("Er ist gekommen", "de-DE")).toBe(false);
+    expect(hasNegativePolarity("Ella no tiene nada", "es")).toBe(true);
+    expect(hasNegativePolarity("Ella tiene algo", "es")).toBe(false);
+  });
+
+  it("rejects French polarity inversion while allowing grammar-preserving negation", () => {
+    const text = "Il n'est pas capable de gerer le projet aujourd'hui.";
+    const inverted = validateDeepEdits(
+      text,
+      [{ source: "Il n'est pas capable", replacement: "Il est capable" }],
+      { language: "fr" },
+    );
+    expect(inverted.edits).toHaveLength(0);
+    expect(inverted.rejected.unsafePolarity).toBe(1);
+
+    const preserved = validateDeepEdits(
+      text,
+      [{ source: "pas capable de gerer", replacement: "pas capable de gérer" }],
+      { language: "fr" },
+    );
+    expect(preserved.edits).toHaveLength(1);
+    expect(preserved.rejected.unsafePolarity).toBe(0);
+  });
+
+  it("rejects German polarity inversion", () => {
+    const text = "Er ist nicht gekommen, weil der Zug Verspätung hatte.";
+    const result = validateDeepEdits(
+      text,
+      [{ source: "Er ist nicht gekommen", replacement: "Er ist gekommen" }],
+      { language: "de-DE" },
+    );
+    expect(result.edits).toHaveLength(0);
+    expect(result.rejected.unsafePolarity).toBe(1);
+  });
+
+  it("detects Romance/Germanic preposition churn pairs", () => {
+    expect(isPrepositionChurn("penser à toi", "penser de toi", "fr")).toBe(true);
+    expect(isPrepositionChurn("warten auf dich", "warten an dich", "de-DE")).toBe(true);
+    expect(isPrepositionChurn("confiar en ella", "confiar a ella", "es")).toBe(true);
+    expect(isPrepositionChurn("pensar em isso", "pensar a isso", "pt-BR")).toBe(true);
+  });
+
+  it("appends a keep-language instruction for non-English deep prompts", () => {
+    const english = getDeepProofreadPrompt("2b", "en-US");
+    const french = getDeepProofreadPrompt("2b", "fr");
+    expect(english).not.toMatch(/do not translate/i);
+    expect(french).toMatch(/same language as the draft/i);
+    expect(french).toMatch(/French/i);
+    expect(french).toMatch(/do not translate/i);
+  });
+
+  it("still calls the model for locales without family-specific guards", async () => {
+    let calls = 0;
+    const snapshot = { text: "Me a gar net.", map: identityMap("Me a gar net.") };
+    const result = await executeDeepScan({
+      snapshot,
+      chunks: [{ text: snapshot.text, start: 0, end: snapshot.text.length }],
+      language: "br",
+      callModel: async () => {
+        calls += 1;
+        return "[]";
+      },
+      isCancelled: () => false,
+      readCurrentText: () => snapshot.text,
+      onProgress: () => {},
+      onChunkMatches: () => {},
+      noteActivity: async () => {},
+    });
+    expect(calls).toBe(1);
+    expect(result.status).toBe("complete");
+    expect(result.aiSkipped).toBeFalsy();
   });
 });
 

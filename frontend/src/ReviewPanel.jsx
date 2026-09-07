@@ -332,7 +332,15 @@ export default function ReviewPanel({
                 </button>
               )}
             </div>
-          ) : count === 0 ? (
+          ) : (
+            <>
+              {isDeepProofread && deepWarning && (
+                <div className="mb-3 rounded-xl border border-amber-300/80 bg-amber-50/70 p-3 text-xs leading-relaxed text-amber-900">
+                  <span className="font-semibold text-amber-950">Notice: </span>
+                  {deepWarning}
+                </div>
+              )}
+              {count === 0 ? (
             showBloom ? (
               <div className="lex-bloom flex w-full items-center gap-2.5 rounded-xl bg-[#EDF3EC] px-4 py-3 text-[#346538] border border-[#D3E2D0]">
                 <ReviewStatusMark
@@ -356,7 +364,7 @@ export default function ReviewPanel({
                 </p>
               </div>
             )
-          ) : (
+              ) : (
             <>
               <div className="mb-3 flex items-center gap-2">
                 <ReviewStatusMark
@@ -368,12 +376,6 @@ export default function ReviewPanel({
                   {lexStatusLabel}
                 </span>
               </div>
-              {isDeepProofread && deepWarning && (
-                <div className="mb-3 rounded-xl border border-amber-300/80 bg-amber-50/70 p-3 text-xs leading-relaxed text-amber-900">
-                  <span className="font-semibold text-amber-950">Notice: </span>
-                  {deepWarning}
-                </div>
-              )}
               <div className="mb-3 flex items-center justify-end gap-3">
                 <div ref={announceRef} aria-live="polite" aria-atomic="true" className="sr-only">
                   {runningCheck ? "Proofreading in progress" : `${count} ${count === 1 ? "issue" : "issues"} found`}
@@ -478,6 +480,8 @@ export default function ReviewPanel({
                   />
                 ))}
               </ul>
+            </>
+              )}
             </>
           )
         ) : (

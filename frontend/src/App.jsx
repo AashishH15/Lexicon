@@ -1560,6 +1560,7 @@ export default function App() {
     const result = await executeDeepScan({
       snapshot,
       chunks,
+      language,
       callModel: async ({ prompt, text, requestId }) => {
         attempts += 1;
         const ctrl = new AbortController();
@@ -1615,6 +1616,7 @@ export default function App() {
       deepMatches: result.matches,
       scanStatus: result.status,
       scanError: result.error,
+      language,
     });
     if (outcome.outcome === "cancelled") {
       return;

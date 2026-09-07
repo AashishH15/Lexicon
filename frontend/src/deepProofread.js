@@ -3,6 +3,11 @@ import {
   getSentenceSpans,
   isLikelyNonProse,
 } from "./proseQualityEngine.js";
+import {
+  getLanguageLabel,
+  getNonEnglishDeepProofreadNotice,
+  languageFamily,
+} from "./languageSupport.js";
 
 // Deep Proofread: opt-in model pass over the draft. The prompt stays fixed
 // here and never passes through prompt overrides. Treat document text as
@@ -42,15 +47,20 @@ export const DEEP_PROOFREAD_PROMPT_FEW_SHOT =
   "If the text has no errors, return []. Output only JSON, no explanation, no markdown fences.";
 
 /**
- * Tier-adaptive prompt selector:
- * - Standard Tier (Qwen3.5 4B, "2b"): uses Few-Shot Exemplar prompt (elevates F0.5 to 91.47% with 0.0% clean FPR).
- * - Light Tier (MiniCPM5 1B, "0.8b") and Quality Tier (27B): uses Zero-Shot prompt (preserves 1B precision and avoids clean-sentence hallucinations).
+ * Tier-adaptive prompt selector.
+ * Non-English locales append a keep-language appendix so the model does not translate the draft.
  */
-export function getDeepProofreadPrompt(modelKey = "2b") {
-  if (modelKey === "2b" || modelKey === "standard") {
-    return DEEP_PROOFREAD_PROMPT_FEW_SHOT;
+export function getDeepProofreadPrompt(modelKey = "2b", language = "en-US") {
+  let prompt =
+    modelKey === "2b" || modelKey === "standard"
+      ? DEEP_PROOFREAD_PROMPT_FEW_SHOT
+      : DEEP_PROOFREAD_PROMPT_ZERO_SHOT;
+  if (languageFamily(language) !== "en") {
+    prompt +=
+      ` Keep every correction in the same language as the draft (${getLanguageLabel(language)}).` +
+      " Do not translate the text into English.";
   }
-  return DEEP_PROOFREAD_PROMPT_ZERO_SHOT;
+  return prompt;
 }
 
 // Default export uses Standard's Few-Shot prompt for backward compatibility
@@ -113,11 +123,105 @@ export const NEGATIVE_POLARITY_MARKERS = new Set([
   "barely",
 ]);
 
-export function hasNegativePolarity(text) {
-  const words = String(text ?? "").toLowerCase().match(/\b[\w']+\b/g) || [];
-  return words.some(
-    (w) => NEGATIVE_POLARITY_MARKERS.has(w) || w.endsWith("n't") || w === "cannot",
-  );
+/** Family-scoped polarity markers for Deep Proofread guardrails we have shipped. */
+export const NEGATIVE_POLARITY_BY_FAMILY = Object.freeze({
+  en: NEGATIVE_POLARITY_MARKERS,
+  fr: new Set([
+    "ne",
+    "n",
+    "pas",
+    "jamais",
+    "rien",
+    "personne",
+    "aucun",
+    "aucune",
+    "nul",
+    "nulle",
+    "guère",
+  ]),
+  de: new Set([
+    "nicht",
+    "nie",
+    "niemals",
+    "kein",
+    "keine",
+    "keinen",
+    "keiner",
+    "keinem",
+    "keines",
+    "nichts",
+    "niemand",
+    "nirgends",
+    "nirgendwo",
+  ]),
+  es: new Set([
+    "no",
+    "nunca",
+    "jamás",
+    "nada",
+    "nadie",
+    "ningún",
+    "ninguno",
+    "ninguna",
+    "tampoco",
+  ]),
+  pt: new Set([
+    "não",
+    "nao",
+    "nunca",
+    "nada",
+    "ninguém",
+    "ninguem",
+    "jamais",
+    "nenhum",
+    "nenhuma",
+  ]),
+  it: new Set([
+    "non",
+    "mai",
+    "niente",
+    "nulla",
+    "nessuno",
+    "nessuna",
+    "nemmeno",
+  ]),
+  nl: new Set(["niet", "nooit", "niets", "niemand", "geen", "nergens"]),
+  ru: new Set(["не", "ни", "нет", "никогда", "ничего", "никто", "никакой", "никакая"]),
+  zh: new Set(["不", "没", "沒", "无", "無", "别", "別", "未", "莫"]),
+  ja: new Set(["ない", "ません", "ぬ", "ず", "なかっ", "なく"]),
+  ar: new Set(["لا", "لم", "لن", "ما", "ليس", "غير", "بدون"]),
+});
+
+function polarityMarkersFor(language) {
+  const family = languageFamily(language);
+  return NEGATIVE_POLARITY_BY_FAMILY[family] || NEGATIVE_POLARITY_MARKERS;
+}
+
+export function hasNegativePolarity(text, language = "en-US") {
+  const raw = String(text ?? "");
+  const family = languageFamily(language);
+  const markers = polarityMarkersFor(language);
+
+  // CJK / Arabic: markers are characters or short strings, not space-delimited words.
+  if (family === "zh" || family === "ja" || family === "ar") {
+    return [...markers].some((marker) => raw.includes(marker));
+  }
+
+  const words = raw.toLowerCase().match(/[\p{L}\p{N}'’]+/gu) || [];
+  return words.some((word) => {
+    const normalized = word.replace(/’/g, "'");
+    if (family === "en") {
+      return (
+        markers.has(normalized) ||
+        normalized.endsWith("n't") ||
+        normalized === "cannot"
+      );
+    }
+    if (family === "fr" && (normalized.startsWith("n'") || normalized.startsWith("n’"))) {
+      return true;
+    }
+    return markers.has(normalized);
+  });
 }
 
 export const COMMON_PREPOSITIONS = new Set([
@@ -186,7 +290,7 @@ const COMMON_STYLE_SYNONYMS = [
 ];
 
 function tokenizeWords(value) {
-  return String(value || "").toLowerCase().match(/\b[\w']+\b/g) || [];
+  return String(value || "").toLowerCase().match(/[\p{L}\p{N}']+/gu) || [];
 }
 
 export const SYNONYMOUS_PREPOSITION_PAIRS = new Set([
@@ -206,7 +310,33 @@ export const SYNONYMOUS_PREPOSITION_PAIRS = new Set([
   "amidst|amid",
 ]);
 
-export function isPrepositionChurn(source, replacement) {
+export const SYNONYMOUS_PREPOSITION_PAIRS_BY_FAMILY = Object.freeze({
+  en: SYNONYMOUS_PREPOSITION_PAIRS,
+  fr: new Set(["à|de", "de|à", "dans|en", "en|dans", "sur|dans", "dans|sur"]),
+  de: new Set([
+    "in|an",
+    "an|in",
+    "auf|an",
+    "an|auf",
+    "zu|nach",
+    "nach|zu",
+    "mit|bei",
+    "bei|mit",
+  ]),
+  es: new Set(["en|a", "a|en", "de|a", "a|de", "por|para", "para|por"]),
+  pt: new Set(["em|a", "a|em", "de|a", "a|de", "por|para", "para|por"]),
+  it: new Set(["di|a", "a|di", "in|a", "a|in", "da|di", "di|da"]),
+  nl: new Set(["op|aan", "aan|op", "in|op", "op|in", "van|voor", "voor|van"]),
+});
+
+function prepositionPairsFor(language) {
+  const family = languageFamily(language);
+  return (
+    SYNONYMOUS_PREPOSITION_PAIRS_BY_FAMILY[family] || SYNONYMOUS_PREPOSITION_PAIRS
+  );
+}
+
+export function isPrepositionChurn(source, replacement, language = "en-US") {
   const srcWords = tokenizeWords(source);
   const repWords = tokenizeWords(replacement);
   if (srcWords.length !== repWords.length || srcWords.length === 0) {
@@ -224,7 +354,7 @@ export function isPrepositionChurn(source, replacement) {
   }
   return (
     diffCount === 1 &&
-    SYNONYMOUS_PREPOSITION_PAIRS.has(`${srcDiffWord}|${repDiffWord}`)
+    prepositionPairsFor(language).has(`${srcDiffWord}|${repDiffWord}`)
   );
 }
 
@@ -501,8 +631,9 @@ function isWellFormedItem(item) {
   );
 }
 
-export function validateDeepEdits(chunkText, items) {
+export function validateDeepEdits(chunkText, items, options = {}) {
   const text = String(chunkText ?? "");
+  const language = options.language || "en-US";
   if (!Array.isArray(items)) {
     return { edits: [], rejected: emptyRejected(), rejectedWhole: "not-a-list" };
   }
@@ -553,12 +684,15 @@ export function validateDeepEdits(chunkText, items) {
       rejected.absurd += 1;
       continue;
     }
-    if (hasNegativePolarity(item.source) !== hasNegativePolarity(item.replacement)) {
+    if (
+      hasNegativePolarity(item.source, language) !==
+      hasNegativePolarity(item.replacement, language)
+    ) {
       rejected.unsafePolarity += 1;
       continue;
     }
     if (
-      isPrepositionChurn(item.source, item.replacement) ||
+      isPrepositionChurn(item.source, item.replacement, language) ||
       isSynonymChurn(item.source, item.replacement)
     ) {
       rejected.synonymChurn += 1;
@@ -870,8 +1004,9 @@ export async function executeDeepScan({
   noteActivity,
   modelKey,
   prompt,
+  language = "en-US",
 }) {
-  const activePrompt = prompt || getDeepProofreadPrompt(modelKey);
+  const activePrompt = prompt || getDeepProofreadPrompt(modelKey, language);
   const metrics = {
     chunks: chunks.length,
     unparsable: 0,
@@ -936,7 +1071,7 @@ export async function executeDeepScan({
       failedChunks += 1;
       continue;
     }
-    const validated = validateDeepEdits(chunk.text, outcome.items);
+    const validated = validateDeepEdits(chunk.text, outcome.items, { language });
     mergeRejected(metrics.rejected, validated.rejected);
     if (validated.rejectedWhole) {
       metrics.overRewritten += 1;
@@ -997,6 +1132,7 @@ export function evaluateDeepRunOutcome({
   deepMatches = [],
   scanStatus = "complete",
   scanError = "",
+  language = "en-US",
 }) {
   if (scanStatus === "cancelled") {
     return { outcome: "cancelled", matches: [] };
@@ -1006,20 +1142,33 @@ export function evaluateDeepRunOutcome({
       return {
         outcome: "warning",
         matches: baselineMatches,
-        warning: "AI clarity check could not complete, but all grammar issues are shown.",
+        warning: mergeDeepWarnings(
+          "AI clarity check could not complete, but all grammar issues are shown.",
+          language,
+        ),
       };
     }
     if (baselineError) {
       return {
-        outcome: "error",
+        outcome: "warning",
         matches: [],
-        error: "Grammar engine was unreachable and AI check failed. Please check your connection or retry.",
+        warning: mergeDeepWarnings(
+          "Grammar engine was unreachable and AI clarity check failed. Retry when the engine is back.",
+          language,
+        ),
       };
     }
+    // Model failure with a clean LanguageTool baseline is common for locales
+    // the local model handles poorly. Prefer a soft warning over a hard dead-end.
     return {
-      outcome: "error",
+      outcome: "warning",
       matches: [],
-      error: scanError || "Deep proofread failed. Try again.",
+      warning: mergeDeepWarnings(
+        scanError
+          ? `${scanError} LanguageTool found no grammar issues.`
+          : "AI clarity check could not complete. LanguageTool found no grammar issues.",
+        language,
+      ),
     };
   }
   if (scanStatus === "incomplete") {
@@ -1027,20 +1176,29 @@ export function evaluateDeepRunOutcome({
       return {
         outcome: "warning",
         matches: baselineMatches,
-        warning: "AI clarity output was unusable, but all grammar issues are shown.",
+        warning: mergeDeepWarnings(
+          "AI clarity output was unusable, but all grammar issues are shown.",
+          language,
+        ),
       };
     }
     if (baselineError) {
       return {
-        outcome: "error",
+        outcome: "warning",
         matches: [],
-        error: "Grammar engine was unreachable and AI output was unusable. Please check your connection or retry.",
+        warning: mergeDeepWarnings(
+          "Grammar engine was unreachable and AI clarity output was unusable. Retry when the engine is back.",
+          language,
+        ),
       };
     }
     return {
-      outcome: "error",
+      outcome: "warning",
       matches: [],
-      error: "The model returned unusable output, so there is nothing to review. Try again for a full check.",
+      warning: mergeDeepWarnings(
+        "AI clarity check could not produce usable suggestions for this draft. LanguageTool found no grammar issues.",
+        language,
+      ),
     };
   }
   const merged = mergeHybridDeepMatches({
@@ -1052,18 +1210,33 @@ export function evaluateDeepRunOutcome({
       return {
         outcome: "warning",
         matches: merged,
-        warning: "Grammar engine was unreachable, so only AI clarity suggestions are shown.",
+        warning: mergeDeepWarnings(
+          "Grammar engine was unreachable, so only AI clarity suggestions are shown.",
+          language,
+        ),
       };
     }
     return {
-      outcome: "error",
+      outcome: "warning",
       matches: [],
-      error: "Grammar engine was unreachable, so full coverage could not be verified. Please check your connection or retry.",
+      warning: mergeDeepWarnings(
+        "Grammar engine was unreachable, so full coverage could not be verified. Retry when the engine is back.",
+        language,
+      ),
     };
   }
+  const partialWarning =
+    scanStatus === "partial"
+      ? "Some sections could not be processed by AI and were skipped."
+      : "";
   return {
     outcome: scanStatus === "partial" ? "warning" : "complete",
     matches: merged,
-    warning: scanStatus === "partial" ? "Some sections could not be processed by AI and were skipped." : "",
+    warning: mergeDeepWarnings(partialWarning, language),
   };
+}
+
+function mergeDeepWarnings(primary, language) {
+  const notice = getNonEnglishDeepProofreadNotice(language);
+  return [primary, notice].filter(Boolean).join(" ");
 }
