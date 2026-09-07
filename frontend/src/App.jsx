@@ -1561,6 +1561,7 @@ export default function App() {
       snapshot,
       chunks,
       language,
+      baselineMatches,
       callModel: async ({ prompt, text, requestId }) => {
         attempts += 1;
         const ctrl = new AbortController();

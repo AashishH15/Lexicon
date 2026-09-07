@@ -17,6 +17,9 @@ import {
   hasNegativePolarity,
   isDeepSnapshotStale,
   isPrepositionChurn,
+  isAdverbChurn,
+  isFunctionWordFluencyChurn,
+  isAllowedIrregularIdiomFix,
   isRelativeAgreementChurn,
   isSynonymChurn,
   mergeHybridDeepMatches,
@@ -231,6 +234,66 @@ describe("validateDeepEdits", () => {
     expect(
       isPrepositionChurn("No sooner had he arrived when", "No sooner had he arrived than"),
     ).toBe(false);
+  });
+
+  it("detects adverb / function-word fluency churn", () => {
+    expect(isAdverbChurn("worked really hard today", "worked very hard today")).toBe(true);
+    expect(isAdverbChurn("She almost finished", "She nearly finished")).toBe(true);
+    expect(isFunctionWordFluencyChurn("depend to others", "depend on others")).toBe(true);
+    expect(isFunctionWordFluencyChurn("published in the", "published at the")).toBe(true);
+    expect(isFunctionWordFluencyChurn("catch cold yesterday", "caught a cold")).toBe(false);
+    expect(
+      isAllowedIrregularIdiomFix("prevent him to leave", "prevent him from leaving"),
+    ).toBe(true);
+    expect(
+      isAllowedIrregularIdiomFix("published in the", "published at the"),
+    ).toBe(false);
+  });
+
+  it("on clean sentences, rejects prep/adverb fluency swaps unless idiom-allowlisted", () => {
+    const text = "The results were published in the journal last week.";
+    // in|on is NOT in the classic synonym-pair set — only the clean-sentence gate catches it.
+    const rejected = validateDeepEdits(
+      text,
+      [{ source: "published in the", replacement: "published on the" }],
+      { baselineMatches: [] },
+    );
+    expect(rejected.edits).toHaveLength(0);
+    expect(rejected.rejected.synonymChurn).toBe(1);
+
+    const idiomText = "Please prevent him to leave early today.";
+    const idiom = validateDeepEdits(
+      idiomText,
+      [{ source: "prevent him to leave", replacement: "prevent him from leaving" }],
+      { baselineMatches: [] },
+    );
+    expect(idiom.edits).toHaveLength(1);
+
+    // Without baselineMatches, only the classic synonym-pair gate applies.
+    const classic = validateDeepEdits(text, [
+      { source: "published in the", replacement: "published on the" },
+    ]);
+    expect(classic.edits).toHaveLength(1);
+  });
+
+  it("includes contrastive negative exemplars in the Standard few-shot prompt", () => {
+    const prompt = getDeepProofreadPrompt("2b", "en-US");
+    expect(prompt).toContain("Which room are you sleeping in?");
+    expect(prompt).toContain("The organisation prioritized colour harmony.");
+    expect(prompt).toContain("The experiment was conducted over three days.");
+    expect(prompt).toContain("capable to handle");
+    // three new negatives should map to empty output
+    const negatives = [
+      "Which room are you sleeping in?",
+      "The organisation prioritized colour harmony.",
+      "The experiment was conducted over three days.",
+    ];
+    for (const sentence of negatives) {
+      const idx = prompt.indexOf(`Input: ${sentence}`);
+      expect(idx).toBeGreaterThan(-1);
+      const window = prompt.slice(idx, idx + sentence.length + 40);
+      expect(window).toMatch(/Output:\s*\[\]/);
+    }
   });
 
   it("rejects candidate edits that merely churn prepositions on clean phrases", () => {

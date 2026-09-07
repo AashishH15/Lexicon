@@ -532,6 +532,7 @@ export async function runCaseEvaluation(baseUrl, model, item, timeoutMs, request
         snapshot,
         chunks,
         modelKey: model,
+        baselineMatches,
         callModel: async ({ prompt, text, requestId: subId }) => {
           const transData = await requestJson(
             `${baseUrl}/transform`,

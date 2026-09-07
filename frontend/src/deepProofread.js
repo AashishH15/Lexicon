@@ -41,6 +41,12 @@ export const DEEP_PROOFREAD_PROMPT_FEW_SHOT =
   'Output: [{"source": "catch cold", "replacement": "caught a cold"}]\n\n' +
   "Input: The results confirmed our initial hypothesis.\n" +
   "Output: []\n\n" +
+  "Input: Which room are you sleeping in?\n" +
+  "Output: []\n\n" +
+  "Input: The organisation prioritized colour harmony.\n" +
+  "Output: []\n\n" +
+  "Input: The experiment was conducted over three days.\n" +
+  "Output: []\n\n" +
   "Instructions: Return ONLY a valid JSON array of objects. Each object must be formatted " +
   'like {"source": "exact words from the text", "replacement": "corrected words"}. ' +
   "Copy the source word-for-word with identical punctuation and capitalization, 2 to 12 words long, specific enough to appear once. " +
@@ -308,7 +314,45 @@ export const SYNONYMOUS_PREPOSITION_PAIRS = new Set([
   "amongst|among",
   "amid|amidst",
   "amidst|amid",
+  "of|from",
+  "from|of",
+  "to|for",
+  "for|to",
+  "with|by",
+  "by|with",
 ]);
+
+/** Stylistic adverb pairs that should not be swapped on clean prose. */
+export const SYNONYMOUS_ADVERB_PAIRS = new Set([
+  "really|very",
+  "very|really",
+  "almost|nearly",
+  "nearly|almost",
+  "quite|rather",
+  "rather|quite",
+  "just|simply",
+  "simply|just",
+  "still|yet",
+  "yet|still",
+  "also|too",
+  "too|also",
+]);
+
+/**
+ * Known ESL / irregular idiom fixes that look like function-word churn but
+ * are legitimate grammar corrections (allowed even on LT-clean sentences).
+ */
+export const IRREGULAR_IDIOM_FIXES = [
+  ["capable to", "capable of"],
+  ["prevent him to", "prevent him from"],
+  ["prevent her to", "prevent her from"],
+  ["prevent them to", "prevent them from"],
+  ["looking forward to meet", "looking forward to meeting"],
+  ["interested on", "interested in"],
+  ["depend of", "depend on"],
+  ["discuss about", "discuss"],
+  ["comprise of", "comprise"],
+];
 
 export const SYNONYMOUS_PREPOSITION_PAIRS_BY_FAMILY = Object.freeze({
   en: SYNONYMOUS_PREPOSITION_PAIRS,
@@ -355,6 +399,87 @@ export function isPrepositionChurn(source, replacement, language = "en-US") {
   return (
     diffCount === 1 &&
     prepositionPairsFor(language).has(`${srcDiffWord}|${repDiffWord}`)
+  );
+}
+
+export function isAdverbChurn(source, replacement) {
+  const srcWords = tokenizeWords(source);
+  const repWords = tokenizeWords(replacement);
+  if (srcWords.length !== repWords.length || srcWords.length === 0) {
+    return false;
+  }
+  let diffCount = 0;
+  let srcDiffWord = "";
+  let repDiffWord = "";
+  for (let i = 0; i < srcWords.length; i++) {
+    if (srcWords[i] !== repWords[i]) {
+      diffCount += 1;
+      srcDiffWord = srcWords[i];
+      repDiffWord = repWords[i];
+    }
+  }
+  return (
+    diffCount === 1 && SYNONYMOUS_ADVERB_PAIRS.has(`${srcDiffWord}|${repDiffWord}`)
+  );
+}
+
+/**
+ * Single differing token where both sides are prepositions (any common prep)
+ * or a listed stylistic adverb pair.
+ */
+export function isFunctionWordFluencyChurn(source, replacement, language = "en-US") {
+  if (isPrepositionChurn(source, replacement, language) || isAdverbChurn(source, replacement)) {
+    return true;
+  }
+  const srcWords = tokenizeWords(source);
+  const repWords = tokenizeWords(replacement);
+  if (srcWords.length !== repWords.length || srcWords.length === 0) {
+    return false;
+  }
+  let diffCount = 0;
+  let srcDiffWord = "";
+  let repDiffWord = "";
+  for (let i = 0; i < srcWords.length; i++) {
+    if (srcWords[i] !== repWords[i]) {
+      diffCount += 1;
+      srcDiffWord = srcWords[i];
+      repDiffWord = repWords[i];
+    }
+  }
+  if (diffCount !== 1) return false;
+  return (
+    COMMON_PREPOSITIONS.has(srcDiffWord) && COMMON_PREPOSITIONS.has(repDiffWord)
+  );
+}
+
+export function isAllowedIrregularIdiomFix(source, replacement) {
+  const src = String(source ?? "").toLowerCase();
+  const rep = String(replacement ?? "").toLowerCase();
+  if (!src || !rep) return false;
+  return IRREGULAR_IDIOM_FIXES.some(([from, to]) => {
+    const f = from.toLowerCase();
+    const t = to.toLowerCase();
+    return src.includes(f) && rep.includes(t);
+  });
+}
+
+function sentenceLacksBaselineSupport(documentText, absoluteOffset, baselineMatches) {
+  if (!Array.isArray(baselineMatches)) {
+    return false;
+  }
+  const ctx = extractSentenceContext(documentText, absoluteOffset);
+  const start = Number(ctx?.offset) || 0;
+  const length = Number(ctx?.length) || 0;
+  if (length <= 0) {
+    return baselineMatches.length === 0;
+  }
+  return !baselineMatches.some((match) =>
+    spansOverlap(
+      start,
+      length,
+      Number(match.offset) || 0,
+      Number(match.length) || 0,
+    ),
   );
 }
 
@@ -634,6 +759,10 @@ function isWellFormedItem(item) {
 export function validateDeepEdits(chunkText, items, options = {}) {
   const text = String(chunkText ?? "");
   const language = options.language || "en-US";
+  const baselineMatches = options.baselineMatches;
+  const chunkTextStart = Number(options.chunkTextStart) || 0;
+  const documentText =
+    options.documentText != null ? String(options.documentText) : text;
   if (!Array.isArray(items)) {
     return { edits: [], rejected: emptyRejected(), rejectedWhole: "not-a-list" };
   }
@@ -694,6 +823,19 @@ export function validateDeepEdits(chunkText, items, options = {}) {
     if (
       isPrepositionChurn(item.source, item.replacement, language) ||
       isSynonymChurn(item.source, item.replacement)
+    ) {
+      rejected.synonymChurn += 1;
+      continue;
+    }
+    if (
+      Array.isArray(baselineMatches) &&
+      !isAllowedIrregularIdiomFix(item.source, item.replacement) &&
+      isFunctionWordFluencyChurn(item.source, item.replacement, language) &&
+      sentenceLacksBaselineSupport(
+        documentText,
+        chunkTextStart + first,
+        baselineMatches,
+      )
     ) {
       rejected.synonymChurn += 1;
       continue;
@@ -1005,6 +1147,7 @@ export async function executeDeepScan({
   modelKey,
   prompt,
   language = "en-US",
+  baselineMatches = undefined,
 }) {
   const activePrompt = prompt || getDeepProofreadPrompt(modelKey, language);
   const metrics = {
@@ -1071,7 +1214,12 @@ export async function executeDeepScan({
       failedChunks += 1;
       continue;
     }
-    const validated = validateDeepEdits(chunk.text, outcome.items, { language });
+    const validated = validateDeepEdits(chunk.text, outcome.items, {
+      language,
+      baselineMatches,
+      chunkTextStart: chunk.textStart || 0,
+      documentText: snapshot?.text ?? chunk.text,
+    });
     mergeRejected(metrics.rejected, validated.rejected);
     if (validated.rejectedWhole) {
       metrics.overRewritten += 1;
