@@ -20,10 +20,20 @@ DEFAULT_PREFS = {
     "lmstudio_model": "",
     "lmstudio_url": "",
     "lmstudio_api_key": "",
+    "device": "gpu",
+    "limit_vram_offload": True,
 }
 
 _VALID_BACKENDS = ("auto", "ollama", "lmstudio", "bundled")
 _VALID_KEYS = ("2b", "0.8b", "quality")
+_VALID_DEVICES = ("cpu", "gpu")
+
+
+def default_device() -> str:
+    """Default to 'gpu' if an NVIDIA GPU is detected via nvidia-smi, otherwise 'cpu'."""
+    import shutil
+
+    return "gpu" if shutil.which("nvidia-smi") else "cpu"
 
 
 def load_prefs() -> dict:
@@ -32,7 +42,9 @@ def load_prefs() -> dict:
         with open(PREFS_PATH, "r", encoding="utf-8") as fh:
             data = json.load(fh)
     except (OSError, json.JSONDecodeError):
-        return dict(DEFAULT_PREFS)
+        prefs = dict(DEFAULT_PREFS)
+        prefs["device"] = default_device()
+        return prefs
     backend = data.get("backend", DEFAULT_PREFS["backend"])
     model_key = data.get("model_key", DEFAULT_PREFS["model_key"])
     ollama_model = data.get("ollama_model", DEFAULT_PREFS["ollama_model"])
@@ -42,6 +54,12 @@ def load_prefs() -> dict:
         "lmstudio_api_key",
         DEFAULT_PREFS["lmstudio_api_key"],
     )
+    device = data.get("device")
+    if device not in _VALID_DEVICES:
+        device = default_device()
+    limit_vram_offload = bool(
+        data.get("limit_vram_offload", DEFAULT_PREFS["limit_vram_offload"])
+    )
     if not isinstance(lmstudio_url, str):
         lmstudio_url = DEFAULT_PREFS["lmstudio_url"]
     if not isinstance(lmstudio_api_key, str):
@@ -50,6 +68,8 @@ def load_prefs() -> dict:
         backend = DEFAULT_PREFS["backend"]
     if model_key not in _VALID_KEYS:
         model_key = DEFAULT_PREFS["model_key"]
+    if device not in _VALID_DEVICES:
+        device = DEFAULT_PREFS["device"]
     return {
         "backend": backend,
         "model_key": model_key,
@@ -57,6 +77,8 @@ def load_prefs() -> dict:
         "lmstudio_model": lmstudio_model,
         "lmstudio_url": lmstudio_url,
         "lmstudio_api_key": lmstudio_api_key,
+        "device": device,
+        "limit_vram_offload": limit_vram_offload,
     }
 
 
@@ -67,19 +89,31 @@ def save_prefs(
     lmstudio_model: str = "",
     lmstudio_url: str = "",
     lmstudio_api_key: str | None = None,
+    device: str | None = None,
+    limit_vram_offload: bool | None = None,
 ) -> dict:
     """Persist a choice. Unknown values are coerced to defaults."""
     if backend not in _VALID_BACKENDS:
         backend = DEFAULT_PREFS["backend"]
     if model_key not in _VALID_KEYS:
         model_key = DEFAULT_PREFS["model_key"]
+    current = load_prefs()
     if lmstudio_api_key is None:
-        lmstudio_api_key = load_prefs().get(
+        lmstudio_api_key = current.get(
             "lmstudio_api_key",
             DEFAULT_PREFS["lmstudio_api_key"],
         )
     if not isinstance(lmstudio_api_key, str):
         lmstudio_api_key = DEFAULT_PREFS["lmstudio_api_key"]
+    if device is None:
+        device = current.get("device", DEFAULT_PREFS["device"])
+    if device not in _VALID_DEVICES:
+        device = DEFAULT_PREFS["device"]
+    if limit_vram_offload is None:
+        limit_vram_offload = current.get(
+            "limit_vram_offload",
+            DEFAULT_PREFS["limit_vram_offload"],
+        )
     prefs = {
         "backend": backend,
         "model_key": model_key,
@@ -87,6 +121,8 @@ def save_prefs(
         "lmstudio_model": lmstudio_model,
         "lmstudio_url": lmstudio_url,
         "lmstudio_api_key": lmstudio_api_key.strip(),
+        "device": device,
+        "limit_vram_offload": bool(limit_vram_offload),
     }
     try:
         with open(PREFS_PATH, "w", encoding="utf-8") as fh:

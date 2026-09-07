@@ -42,7 +42,9 @@ from inference import (
     InferenceUnavailable,
     LMStudioBackend,
     OllamaBackend,
+    detect_gpu_hardware,
     get_backend,
+    get_hardware_diagnostics,
     unload_active_backend,
 )
 from languagetool import check_text, close_tool
@@ -149,6 +151,7 @@ class TransformRequest(BaseModel):
     backend: str | None = None  # Backend name, or None for automatic selection.
     request_id: str | None = None
     temperature: float | None = None
+    max_tokens: int | None = None
 
 
 class TransformCancelRequest(BaseModel):
@@ -370,7 +373,48 @@ def ai_status():
         "upgrade_tier_name": upgrade_info.get("tier_name"),
         "upgrade_info": upgrade_info,
         "tier_upgrades": tier_upgrades,
+        "gpu_info": detect_gpu_hardware(),
+        "hardware": get_hardware_diagnostics(),
     }
+
+
+@app.get("/ai/hardware")
+def ai_hardware_get():
+    """Detailed hardware diagnostics for CPU, Memory, GPU, and recommendations."""
+    return get_hardware_diagnostics()
+
+
+class HardwareSettingsRequest(BaseModel):
+    device: str  # "gpu" or "cpu"
+    limit_vram_offload: bool | None = None
+
+
+@app.post("/ai/hardware/settings")
+def ai_hardware_settings_set(request: HardwareSettingsRequest):
+    """Persist GPU/CPU compute device and memory offload settings."""
+    current = load_prefs()
+    next_offload = (
+        current.get("limit_vram_offload", True)
+        if request.limit_vram_offload is None
+        else bool(request.limit_vram_offload)
+    )
+    settings_changed = request.device != current.get("device") or next_offload != bool(
+        current.get("limit_vram_offload", True)
+    )
+    save_prefs(
+        current["backend"],
+        current["model_key"],
+        current.get("ollama_model", ""),
+        current.get("lmstudio_model", ""),
+        current.get("lmstudio_url", ""),
+        current.get("lmstudio_api_key"),
+        device=request.device,
+        limit_vram_offload=request.limit_vram_offload,
+    )
+    if settings_changed:
+        unload_active_backend()
+    get_backend(force_refresh=True)
+    return get_hardware_diagnostics()
 
 
 @app.get("/ai/preference")
@@ -386,12 +430,20 @@ class AiPreferenceRequest(BaseModel):
     lmstudio_model: str = ""  # Selected LM Studio model name.
     lmstudio_url: str = ""  # LM Studio server URL.
     lmstudio_api_key: str | None = None  # Optional LM Studio API token.
+    device: str | None = None  # "gpu" or "cpu"
+    limit_vram_offload: bool | None = None
 
 
 @app.post("/ai/preference")
 def ai_preference_set(request: AiPreferenceRequest):
     """Persist the user's backend choice so it survives restarts and drives
     get_backend(). The editor's AI tools read this via get_backend()."""
+    current = load_prefs()
+    device_changed = request.device is not None and request.device != current.get("device")
+    offload_changed = (
+        request.limit_vram_offload is not None
+        and request.limit_vram_offload != current.get("limit_vram_offload")
+    )
     prefs = save_prefs(
         request.backend,
         request.model_key,
@@ -399,7 +451,11 @@ def ai_preference_set(request: AiPreferenceRequest):
         request.lmstudio_model,
         request.lmstudio_url,
         request.lmstudio_api_key,
+        device=request.device,
+        limit_vram_offload=request.limit_vram_offload,
     )
+    if device_changed or offload_changed:
+        unload_active_backend()
     # Force the cached backend to re-resolve against the new preference.
     get_backend(force_refresh=True)
     return public_prefs(prefs)
@@ -522,6 +578,8 @@ def transform(request: TransformRequest):
         }
         if request.temperature is not None:
             opts["temperature"] = request.temperature
+        if request.max_tokens is not None:
+            opts["max_tokens"] = request.max_tokens
         result = backend.complete(
             request.prompt,
             request.text,

@@ -167,7 +167,8 @@ def test_lmstudio_sends_openai_chat_completion(monkeypatch):
     assert requests_seen[0][0] == "http://localhost:1234/v1/chat/completions"
     assert requests_seen[0][1]["model"] == "qwen/qwen3-4b"
     assert requests_seen[0][1]["stream"] is True
-    assert requests_seen[0][1]["reasoning_effort"] == "none"
+    assert requests_seen[0][1]["enable_thinking"] is False
+    assert "reasoning_effort" not in requests_seen[0][1]
     assert requests_seen[0][1]["messages"][1]["content"] == (
         "Make it concise.\n\nA long sentence."
     )

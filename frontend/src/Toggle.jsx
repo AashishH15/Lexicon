@@ -1,4 +1,4 @@
-export default function Toggle({ checked, onChange, label }) {
+export default function Toggle({ checked, onChange, label, ...rest }) {
   return (
     <button
       type="button"
@@ -6,6 +6,7 @@ export default function Toggle({ checked, onChange, label }) {
       aria-checked={checked}
       aria-label={label}
       onClick={() => onChange(!checked)}
+      {...rest}
       className={
         "relative flex h-5 w-9 shrink-0 items-center rounded-full p-0.5 transition-colors duration-200 " +
         (checked

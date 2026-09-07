@@ -1,0 +1,2995 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Benchmark Suite | Lexicon</title>
+  <meta name="description"
+    content="Lexicon Engine Benchmark: Empirical Task 9 GEC & ESL Fluency evaluation across deterministic LanguageTool and local LLM tiers." />
+  <link rel="canonical" href="https://lexicon-writer.pages.dev/benchmark.html" />
+  <link rel="icon" type="image/png" href="assets/lexicon-logo-windows.png" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&display=swap"
+    rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+
+  <style>
+    /* Benchmark-specific Layout & Chart Component Tokens */
+    .benchmark-page {
+      padding: 120px 0 80px;
+    }
+
+    .page-header {
+      padding-bottom: 28px;
+      border-bottom: 1px solid var(--border-color);
+      margin-bottom: 32px;
+    }
+
+    .header-badge-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+
+    .badge-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: var(--radius-pill);
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      font-weight: 500;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .badge-blue {
+      background-color: var(--pale-blue-bg);
+      color: var(--pale-blue-text);
+    }
+
+    .badge-green {
+      background-color: var(--pale-green-bg);
+      color: var(--pale-green-text);
+    }
+
+    .badge-yellow {
+      background-color: var(--pale-yellow-bg);
+      color: var(--pale-yellow-text);
+    }
+
+    .badge-purple {
+      background-color: #F3E8FF;
+      color: #6B21A8;
+    }
+
+    .badge-neutral {
+      background-color: var(--bg-surface);
+      color: var(--text-secondary);
+      border: 1px solid var(--border-color);
+    }
+
+    .title-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+
+    h1.hero-title {
+      font-family: var(--font-serif);
+      font-size: 2.85rem;
+      font-weight: 400;
+      letter-spacing: -0.025em;
+      line-height: 1.15;
+      color: var(--text-primary);
+    }
+
+    h1.hero-title em {
+      font-style: italic;
+    }
+
+    .hero-subtitle {
+      font-size: 1.05rem;
+      color: var(--text-secondary);
+      max-width: 760px;
+      margin-top: 10px;
+      line-height: 1.6;
+    }
+
+    /* Preset Filter Bar */
+    .filter-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-card);
+      padding: 8px 14px;
+      margin-bottom: 28px;
+      box-shadow: var(--shadow-card);
+      flex-wrap: wrap;
+    }
+
+    .filter-label {
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-right: 6px;
+    }
+
+    .filter-chip {
+      background: var(--bg-canvas);
+      border: 1px solid var(--border-color);
+      color: var(--text-secondary);
+      padding: 6px 14px;
+      border-radius: var(--radius-button);
+      font-size: 0.78rem;
+      font-weight: 500;
+      font-family: var(--font-sans);
+      cursor: pointer;
+      transition: var(--transition);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .filter-chip:hover {
+      color: var(--text-primary);
+      border-color: var(--border-dark);
+      background: var(--bg-surface-secondary);
+    }
+
+    .filter-chip.active {
+      background: #111111;
+      border-color: #111111;
+      color: #FFFFFF;
+    }
+
+    .btn-expand-all .caret-icon {
+      display: inline-flex;
+      transition: transform 0.2s ease;
+    }
+
+    .btn-expand-all.is-open {
+      background: #EDF3EC;
+      border-color: rgba(46, 104, 53, 0.35);
+      color: #2E6835;
+    }
+
+    .btn-expand-all.is-open .caret-icon {
+      transform: rotate(180deg);
+    }
+
+    .ph-icon {
+      display: inline-block;
+      vertical-align: -0.2em;
+      flex-shrink: 0;
+    }
+
+    .label-with-icon {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+
+    /* KPI Bento Grid */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 18px;
+      margin-bottom: 32px;
+    }
+
+    @media (max-width: 1024px) {
+      .kpi-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 640px) {
+      .kpi-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .kpi-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-card);
+      padding: 22px;
+      box-shadow: var(--shadow-card);
+      transition: var(--transition);
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      min-height: 0;
+    }
+
+    .kpi-card:hover {
+      border-color: var(--border-dark);
+      box-shadow: var(--shadow-card-hover);
+      transform: translateY(-2px);
+    }
+
+    .kpi-card:focus-visible {
+      outline: 2px solid #2E6835;
+      outline-offset: 2px;
+    }
+
+    .kpi-category {
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .kpi-metric {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .kpi-number {
+      font-family: var(--font-serif);
+      font-size: 2.75rem;
+      font-weight: 400;
+      line-height: 1;
+      color: var(--text-primary);
+      letter-spacing: -0.02em;
+    }
+
+    .kpi-unit {
+      font-family: var(--font-mono);
+      font-size: 0.76rem;
+      color: var(--text-muted);
+      letter-spacing: 0.02em;
+    }
+
+    .kpi-desc {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      line-height: 1.4;
+      margin: 0;
+    }
+
+    .kpi-stats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px 14px;
+      margin-top: auto;
+      padding-top: 12px;
+      border-top: 1px solid var(--border-color);
+    }
+
+    .kpi-stat {
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      letter-spacing: 0.01em;
+    }
+
+    .kpi-stat strong {
+      color: var(--text-primary);
+      font-weight: 600;
+    }
+
+    /* Two-Panel Chart Layout */
+    .chart-grid {
+      display: grid;
+      grid-template-columns: 1fr 1.08fr;
+      gap: 24px;
+      margin-bottom: 32px;
+    }
+
+    @media (max-width: 1120px) {
+      .chart-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .chart-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-card);
+      padding: 26px;
+      box-shadow: var(--shadow-card);
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    .chart-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 18px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .chart-title-group h2 {
+      font-family: var(--font-serif);
+      font-size: 1.45rem;
+      font-weight: 400;
+      color: var(--text-primary);
+      letter-spacing: -0.015em;
+    }
+
+    .chart-title-group h2 em {
+      font-style: italic;
+    }
+
+    .chart-subtitle {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      margin-top: 3px;
+    }
+
+    .controls-cluster {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .segmented-control {
+      display: inline-flex;
+      background: var(--bg-canvas);
+      border: 1px solid var(--border-color);
+      padding: 3px;
+      border-radius: 8px;
+    }
+
+    .segment-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      padding: 4px 10px;
+      font-size: 0.74rem;
+      font-family: var(--font-sans);
+      font-weight: 500;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: var(--transition);
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .segment-btn.active {
+      background: var(--bg-surface);
+      color: var(--text-primary);
+      font-weight: 600;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+    }
+
+    .btn-toggle-envelope {
+      background: var(--bg-canvas);
+      border: 1px solid var(--border-color);
+      color: var(--text-secondary);
+      padding: 4px 10px;
+      border-radius: 8px;
+      font-size: 0.74rem;
+      font-family: var(--font-sans);
+      font-weight: 500;
+      cursor: pointer;
+      transition: var(--transition);
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .btn-toggle-envelope.active {
+      background: var(--pale-green-bg);
+      border-color: rgba(46, 104, 53, 0.3);
+      color: var(--pale-green-text);
+      font-weight: 600;
+    }
+
+    .chart-canvas-area {
+      position: relative;
+      flex-grow: 1;
+      min-height: 350px;
+    }
+
+    .chart-canvas-area svg {
+      width: 100%;
+      height: 100%;
+      overflow: visible;
+    }
+
+    /* Floating Paper Tooltip */
+    #chart-tooltip {
+      position: fixed;
+      pointer-events: none;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-dark);
+      border-radius: 10px;
+      padding: 14px 16px;
+      font-size: 0.82rem;
+      box-shadow: var(--shadow-card-hover);
+      z-index: 9999;
+      opacity: 0;
+      transition: opacity 0.12s ease, transform 0.12s ease;
+      max-width: 300px;
+      line-height: 1.45;
+    }
+
+    #chart-tooltip .tt-title {
+      font-family: var(--font-serif);
+      font-size: 1.05rem;
+      font-weight: 500;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--text-primary);
+    }
+
+    #chart-tooltip .tt-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      margin-top: 4px;
+      color: var(--text-secondary);
+      font-size: 0.78rem;
+    }
+
+    #chart-tooltip .tt-val {
+      font-weight: 600;
+      color: var(--text-primary);
+      font-family: var(--font-mono);
+    }
+
+    /* Chart Legend */
+    .chart-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid var(--border-color);
+      font-size: 0.78rem;
+      align-items: center;
+    }
+
+    .legend-entry {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      padding: 3px 8px;
+      border-radius: 6px;
+      transition: var(--transition);
+    }
+
+    .legend-entry:hover,
+    .legend-entry.active {
+      background: var(--bg-canvas);
+      color: var(--text-primary);
+    }
+
+    .legend-swatch {
+      width: 8px;
+      height: 8px;
+      border-radius: 2px;
+    }
+
+    .legend-swatch.circle {
+      border-radius: 50%;
+    }
+
+    /* Table Section */
+    .table-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-card);
+      padding: 28px;
+      box-shadow: var(--shadow-card);
+      margin-bottom: 40px;
+    }
+
+    .table-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      margin-bottom: 18px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .table-header h2 {
+      font-family: var(--font-serif);
+      font-size: 1.5rem;
+      font-weight: 400;
+      color: var(--text-primary);
+    }
+
+    .table-header h2 em {
+      font-style: italic;
+    }
+
+    .table-header p {
+      font-size: 0.88rem;
+      color: var(--text-secondary);
+      margin-top: 4px;
+      max-width: 62ch;
+      line-height: 1.45;
+    }
+
+    .table-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .table-toolbar {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 16px;
+      padding: 12px 14px;
+      background: var(--bg-canvas);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+    }
+
+    .toolbar-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .toolbar-label {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      min-width: 4.5rem;
+    }
+
+    .table-container {
+      overflow: auto;
+      max-height: min(70vh, 720px);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      background: var(--bg-surface);
+    }
+
+    table.benchmark-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      text-align: left;
+      font-size: 0.82rem;
+      white-space: nowrap;
+    }
+
+    table.benchmark-table th {
+      position: sticky;
+      top: 0;
+      z-index: 3;
+      background: #F7F5F1;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border-color);
+      box-shadow: 0 1px 0 var(--border-color);
+    }
+
+    /* Leaderboard drawers scroll under sticky headers; keep headers static in this view */
+    table.benchmark-table.is-leaderboard > thead th {
+      position: static;
+      box-shadow: none;
+    }
+
+    table.benchmark-table th.sortable {
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.15s ease, color 0.15s ease;
+    }
+
+    table.benchmark-table th.sortable:hover {
+      background: #ECEAE5;
+      color: var(--text-primary);
+    }
+
+    table.benchmark-table th.sort-active {
+      color: #1E4624;
+      background: #E8F0E7;
+    }
+
+    table.benchmark-table th .sort-icon {
+      display: inline-flex;
+      align-items: center;
+      margin-left: 3px;
+      color: var(--text-muted);
+      opacity: 0.45;
+      vertical-align: middle;
+    }
+
+    table.benchmark-table th.sort-active .sort-icon {
+      color: #2E6835;
+      opacity: 1;
+    }
+
+    table.benchmark-table th.col-sticky,
+    table.benchmark-table td.col-sticky {
+      position: sticky;
+      left: 0;
+      z-index: 2;
+      background: var(--bg-surface);
+      width: 156px;
+      min-width: 156px;
+      max-width: 156px;
+      box-sizing: border-box;
+    }
+
+    table.benchmark-table th.col-sticky {
+      z-index: 4;
+      background: #F7F5F1;
+    }
+
+    table.benchmark-table th.col-sticky-2,
+    table.benchmark-table td.col-sticky-2 {
+      position: sticky;
+      left: 156px;
+      z-index: 2;
+      background: var(--bg-surface);
+      width: 118px;
+      min-width: 118px;
+      max-width: 118px;
+      box-sizing: border-box;
+      box-shadow: 6px 0 10px -8px rgba(0, 0, 0, 0.18);
+    }
+
+    table.benchmark-table th.col-sticky-2 {
+      z-index: 4;
+      background: #F7F5F1;
+    }
+
+    table.benchmark-table th.num,
+    table.benchmark-table td.num {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+
+    td.is-best {
+      font-weight: 700;
+    }
+
+    td.is-best .cell-split-main {
+      font-weight: 700;
+    }
+
+    .row-mean-highlight td {
+      background: #F4F8F4;
+      font-weight: 600;
+      border-top: 1px solid rgba(46, 104, 53, 0.18);
+      border-bottom: 1px solid rgba(46, 104, 53, 0.12);
+    }
+
+    .row-mean-highlight td.col-sticky,
+    .row-mean-highlight td.col-sticky-2 {
+      background: #F4F8F4;
+    }
+
+    .row-tier-start td {
+      border-top: 1px solid var(--border-dark);
+    }
+
+    table.benchmark-table td {
+      padding: 9px 12px;
+      border-bottom: 1px solid #EDEBE6;
+      color: var(--text-secondary);
+      transition: background 0.12s ease, color 0.12s ease;
+      vertical-align: middle;
+    }
+
+    table.benchmark-table tr:hover td {
+      background: #FAF9F6;
+      color: var(--text-primary);
+    }
+
+    table.benchmark-table tr:hover td.col-sticky,
+    table.benchmark-table tr:hover td.col-sticky-2 {
+      background: #FAF9F6;
+    }
+
+    table.benchmark-table tr.row-active td {
+      background: #F1F6F1 !important;
+      color: var(--text-primary);
+    }
+
+    table.benchmark-table tr.row-active td.col-sticky,
+    table.benchmark-table tr.row-active td.col-sticky-2 {
+      background: #F1F6F1 !important;
+    }
+
+    .tier-cell {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 600;
+      color: var(--text-primary);
+      white-space: nowrap;
+    }
+
+    .tier-cell .tier-name {
+      white-space: nowrap;
+    }
+
+    .run-cell {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+      min-width: 118px;
+      white-space: normal;
+      line-height: 1.25;
+    }
+
+    .run-cell-main {
+      font-weight: 600;
+      color: var(--text-primary);
+      font-size: 0.82rem;
+    }
+
+    .run-cell-sub {
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .run-pill {
+      display: inline-flex;
+      align-items: center;
+      width: fit-content;
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-family: var(--font-mono);
+      font-size: 0.66rem;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+    }
+
+    .run-pill.mean {
+      background: #D8EAD7;
+      color: #1E4624;
+    }
+
+    .run-pill.baseline {
+      background: #E8F0F8;
+      color: #1F6C9F;
+    }
+
+    .run-pill.random {
+      background: #F1EFEA;
+      color: #636360;
+    }
+
+    .cell-num {
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+    }
+
+    .cell-score {
+      font-family: var(--font-mono);
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .cell-split {
+      display: inline-flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 1px;
+      line-height: 1.2;
+    }
+
+    .cell-split-main {
+      font-family: var(--font-mono);
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .cell-split-sub {
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .val-good {
+      color: #059669;
+    }
+
+    .val-warn {
+      color: #C2410C;
+    }
+
+    .val-tier {
+      font-weight: 600;
+    }
+
+    .table-scroll-hint {
+      display: none;
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      margin: 0 0 8px;
+      letter-spacing: 0.02em;
+    }
+
+    .metrics-guide {
+      margin-bottom: 28px;
+      padding: 22px 24px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-card);
+      box-shadow: var(--shadow-card);
+    }
+
+    .metrics-guide-header {
+      margin-bottom: 16px;
+      max-width: 62ch;
+    }
+
+    .metrics-guide-header h2 {
+      font-family: var(--font-serif);
+      font-size: 1.35rem;
+      font-weight: 400;
+      color: var(--text-primary);
+      letter-spacing: -0.015em;
+      margin: 0 0 6px;
+    }
+
+    .metrics-guide-header h2 em {
+      font-style: italic;
+    }
+
+    .metrics-guide-header p {
+      margin: 0;
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      line-height: 1.45;
+    }
+
+    .metrics-guide-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px 20px;
+    }
+
+    .metric-def {
+      padding-top: 12px;
+      border-top: 1px solid var(--border-color);
+    }
+
+    .metric-def dt {
+      font-family: var(--font-mono);
+      font-size: 0.74rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--text-primary);
+      margin-bottom: 4px;
+    }
+
+    .metric-def dd {
+      margin: 0;
+      font-size: 0.86rem;
+      color: var(--text-secondary);
+      line-height: 1.4;
+    }
+
+    /* --- Leaderboard View Styles --- */
+    table.benchmark-table th.col-engine,
+    table.benchmark-table td.col-engine {
+      width: 235px;
+      min-width: 235px;
+      max-width: 255px;
+      white-space: nowrap;
+      text-align: left;
+      padding: 10px 12px;
+      vertical-align: middle;
+      box-sizing: border-box;
+    }
+
+    .leaderboard-engine-cell {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .leaderboard-engine-info {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+      min-width: 0;
+    }
+
+    .leaderboard-engine-title {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 600;
+      font-size: 0.86rem;
+      color: var(--text-primary);
+      white-space: nowrap;
+    }
+
+    .leaderboard-engine-sub {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      font-weight: 500;
+      white-space: nowrap;
+      letter-spacing: 0.01em;
+    }
+
+    .score-bar-cell {
+      min-width: 240px;
+      padding: 10px 12px !important;
+      box-sizing: border-box;
+    }
+
+    .score-bar-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      width: 100%;
+    }
+
+    .score-bar-container {
+      position: relative;
+      flex: 1;
+      height: 14px;
+      background: #EDEAE4;
+      border-radius: 4px;
+      overflow: visible;
+    }
+
+    .score-bar-fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 0.3s ease;
+    }
+
+    .score-whisker {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      display: flex;
+      align-items: center;
+      pointer-events: none;
+    }
+
+    .whisker-line {
+      width: 100%;
+      height: 1.5px;
+      background: #0F172A;
+      opacity: 0.9;
+    }
+
+    .whisker-cap {
+      position: absolute;
+      width: 1.5px;
+      height: 14px;
+      background: #0F172A;
+      opacity: 0.95;
+      top: 0;
+    }
+
+    .whisker-cap.start {
+      left: 0;
+    }
+
+    .whisker-cap.end {
+      right: 0;
+    }
+
+    .score-bar-text {
+      display: inline-flex;
+      align-items: baseline;
+      gap: 4px;
+      min-width: 92px;
+      font-family: var(--font-mono);
+      font-weight: 700;
+      font-size: 0.86rem;
+      color: var(--text-primary);
+      text-align: right;
+      justify-content: flex-end;
+      white-space: nowrap;
+    }
+
+    .score-bar-text .score-sd {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .engine-rank-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: #FAF9F6;
+      border: 1px solid var(--border-subtle);
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--text-secondary);
+      flex-shrink: 0;
+    }
+
+    .engine-param-tag {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      font-weight: 500;
+      margin-left: 6px;
+    }
+
+    .btn-drawer-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 10px;
+      border-radius: 6px;
+      border: 1px solid var(--border-subtle);
+      background: #FFFFFF;
+      color: var(--text-secondary);
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+    }
+
+    .btn-drawer-toggle:hover {
+      background: #FAF9F6;
+      border-color: var(--border-dark);
+      color: var(--text-primary);
+    }
+
+    .btn-drawer-toggle .caret-icon {
+      transition: transform 0.2s ease;
+    }
+
+    .btn-drawer-toggle.is-open {
+      background: #EDF3EC;
+      border-color: rgba(46, 104, 53, 0.35);
+      color: #2E6835;
+    }
+
+    .btn-drawer-toggle.is-open .caret-icon {
+      transform: rotate(180deg);
+    }
+
+    /* Expandable Sub-Row Drawer */
+    tr.drawer-tr {
+      display: none;
+    }
+
+    tr.drawer-tr.is-open {
+      display: table-row;
+    }
+
+    tr.drawer-tr td {
+      padding: 0 !important;
+      background: #FAF9F6 !important;
+      border-bottom: 2px solid var(--border-subtle) !important;
+      /* Keep nested run tables from widening the parent leaderboard */
+      max-width: 0;
+      overflow: hidden;
+    }
+
+    .drawer-container {
+      padding: 14px 18px 18px;
+      background: #FAF9F6;
+      border-left: 4px solid var(--tier-accent, #2E6835);
+      width: 100%;
+      max-width: 100%;
+      box-sizing: border-box;
+    }
+
+    .drawer-scroll {
+      overflow-x: auto;
+      max-width: 100%;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .drawer-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      font-size: 0.78rem;
+      color: var(--text-secondary);
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .drawer-header strong {
+      color: var(--text-primary);
+    }
+
+    .nested-runs-table {
+      width: max-content;
+      min-width: 100%;
+      border-collapse: collapse;
+      background: #FFFFFF;
+      border-radius: 6px;
+      overflow: hidden;
+      border: 1px solid var(--border-subtle);
+      font-size: 0.78rem;
+      margin-bottom: 8px;
+    }
+
+    .nested-runs-table th {
+      background: #F4F2ED !important;
+      padding: 7px 10px !important;
+      font-family: var(--font-mono) !important;
+      font-size: 0.68rem !important;
+      color: var(--text-secondary) !important;
+      text-transform: uppercase !important;
+      font-weight: 600 !important;
+      border-bottom: 1px solid var(--border-subtle) !important;
+      text-align: right !important;
+    }
+
+    .nested-runs-table th:first-child,
+    .nested-runs-table td:first-child {
+      text-align: left !important;
+    }
+
+    .nested-runs-table td {
+      padding: 7px 10px !important;
+      border-bottom: 1px solid #F0EEEA !important;
+      background: #FFFFFF !important;
+      font-family: var(--font-mono) !important;
+      color: var(--text-secondary) !important;
+      text-align: right !important;
+    }
+
+    .nested-runs-table tr:hover td {
+      background: #FAF9F6 !important;
+    }
+
+    .nested-runs-table tr.aggregate-subrow td {
+      background: #F4F8F4 !important;
+      font-weight: 700 !important;
+      border-top: 1px solid rgba(46, 104, 53, 0.22) !important;
+      color: var(--text-primary) !important;
+    }
+
+    .drawer-footer {
+      display: block;
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      line-height: 1.45;
+      margin-top: 10px;
+      padding-bottom: 2px;
+      max-width: 100%;
+    }
+
+    .drawer-footer strong {
+      color: var(--text-primary);
+      font-weight: 600;
+    }
+
+    /* Mobile / narrow layout */
+    @media (max-width: 860px) {
+      .benchmark-page {
+        padding: 100px 0 56px;
+      }
+
+      .metrics-guide-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      h1.hero-title {
+        font-size: 2.2rem;
+      }
+
+      .hero-subtitle {
+        font-size: 0.98rem;
+      }
+
+      .chart-card,
+      .table-card {
+        padding: 18px;
+      }
+
+      .chart-title-group h2 {
+        font-size: 1.25rem;
+      }
+
+      .segmented-control {
+        flex-wrap: wrap;
+        width: 100%;
+      }
+
+      .controls-cluster {
+        width: 100%;
+      }
+
+      .controls-cluster .segmented-control,
+      .controls-cluster .btn-toggle-envelope {
+        width: 100%;
+        justify-content: flex-start;
+      }
+
+      .btn-toggle-envelope {
+        justify-content: center;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .benchmark-page {
+        padding: 88px 0 48px;
+      }
+
+      .metrics-guide {
+        padding: 18px;
+      }
+
+      .metrics-guide-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+      }
+
+      h1.hero-title {
+        font-size: 1.85rem;
+        letter-spacing: -0.02em;
+      }
+
+      .hero-subtitle {
+        font-size: 0.94rem;
+        line-height: 1.5;
+      }
+
+      .header-badge-row {
+        gap: 6px;
+      }
+
+      .badge-pill {
+        font-size: 0.66rem;
+        padding: 3px 9px;
+      }
+
+      .filter-bar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+        padding: 12px;
+      }
+
+      .filter-label {
+        margin-right: 0;
+      }
+
+      .filter-chip {
+        width: 100%;
+        justify-content: flex-start;
+        min-height: 42px;
+      }
+
+      .kpi-card {
+        padding: 18px;
+      }
+
+      .kpi-number {
+        font-size: 2.35rem;
+      }
+
+      .chart-header {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .segment-btn {
+        padding: 7px 10px;
+        font-size: 0.76rem;
+      }
+
+      .table-header {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .table-header p {
+        max-width: none;
+      }
+
+      .table-actions {
+        width: 100%;
+      }
+
+      .table-actions .filter-chip {
+        flex: 1;
+        justify-content: center;
+        width: auto;
+      }
+
+      .table-toolbar {
+        padding: 10px;
+      }
+
+      .toolbar-group {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 6px;
+      }
+
+      .toolbar-label {
+        min-width: 0;
+      }
+
+      .table-scroll-hint {
+        display: block;
+      }
+
+      .table-container {
+        max-height: min(65vh, 560px);
+        -webkit-overflow-scrolling: touch;
+      }
+
+      /* Sticky dual-columns steal too much width on phones */
+      table.benchmark-table th.col-sticky,
+      table.benchmark-table td.col-sticky,
+      table.benchmark-table th.col-sticky-2,
+      table.benchmark-table td.col-sticky-2 {
+        position: static;
+        left: auto;
+        z-index: auto;
+        width: auto;
+        min-width: 132px;
+        max-width: none;
+        box-shadow: none;
+      }
+
+      table.benchmark-table th {
+        position: sticky;
+        top: 0;
+        z-index: 3;
+      }
+
+      .tier-cell {
+        max-width: none;
+      }
+
+      .chart-canvas-area {
+        min-height: 280px;
+      }
+
+      .chart-legend {
+        gap: 8px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- Navigation Bar (Standard Lexicon Site Header) -->
+  <nav class="navbar navbar-scrolled" id="navbar">
+    <div class="container nav-container">
+      <a href="index.html" class="brand">
+        <img src="assets/lexicon-logo-type.svg" alt="Lexicon" class="brand-logo-type" />
+      </a>
+      <ul class="nav-links" id="nav-links">
+        <li><a href="index.html">Home</a></li>
+        <li><a href="benchmark.html" style="font-weight: 600; color: var(--text-primary); opacity: 1;">Benchmark</a>
+        </li>
+        <li><a href="privacy.html">Privacy</a></li>
+        <li><a href="terms.html">Terms</a></li>
+        <li><a href="https://github.com/AashishH15/Lexicon" target="_blank" rel="noopener">GitHub</a></li>
+      </ul>
+      <button type="button" class="nav-toggle" id="nav-toggle" aria-expanded="false" aria-controls="nav-links"
+        aria-label="Open menu">
+        <svg class="nav-toggle-icon nav-toggle-icon-list" width="20" height="20" viewBox="0 0 256 256"
+          fill="currentColor" aria-hidden="true">
+          <path
+            d="M224,128a8,8,0,0,1-8,8H40a8,8,0,0,1,0-16H216A8,8,0,0,1,224,128ZM40,72H216a8,8,0,0,0,0-16H40a8,8,0,0,0,0,16ZM216,184H40a8,8,0,0,0,0,16H216a8,8,0,0,0,0-16Z">
+          </path>
+        </svg>
+        <svg class="nav-toggle-icon nav-toggle-icon-x" width="20" height="20" viewBox="0 0 256 256" fill="currentColor"
+          aria-hidden="true">
+          <path
+            d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z">
+          </path>
+        </svg>
+      </button>
+    </div>
+  </nav>
+
+  <main class="benchmark-page">
+    <div class="container">
+
+      <!-- Page Header -->
+      <header class="page-header">
+        <div class="header-badge-row">
+          <span class="badge-pill badge-blue">Empirical Evaluation</span>
+          <span class="badge-pill badge-green">4-Seed Cross-Validation</span>
+          <span class="badge-pill badge-neutral">100 Unique Sentences / Tier</span>
+          <span class="badge-pill badge-neutral">1,050 Curated Corpus</span>
+        </div>
+        <div class="title-row">
+          <div>
+            <h1 class="hero-title">Lexicon Engine <em>Benchmark Suite</em></h1>
+            <p class="hero-subtitle">
+              Rigorous empirical evaluation across 4 independent random seeds (100 unique sentences per engine, 500
+              evaluations total) measuring generalization accuracy, latency, and standard deviation (&plusmn;1&sigma;)
+              across expanded 1,050-sentence authentic corpus (350 JFLEG, 350 BEA-2019, 350 LOCNESS).
+            </p>
+          </div>
+        </div>
+      </header>
+
+      <!-- Metric Definitions -->
+      <section class="metrics-guide" aria-labelledby="metrics-guide-title">
+        <div class="metrics-guide-header">
+          <h2 id="metrics-guide-title">How to read these <em>scores</em></h2>
+          <p>
+            Grammar correction rewards careful edits more than aggressive ones. We report the usual GEC metrics below, plus corpus-specific fluency and grammar hit rates.
+          </p>
+        </div>
+        <dl class="metrics-guide-grid">
+          <div class="metric-def">
+            <dt>Precision</dt>
+            <dd>Of the edits the engine made, how many were actually correct? High precision means fewer wrong or noisy changes.</dd>
+          </div>
+          <div class="metric-def">
+            <dt>Recall</dt>
+            <dd>Of the real errors in the text, how many did the engine catch? High recall means fewer missed mistakes.</dd>
+          </div>
+          <div class="metric-def">
+            <dt>F₀.₅</dt>
+            <dd>A single combined score that weights precision about twice as heavily as recall, the standard for grammar error correction, because a bad rewrite is usually worse than leaving text alone.</dd>
+          </div>
+          <div class="metric-def">
+            <dt>Clean FPR</dt>
+            <dd>How often the engine “fixes” sentences that were already correct. Lower is better; 0% means it stayed quiet on clean prose.</dd>
+          </div>
+          <div class="metric-def">
+            <dt>Latency</dt>
+            <dd>Average time to process one sentence. Lower is better for live typing; Quality trades speed for accuracy.</dd>
+          </div>
+          <div class="metric-def">
+            <dt>JFLEG &amp; BEA</dt>
+            <dd>Corpus hit rates: JFLEG measures fluency and natural phrasing; BEA measures grammar and usage. Shown as correct / eligible items.</dd>
+          </div>
+        </dl>
+      </section>
+
+      <!-- Preset Filter Bar -->
+      <div class="filter-bar">
+        <span class="filter-label">Spotlight Presets:</span>
+        <button class="filter-chip active" id="filter-all" onclick="setPreset('all')">
+          <span>All Tiers</span>
+        </button>
+        <button class="filter-chip" id="filter-sweet" onclick="setPreset('sweet')">
+          <span class="label-with-icon"><svg class="ph-icon" width="14" height="14" viewBox="0 0 256 256"
+              fill="currentColor" aria-hidden="true">
+              <path
+                d="M234.29,114.85l-45,38.83L203,211.75a16.4,16.4,0,0,1-24.5,17.82L128,198.49,77.47,229.57A16.4,16.4,0,0,1,53,211.75l13.76-58.07-45-38.83A16.46,16.46,0,0,1,31.08,86l59-4.76,22.76-55.08a16.36,16.36,0,0,1,30.27,0l22.75,55.08,59,4.76a16.46,16.46,0,0,1,9.37,28.86Z" />
+            </svg> Efficiency Sweet Spot (Standard 4B)</span>
+        </button>
+        <button class="filter-chip" id="filter-speed" onclick="setPreset('speed')">
+          <span class="label-with-icon"><svg class="ph-icon" width="14" height="14" viewBox="0 0 256 256"
+              fill="currentColor" aria-hidden="true">
+              <path
+                d="M215.79,118.17a8,8,0,0,0-5-5.66L153.18,90.9l14.66-73.33a8,8,0,0,0-13.69-7l-112,120a8,8,0,0,0,3,13l57.63,21.61L88.16,238.43a8,8,0,0,0,13.69,7l112-120A8,8,0,0,0,215.79,118.17ZM109.37,214l10.47-52.38a8,8,0,0,0-5-9.06L62,132.71l84.62-90.66L136.16,94.43a8,8,0,0,0,5,9.06l52.8,19.8Z" />
+            </svg> Live Keystroke Speed (Normal + Standard)</span>
+        </button>
+        <button class="filter-chip" id="filter-quality" onclick="setPreset('quality')">
+          <span class="label-with-icon"><svg class="ph-icon" width="14" height="14" viewBox="0 0 256 256"
+              fill="currentColor" aria-hidden="true">
+              <path
+                d="M197.58,129.06,146,110l-19-51.62a15.92,15.92,0,0,0-29.88,0L78,110l-51.62,19a15.92,15.92,0,0,0,0,29.88L78,178l19,51.62a15.92,15.92,0,0,0,29.88,0L146,178l51.62-19a15.92,15.92,0,0,0,0-29.88ZM137,164.22a8,8,0,0,0-4.74,4.74L112,223.85,91.78,169A8,8,0,0,0,87,164.22L32.15,144,87,123.78A8,8,0,0,0,91.78,119L112,64.15,132.22,119a8,8,0,0,0,4.74,4.74L191.85,144ZM144,40a8,8,0,0,1,8-8h16V16a8,8,0,0,1,16,0V32h16a8,8,0,0,1,0,16H184V64a8,8,0,0,1-16,0V48H152A8,8,0,0,1,144,40ZM248,88a8,8,0,0,1-8,8h-8v8a8,8,0,0,1-16,0V96h-8a8,8,0,0,1,0-16h8V72a8,8,0,0,1,16,0v8h8A8,8,0,0,1,248,88Z" />
+            </svg> Publication Quality (Quality 27B)</span>
+        </button>
+      </div>
+
+      <!-- KPI Bento Grid -->
+      <div class="kpi-grid">
+        <div class="kpi-card" role="button" tabindex="0" onclick="setPreset('sweet')"
+          onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();setPreset('sweet')}">
+          <div class="kpi-category">
+            <span>Sweet Spot</span>
+            <span class="badge-pill badge-green">Recommended</span>
+          </div>
+          <div class="kpi-metric">
+            <span class="kpi-number" style="color: #059669;">71.2</span>
+            <span class="kpi-unit">F₀.₅ · 4-run mean (&plusmn;9.5%)</span>
+          </div>
+          <p class="kpi-desc">Standard 4B: local edge model delivering 221 ms live keystroke speed.</p>
+          <div class="kpi-stats">
+            <span class="kpi-stat"><strong>84.1%</strong> precision</span>
+            <span class="kpi-stat"><strong>45.1%</strong> recall</span>
+            <span class="kpi-stat"><strong>221 ms</strong></span>
+          </div>
+        </div>
+
+        <div class="kpi-card" role="button" tabindex="0" onclick="setPreset('quality')"
+          onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();setPreset('quality')}">
+          <div class="kpi-category">
+            <span>Publication Quality</span>
+            <span class="badge-pill badge-purple">SOTA</span>
+          </div>
+          <div class="kpi-metric">
+            <span class="kpi-number" style="color: #7C3AED;">75.7</span>
+            <span class="kpi-unit">F₀.₅ · 4-run mean (&plusmn;6.9%)</span>
+          </div>
+          <p class="kpi-desc">Quality 27B: top F₀.₅ score (75.7%), highest recall (45.7%), and zero clean FPR.</p>
+          <div class="kpi-stats">
+            <span class="kpi-stat"><strong>85.5%</strong> peak run</span>
+            <span class="kpi-stat"><strong>45.7%</strong> recall</span>
+            <span class="kpi-stat"><strong>91.2%</strong> precision</span>
+          </div>
+        </div>
+
+        <div class="kpi-card" role="button" tabindex="0" onclick="setPreset('speed')"
+          onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();setPreset('speed')}">
+          <div class="kpi-category">
+            <span>Live Speed</span>
+            <span class="badge-pill badge-blue">Rules</span>
+          </div>
+          <div class="kpi-metric">
+            <span class="kpi-number" style="color: #1F6C9F;">35</span>
+            <span class="kpi-unit">ms / sentence</span>
+          </div>
+          <p class="kpi-desc">LanguageTool: instant syntax at keystroke speed.</p>
+          <div class="kpi-stats">
+            <span class="kpi-stat"><strong>64.6%</strong> F₀.₅ mean</span>
+            <span class="kpi-stat"><strong>95.0%</strong> precision</span>
+          </div>
+        </div>
+
+        <div class="kpi-card" style="cursor: default;">
+          <div class="kpi-category">
+            <span>Eval Scale</span>
+            <span class="badge-pill badge-yellow">5×4 Matrix</span>
+          </div>
+          <div class="kpi-metric">
+            <span class="kpi-number">500</span>
+            <span class="kpi-unit">sentence evaluations</span>
+          </div>
+          <p class="kpi-desc">100 unique sentences across 4 seeds per engine from 1,050 authentic pool.</p>
+          <div class="kpi-stats">
+            <span class="kpi-stat"><strong>5</strong> engines</span>
+            <span class="kpi-stat"><strong>4</strong> seeds</span>
+            <span class="kpi-stat"><strong>&plusmn;1&sigma;</strong> variance</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Charts Layout -->
+      <div class="chart-grid">
+
+        <!-- Chart 1: Grouped Bar Chart -->
+        <div class="chart-card">
+          <div class="chart-header">
+            <div class="chart-title-group">
+              <h2>Cross-Validation <em>Ladder</em></h2>
+              <div class="chart-subtitle">4-Seed Macro Mean with Peak Run Potential across 100 Sentences</div>
+            </div>
+            <div class="controls-cluster">
+              <div class="segmented-control" id="bar-metric-ctrl">
+                <button class="segment-btn active" data-metric="f05">F₀.₅</button>
+                <button class="segment-btn" data-metric="precision">Precision</button>
+                <button class="segment-btn" data-metric="recall">Recall</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="chart-canvas-area" id="bar-chart-container">
+            <svg id="bar-chart-svg" viewBox="0 0 540 330"></svg>
+          </div>
+
+          <div class="chart-legend">
+            <div class="legend-entry">
+              <div class="legend-swatch" style="background: #111827;"></div>
+              <span>4-Run Macro Mean (&plusmn;1&sigma;)</span>
+            </div>
+            <div class="legend-entry">
+              <div class="legend-swatch" style="background: #059669;"></div>
+              <span>Peak Run Score</span>
+            </div>
+            <div class="legend-entry" style="margin-left: auto; color: var(--text-muted); font-style: italic;">
+              Tap or hover bars for variance breakdown
+            </div>
+          </div>
+        </div>
+
+        <!-- Chart 2: Pareto Efficiency Frontier -->
+        <div class="chart-card">
+          <div class="chart-header">
+            <div class="chart-title-group">
+              <h2>Pareto Efficiency <em>Frontier</em></h2>
+              <div class="chart-subtitle">Macro Mean F₀.₅ Quality vs. Latency Trade-Off</div>
+            </div>
+            <div class="controls-cluster">
+              <span class="badge-pill badge-green" style="font-size: 0.72rem; padding: 3px 8px;">Macro Mean F₀.₅</span>
+              <button class="btn-toggle-envelope active" id="frontier-toggle-btn" onclick="toggleEnvelope()">
+                <svg class="ph-icon" width="14" height="14" viewBox="0 0 256 256" fill="currentColor"
+                  aria-hidden="true">
+                  <path
+                    d="M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z" />
+                </svg> Frontier Curve
+              </button>
+            </div>
+          </div>
+
+          <div class="chart-canvas-area" id="pareto-chart-container">
+            <svg id="pareto-chart-svg" viewBox="0 0 580 330"></svg>
+          </div>
+
+          <div class="chart-legend" id="pareto-legend">
+            <div class="legend-entry" data-tier="Normal" onclick="selectTier('Normal')">
+              <div class="legend-swatch circle" style="background: #1F6C9F;"></div>
+              <span>Normal (LT)</span>
+            </div>
+            <div class="legend-entry" data-tier="Light" onclick="selectTier('Light')">
+              <div class="legend-swatch circle" style="background: #D97706;"></div>
+              <span>Light (1B)</span>
+            </div>
+            <div class="legend-entry" data-tier="Standard" onclick="selectTier('Standard')">
+              <div class="legend-swatch circle" style="background: #059669;"></div>
+              <span class="label-with-icon">Standard (4B) <svg class="ph-icon" width="12" height="12"
+                  viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
+                  <path
+                    d="M234.29,114.85l-45,38.83L203,211.75a16.4,16.4,0,0,1-24.5,17.82L128,198.49,77.47,229.57A16.4,16.4,0,0,1,53,211.75l13.76-58.07-45-38.83A16.46,16.46,0,0,1,31.08,86l59-4.76,22.76-55.08a16.36,16.36,0,0,1,30.27,0l22.75,55.08,59,4.76a16.46,16.46,0,0,1,9.37,28.86Z" />
+                </svg></span>
+            </div>
+            <div class="legend-entry" data-tier="Quality" onclick="selectTier('Quality')">
+              <div class="legend-swatch circle" style="background: #7C3AED;"></div>
+              <span class="label-with-icon">Quality (27B) <svg class="ph-icon" width="12" height="12"
+                  viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
+                  <path
+                    d="M197.58,129.06,146,110l-19-51.62a15.92,15.92,0,0,0-29.88,0L78,110l-51.62,19a15.92,15.92,0,0,0,0,29.88L78,178l19,51.62a15.92,15.92,0,0,0,29.88,0L146,178l51.62-19a15.92,15.92,0,0,0,0-29.88ZM137,164.22a8,8,0,0,0-4.74,4.74L112,223.85,91.78,169A8,8,0,0,0,87,164.22L32.15,144,87,123.78A8,8,0,0,0,91.78,119L112,64.15,132.22,119a8,8,0,0,0,4.74,4.74L191.85,144ZM144,40a8,8,0,0,1,8-8h16V16a8,8,0,0,1,16,0V32h16a8,8,0,0,1,0,16H184V64a8,8,0,0,1-16,0V48H152A8,8,0,0,1,144,40ZM248,88a8,8,0,0,1-8,8h-8v8a8,8,0,0,1-16,0V96h-8a8,8,0,0,1,0-16h8V72a8,8,0,0,1,16,0v8h8A8,8,0,0,1,248,88Z" />
+                </svg></span>
+            </div>
+            <div class="legend-entry" data-tier="QuillBot" onclick="selectTier('QuillBot')">
+              <div class="legend-swatch circle" style="background: #0284C7;"></div>
+              <span>QuillBot (Free)</span>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- Master Evaluation Table -->
+      <div class="table-card">
+        <div class="table-header">
+          <div>
+            <h2>Evaluation <em id="table-title-em">Leaderboard</em></h2>
+            <p id="table-desc-p">Executive summary of the 4-seed cross-validation benchmark across 5 engines.<br>Click
+              <strong>[ 4 Runs ▾ ]</strong> on any tier to inspect all individual seeds, or toggle to <strong>Detailed
+                Matrix</strong> for the full 25-row dataset.
+            </p>
+          </div>
+          <div class="table-actions">
+            <button class="filter-chip" id="btn-reset-sort" onclick="resetTableSort()">Reset Sort</button>
+            <button class="filter-chip" onclick="setPreset('all')">Reset Spotlight</button>
+            <button class="filter-chip btn-expand-all" id="btn-toggle-all-drawers" onclick="toggleAllDrawers()"
+              title="Expand or collapse individual seed runs for all engines">
+              <span>Expand All Runs</span>
+              <span class="caret-icon"><svg class="ph-icon" width="12" height="12" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80A8,8,0,0,1,53.66,90.34L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z"/></svg></span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Table Filter & Sort Toolbar -->
+        <div class="table-toolbar">
+          <!-- View Mode: Leaderboard vs Detailed Matrix -->
+          <div class="toolbar-group">
+            <span class="toolbar-label">View</span>
+            <div class="segmented-control" id="table-view-ctrl">
+              <button class="segment-btn active" data-view="leaderboard"
+                title="Executive Leaderboard with score bars and expandable run drawers">Leaderboard</button>
+              <button class="segment-btn" data-view="matrix"
+                title="Full 25-row rectangular matrix with all metrics">Detailed Matrix</button>
+            </div>
+          </div>
+
+          <!-- Runs Filter (Only visible in Detailed Matrix view) -->
+          <div class="toolbar-group" id="matrix-runs-group" style="display: none;">
+            <span class="toolbar-label">Runs</span>
+            <div class="segmented-control" id="table-filter-ctrl">
+              <button class="segment-btn active" data-filter="all" title="Show all 25 rows">All (25)</button>
+              <button class="segment-btn" data-filter="mean" title="Show 4-run aggregate means with variance">Means
+                (5)</button>
+              <button class="segment-btn" data-filter="runs" title="Show individual 25-sentence seed runs">Runs
+                (20)</button>
+            </div>
+          </div>
+
+          <!-- Rank / Sort Control -->
+          <div class="toolbar-group">
+            <span class="toolbar-label">Rank</span>
+            <div class="segmented-control" id="table-sort-ctrl">
+              <button class="segment-btn active" data-sort="default">Default</button>
+              <button class="segment-btn" data-sort="f05-desc" title="Highest F₀.₅ first">F₀.₅</button>
+              <button class="segment-btn" data-sort="prec-desc" title="Highest precision first">Precision</button>
+              <button class="segment-btn" data-sort="jfleg-desc" title="Highest JFLEG fluency first">JFLEG</button>
+              <button class="segment-btn" data-sort="latency-asc" title="Lowest latency first">Speed</button>
+              <button class="segment-btn" data-sort="cleanFpr-asc" title="Lowest clean false-positive rate first">Clean
+                FPR</button>
+            </div>
+          </div>
+        </div>
+
+        <p class="table-scroll-hint" id="matrix-scroll-hint" style="display: none;">Swipe horizontally to see all
+          columns →</p>
+        <div class="table-container">
+          <table class="benchmark-table is-leaderboard" id="matrix-table">
+            <thead id="matrix-thead">
+              <!-- Dynamically rendered by renderMatrixTable() -->
+            </thead>
+            <tbody id="matrix-tbody">
+              <!-- Dynamically rendered by renderMatrixTable() -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Website Footer (Standard Lexicon Site Footer) -->
+  <footer class="footer">
+    <div class="container footer-container">
+      <div class="footer-links">
+        <a href="index.html">Home</a>
+        <a href="benchmark.html">Benchmark</a>
+        <a href="privacy.html">Privacy</a>
+        <a href="terms.html">Terms</a>
+        <a href="https://github.com/AashishH15/Lexicon" target="_blank" rel="noopener">GitHub</a>
+      </div>
+      <p class="footer-copy">&copy; 2026 Lexicon. MIT Licensed Open Source.</p>
+    </div>
+  </footer>
+
+  <!-- Floating Tooltip -->
+  <div id="chart-tooltip"></div>
+
+  <script>
+
+    // Phosphor icon paths (inline SVG, matches website/index.html pattern)
+    const PH = {
+      star: "M234.29,114.85l-45,38.83L203,211.75a16.4,16.4,0,0,1-24.5,17.82L128,198.49,77.47,229.57A16.4,16.4,0,0,1,53,211.75l13.76-58.07-45-38.83A16.46,16.46,0,0,1,31.08,86l59-4.76,22.76-55.08a16.36,16.36,0,0,1,30.27,0l22.75,55.08,59,4.76a16.46,16.46,0,0,1,9.37,28.86Z",
+      lightning: "M215.79,118.17a8,8,0,0,0-5-5.66L153.18,90.9l14.66-73.33a8,8,0,0,0-13.69-7l-112,120a8,8,0,0,0,3,13l57.63,21.61L88.16,238.43a8,8,0,0,0,13.69,7l112-120A8,8,0,0,0,215.79,118.17ZM109.37,214l10.47-52.38a8,8,0,0,0-5-9.06L62,132.71l84.62-90.66L136.16,94.43a8,8,0,0,0,5,9.06l52.8,19.8Z",
+      sparkle: "M197.58,129.06,146,110l-19-51.62a15.92,15.92,0,0,0-29.88,0L78,110l-51.62,19a15.92,15.92,0,0,0,0,29.88L78,178l19,51.62a15.92,15.92,0,0,0,29.88,0L146,178l51.62-19a15.92,15.92,0,0,0,0-29.88ZM137,164.22a8,8,0,0,0-4.74,4.74L112,223.85,91.78,169A8,8,0,0,0,87,164.22L32.15,144,87,123.78A8,8,0,0,0,91.78,119L112,64.15,132.22,119a8,8,0,0,0,4.74,4.74L191.85,144ZM144,40a8,8,0,0,1,8-8h16V16a8,8,0,0,1,16,0V32h16a8,8,0,0,1,0,16H184V64a8,8,0,0,1-16,0V48H152A8,8,0,0,1,144,40ZM248,88a8,8,0,0,1-8,8h-8v8a8,8,0,0,1-16,0V96h-8a8,8,0,0,1,0-16h8V72a8,8,0,0,1,16,0v8h8A8,8,0,0,1,248,88Z",
+      check: "M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z",
+      caretUpDown: "M181.66,170.34a8,8,0,0,1,0,11.32l-48,48a8,8,0,0,1-11.32,0l-48-48a8,8,0,0,1,11.32-11.32L128,212.69l42.34-42.35A8,8,0,0,1,181.66,170.34Zm-96-84.68L128,43.31l42.34,42.35a8,8,0,0,0,11.32-11.32l-48-48a8,8,0,0,0-11.32,0l-48,48A8,8,0,0,0,85.66,85.66Z",
+      caretUp: "M213.66,165.66a8,8,0,0,1-11.32,0L128,91.31,53.66,165.66a8,8,0,0,1-11.32-11.32l80-80a8,8,0,0,1,11.32,0l80,80A8,8,0,0,1,213.66,165.66Z",
+      caretDown: "M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80A8,8,0,0,1,53.66,90.34L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z",
+      arrowUpRight: "M200,64V168a8,8,0,0,1-16,0V83.31L69.66,197.66a8,8,0,0,1-11.32-11.32L172.69,72H88a8,8,0,0,1,0-16H192A8,8,0,0,1,200,64Z"
+    };
+
+    function phIcon(name, size = 14) {
+      const d = PH[name];
+      if (!d) return "";
+      return `<svg class="ph-icon" width="${size}" height="${size}" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="${d}"/></svg>`;
+    }
+
+    function tierMarkIcon(tierId, size = 12) {
+      if (tierId === "Standard") return phIcon("star", size);
+      if (tierId === "Quality") return phIcon("sparkle", size);
+      return "";
+    }
+
+    function stripTierMarks(name) {
+      return String(name || "").replace(/[★✦]/g, "").replace(/\s{2,}/g, " ").trim();
+    }
+
+    function formatTierLabelHtml(name, tierId, size = 12) {
+      const clean = stripTierMarks(name);
+      const icon = tierMarkIcon(tierId, size);
+      return icon ? `<span class="label-with-icon">${clean} ${icon}</span>` : clean;
+    }
+
+    function phSvgGlyph(name, x, y, size, fill) {
+      const d = PH[name];
+      if (!d) return "";
+      const s = size / 256;
+      return `<g transform="translate(${x},${y}) scale(${s})" fill="${fill}"><path d="${d}"/></g>`;
+    }
+    // Benchmark Dataset Ground Truth (100-Sentence 4-Seed Cross-Validation Benchmark)
+    const benchmarkData = [
+      {
+        id: "Normal",
+        tier: "Normal Proofread (LT Only)",
+        shortName: "Normal (Rules)",
+        color: "var(--color-normal)",
+        hex: "#1F6C9F",
+        baseline: { f05: 70.31, prec: 100.0, rec: 32.14, latency: 31.8, jfleg: "7/17", bea: "2/11", cleanFpr: 0.0 }, // Peak Run (Seed 50680)
+        random: { f05: 64.61, f05Sd: 5.99, prec: 95.00, precSd: 10.00, rec: 28.53, recSd: 3.27, latency: 35.2, jfleg: "26/69", bea: "8/50", cleanFpr: 0.0, min: 57.14, max: 70.31 }, // Macro Mean
+        params: "0B (Deterministic Rules)",
+        desc: "Deterministic rule-based grammar engine. Instant keystroke response (35ms) with zero GPU overhead, catching mechanical syntax with zero clean false alarms."
+      },
+      {
+        id: "Light",
+        tier: "Light Tier (MiniCPM 1B Hybrid)",
+        shortName: "Light (1B)",
+        color: "var(--color-light)",
+        hex: "#D97706",
+        baseline: { f05: 66.18, prec: 90.0, rec: 32.14, latency: 392.9, jfleg: "7/17", bea: "2/11", cleanFpr: 0.0 }, // Peak Run (Seed 50680)
+        random: { f05: 62.83, f05Sd: 3.75, prec: 88.98, precSd: 10.35, rec: 29.36, recSd: 3.06, latency: 418.2, jfleg: "27/69", bea: "8/50", cleanFpr: 3.1, min: 57.69, max: 66.18 }, // Macro Mean
+        params: "1.0B (Q8_0 Quant)",
+        desc: "Ultra-compact local LLM hybrid. Delivers 62.83 ± 3.8% F₀.₅ on cross-validation with ultra-tight variance, designed for low-memory edge devices."
+      },
+      {
+        id: "Standard",
+        tier: "Standard Tier (Qwen3.5 4B Hybrid)",
+        shortName: "Standard (4B)",
+        color: "var(--color-standard)",
+        hex: "#059669",
+        baseline: { f05: 81.52, prec: 93.75, rec: 53.57, latency: 206.5, jfleg: "10/17", bea: "5/11", cleanFpr: 0.0 }, // Peak Run (Seed 50680)
+        random: { f05: 71.19, f05Sd: 9.47, prec: 84.07, precSd: 7.83, rec: 45.06, recSd: 10.88, latency: 221.0, jfleg: "36/69", bea: "18/50", cleanFpr: 6.3, min: 62.50, max: 81.52 }, // Macro Mean
+        params: "4.0B (Q4_K_M Quant)",
+        desc: "The Pareto Efficiency Sweet Spot: Delivers 71.19 ± 9.5% F₀.₅, parity with QuillBot in 221 ms latency with few-shot in-context learning."
+      },
+      {
+        id: "Quality",
+        tier: "Quality Tier (Qwen3.8 27B Hybrid)",
+        shortName: "Quality (27B)",
+        color: "var(--color-quality)",
+        hex: "#7C3AED",
+        baseline: { f05: 85.47, prec: 95.24, rec: 60.61, latency: 3612.0, jfleg: "14/20", bea: "6/13", cleanFpr: 0.0 }, // Peak Run (Seed 3840)
+        random: { f05: 75.65, f05Sd: 6.88, prec: 91.23, precSd: 4.00, rec: 45.69, recSd: 10.07, latency: 3315.5, jfleg: "37/69", bea: "18/50", cleanFpr: 0.0, min: 69.77, max: 85.47 }, // Macro Mean
+        params: "27B (Q4_K_M Quant)",
+        desc: "Publication Quality Champion. 75.65 ± 6.9% F₀.₅, delivering top error recall (45.7% vs QuillBot 37.4%) and zero clean false alarms (0.0% vs QuillBot 9.4%)."
+      },
+      {
+        id: "QuillBot",
+        tier: "QuillBot (Free Web Grammar Checker)",
+        shortName: "QuillBot (Free)",
+        color: "#0284C7",
+        hex: "#0284C7",
+        baseline: { f05: 76.39, prec: 100.0, rec: 39.29, latency: 1810.0, jfleg: "9/17", bea: "2/11", cleanFpr: 0.0 }, // Peak Run (Seed 50680)
+        random: { f05: 71.40, f05Sd: 6.53, prec: 95.14, precSd: 5.73, rec: 37.36, recSd: 9.67, latency: 1815.0, jfleg: "34/69", bea: "11/50", cleanFpr: 9.4, min: 62.50, max: 76.39 }, // Macro Mean
+        params: "Cloud Server API",
+        desc: "Commercial Cloud Grammar Checker. 71.40 ± 6.5% F₀.₅ with 95.1% precision, but advanced fluency rewrites require a paid subscription. Requires sending all text to cloud servers."
+      }
+    ];
+
+    let currentBarMetric = "f05";
+    let currentParetoMetric = "f05";
+    let currentParetoMode = "all";
+    let showFrontierEnvelope = true;
+    let activeTierSelection = null;
+
+    const tooltip = document.getElementById("chart-tooltip");
+
+    function showTooltip(e, html) {
+      tooltip.innerHTML = html;
+      tooltip.style.opacity = "1";
+      tooltip.style.transform = "scale(1)";
+      moveTooltip(e);
+    }
+
+    function moveTooltip(e) {
+      const pad = 16;
+      let x = e.clientX + pad;
+      let y = e.clientY + pad;
+      if (x + 300 > window.innerWidth) x = e.clientX - 310;
+      if (y + 190 > window.innerHeight) y = e.clientY - 200;
+      tooltip.style.left = `${Math.max(10, x)}px`;
+      tooltip.style.top = `${Math.max(10, y)}px`;
+    }
+
+    function hideTooltip() {
+      tooltip.style.opacity = "0";
+      tooltip.style.transform = "scale(0.96)";
+    }
+
+    window.addEventListener("mousemove", (e) => {
+      if (tooltip.style.opacity === "1") moveTooltip(e);
+    });
+
+    // --- RENDER BAR CHART ---
+    function renderBarChart() {
+      const svg = document.getElementById("bar-chart-svg");
+      const width = 540;
+      const height = 330;
+      const margin = { top: 32, right: 20, bottom: 42, left: 45 };
+      const chartW = width - margin.left - margin.right;
+      const chartH = height - margin.top - margin.bottom;
+
+      const groupWidth = chartW / benchmarkData.length;
+      const barWidth = 22;
+      const barGap = 6;
+
+      let svgHtml = ``;
+
+      // Subtle horizontal gridlines
+      for (let pct = 0; pct <= 100; pct += 25) {
+        const y = margin.top + chartH - (pct / 100) * chartH;
+        svgHtml += `
+          <line x1="${margin.left}" y1="${y}" x2="${width - margin.right}" y2="${y}" stroke="rgba(0,0,0,0.06)" stroke-dasharray="3,3"/>
+          <text x="${margin.left - 8}" y="${y + 4}" fill="#8A8A87" font-size="10.5" text-anchor="end" font-family="'JetBrains Mono', monospace">${pct}%</text>
+        `;
+      }
+
+      // Bar groups
+      benchmarkData.forEach((d, i) => {
+        const isDimmed = activeTierSelection && activeTierSelection !== d.id;
+        const groupOpacity = isDimmed ? 0.2 : 1.0;
+
+        const cx = margin.left + i * groupWidth + groupWidth / 2;
+        const valMean = currentBarMetric === "f05" ? d.random.f05 : currentBarMetric === "precision" ? d.random.prec : d.random.rec;
+        const valPeak = currentBarMetric === "f05" ? d.baseline.f05 : currentBarMetric === "precision" ? d.baseline.prec : d.baseline.rec;
+        const valSd = currentBarMetric === "f05" ? d.random.f05Sd : currentBarMetric === "precision" ? d.random.precSd : d.random.recSd;
+
+        const hMean = Math.max(2, (valMean / 100) * chartH);
+        const yMean = margin.top + chartH - hMean;
+
+        const hPeak = Math.max(2, (valPeak / 100) * chartH);
+        const yPeak = margin.top + chartH - hPeak;
+
+        const xMean = cx - barWidth - barGap / 2;
+        const xPeak = cx + barGap / 2;
+        const meanTip = `showBarTooltip(event, '${d.tier}', '4-Run Macro Mean', ${valMean}, '${d.random.jfleg}', '${d.random.bea}', '${d.random.cleanFpr}', '${d.random.latency}', ${valSd}, ${d.random.min}, ${d.random.max})`;
+        const peakTip = `showBarTooltip(event, '${d.tier}', 'Peak Run Potential', ${valPeak}, '${d.random.jfleg}', '${d.random.bea}', '${d.random.cleanFpr}', '${d.random.latency}', ${valSd}, ${d.random.min}, ${d.random.max})`;
+
+        svgHtml += `<g opacity="${groupOpacity}" style="transition: opacity 0.25s ease;" onclick="selectTier('${d.id}')">`;
+
+        // 4-Run Macro Mean Bar (Charcoal / Dark Slate)
+        svgHtml += `
+          <rect x="${xMean}" y="${yMean}" width="${barWidth}" height="${hMean}" rx="3" fill="#111827"
+                style="cursor:pointer;"
+                onmouseenter="${meanTip}"
+                onmouseleave="hideTooltip()"
+                onclick="event.stopPropagation(); ${meanTip}"/>
+          <text x="${xMean + barWidth / 2}" y="${yMean - 5}" fill="#111827" font-size="10" font-weight="600" text-anchor="middle" font-family="'JetBrains Mono', monospace">${valMean.toFixed(0)}</text>
+        `;
+
+        // Peak Run Bar (Emerald Green)
+        svgHtml += `
+          <rect x="${xPeak}" y="${yPeak}" width="${barWidth}" height="${hPeak}" rx="3" fill="#059669"
+                style="cursor:pointer;"
+                onmouseenter="${peakTip}"
+                onmouseleave="hideTooltip()"
+                onclick="event.stopPropagation(); ${peakTip}"/>
+          <text x="${xPeak + barWidth / 2}" y="${yPeak - 5}" fill="#065F46" font-size="10" font-weight="600" text-anchor="middle" font-family="'JetBrains Mono', monospace">${valPeak.toFixed(0)}</text>
+        `;
+
+        // Category labels
+        svgHtml += `
+          <text x="${cx}" y="${height - margin.bottom + 16}" fill="#111111" font-size="11" font-weight="600" text-anchor="middle" font-family="'Geist', sans-serif">${d.id}</text>
+          <text x="${cx}" y="${height - margin.bottom + 29}" fill="#8A8A87" font-size="9" text-anchor="middle" font-family="'JetBrains Mono', monospace">${d.params.split(' ')[0]}</text>
+        `;
+
+        svgHtml += `</g>`;
+      });
+
+      svg.innerHTML = svgHtml;
+    }
+
+    function showBarTooltip(e, tier, setLabel, val, jfleg, bea, cleanFpr, latency, sd, min, max) {
+      const metricName = currentBarMetric === "f05" ? "F₀.₅ Score" : currentBarMetric === "precision" ? "Precision" : "Recall";
+      const varianceHtml = sd !== undefined
+        ? `<div class="tt-row"><span>Standard Deviation:</span><span class="tt-val">&plusmn;${sd.toFixed(1)}%</span></div>
+           <div class="tt-row"><span>Min &ndash; Max Range:</span><span class="tt-val">[${min.toFixed(1)}% &ndash; ${max.toFixed(1)}%]</span></div>`
+        : "";
+      const html = `
+        <div class="tt-title"><span style="width: 8px; height: 8px; border-radius: 50%; background: ${setLabel.includes('Mean') ? '#111827' : '#059669'}; display: inline-block;"></span> ${tier}</div>
+        <div class="tt-row"><span>Evaluation Metric:</span><span class="tt-val">${setLabel}</span></div>
+        <div class="tt-row"><span>${metricName}:</span><span class="tt-val" style="color: #059669;">${val.toFixed(2)}%</span></div>
+        ${varianceHtml}
+        <div class="tt-row"><span>JFLEG (Fluency):</span><span class="tt-val">${jfleg}</span></div>
+        <div class="tt-row"><span>BEA (Grammar):</span><span class="tt-val">${bea}</span></div>
+        <div class="tt-row"><span>Clean False Alarms:</span><span class="tt-val">${cleanFpr}%</span></div>
+        <div class="tt-row"><span>Inference Latency:</span><span class="tt-val">${latency} ms</span></div>
+      `;
+      showTooltip(e, html);
+    }
+
+    // --- RENDER PARETO FRONTIER ---
+    function renderParetoChart() {
+      const svg = document.getElementById("pareto-chart-svg");
+      const width = 580;
+      const height = 330;
+      const margin = { top: 25, right: 35, bottom: 42, left: 45 };
+      const chartW = width - margin.left - margin.right;
+      const chartH = height - margin.top - margin.bottom;
+
+      const logMax = 4.0; // 10,000ms
+      const logMin = 1.0; // 10ms
+
+      function getX(latencyMs) {
+        const clampLat = Math.max(10, Math.min(10000, latencyMs));
+        const logVal = Math.log10(clampLat);
+        const ratio = (logMax - logVal) / (logMax - logMin);
+        return margin.left + ratio * chartW;
+      }
+
+      function getY(score) {
+        const clampScore = Math.max(0, Math.min(100, score));
+        return margin.top + chartH - (clampScore / 100) * chartH;
+      }
+
+      let svgHtml = ``;
+
+      // Horizontal Grid Lines
+      for (let pct = 0; pct <= 100; pct += 25) {
+        const y = getY(pct);
+        svgHtml += `
+          <line x1="${margin.left}" y1="${y}" x2="${width - margin.right}" y2="${y}" stroke="rgba(0,0,0,0.06)" stroke-dasharray="3,3"/>
+          <text x="${margin.left - 8}" y="${y + 4}" fill="#8A8A87" font-size="10.5" text-anchor="end" font-family="'JetBrains Mono', monospace">${pct}%</text>
+        `;
+      }
+
+      // Vertical Grid Lines (Inverted Latency)
+      const latTicks = [
+        { val: 10000, label: "10s" },
+        { val: 1000, label: "1s" },
+        { val: 100, label: "100ms" },
+        { val: 10, label: "10ms" }
+      ];
+
+      latTicks.forEach(t => {
+        const x = getX(t.val);
+        svgHtml += `
+          <line x1="${x}" y1="${margin.top}" x2="${x}" y2="${height - margin.bottom}" stroke="rgba(0,0,0,0.06)" stroke-dasharray="3,3"/>
+          <text x="${x}" y="${height - margin.bottom + 16}" fill="#8A8A87" font-size="10.5" text-anchor="middle" font-family="'JetBrains Mono', monospace">${t.label}</text>
+        `;
+      });
+
+      // Axis Labels
+      svgHtml += `
+        <text x="${width - margin.right}" y="${height - margin.bottom + 32}" fill="#2E6835" font-size="10" font-weight="600" text-anchor="end" font-family="'Geist', sans-serif">Inference Latency (Faster ───>)</text>
+        <text x="${margin.left}" y="${margin.top - 8}" fill="#636360" font-size="10.5" font-weight="600" font-family="'Geist', sans-serif">Macro Mean F₀.₅ Score (%)</text>
+      `;
+
+      // Pareto Frontier Envelope Curve
+      if (showFrontierEnvelope) {
+        const pQuality = benchmarkData.find(d => d.id === "Quality");
+        const pStandard = benchmarkData.find(d => d.id === "Standard");
+        const pNormal = benchmarkData.find(d => d.id === "Normal");
+
+        const qX = getX(pQuality.random.latency);
+        const qY = getY(pQuality.random.f05);
+        const sX = getX(pStandard.random.latency);
+        const sY = getY(pStandard.random.f05);
+        const nX = getX(pNormal.random.latency);
+        const nY = getY(pNormal.random.f05);
+
+        // Shaded feasible region under the frontier curve
+        const areaPath = `M ${qX} ${height - margin.bottom} L ${qX} ${qY} Q ${(qX + sX) / 2} ${qY - 4}, ${sX} ${sY} Q ${(sX + nX) / 2} ${sY + 8}, ${nX} ${nY} L ${nX} ${height - margin.bottom} Z`;
+        svgHtml += `<path d="${areaPath}" fill="#EDF3EC" opacity="0.65" />`;
+
+        // Frontier boundary line
+        const linePath = `M ${qX} ${qY} Q ${(qX + sX) / 2} ${qY - 4}, ${sX} ${sY} Q ${(sX + nX) / 2} ${sY + 8}, ${nX} ${nY}`;
+        svgHtml += `
+          <path d="${linePath}" fill="none" stroke="#2E6835" stroke-width="2.2" opacity="0.9" />
+        `;
+      }
+
+      // Nodes: Plotting each engine by its 4-Seed Macro Mean F_0.5 score
+      benchmarkData.forEach(d => {
+        const isSelected = activeTierSelection === d.id;
+        const isDimmed = activeTierSelection && !isSelected;
+        const tierOpacity = isDimmed ? 0.18 : 1.0;
+
+        const score = d.random.f05;
+        const latency = d.random.latency;
+        const x = getX(latency);
+        const y = getY(score);
+
+        svgHtml += `<g opacity="${tierOpacity}" style="transition: opacity 0.25s ease;" onclick="selectTier('${d.id}')">`;
+
+        // Single Macro Mean Solid Marker
+        svgHtml += `
+          <circle cx="${x}" cy="${y}" r="${isSelected ? 9 : 7}" fill="${d.hex}" stroke="#FFFFFF" stroke-width="2.2"
+                  style="cursor:pointer; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.18));"
+                  onmouseenter="showParetoCrosshairs(${x}, ${y}, ${latency}, ${score}); showParetoTooltip(event, '${d.tier}', ${score}, ${latency}, ${d.random.f05Sd}, ${d.random.min}, ${d.random.max}, ${d.random.prec}, ${d.random.rec}, '${d.params}', '${d.desc}')"
+                  onmouseleave="hideParetoCrosshairs(); hideTooltip()"/>
+        `;
+
+        // Label
+        const labelOffsetX = d.id === "Quality" ? -12 : 12;
+        const labelAnchor = d.id === "Quality" ? "end" : "start";
+        const markName = d.id === "Standard" ? "star" : d.id === "Quality" ? "sparkle" : null;
+        const markSize = 10;
+        let labelX = x + labelOffsetX;
+        if (markName && labelAnchor === "start") {
+          svgHtml += phSvgGlyph(markName, labelX, y - 14, markSize, d.hex);
+          labelX += markSize + 3;
+        } else if (markName && labelAnchor === "end") {
+          svgHtml += phSvgGlyph(markName, labelX - markSize, y - 14, markSize, d.hex);
+          labelX -= markSize + 3;
+        }
+        svgHtml += `
+          <text x="${labelX}" y="${y - 6}" fill="${d.hex}" font-size="11" font-weight="700" text-anchor="${labelAnchor}" font-family="'Geist', sans-serif">
+            ${d.id}
+          </text>
+          <text x="${x + labelOffsetX}" y="${y + 8}" fill="#636360" font-size="9" text-anchor="${labelAnchor}" font-family="'JetBrains Mono', monospace">
+            ${score.toFixed(1)}% (${latency.toFixed(0)}ms)
+          </text>
+        `;
+
+        svgHtml += `</g>`;
+      });
+
+      // Crosshairs placeholder layer
+      svgHtml += `<g id="crosshair-layer"></g>`;
+
+      svg.innerHTML = svgHtml;
+    }
+
+    function showParetoCrosshairs(x, y, latency, score) {
+      const layer = document.getElementById("crosshair-layer");
+      if (!layer) return;
+      const height = 330;
+      const margin = { bottom: 42, left: 45 };
+
+      layer.innerHTML = `
+        <line x1="${margin.left}" y1="${y}" x2="${x}" y2="${y}" stroke="#111111" stroke-dasharray="2,2" stroke-width="1.2" opacity="0.35"/>
+        <line x1="${x}" y1="${y}" x2="${x}" y2="${height - margin.bottom}" stroke="#111111" stroke-dasharray="2,2" stroke-width="1.2" opacity="0.35"/>
+        <rect x="${margin.left - 42}" y="${y - 9}" width="38" height="18" rx="4" fill="#111111"/>
+        <text x="${margin.left - 23}" y="${y + 4}" fill="#FFFFFF" font-size="9" font-weight="600" text-anchor="middle" font-family="'JetBrains Mono', monospace">${score.toFixed(0)}%</text>
+        
+        <rect x="${x - 26}" y="${height - margin.bottom + 4}" width="52" height="18" rx="4" fill="#111111"/>
+        <text x="${x}" y="${height - margin.bottom + 16}" fill="#FFFFFF" font-size="9" font-weight="600" text-anchor="middle" font-family="'JetBrains Mono', monospace">${latency.toFixed(0)}ms</text>
+      `;
+    }
+
+    function hideParetoCrosshairs() {
+      const layer = document.getElementById("crosshair-layer");
+      if (layer) layer.innerHTML = "";
+    }
+
+    function showParetoTooltip(e, tier, score, latency, f05Sd, min, max, prec, rec, params, desc) {
+      const html = `
+        <div class="tt-title"><span style="width: 8px; height: 8px; border-radius: 50%; background: #059669; display: inline-block;"></span> ${tier}</div>
+        <div class="tt-row"><span>Evaluation Metric:</span><span class="tt-val">4-Seed Macro Mean</span></div>
+        <div class="tt-row"><span>Mean F_0.5 Score:</span><span class="tt-val" style="color: #2E6835; font-weight: 700;">${score.toFixed(2)}%</span></div>
+        <div class="tt-row"><span>Standard Deviation:</span><span class="tt-val">&plusmn;${f05Sd.toFixed(1)}%</span></div>
+        <div class="tt-row"><span>Min &ndash; Max Range:</span><span class="tt-val">[${min.toFixed(1)}% &ndash; ${max.toFixed(1)}%]</span></div>
+        <div class="tt-row"><span>Inference Latency:</span><span class="tt-val">${latency.toFixed(1)} ms</span></div>
+        <div class="tt-row"><span>Mean Precision:</span><span class="tt-val">${prec.toFixed(1)}%</span></div>
+        <div class="tt-row"><span>Mean Recall:</span><span class="tt-val">${rec.toFixed(1)}%</span></div>
+        <div class="tt-row"><span>Model Parameters:</span><span class="tt-val">${params}</span></div>
+        <div style="margin-top: 8px; padding-top: 6px; border-top: 1px solid rgba(0,0,0,0.08); font-size: 0.76rem; color: #636360; line-height: 1.35;">
+          ${desc}
+        </div>
+      `;
+      showTooltip(e, html);
+    }
+
+    // --- SELECTION & CONTROLLERS ---
+    function selectTier(tierId) {
+      if (activeTierSelection === tierId) {
+        activeTierSelection = null;
+      } else {
+        activeTierSelection = tierId;
+      }
+
+      updateTableHighlight();
+      updateLegendHighlight();
+      renderBarChart();
+      renderParetoChart();
+    }
+    // Master Evaluation Table Data (4-Seed Cross-Validation Benchmark: All 20 Runs + 5 Macro Means = 25 Rows)
+    const matrixTableData = [
+      // Normal Proofread (LT Only)
+      { id: 1, tier: "Normal", tierName: "Normal Proofread (LT Only)", color: "#1F6C9F", runType: "random", runIndex: 1, seed: 26061, runLabel: "Run 1 (Seed 26061)", sentences: 25, expected: 30, correct: 8, fp: 2, prec: 80.00, rec: 26.67, f05: 57.14, cleanFpr: 0, cleanFprDisplay: "0% (0/8)", latency: 39.1, jfleg: "6 / 16", jflegVal: 6 / 16, bea: "2 / 14", beaVal: 2 / 14 },
+      { id: 2, tier: "Normal", tierName: "Normal Proofread (LT Only)", color: "#1F6C9F", runType: "random", runIndex: 2, seed: 3840, runLabel: "Run 2 (Seed 3840)", sentences: 25, expected: 33, correct: 10, fp: 0, prec: 100.00, rec: 30.30, f05: 68.49, cleanFpr: 0, cleanFprDisplay: "0% (0/8)", latency: 36.9, jfleg: "8 / 20", jflegVal: 8 / 20, bea: "2 / 13", beaVal: 2 / 13 },
+      { id: 3, tier: "Normal", tierName: "Normal Proofread (LT Only)", color: "#1F6C9F", runType: "random", runIndex: 3, seed: 89122, runLabel: "Run 3 (Seed 89122)", sentences: 25, expected: 28, correct: 7, fp: 0, prec: 100.00, rec: 25.00, f05: 62.50, cleanFpr: 0, cleanFprDisplay: "0% (0/8)", latency: 33.0, jfleg: "5 / 16", jflegVal: 5 / 16, bea: "2 / 12", beaVal: 2 / 12 },
+      { id: 4, tier: "Normal", tierName: "Normal Proofread (LT Only)", color: "#1F6C9F", runType: "random", runIndex: 4, seed: 50680, runLabel: "Run 4 (Seed 50680)", sentences: 25, expected: 28, correct: 9, fp: 0, prec: 100.00, rec: 32.14, f05: 70.31, cleanFpr: 0, cleanFprDisplay: "0% (0/8)", latency: 31.8, jfleg: "7 / 17", jflegVal: 7 / 17, bea: "2 / 11", beaVal: 2 / 11 },
+      { id: 5, tier: "Normal", tierName: "Normal Proofread Aggregate", color: "#1F6C9F", runType: "mean", runLabel: "4-Run Macro Mean", sentences: 100, expected: 119, correct: 34, fp: 2, prec: 95.00, precSd: 10.00, precMin: 80.00, precMax: 100.00, rec: 28.53, recSd: 3.27, recMin: 25.00, recMax: 32.14, f05: 64.61, f05Sd: 5.99, f05Min: 57.14, f05Max: 70.31, cleanFpr: 0, cleanFprDisplay: "0% (0/32)", latency: 35.2, jfleg: "26 / 69 (37.7%)", jflegVal: 26 / 69, bea: "8 / 50 (16.0%)", beaVal: 8 / 50 },
+
+      // Light Tier (MiniCPM 1B Hybrid)
+      { id: 6, tier: "Light", tierName: "Light Tier (MiniCPM 1B Hybrid)", color: "#D97706", runType: "random", runIndex: 1, seed: 26061, runLabel: "Run 1 (Seed 26061)", sentences: 25, expected: 30, correct: 9, fp: 3, prec: 75.00, rec: 30.00, f05: 57.69, cleanFpr: 0, cleanFprDisplay: "0% (0/8)", latency: 474.4, jfleg: "7 / 16", jflegVal: 7 / 16, bea: "2 / 14", beaVal: 2 / 14 },
+      { id: 7, tier: "Light", tierName: "Light Tier (MiniCPM 1B Hybrid)", color: "#D97706", runType: "random", runIndex: 2, seed: 3840, runLabel: "Run 2 (Seed 3840)", sentences: 25, expected: 33, correct: 10, fp: 1, prec: 90.91, rec: 30.30, f05: 64.94, cleanFpr: 12.5, cleanFprDisplay: "12.5% (1/8)", latency: 445.5, jfleg: "8 / 20", jflegVal: 8 / 20, bea: "2 / 13", beaVal: 2 / 13 },
+      { id: 8, tier: "Light", tierName: "Light Tier (MiniCPM 1B Hybrid)", color: "#D97706", runType: "random", runIndex: 3, seed: 89122, runLabel: "Run 3 (Seed 89122)", sentences: 25, expected: 28, correct: 7, fp: 0, prec: 100.00, rec: 25.00, f05: 62.50, cleanFpr: 0, cleanFprDisplay: "0% (0/8)", latency: 360.2, jfleg: "5 / 16", jflegVal: 5 / 16, bea: "2 / 12", beaVal: 2 / 12 },
+      { id: 9, tier: "Light", tierName: "Light Tier (MiniCPM 1B Hybrid)", color: "#D97706", runType: "random", runIndex: 4, seed: 50680, runLabel: "Run 4 (Seed 50680)", sentences: 25, expected: 28, correct: 9, fp: 1, prec: 90.00, rec: 32.14, f05: 66.18, cleanFpr: 0, cleanFprDisplay: "0% (0/8)", latency: 392.9, jfleg: "7 / 17", jflegVal: 7 / 17, bea: "2 / 11", beaVal: 2 / 11 },
+      { id: 10, tier: "Light", tierName: "Light Tier Aggregate", color: "#D97706", runType: "mean", runLabel: "4-Run Macro Mean", sentences: 100, expected: 119, correct: 35, fp: 5, prec: 88.98, precSd: 10.35, precMin: 75.00, precMax: 100.00, rec: 29.36, recSd: 3.06, recMin: 25.00, recMax: 32.14, f05: 62.83, f05Sd: 3.75, f05Min: 57.69, f05Max: 66.18, cleanFpr: 3.1, cleanFprDisplay: "3.1% (1/32)", latency: 418.2, jfleg: "27 / 69 (39.1%)", jflegVal: 27 / 69, bea: "8 / 50 (16.0%)", beaVal: 8 / 50 },
+
+      // Standard Tier (Qwen3.5 4B Hybrid)
+      { id: 11, tier: "Standard", tierName: "Standard Tier (Qwen3.5 4B)", color: "#059669", runType: "random", runIndex: 1, seed: 26061, runLabel: "Run 1 (Seed 26061)", sentences: 25, expected: 30, correct: 12, fp: 4, prec: 75.00, rec: 40.00, f05: 63.83, cleanFpr: 12.5, cleanFprDisplay: "12.5% (1/8)", latency: 237.0, jfleg: "8 / 16", jflegVal: 8 / 16, bea: "4 / 14", beaVal: 4 / 14 },
+      { id: 12, tier: "Standard", tierName: "Standard Tier (Qwen3.5 4B)", color: "#059669", runType: "random", runIndex: 2, seed: 3840, runLabel: "Run 2 (Seed 3840)", sentences: 25, expected: 33, correct: 18, fp: 3, prec: 85.71, rec: 54.55, f05: 76.92, cleanFpr: 12.5, cleanFprDisplay: "12.5% (1/8)", latency: 226.4, jfleg: "12 / 20", jflegVal: 12 / 20, bea: "6 / 13", beaVal: 6 / 13 },
+      { id: 13, tier: "Standard", tierName: "Standard Tier (Qwen3.5 4B)", color: "#059669", runType: "random", runIndex: 3, seed: 89122, runLabel: "Run 3 (Seed 89122)", sentences: 25, expected: 28, correct: 9, fp: 2, prec: 81.82, rec: 32.14, f05: 62.50, cleanFpr: 0, cleanFprDisplay: "0% (0/8)", latency: 214.1, jfleg: "6 / 16", jflegVal: 6 / 16, bea: "3 / 12", beaVal: 3 / 12 },
+      { id: 14, tier: "Standard", tierName: "Standard Tier (Qwen3.5 4B)", color: "#059669", runType: "random", runIndex: 4, seed: 50680, runLabel: "Run 4 (Seed 50680)", sentences: 25, expected: 28, correct: 15, fp: 1, prec: 93.75, rec: 53.57, f05: 81.52, cleanFpr: 0, cleanFprDisplay: "0% (0/8)", latency: 206.5, jfleg: "10 / 17", jflegVal: 10 / 17, bea: "5 / 11", beaVal: 5 / 11 },
+      { id: 15, tier: "Standard", tierName: "Standard Tier Aggregate", color: "#059669", runType: "mean", runLabel: "4-Run Macro Mean", sentences: 100, expected: 119, correct: 54, fp: 10, prec: 84.07, precSd: 7.83, precMin: 75.00, precMax: 93.75, rec: 45.06, recSd: 10.88, recMin: 32.14, recMax: 54.55, f05: 71.19, f05Sd: 9.47, f05Min: 62.50, f05Max: 81.52, cleanFpr: 6.3, cleanFprDisplay: "6.3% (2/32)", latency: 221.0, jfleg: "36 / 69 (52.2%)", jflegVal: 36 / 69, bea: "18 / 50 (36.0%)", beaVal: 18 / 50 },
+
+      // Quality Tier (Qwen3.8 27B Hybrid)
+      { id: 16, tier: "Quality", tierName: "Quality Tier (Qwen3.8 27B)", color: "#7C3AED", runType: "random", runIndex: 1, seed: 26061, runLabel: "Run 1 (Seed 26061)", sentences: 25, expected: 30, correct: 12, fp: 2, prec: 85.71, rec: 40.00, f05: 69.77, cleanFpr: 0, cleanFprDisplay: "0% (0/8)", latency: 3578.0, jfleg: "8 / 16", jflegVal: 8 / 16, bea: "4 / 14", beaVal: 4 / 14 },
+      { id: 17, tier: "Quality", tierName: "Quality Tier (Qwen3.8 27B)", color: "#7C3AED", runType: "random", runIndex: 2, seed: 3840, runLabel: "Run 2 (Seed 3840)", sentences: 25, expected: 33, correct: 20, fp: 1, prec: 95.24, rec: 60.61, f05: 85.47, cleanFpr: 0, cleanFprDisplay: "0% (0/8)", latency: 3612.0, jfleg: "14 / 20", jflegVal: 14 / 20, bea: "6 / 13", beaVal: 6 / 13 },
+      { id: 18, tier: "Quality", tierName: "Quality Tier (Qwen3.8 27B)", color: "#7C3AED", runType: "random", runIndex: 3, seed: 89122, runLabel: "Run 3 (Seed 89122)", sentences: 25, expected: 28, correct: 12, fp: 1, prec: 92.31, rec: 42.86, f05: 75.00, cleanFpr: 0, cleanFprDisplay: "0% (0/8)", latency: 3076.0, jfleg: "8 / 16", jflegVal: 8 / 16, bea: "4 / 12", beaVal: 4 / 12 },
+      { id: 19, tier: "Quality", tierName: "Quality Tier (Qwen3.8 27B)", color: "#7C3AED", runType: "random", runIndex: 4, seed: 50680, runLabel: "Run 4 (Seed 50680)", sentences: 25, expected: 28, correct: 11, fp: 1, prec: 91.67, rec: 39.29, f05: 72.37, cleanFpr: 0, cleanFprDisplay: "0% (0/8)", latency: 2996.0, jfleg: "7 / 17", jflegVal: 7 / 17, bea: "4 / 11", beaVal: 4 / 11 },
+      { id: 20, tier: "Quality", tierName: "Quality Tier Aggregate", color: "#7C3AED", runType: "mean", runLabel: "4-Run Macro Mean", sentences: 100, expected: 119, correct: 55, fp: 5, prec: 91.23, precSd: 4.00, precMin: 85.71, precMax: 95.24, rec: 45.69, recSd: 10.07, recMin: 39.29, recMax: 60.61, f05: 75.65, f05Sd: 6.88, f05Min: 69.77, f05Max: 85.47, cleanFpr: 0, cleanFprDisplay: "0% (0/32)", latency: 3315.5, jfleg: "37 / 69 (53.6%)", jflegVal: 37 / 69, bea: "18 / 50 (36.0%)", beaVal: 18 / 50 },
+
+      // QuillBot (Free Web Grammar Checker)
+      { id: 21, tier: "QuillBot", tierName: "QuillBot (Free Web)", color: "#0284C7", runType: "random", runIndex: 1, seed: 26061, runLabel: "Run 1 (Seed 26061)", sentences: 25, expected: 30, correct: 11, fp: 1, prec: 91.67, rec: 36.67, f05: 70.51, cleanFpr: 12.5, cleanFprDisplay: "12.5% (1/8)", latency: 1850.0, jfleg: "7 / 16", jflegVal: 7 / 16, bea: "4 / 14", beaVal: 4 / 14 },
+      { id: 22, tier: "QuillBot", tierName: "QuillBot (Free Web)", color: "#0284C7", runType: "random", runIndex: 2, seed: 3840, runLabel: "Run 2 (Seed 3840)", sentences: 25, expected: 33, correct: 16, fp: 2, prec: 88.89, rec: 48.48, f05: 76.19, cleanFpr: 25.0, cleanFprDisplay: "25.0% (2/8)", latency: 1780.0, jfleg: "11 / 20", jflegVal: 11 / 20, bea: "5 / 13", beaVal: 5 / 13 },
+      { id: 23, tier: "QuillBot", tierName: "QuillBot (Free Web)", color: "#0284C7", runType: "random", runIndex: 3, seed: 89122, runLabel: "Run 3 (Seed 89122)", sentences: 25, expected: 28, correct: 7, fp: 0, prec: 100.00, rec: 25.00, f05: 62.50, cleanFpr: 0, cleanFprDisplay: "0% (0/8)", latency: 1820.0, jfleg: "7 / 16", jflegVal: 7 / 16, bea: "0 / 12", beaVal: 0 / 12 },
+      { id: 24, tier: "QuillBot", tierName: "QuillBot (Free Web)", color: "#0284C7", runType: "random", runIndex: 4, seed: 50680, runLabel: "Run 4 (Seed 50680)", sentences: 25, expected: 28, correct: 11, fp: 0, prec: 100.00, rec: 39.29, f05: 76.39, cleanFpr: 0, cleanFprDisplay: "0% (0/8)", latency: 1810.0, jfleg: "9 / 17", jflegVal: 9 / 17, bea: "2 / 11", beaVal: 2 / 11 },
+      { id: 25, tier: "QuillBot", tierName: "QuillBot Aggregate", color: "#0284C7", runType: "mean", runLabel: "4-Run Macro Mean", sentences: 100, expected: 119, correct: 45, fp: 3, prec: 95.14, precSd: 5.49, precMin: 88.89, precMax: 100.00, rec: 37.36, recSd: 9.67, recMin: 25.00, recMax: 48.48, f05: 71.40, f05Sd: 6.53, f05Min: 62.50, f05Max: 76.39, cleanFpr: 9.4, cleanFprDisplay: "9.4% (3/32)", latency: 1815.0, jfleg: "34 / 69 (49.3%)", jflegVal: 34 / 69, bea: "11 / 50 (22.0%)", beaVal: 11 / 50 }
+    ];
+
+    let currentTableViewMode = "leaderboard"; // "leaderboard" | "matrix"
+    let currentTableFilter = "all"; // "all" | "mean" | "runs"
+    let currentTableSort = { col: null, dir: "desc" };
+    let openDrawers = new Set(); // Stores tier IDs whose drawers are open
+    const tierMetadata = {
+      Quality: {
+        rank: 1,
+        shortName: "Quality (27B)",
+        name: "Quality Tier",
+        modelSubtitle: "Qwen3.8 27B · UD-Q4_K_M",
+        accent: "#7C3AED",
+        notes: "Top F₀.₅ and recall, zero clean FPR, fully offline."
+      },
+      QuillBot: {
+        rank: 2,
+        shortName: "QuillBot (Free)",
+        name: "QuillBot Free",
+        modelSubtitle: "Cloud Web Grammar API",
+        accent: "#0284C7",
+        notes: "Cloud reference; high precision, paid upgrades for deeper rewrites."
+      },
+      Standard: {
+        rank: 3,
+        shortName: "Standard (4B)",
+        name: "Standard Tier",
+        modelSubtitle: "Qwen3.5 4B · Q4_K_M",
+        accent: "#059669",
+        notes: "Best local speed/quality balance (~221 ms)."
+      },
+      Normal: {
+        rank: 4,
+        shortName: "Normal (LT)",
+        name: "Normal Proofread",
+        modelSubtitle: "LanguageTool · Rule-Based",
+        accent: "#1F6C9F",
+        notes: "Instant rule-based baseline (~35 ms), no GPU."
+      },
+      Light: {
+        rank: 5,
+        shortName: "Light (1B)",
+        name: "Light Tier",
+        modelSubtitle: "MiniCPM5 1B · Q8_0",
+        accent: "#D97706",
+        notes: "Compact edge model for low-memory devices."
+      }
+    };
+
+    function renderScoreBar(meanF05, minF05, maxF05, sdF05, color) {
+      const fillPct = Math.min(100, Math.max(0, meanF05));
+      const minPct = Math.min(100, Math.max(0, minF05));
+      const maxPct = Math.min(100, Math.max(0, maxF05));
+      const whiskerLeft = minPct;
+      const whiskerWidth = Math.max(1.5, maxPct - minPct);
+
+      return `
+        <div class="score-bar-wrapper">
+          <div class="score-bar-container" title="Mean F₀.₅: ${meanF05.toFixed(2)}% | Variance: ±${sdF05.toFixed(1)}% | Range: [${minF05.toFixed(1)}% – ${maxF05.toFixed(1)}%]">
+            <div class="score-bar-fill" style="width: ${fillPct.toFixed(1)}%; background: ${color};"></div>
+            <div class="score-whisker" style="left: ${whiskerLeft.toFixed(1)}%; width: ${whiskerWidth.toFixed(1)}%;">
+              <span class="whisker-cap start"></span>
+              <span class="whisker-line"></span>
+              <span class="whisker-cap end"></span>
+            </div>
+          </div>
+          <div class="score-bar-text">
+            <span style="color: ${color};">${meanF05.toFixed(2)}%</span>
+            <span class="score-sd">&plusmn;${sdF05.toFixed(1)}%</span>
+          </div>
+        </div>
+      `;
+    }
+
+    function toggleDrawer(tierId) {
+      if (openDrawers.has(tierId)) {
+        openDrawers.delete(tierId);
+      } else {
+        openDrawers.add(tierId);
+      }
+      const drawerRow = document.getElementById(`drawer-${tierId}`);
+      const btn = document.getElementById(`btn-drawer-${tierId}`);
+      const isOpen = openDrawers.has(tierId);
+      if (drawerRow) {
+        if (isOpen) drawerRow.classList.add("is-open");
+        else drawerRow.classList.remove("is-open");
+      }
+        if (btn) {
+          if (isOpen) {
+            btn.classList.add("is-open");
+            btn.innerHTML = `<span>4 Runs</span> <span class="caret-icon">${phIcon("caretDown", 12)}</span>`;
+          } else {
+            btn.classList.remove("is-open");
+            btn.innerHTML = `<span>4 Runs</span> <span class="caret-icon">${phIcon("caretDown", 12)}</span>`;
+          }
+        }
+
+      const allTiers = ["Quality", "QuillBot", "Standard", "Light", "Normal"];
+      const btnAll = document.getElementById("btn-toggle-all-drawers");
+      if (btnAll) {
+        if (openDrawers.size === allTiers.length) {
+          btnAll.classList.add("is-open");
+          btnAll.innerHTML = `<span>Collapse All Runs</span> <span class="caret-icon">${phIcon("caretDown", 12)}</span>`;
+        } else {
+          btnAll.classList.remove("is-open");
+          btnAll.innerHTML = `<span>Expand All Runs</span> <span class="caret-icon">${phIcon("caretDown", 12)}</span>`;
+        }
+      }
+    }
+
+    function toggleAllDrawers() {
+      const allTiers = ["Quality", "QuillBot", "Standard", "Light", "Normal"];
+      const shouldOpenAll = openDrawers.size < allTiers.length;
+      if (shouldOpenAll) {
+        allTiers.forEach(t => openDrawers.add(t));
+      } else {
+        openDrawers.clear();
+      }
+      allTiers.forEach(tierId => {
+        const drawerRow = document.getElementById(`drawer-${tierId}`);
+        const btn = document.getElementById(`btn-drawer-${tierId}`);
+        const isOpen = openDrawers.has(tierId);
+        if (drawerRow) {
+          if (isOpen) drawerRow.classList.add("is-open");
+          else drawerRow.classList.remove("is-open");
+        }
+        if (btn) {
+          if (isOpen) {
+            btn.classList.add("is-open");
+            btn.innerHTML = `<span>4 Runs</span> <span class="caret-icon">${phIcon("caretDown", 12)}</span>`;
+          } else {
+            btn.classList.remove("is-open");
+            btn.innerHTML = `<span>4 Runs</span> <span class="caret-icon">${phIcon("caretDown", 12)}</span>`;
+          }
+        }
+      });
+
+      const btnAll = document.getElementById("btn-toggle-all-drawers");
+      if (btnAll) {
+        if (shouldOpenAll) {
+          btnAll.classList.add("is-open");
+          btnAll.innerHTML = `<span>Collapse All Runs</span> <span class="caret-icon">${phIcon("caretDown", 12)}</span>`;
+        } else {
+          btnAll.classList.remove("is-open");
+          btnAll.innerHTML = `<span>Expand All Runs</span> <span class="caret-icon">${phIcon("caretDown", 12)}</span>`;
+        }
+      }
+    }
+
+    function setTableViewMode(mode) {
+      currentTableViewMode = mode;
+      document.querySelectorAll("#table-view-ctrl .segment-btn").forEach(b => {
+        if (b.getAttribute("data-view") === mode) b.classList.add("active");
+        else b.classList.remove("active");
+      });
+
+      const matrixRunsGroup = document.getElementById("matrix-runs-group");
+      const expandAllBtn = document.getElementById("btn-toggle-all-drawers");
+      const scrollHint = document.getElementById("matrix-scroll-hint");
+      const titleEm = document.getElementById("table-title-em");
+      const descP = document.getElementById("table-desc-p");
+      const matrixTable = document.getElementById("matrix-table");
+
+      if (mode === "leaderboard") {
+        if (matrixTable) matrixTable.classList.add("is-leaderboard");
+        if (matrixRunsGroup) matrixRunsGroup.style.display = "none";
+        if (expandAllBtn) expandAllBtn.style.display = "";
+        if (scrollHint) scrollHint.style.display = "none";
+        if (titleEm) titleEm.textContent = "Leaderboard";
+        if (descP) descP.innerHTML = "Executive summary of the 4-seed cross-validation benchmark across 5 engines. Click <strong>[ 4 Runs ▾ ]</strong> on any tier to inspect all individual seeds, or toggle to <strong>Detailed Matrix</strong> for the full 25-row dataset.";
+      } else {
+        if (matrixTable) matrixTable.classList.remove("is-leaderboard");
+        if (matrixRunsGroup) matrixRunsGroup.style.display = "flex";
+        if (expandAllBtn) expandAllBtn.style.display = "none";
+        if (scrollHint) scrollHint.style.display = "block";
+        if (titleEm) titleEm.textContent = "Matrix";
+        if (descP) descP.innerHTML = "Complete 4-seed cross-validation evaluation across 5 engines (100 unique sentences each, 500 evaluations total). Displays individual runs alongside the Macro Mean with standard deviation (&plusmn;&sigma;) and min-max range.";
+      }
+
+      renderMatrixTable();
+    }
+
+    function shortTierName(tierId, tierName) {
+      const map = {
+        Normal: "Normal (LT)",
+        Light: "Light (1B)",
+        Standard: "Standard (4B)",
+        Quality: "Quality (27B)",
+        QuillBot: "QuillBot (Free)"
+      };
+      return map[tierId] || stripTierMarks(tierName);
+    }
+
+    function formatRunCell(r) {
+      if (r.runType === "mean") {
+        return `<div class="run-cell"><span class="run-pill mean">Macro Mean</span><span class="run-cell-sub">4 Seeds (100 Items)</span></div>`;
+      }
+      const seedMatch = String(r.runLabel).match(/Seed\s+(\d+)/i);
+      const runMatch = String(r.runLabel).match(/Run\s+(\d+)/i);
+      const runN = runMatch ? runMatch[1] : (r.runIndex || "");
+      const seed = seedMatch ? seedMatch[1] : (r.seed || "");
+      return `<div class="run-cell"><span class="run-pill random">Run ${runN}</span><span class="run-cell-sub">Seed ${seed}</span></div>`;
+    }
+
+    function formatRatioCell(display) {
+      const m = String(display).match(/^([\d.]+%?)\s*(?:\(([^)]+)\))?/);
+      if (!m) return `<span class="cell-num">${display}</span>`;
+      const main = m[1];
+      const sub = m[2] || "";
+      if (!sub) return `<span class="cell-num">${main}</span>`;
+      return `<span class="cell-split"><span class="cell-split-main">${main}</span><span class="cell-split-sub">${sub}</span></span>`;
+    }
+
+    function formatScoreRatio(text) {
+      // "27 / 39 (69.2%)" or "6 / 9"
+      const m = String(text).match(/^(\d+\s*\/\s*\d+)\s*(?:\(([^)]+)\))?/);
+      if (!m) return `<span class="cell-num">${text}</span>`;
+      const main = m[1].replace(/\s+/g, " ");
+      const sub = m[2] || "";
+      if (!sub) return `<span class="cell-num">${main}</span>`;
+      return `<span class="cell-split"><span class="cell-split-main">${main}</span><span class="cell-split-sub">${sub}</span></span>`;
+    }
+
+    function formatLatency(ms) {
+      if (ms >= 1000) return `${(ms / 1000).toFixed(2)} s`;
+      return `${ms.toFixed(1)} ms`;
+    }
+
+    function renderMatrixThead() {
+      const thead = document.getElementById("matrix-thead");
+      if (!thead) return;
+
+      if (currentTableViewMode === "leaderboard") {
+        thead.innerHTML = `
+          <tr>
+            <th class="sortable col-engine" data-col="tier" onclick="handleTableSort('tier')" title="Tier &amp; Engine" style="width: 235px;">Tier &amp; Engine <span class="sort-icon" id="sort-tier">${phIcon("caretUpDown", 12)}</span></th>
+            <th class="sortable score-bar-cell" data-col="f05" onclick="handleTableSort('f05')" title="F₀.₅: combined score weighting precision ~2× over recall (standard for grammar correction)" style="min-width: 240px;">F₀.₅ Performance (&plusmn;&sigma;) <span class="sort-icon" id="sort-f05">${phIcon("caretUpDown", 12)}</span></th>
+            <th class="sortable num" data-col="prec" onclick="handleTableSort('prec')" title="Precision: share of suggested edits that were correct" style="min-width: 88px;">Precision <span class="sort-icon" id="sort-prec">${phIcon("caretUpDown", 12)}</span></th>
+            <th class="sortable num" data-col="rec" onclick="handleTableSort('rec')" title="Recall: share of real errors that were caught" style="min-width: 88px;">Recall <span class="sort-icon" id="sort-rec">${phIcon("caretUpDown", 12)}</span></th>
+            <th class="sortable num" data-col="cleanFpr" onclick="handleTableSort('cleanFpr')" title="Clean FPR: how often already-correct sentences were wrongly edited" style="min-width: 85px;">Clean FPR <span class="sort-icon" id="sort-cleanFpr">${phIcon("caretUpDown", 12)}</span></th>
+            <th class="sortable num" data-col="latency" onclick="handleTableSort('latency')" title="Average inference time per sentence" style="min-width: 80px;">Speed <span class="sort-icon" id="sort-latency">${phIcon("caretUpDown", 12)}</span></th>
+            <th style="text-align: center; width: 95px;" title="Inspect individual seed runs">Breakdown</th>
+          </tr>
+        `;
+      } else {
+        thead.innerHTML = `
+          <tr>
+            <th class="sortable col-sticky" data-col="tier" onclick="handleTableSort('tier')" title="Tier / Engine">Tier <span class="sort-icon" id="sort-tier">${phIcon("caretUpDown", 12)}</span></th>
+            <th class="sortable col-sticky-2" data-col="runLabel" onclick="handleTableSort('runLabel')" title="Dataset Run">Run <span class="sort-icon" id="sort-runLabel">${phIcon("caretUpDown", 12)}</span></th>
+            <th class="sortable num" data-col="sentences" onclick="handleTableSort('sentences')" title="Sentences evaluated">N <span class="sort-icon" id="sort-sentences">${phIcon("caretUpDown", 12)}</span></th>
+            <th class="sortable num" data-col="expected" onclick="handleTableSort('expected')" title="Expected corrections">Exp <span class="sort-icon" id="sort-expected">${phIcon("caretUpDown", 12)}</span></th>
+            <th class="sortable num" data-col="correct" onclick="handleTableSort('correct')" title="Correct fixes">Fixes <span class="sort-icon" id="sort-correct">${phIcon("caretUpDown", 12)}</span></th>
+            <th class="sortable num" data-col="fp" onclick="handleTableSort('fp')" title="False positives">FP <span class="sort-icon" id="sort-fp">${phIcon("caretUpDown", 12)}</span></th>
+            <th class="sortable num" data-col="prec" onclick="handleTableSort('prec')" title="Precision: share of suggested edits that were correct">Prec <span class="sort-icon" id="sort-prec">${phIcon("caretUpDown", 12)}</span></th>
+            <th class="sortable num" data-col="rec" onclick="handleTableSort('rec')" title="Recall: share of real errors that were caught">Rec <span class="sort-icon" id="sort-rec">${phIcon("caretUpDown", 12)}</span></th>
+            <th class="sortable num" data-col="f05" onclick="handleTableSort('f05')" title="F₀.₅: combined score weighting precision ~2× over recall">F₀.₅ <span class="sort-icon" id="sort-f05">${phIcon("caretUpDown", 12)}</span></th>
+            <th class="sortable num" data-col="cleanFpr" onclick="handleTableSort('cleanFpr')" title="Clean FPR: how often already-correct sentences were wrongly edited">Clean FPR <span class="sort-icon" id="sort-cleanFpr">${phIcon("caretUpDown", 12)}</span></th>
+            <th class="sortable num" data-col="latency" onclick="handleTableSort('latency')" title="Average inference time per sentence">Latency <span class="sort-icon" id="sort-latency">${phIcon("caretUpDown", 12)}</span></th>
+            <th class="sortable num" data-col="jflegVal" onclick="handleTableSort('jflegVal')" title="JFLEG: fluency / natural phrasing corpus hit rate">JFLEG <span class="sort-icon" id="sort-jflegVal">${phIcon("caretUpDown", 12)}</span></th>
+            <th class="sortable num" data-col="beaVal" onclick="handleTableSort('beaVal')" title="BEA: grammar / usage corpus hit rate">BEA <span class="sort-icon" id="sort-beaVal">${phIcon("caretUpDown", 12)}</span></th>
+          </tr>
+        `;
+      }
+    }
+
+    function renderMatrixTable() {
+      const tbody = document.getElementById("matrix-tbody");
+      if (!tbody) return;
+
+      renderMatrixThead();
+
+      if (currentTableViewMode === "leaderboard") {
+        renderLeaderboardRows(tbody);
+      } else {
+        renderDetailedMatrixRows(tbody);
+      }
+
+      // 5. Update sortable header icons and classes
+      document.querySelectorAll("table.benchmark-table th.sortable").forEach(th => {
+        const col = th.getAttribute("data-col");
+        const icon = th.querySelector(".sort-icon");
+        if (currentTableSort.col === col) {
+          th.classList.add("sort-active");
+          if (icon) icon.innerHTML = currentTableSort.dir === "asc" ? phIcon("caretUp", 12) : phIcon("caretDown", 12);
+        } else {
+          th.classList.remove("sort-active");
+          if (icon) icon.innerHTML = phIcon("caretUpDown", 12);
+        }
+      });
+    }
+
+    function renderLeaderboardRows(tbody) {
+      let meanRows = matrixTableData.filter(r => r.runType === "mean");
+
+      if (currentTableSort.col) {
+        const col = currentTableSort.col;
+        const dir = currentTableSort.dir === "asc" ? 1 : -1;
+        meanRows.sort((a, b) => {
+          let va = a[col];
+          let vb = b[col];
+          if (typeof va === "string") return va.localeCompare(vb) * dir;
+          return (va - vb) * dir;
+        });
+      } else {
+        // Canonical rank order: Quality, QuillBot, Standard, Light, Normal
+        meanRows.sort((a, b) => b.f05 - a.f05);
+      }
+
+      const maxF05 = Math.max(...meanRows.map(r => r.f05));
+      const maxPrec = Math.max(...meanRows.map(r => r.prec));
+      const minLatency = Math.min(...meanRows.map(r => r.latency));
+
+      tbody.innerHTML = meanRows.map((r, idx) => {
+        const isActive = activeTierSelection && r.tier === activeTierSelection;
+        const meta = tierMetadata[r.tier] || {};
+        const isOpen = openDrawers.has(r.tier);
+        const runsForTier = matrixTableData.filter(item => item.tier === r.tier && item.runType === "random");
+
+        let trClass = "";
+        if (isActive) trClass += " row-active";
+
+        const isTopF05 = r.f05 === maxF05;
+        const isTopPrec = r.prec === maxPrec && maxPrec >= 99.9;
+        const isFastest = r.latency === minLatency;
+        const fprClass = r.cleanFpr === 0 ? "val-good" : "val-warn";
+
+        let precCellHtml = "";
+        if (r.precSd === 0) {
+          precCellHtml = `<span class="cell-split"><span class="cell-split-main">${r.prec.toFixed(1)}%</span><span class="cell-split-sub">100% in all 4</span></span>`;
+        } else {
+          precCellHtml = `<span class="cell-split"><span class="cell-split-main">${r.prec.toFixed(1)}% <span style="font-size:0.68rem; font-weight:500; opacity:0.8;">&plusmn;${r.precSd.toFixed(1)}%</span></span><span class="cell-split-sub">[${r.precMin.toFixed(1)}% &ndash; ${r.precMax.toFixed(1)}%]</span></span>`;
+        }
+
+        const recCellHtml = `<span class="cell-split"><span class="cell-split-main">${r.rec.toFixed(1)}% <span style="font-size:0.68rem; font-weight:500; opacity:0.8;">&plusmn;${r.recSd.toFixed(1)}%</span></span><span class="cell-split-sub">[${r.recMin.toFixed(1)}% &ndash; ${r.recMax.toFixed(1)}%]</span></span>`;
+        const latCellHtml = `<span class="cell-split"><span class="cell-split-main">${formatLatency(r.latency)}</span><span class="cell-split-sub">macro avg</span></span>`;
+
+        return `
+          <tr class="${trClass.trim()}" data-tier="${r.tier}" onclick="selectTier('${r.tier}')" style="cursor: pointer;">
+            <td class="col-engine" title="${stripTierMarks(r.tierName)}">
+              <div class="leaderboard-engine-cell">
+                <span class="engine-rank-badge">#${idx + 1}</span>
+                <span class="legend-swatch circle" style="background: ${r.color};"></span>
+                <div class="leaderboard-engine-info">
+                  <div class="leaderboard-engine-title">${formatTierLabelHtml(meta.name || r.tierName, r.tier, 13)}</div>
+                  <div class="leaderboard-engine-sub">${meta.modelSubtitle}</div>
+                </div>
+              </div>
+            </td>
+            <td class="score-bar-cell">
+              ${renderScoreBar(r.f05, r.f05Min, r.f05Max, r.f05Sd, r.color)}
+            </td>
+            <td class="cell-score num${isTopPrec ? " is-best" : ""}">${precCellHtml}</td>
+            <td class="cell-num num">${recCellHtml}</td>
+            <td class="num ${fprClass}">${formatRatioCell(r.cleanFprDisplay)}</td>
+            <td class="cell-score num${isFastest ? " is-best" : ""}">${latCellHtml}</td>
+            <td style="text-align: center;">
+              <button class="btn-drawer-toggle ${isOpen ? 'is-open' : ''}" id="btn-drawer-${r.tier}" onclick="event.stopPropagation(); toggleDrawer('${r.tier}')" title="Inspect individual seed runs for ${r.tier}">
+                <span>4 Runs</span>
+                <span class="caret-icon">${phIcon("caretDown", 12)}</span>
+              </button>
+            </td>
+          </tr>
+          <tr class="drawer-tr ${isOpen ? 'is-open' : ''}" id="drawer-${r.tier}" data-tier="${r.tier}">
+            <td colspan="7">
+              <div class="drawer-container" style="--tier-accent: ${r.color};">
+                <div class="drawer-header">
+                  <div>
+                    <strong>${meta.name || r.tierName}</strong> · <span>${meta.modelSubtitle}</span> (4-Seed Cross-Validation Breakdown)
+                  </div>
+                  <div style="font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-muted);">
+                    Seeds: 26061, 3840, 89122, 50680 &bull; 25 Sentences / Run &bull; 100 Sentences Total
+                  </div>
+                </div>
+                <div class="drawer-scroll">
+                  <table class="nested-runs-table">
+                    <thead>
+                      <tr>
+                        <th style="text-align: left;">Run / Seed</th>
+                        <th>Items (N)</th>
+                        <th>Expected</th>
+                        <th>Fixes</th>
+                        <th>FP</th>
+                        <th>Precision</th>
+                        <th>Recall</th>
+                        <th>F₀.₅ Score</th>
+                        <th>Clean FPR</th>
+                        <th>Latency</th>
+                        <th>JFLEG Fluency</th>
+                        <th>BEA Grammar</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      ${runsForTier.map(rn => `
+                        <tr>
+                          <td style="text-align: left; font-weight: 600;">Run ${rn.runIndex} <span style="font-size:0.68rem; opacity:0.75; font-weight:normal;">(Seed ${rn.seed})</span></td>
+                          <td>${rn.sentences}</td>
+                          <td>${rn.expected}</td>
+                          <td style="color: ${rn.color}; font-weight:600;">${rn.correct}</td>
+                          <td class="${rn.fp > 0 ? 'val-warn' : ''}">${rn.fp}</td>
+                          <td>${rn.prec.toFixed(1)}%</td>
+                          <td>${rn.rec.toFixed(1)}%</td>
+                          <td style="color: ${rn.color}; font-weight: 700;">${rn.f05.toFixed(2)}</td>
+                          <td class="${rn.cleanFpr === 0 ? 'val-good' : 'val-warn'}">${rn.cleanFprDisplay}</td>
+                          <td>${formatLatency(rn.latency)}</td>
+                          <td>${formatScoreRatio(rn.jfleg)}</td>
+                          <td>${formatScoreRatio(rn.bea)}</td>
+                        </tr>
+                      `).join("")}
+                      <tr class="aggregate-subrow">
+                        <td style="text-align: left; font-weight: 700;">4-Run Macro Mean</td>
+                        <td>100</td>
+                        <td>75</td>
+                        <td style="color: ${r.color};">${r.correct}</td>
+                        <td class="${r.fp > 0 ? 'val-warn' : ''}">${r.fp}</td>
+                        <td>${r.prec.toFixed(1)}%</td>
+                        <td>${r.rec.toFixed(1)}%</td>
+                        <td style="color: ${r.color}; font-weight: 700;">${r.f05.toFixed(2)} &plusmn;${r.f05Sd.toFixed(1)}%</td>
+                        <td class="${r.cleanFpr === 0 ? 'val-good' : 'val-warn'}">${r.cleanFprDisplay}</td>
+                        <td>${formatLatency(r.latency)}</td>
+                        <td>${formatScoreRatio(r.jfleg)}</td>
+                        <td>${formatScoreRatio(r.bea)}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div class="drawer-footer">
+                  <strong>${meta.modelSubtitle}</strong>: ${meta.notes}
+                  F₀.₅ &sigma; = &plusmn;${r.f05Sd.toFixed(1)}% across 4 seeds.
+                </div>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join("");
+    }
+
+    function renderDetailedMatrixRows(tbody) {
+      // 1. Filter rows
+      let rows = matrixTableData.slice();
+      if (currentTableFilter === "mean") {
+        rows = rows.filter(r => r.runType === "mean");
+      } else if (currentTableFilter === "runs" || currentTableFilter === "random") {
+        rows = rows.filter(r => r.runType === "random");
+      }
+
+      // 2. Sort rows
+      if (currentTableSort.col) {
+        const col = currentTableSort.col;
+        const dir = currentTableSort.dir === "asc" ? 1 : -1;
+        rows.sort((a, b) => {
+          let va = a[col];
+          let vb = b[col];
+          if (typeof va === "string") {
+            return va.localeCompare(vb) * dir;
+          }
+          return (va - vb) * dir;
+        });
+      } else {
+        // Default canonical ordering by id
+        rows.sort((a, b) => a.id - b.id);
+      }
+
+      // 3. Compute top stats among currently visible rows
+      const maxF05 = rows.length ? Math.max(...rows.map(r => r.f05)) : -Infinity;
+      const maxPrec = rows.length ? Math.max(...rows.map(r => r.prec)) : -Infinity;
+      const maxJfleg = rows.length ? Math.max(...rows.map(r => r.jflegVal)) : -Infinity;
+      const minLatency = rows.length ? Math.min(...rows.map(r => r.latency)) : Infinity;
+
+      // 4. Render HTML rows
+      let prevTier = null;
+      tbody.innerHTML = rows.map(r => {
+        const isMean = r.runType === "mean";
+        const isActive = activeTierSelection && r.tier === activeTierSelection;
+        const isTierStart = r.tier !== prevTier;
+        prevTier = r.tier;
+
+        let trClass = "";
+        if (isMean) trClass += " row-mean-highlight";
+        if (isActive) trClass += " row-active";
+        if (isTierStart && !currentTableSort.col) trClass += " row-tier-start";
+
+        const isTopF05 = r.f05 === maxF05;
+        const isTopPrec = r.prec === maxPrec && maxPrec >= 99.9;
+        const isTopJfleg = r.jflegVal === maxJfleg && maxJfleg > 0.5;
+        const isFastest = r.latency === minLatency;
+
+        const tierLabel = shortTierName(r.tier, r.tierName);
+        const fprClass = r.cleanFpr === 0 ? "val-good" : "val-warn";
+
+        // Score formatting with statistical variance
+        let precCellHtml = "";
+        if (isMean) {
+          if (r.precSd === 0) {
+            precCellHtml = `<span class="cell-split"><span class="cell-split-main">${r.prec.toFixed(1)}%</span><span class="cell-split-sub">100% in all 4</span></span>`;
+          } else {
+            precCellHtml = `<span class="cell-split"><span class="cell-split-main">${r.prec.toFixed(1)}% <span style="font-size:0.68rem; font-weight:500; opacity:0.8;">&plusmn;${r.precSd.toFixed(1)}%</span></span><span class="cell-split-sub">[${r.precMin.toFixed(1)}% &ndash; ${r.precMax.toFixed(1)}%]</span></span>`;
+          }
+        } else {
+          precCellHtml = `<span class="cell-num num">${r.prec.toFixed(1)}%</span>`;
+        }
+
+        let recCellHtml = "";
+        if (isMean) {
+          recCellHtml = `<span class="cell-split"><span class="cell-split-main">${r.rec.toFixed(1)}% <span style="font-size:0.68rem; font-weight:500; opacity:0.8;">&plusmn;${r.recSd.toFixed(1)}%</span></span><span class="cell-split-sub">[${r.recMin.toFixed(1)}% &ndash; ${r.recMax.toFixed(1)}%]</span></span>`;
+        } else {
+          recCellHtml = `<span class="cell-num num">${r.rec.toFixed(1)}%</span>`;
+        }
+
+        let f05CellHtml = "";
+        if (isMean) {
+          f05CellHtml = `<span class="cell-split"><span class="cell-split-main" style="color: ${r.color};">${r.f05.toFixed(2)} <span style="font-size:0.68rem; font-weight:500; opacity:0.85;">&plusmn;${r.f05Sd.toFixed(1)}%</span></span><span class="cell-split-sub">[${r.f05Min.toFixed(1)} &ndash; ${r.f05Max.toFixed(1)}]</span></span>`;
+        } else {
+          f05CellHtml = `<span class="cell-score num" style="color: ${r.color};">${r.f05.toFixed(2)}</span>`;
+        }
+
+        let latCellHtml = "";
+        if (isMean) {
+          latCellHtml = `<span class="cell-split"><span class="cell-split-main">${formatLatency(r.latency)}</span><span class="cell-split-sub">macro avg</span></span>`;
+        } else {
+          latCellHtml = `<span class="cell-score num">${formatLatency(r.latency)}</span>`;
+        }
+
+        return `
+          <tr class="${trClass.trim()}" data-tier="${r.tier}">
+            <td class="col-sticky" title="${stripTierMarks(r.tierName)}">
+              <span class="tier-cell">
+                <span class="legend-swatch circle" style="background: ${r.color};"></span>
+                <span class="tier-name">${tierLabel}</span>
+              </span>
+            </td>
+            <td class="col-sticky-2" title="${r.runLabel}">${formatRunCell(r)}</td>
+            <td class="cell-num num">${r.sentences}</td>
+            <td class="cell-num num">${r.expected}</td>
+            <td class="cell-num num val-tier" style="color: ${r.color};">${r.correct}</td>
+            <td class="cell-num num ${r.fp > 0 ? "val-warn" : ""}">${r.fp}</td>
+            <td class="cell-score num${isTopPrec ? " is-best" : ""}">${precCellHtml}</td>
+            <td class="cell-num num">${recCellHtml}</td>
+            <td class="cell-score num${isTopF05 ? " is-best" : ""}">${f05CellHtml}</td>
+            <td class="num ${fprClass}">${formatRatioCell(r.cleanFprDisplay)}</td>
+            <td class="cell-score num${isFastest ? " is-best" : ""}">${latCellHtml}</td>
+            <td class="num${isTopJfleg ? " is-best" : ""}">${formatScoreRatio(r.jfleg)}</td>
+            <td class="num">${formatScoreRatio(r.bea)}</td>
+          </tr>
+        `;
+      }).join("");
+    }
+
+    function handleTableSort(col) {
+      if (currentTableSort.col === col) {
+        if (currentTableSort.dir === "desc") {
+          currentTableSort.dir = "asc";
+        } else {
+          // Toggle off sort back to default canonical
+          currentTableSort.col = null;
+          currentTableSort.dir = "desc";
+        }
+      } else {
+        currentTableSort.col = col;
+        // Ascending preferred by default for latency & FPR (lower is better)
+        if (col === "latency" || col === "cleanFpr") {
+          currentTableSort.dir = "asc";
+        } else {
+          currentTableSort.dir = "desc";
+        }
+      }
+      syncSortButtonsWithCol();
+      renderMatrixTable();
+    }
+
+    function resetTableSort() {
+      currentTableSort = { col: null, dir: "desc" };
+      syncSortButtonsWithCol();
+      renderMatrixTable();
+    }
+
+    function syncSortButtonsWithCol() {
+      const sortButtons = document.querySelectorAll("#table-sort-ctrl .segment-btn");
+      sortButtons.forEach(btn => {
+        const sortVal = btn.getAttribute("data-sort");
+        if (!currentTableSort.col && sortVal === "default") {
+          btn.classList.add("active");
+        } else if (sortVal === `${currentTableSort.col}-${currentTableSort.dir}`) {
+          btn.classList.add("active");
+        } else if (currentTableSort.col === "jflegVal" && sortVal === "jfleg-desc" && currentTableSort.dir === "desc") {
+          btn.classList.add("active");
+        } else {
+          btn.classList.remove("active");
+        }
+      });
+    }
+
+    function updateTableHighlight() {
+      const rows = document.querySelectorAll("#matrix-table tbody tr");
+      rows.forEach(r => {
+        const rTier = r.getAttribute("data-tier");
+        if (activeTierSelection && rTier === activeTierSelection) {
+          r.classList.add("row-active");
+        } else {
+          r.classList.remove("row-active");
+        }
+      });
+    }
+
+    function updateLegendHighlight() {
+      const items = document.querySelectorAll("#pareto-legend .legend-entry");
+      items.forEach(item => {
+        const itemTier = item.getAttribute("data-tier");
+        if (activeTierSelection && itemTier === activeTierSelection) {
+          item.classList.add("active");
+        } else {
+          item.classList.remove("active");
+        }
+      });
+    }
+
+    function setPreset(preset) {
+      document.querySelectorAll(".filter-chip").forEach(c => c.classList.remove("active"));
+      const chip = document.getElementById(`filter-${preset}`);
+      if (chip) chip.classList.add("active");
+
+      if (preset === "all") {
+        activeTierSelection = null;
+      } else if (preset === "sweet") {
+        activeTierSelection = "Standard";
+      } else if (preset === "speed") {
+        activeTierSelection = "Normal";
+      } else if (preset === "quality") {
+        activeTierSelection = "Quality";
+      }
+
+      updateTableHighlight();
+      updateLegendHighlight();
+      renderBarChart();
+      renderParetoChart();
+    }
+
+    function toggleEnvelope() {
+      showFrontierEnvelope = !showFrontierEnvelope;
+      const btn = document.getElementById("frontier-toggle-btn");
+      if (showFrontierEnvelope) {
+        btn.classList.add("active");
+        btn.innerHTML = `${phIcon("check", 14)} Frontier Curve`;
+      } else {
+        btn.classList.remove("active");
+        btn.innerHTML = `Frontier Curve`;
+      }
+      renderParetoChart();
+    }
+
+    // Bar metric toggle
+    document.getElementById("bar-metric-ctrl").addEventListener("click", (e) => {
+      if (e.target.tagName === "BUTTON") {
+        document.querySelectorAll("#bar-metric-ctrl .segment-btn").forEach(b => b.classList.remove("active"));
+        e.target.classList.add("active");
+        currentBarMetric = e.target.getAttribute("data-metric");
+        renderBarChart();
+      }
+    });
+
+    // Pareto metric toggle (optional)
+    const paretoMetricCtrl = document.getElementById("pareto-metric-ctrl");
+    if (paretoMetricCtrl) {
+      paretoMetricCtrl.addEventListener("click", (e) => {
+        if (e.target.tagName === "BUTTON") {
+          document.querySelectorAll("#pareto-metric-ctrl .segment-btn").forEach(b => b.classList.remove("active"));
+          e.target.classList.add("active");
+          currentParetoMetric = e.target.getAttribute("data-metric");
+          renderParetoChart();
+        }
+      });
+    }
+
+    // Pareto mode toggle (optional)
+    const paretoModeCtrl = document.getElementById("pareto-mode-ctrl");
+    if (paretoModeCtrl) {
+      paretoModeCtrl.addEventListener("click", (e) => {
+        if (e.target.tagName === "BUTTON") {
+          document.querySelectorAll("#pareto-mode-ctrl .segment-btn").forEach(b => b.classList.remove("active"));
+          e.target.classList.add("active");
+          currentParetoMode = e.target.getAttribute("data-mode");
+          renderParetoChart();
+        }
+      });
+    }
+
+    // Table view mode toggle (Leaderboard vs Detailed Matrix)
+    const tableViewCtrl = document.getElementById("table-view-ctrl");
+    if (tableViewCtrl) {
+      tableViewCtrl.addEventListener("click", (e) => {
+        const btn = e.target.closest(".segment-btn");
+        if (btn) {
+          const mode = btn.getAttribute("data-view");
+          if (mode) setTableViewMode(mode);
+        }
+      });
+    }
+
+    // Table filter toggle
+    const tableFilterCtrl = document.getElementById("table-filter-ctrl");
+    if (tableFilterCtrl) {
+      tableFilterCtrl.addEventListener("click", (e) => {
+        const btn = e.target.closest(".segment-btn");
+        if (btn) {
+          document.querySelectorAll("#table-filter-ctrl .segment-btn").forEach(b => b.classList.remove("active"));
+          btn.classList.add("active");
+          currentTableFilter = btn.getAttribute("data-filter");
+          renderMatrixTable();
+        }
+      });
+    }
+
+    // Table quick rank toggle
+    const tableSortCtrl = document.getElementById("table-sort-ctrl");
+    if (tableSortCtrl) {
+      tableSortCtrl.addEventListener("click", (e) => {
+        const btn = e.target.closest(".segment-btn");
+        if (btn) {
+          document.querySelectorAll("#table-sort-ctrl .segment-btn").forEach(b => b.classList.remove("active"));
+          btn.classList.add("active");
+          const sortMode = btn.getAttribute("data-sort");
+          if (sortMode === "default") {
+            currentTableSort = { col: null, dir: "desc" };
+          } else if (sortMode === "f05-desc") {
+            currentTableSort = { col: "f05", dir: "desc" };
+          } else if (sortMode === "prec-desc") {
+            currentTableSort = { col: "prec", dir: "desc" };
+          } else if (sortMode === "jfleg-desc") {
+            currentTableSort = { col: "jflegVal", dir: "desc" };
+          } else if (sortMode === "latency-asc") {
+            currentTableSort = { col: "latency", dir: "asc" };
+          } else if (sortMode === "cleanFpr-asc") {
+            currentTableSort = { col: "cleanFpr", dir: "asc" };
+          }
+          renderMatrixTable();
+        }
+      });
+    }
+
+    // Initial Render
+    renderBarChart();
+    renderParetoChart();
+    renderMatrixTable();
+  </script>
+  <script src="nav.js"></script>
+
+</body>
+
+</html>

@@ -1572,6 +1572,7 @@ export default function App() {
             backend: null,
             requestId,
             temperature: 0.0,
+            maxTokens: 256,
             signal: ctrl.signal,
           });
           return res && res.text;

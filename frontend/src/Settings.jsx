@@ -27,10 +27,12 @@ import {
   CaretDown,
   ArrowSquareOut,
   CircleNotch,
+  HardDrives,
 } from "@phosphor-icons/react";
 import Toggle from "./Toggle.jsx";
 import LanguageDropdown from "./LanguageDropdown.jsx";
 import ModelManager from "./ModelManager.jsx";
+import HardwareTab from "./HardwareTab.jsx";
 import CustomToolsSettings from "./CustomToolsSettings.jsx";
 import { TYPOGRAPHY_PRESETS } from "./typographyPresets.js";
 import { PAPER_TEXTURES } from "./paperTextures.js";
@@ -141,9 +143,16 @@ const TABS = [
   { id: "actions", label: "Custom Actions", icon: Lightning },
   { id: "shortcuts", label: "Shortcuts", icon: Keyboard },
   { id: "about", label: "About & Feedback", icon: Info },
+  { id: "hardware", label: "Hardware", icon: HardDrives },
 ];
 
 const SEARCH_INDEX = [
+  {
+    label: "Hardware & GPU",
+    tab: "hardware",
+    settingKey: "hardware-section",
+    keywords: ["hardware", "gpu", "cpu", "vram", "ram", "cuda", "graphics", "offload", "processor", "tier"],
+  },
   {
     label: "Font Size",
     tab: "general",
@@ -1912,7 +1921,8 @@ export default function Settings({
                           pref.ollama_model || "",
                           pref.lmstudio_model || "",
                           pref.lmstudio_url || "",
-                          pref.lmstudio_api_key ?? null
+                          pref.lmstudio_api_key ?? null,
+                          pref.device ?? null
                         ).catch(() => { });
                       }}
                       onConfigured={() =>
@@ -2360,6 +2370,16 @@ export default function Settings({
                       </div>
                     </div>
                   </div>
+                </div>
+              )}
+
+              {/* ── Hardware ── */}
+              {activeTab === "hardware" && (
+                <div
+                  data-setting-key="hardware-section"
+                  className={getHighlightClass("hardware-section")}
+                >
+                  <HardwareTab />
                 </div>
               )}
             </div>

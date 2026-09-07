@@ -69,7 +69,22 @@ describe("extractDeepJson", () => {
     expect(extractDeepJson(raw).items).toHaveLength(1);
   });
 
-  it("rejects garbage without an array", () => {
+    it("wraps a single edit object as a one-item array", () => {
+      const raw =
+        '{"source": "He do not go", "replacement": "He does not go"}';
+      expect(extractDeepJson(raw)).toEqual({
+        items: [{ source: "He do not go", replacement: "He does not go" }],
+      });
+    });
+
+    it("recovers pseudo-array outputs without inner object braces", () => {
+      const raw = '["source": "He do not go", "replacement": "He does not go"]';
+      expect(extractDeepJson(raw)).toEqual({
+        items: [{ source: "He do not go", replacement: "He does not go" }],
+      });
+    });
+
+    it("rejects garbage without an array", () => {
     expect(extractDeepJson("All clean!").error).toBe("unparsable");
     expect(extractDeepJson("").error).toBe("unparsable");
   });

@@ -84,18 +84,18 @@ def test_standard_model_path_falls_back_to_legacy_when_legacy_file_exists(tmp_pa
         assert os.path.basename(path) == "Qwen_Qwen3.5-2B-Q4_K_M.gguf"
 
 
-def test_quality_model_spec_points_to_ling_3_0_tiny():
+def test_quality_model_spec_points_to_qwen3_8_27b():
     assert "quality" in MODELS
     spec = MODELS["quality"]
-    assert spec["repo_id"] == "bartowski/Ling-3.0-tiny-GGUF"
-    assert spec["filename"] == "Ling-3.0-tiny-Q4_K_M.gguf"
-    assert spec["size"] > 4_000_000_000
+    assert spec["repo_id"] == "unsloth/Qwen3.8-27B-GGUF"
+    assert spec["filename"] == "Qwen3.8-27B-UD-Q4_K_M.gguf"
+    assert spec["size"] > 16_000_000_000
 
 
 def test_quality_model_path_returns_primary(tmp_path):
     with patch("model_manager.models_dir", return_value=str(tmp_path)):
         path = model_path("quality")
-        assert os.path.basename(path) == "Ling-3.0-tiny-Q4_K_M.gguf"
+        assert os.path.basename(path) == "Qwen3.8-27B-UD-Q4_K_M.gguf"
 
 
 def test_invalid_primary_does_not_shadow_valid_legacy_model(tmp_path):

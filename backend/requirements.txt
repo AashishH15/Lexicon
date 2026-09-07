@@ -2,3 +2,4 @@ fastapi
 uvicorn
 requests
 huggingface-hub==0.29.3
+psutil

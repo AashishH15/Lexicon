@@ -13,7 +13,10 @@ The HTTP endpoint is defined in ``main.py``.
 
 import json
 import os
+import platform
 import re
+import shutil
+import subprocess
 import sys
 from collections.abc import Callable
 from threading import Event, Lock
@@ -21,7 +24,32 @@ from threading import Event, Lock
 import requests
 
 from ai_prefs import load_prefs
-from model_manager import is_model_file_available, model_path
+from model_manager import MODELS, is_model_file_available, model_path
+
+
+def _init_cuda_dll_directory():
+    """Ensure NVIDIA CUDA runtime and cuBLAS DLLs are discoverable on Windows."""
+    if sys.platform != "win32":
+        return
+    import site
+
+    try:
+        sp_list = site.getsitepackages()
+    except Exception:
+        sp_list = []
+    for sp in sp_list:
+        nvidia_dir = os.path.join(sp, "nvidia")
+        if os.path.isdir(nvidia_dir):
+            for sub in ("cuda_runtime", "cublas", "cuda_nvrtc"):
+                bin_dir = os.path.join(nvidia_dir, sub, "bin")
+                if os.path.isdir(bin_dir):
+                    try:
+                        os.add_dll_directory(bin_dir)
+                    except (OSError, AttributeError):
+                        pass
+
+
+_init_cuda_dll_directory()
 
 OLLAMA_SERVER = os.environ.get("OLLAMA_SERVER", "http://localhost:11434")
 LM_STUDIO_SERVER = os.environ.get("LM_STUDIO_SERVER", "http://localhost:1234")
@@ -44,6 +72,13 @@ TRANSFORM_MAX_TOKENS = 2048
 # so the lock must be global. Concurrent calls share one model session
 # and can wedge or crash it.
 _BUNDLED_GENERATION_LOCK = Lock()
+_CACHED_BUNDLED_LLM: dict[str, object] = {
+    "key": None,
+    "path": None,
+    "device": None,
+    "limit_vram": None,
+    "llm": None,
+}
 
 SYSTEM_PROMPT = (
     "You are a writing assistant. Follow the user's "
@@ -51,16 +86,31 @@ SYSTEM_PROMPT = (
     "explain. Do not think aloud."
 )
 
-# Reasoning adds time without improving short transforms. Ollama disables it
-# with `think: false`, and LM Studio disables it with `reasoning_effort: "none"`.
-# llama.cpp 0.3.x has no equivalent setting. The prompt asks the model not to
-# expose reasoning, and the cleanup removes any reasoning block that it returns.
+# Reasoning adds time without improving short transforms. Ollama uses
+# `think: false`. LM Studio and llama.cpp Qwen templates use
+# `enable_thinking: false` (not reasoning_effort off/none — Qwen3.8 rejects
+# those values). Any leaked block is still stripped from the output.
 THINK_TAG_RE = re.compile(r"<think>.*?</think>\s*", re.DOTALL)
+
+# Approximate transformer layer counts for VRAM-limited GPU offload.
+_MODEL_LAYER_COUNTS = {
+    "0.8b": 24,
+    "2b": 36,
+    "quality": 64,
+    "legacy-0.8b": 28,
+    "legacy-2b": 28,
+}
+_VRAM_HEADROOM_BYTES = int(1.25 * 1024**3)
 
 
 def strip_think(text: str) -> str:
     """Remove any leaked reasoning block from a model output."""
-    return THINK_TAG_RE.sub("", text).strip()
+    cleaned = THINK_TAG_RE.sub("", text).strip()
+    if cleaned.startswith("Thinking Process:") and ("[" in cleaned or "{" in cleaned):
+        bracket_indices = [cleaned.find(c) for c in ("[", "{") if cleaned.find(c) != -1]
+        if bracket_indices:
+            cleaned = cleaned[min(bracket_indices):].strip()
+    return cleaned
 
 
 class InferenceUnavailable(RuntimeError):
@@ -91,6 +141,312 @@ def _clean_completion(text: str, backend_name: str) -> str:
         f"{backend_name} returned no final text. The model may have spent "
         "the output budget on reasoning; thinking is disabled for transforms."
     )
+
+
+def _normalize_arch(machine: str | None = None) -> str:
+    raw = (machine or platform.machine() or "").lower()
+    if raw in ("amd64", "x86_64"):
+        return "x86_64"
+    if raw in ("aarch64", "arm64"):
+        return "arm64"
+    return raw or "unknown"
+
+
+def _is_arm_arch(arch: str) -> bool:
+    lowered = (arch or "").lower()
+    return "arm" in lowered or "aarch64" in lowered
+
+
+def detect_cpu_instruction_features() -> tuple[list[str], bool]:
+    """Detect CPU SIMD flags. Returns (labels, probe_succeeded)."""
+    flags: list[str] = []
+    probed = False
+    try:
+        if sys.platform == "win32":
+            try:
+                import ctypes
+
+                kernel32 = ctypes.windll.kernel32
+                probed = True
+                if kernel32.IsProcessorFeaturePresent(39):
+                    flags.append("AVX")
+                if kernel32.IsProcessorFeaturePresent(40):
+                    flags.append("AVX2")
+                if kernel32.IsProcessorFeaturePresent(41):
+                    flags.append("AVX512")
+            except Exception:
+                probed = False
+        elif sys.platform == "darwin":
+            probed = True
+            for flag, cmd in (
+                ("AVX", ["sysctl", "-n", "hw.optional.avx1_0"]),
+                ("AVX2", ["sysctl", "-n", "hw.optional.avx2_0"]),
+                ("NEON", ["sysctl", "-n", "hw.optional.neon"]),
+            ):
+                try:
+                    res = subprocess.run(
+                        cmd, capture_output=True, text=True, timeout=2
+                    )
+                    if res.returncode == 0 and res.stdout.strip() in ("1", "true"):
+                        flags.append(flag)
+                except Exception:
+                    pass
+        else:
+            cpuinfo_path = "/proc/cpuinfo"
+            if os.path.isfile(cpuinfo_path):
+                with open(cpuinfo_path, encoding="utf-8", errors="replace") as fh:
+                    text = fh.read().lower()
+                probed = True
+                if re.search(r"\bavx2\b", text):
+                    flags.append("AVX2")
+                if re.search(r"\bavx\b", text):
+                    flags.append("AVX")
+                if re.search(r"\b(neon|asimd)\b", text):
+                    flags.append("NEON")
+    except Exception:
+        return flags, False
+    return flags, probed
+
+
+def cpu_is_compatible(arch: str, features: list[str], probed: bool) -> bool:
+    """ARM is always compatible. x86 needs AVX when the probe succeeded."""
+    if _is_arm_arch(arch):
+        return True
+    if not probed:
+        return True
+    return "AVX" in features or "AVX2" in features
+
+
+def _cpu_name() -> str:
+    name = platform.processor() or "Unknown CPU"
+    if sys.platform == "win32":
+        try:
+            res = subprocess.run(
+                [
+                    "powershell",
+                    "-NoProfile",
+                    "-Command",
+                    "(Get-CimInstance -ClassName Win32_Processor).Name",
+                ],
+                capture_output=True,
+                text=True,
+                timeout=3,
+            )
+            if res.returncode == 0 and res.stdout.strip():
+                name = res.stdout.strip().splitlines()[0].strip()
+        except Exception:
+            pass
+    elif sys.platform == "darwin":
+        try:
+            res = subprocess.run(
+                ["sysctl", "-n", "machdep.cpu.brand_string"],
+                capture_output=True,
+                text=True,
+                timeout=2,
+            )
+            if res.returncode == 0 and res.stdout.strip():
+                name = res.stdout.strip()
+        except Exception:
+            pass
+    else:
+        try:
+            with open("/proc/cpuinfo", encoding="utf-8", errors="replace") as fh:
+                for line in fh:
+                    if line.lower().startswith("model name"):
+                        name = line.split(":", 1)[1].strip()
+                        break
+        except Exception:
+            pass
+    return name
+
+
+def _query_nvidia_gpu() -> dict:
+    """Read NVIDIA GPU name and dedicated VRAM via nvidia-smi only."""
+    info = {
+        "count": 0,
+        "name": None,
+        "vram_gb": 0.0,
+        "backend": "None",
+        "device_id": 0,
+        "cuda_available": False,
+    }
+    if not shutil.which("nvidia-smi"):
+        return info
+    try:
+        res = subprocess.run(
+            [
+                "nvidia-smi",
+                "--query-gpu=name,memory.total,index",
+                "--format=csv,noheader,nounits",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=3,
+        )
+        if res.returncode != 0 or not res.stdout.strip():
+            return info
+        lines = [line for line in res.stdout.strip().splitlines() if line.strip()]
+        first = [cell.strip() for cell in lines[0].split(",")]
+        if len(first) < 2:
+            return info
+        info["count"] = len(lines)
+        info["name"] = first[0]
+        try:
+            info["vram_gb"] = round(float(first[1]) / 1024, 2)
+        except ValueError:
+            info["vram_gb"] = 0.0
+        info["backend"] = "CUDA"
+        info["device_id"] = (
+            int(first[2]) if len(first) > 2 and first[2].isdigit() else 0
+        )
+        info["cuda_available"] = True
+    except Exception:
+        return info
+    return info
+
+
+def resolve_n_gpu_layers(
+    model_key: str,
+    device: str,
+    limit_vram_offload: bool,
+    vram_gb: float | None = None,
+    model_bytes: int | None = None,
+) -> int:
+    """Pick llama.cpp GPU layers. Limited mode stays in dedicated VRAM."""
+    if device != "gpu":
+        return 0
+    if vram_gb is None:
+        vram_gb = float(_query_nvidia_gpu().get("vram_gb") or 0.0)
+    if vram_gb <= 0.0:
+        return 0
+    if not limit_vram_offload:
+        return -1
+    usable = int(float(vram_gb or 0.0) * (1024**3)) - _VRAM_HEADROOM_BYTES
+    if usable <= 0:
+        return 0
+    size = model_bytes
+    if size is None:
+        spec = MODELS.get(model_key) or {}
+        size = int(spec.get("size") or 0)
+    if size <= 0 or size <= usable:
+        return -1
+    layers = _MODEL_LAYER_COUNTS.get(model_key, 32)
+    fitted = int(layers * (usable / size))
+    return max(1, min(layers - 1, fitted))
+
+
+def _recommended_tier(vram_gb: float, ram_gb: float, gpu_count: int, device_pref: str) -> dict:
+    if gpu_count > 0 and device_pref == "gpu":
+        if vram_gb >= 18.0:
+            return {
+                "key": "quality",
+                "label": "Quality",
+                "badge": "Recommended for your hardware",
+                "reason": (
+                    f"Your GPU has {vram_gb} GB VRAM, enough for Quality in "
+                    "dedicated memory."
+                ),
+                "quality_supported": True,
+            }
+        if vram_gb >= 6.0:
+            return {
+                "key": "2b",
+                "label": "Standard",
+                "badge": "Recommended for your hardware",
+                "reason": (
+                    f"Your GPU has {vram_gb} GB VRAM. Standard fits in dedicated "
+                    "VRAM. Quality can run with CPU offload for leftover layers."
+                ),
+                "quality_supported": True,
+            }
+        return {
+            "key": "0.8b",
+            "label": "Light",
+            "badge": "Recommended for your hardware",
+            "reason": "Light is the best fit for GPUs under 6 GB VRAM.",
+            "quality_supported": False,
+        }
+    if ram_gb >= 16.0:
+        return {
+            "key": "2b",
+            "label": "Standard",
+            "badge": "Recommended for your hardware",
+            "reason": (
+                f"Standard is the best CPU balance with your {ram_gb} GB RAM."
+            ),
+            "quality_supported": ram_gb >= 30.0,
+        }
+    return {
+        "key": "0.8b",
+        "label": "Light",
+        "badge": "Recommended for your hardware",
+        "reason": f"Light is the most responsive CPU option with {ram_gb} GB RAM.",
+        "quality_supported": False,
+    }
+
+
+def get_hardware_diagnostics() -> dict:
+    """Return CPU, RAM, and NVIDIA GPU info for the Hardware tab."""
+    arch = _normalize_arch()
+    simd, probed = detect_cpu_instruction_features()
+    features = [arch, *simd]
+    gpu_info = _query_nvidia_gpu()
+    if not gpu_info["cuda_available"]:
+        try:
+            import llama_cpp
+
+            gpu_info["cuda_available"] = bool(llama_cpp.llama_supports_gpu_offload())
+        except Exception:
+            pass
+
+    try:
+        import psutil
+
+        ram_gb = round(psutil.virtual_memory().total / (1024**3), 2)
+    except Exception:
+        ram_gb = 16.0
+
+    prefs = load_prefs()
+    device_pref = prefs.get("device", "gpu")
+    if not gpu_info.get("cuda_available"):
+        device_pref = "cpu"
+    limit_vram = bool(prefs.get("limit_vram_offload", True))
+    recommended = _recommended_tier(
+        gpu_info["vram_gb"] or 0.0,
+        ram_gb,
+        gpu_info["count"],
+        device_pref,
+    )
+    return {
+        "cpu": {
+            "name": _cpu_name(),
+            "arch": arch,
+            "features": features,
+            "compatible": cpu_is_compatible(arch, features, probed),
+        },
+        "memory": {
+            "ram_gb": ram_gb,
+            "vram_gb": gpu_info["vram_gb"],
+        },
+        "gpu": gpu_info,
+        "device": device_pref,
+        "limit_vram_offload": limit_vram,
+        "recommended_tier": recommended,
+    }
+
+
+def detect_gpu_hardware() -> dict:
+    """Backward-compatible helper returning basic GPU status."""
+    diag = get_hardware_diagnostics()
+    gpu = diag["gpu"]
+    return {
+        "has_gpu": gpu["count"] > 0,
+        "gpu_name": gpu["name"],
+        "vram_gb": gpu["vram_gb"],
+        "gpu_offload_supported": gpu["cuda_available"],
+        "device": diag["device"],
+        "recommended_tier": diag["recommended_tier"],
+    }
 
 
 class InferenceBackend:
@@ -408,8 +764,9 @@ class LMStudioBackend(InferenceBackend):
                 {"role": "user", "content": f"{prompt}\n\n{text}"},
             ],
             "stream": True,
-            # Disable reasoning so it cannot use the complete output budget.
-            "reasoning_effort": "none",
+            # Qwen3.8 rejects reasoning_effort off/none. Disable thinking
+            # the same way LM Studio's "Enable thinking" toggle does.
+            "enable_thinking": False,
             "max_tokens": int(opts.pop("max_tokens", TRANSFORM_MAX_TOKENS)),
             "temperature": 0.3,
             **opts,
@@ -500,8 +857,33 @@ class BundledBackend(InferenceBackend):
         return is_model_file_available(self.model_key)
 
     def _ensure_loaded(self):
+        global _CACHED_BUNDLED_LLM
         if self._llm is not None:
             return
+        target_path = self._path()
+        prefs = load_prefs()
+        device = prefs.get("device", "gpu")
+        limit_vram = bool(prefs.get("limit_vram_offload", True))
+        if (
+            _CACHED_BUNDLED_LLM["key"] == self.model_key
+            and _CACHED_BUNDLED_LLM["path"] == target_path
+            and _CACHED_BUNDLED_LLM["device"] == device
+            and _CACHED_BUNDLED_LLM.get("limit_vram") == limit_vram
+            and _CACHED_BUNDLED_LLM["llm"] is not None
+        ):
+            self._llm = _CACHED_BUNDLED_LLM["llm"]
+            return
+
+        if _CACHED_BUNDLED_LLM["llm"] is not None:
+            _CACHED_BUNDLED_LLM["key"] = None
+            _CACHED_BUNDLED_LLM["path"] = None
+            _CACHED_BUNDLED_LLM["device"] = None
+            _CACHED_BUNDLED_LLM["limit_vram"] = None
+            _CACHED_BUNDLED_LLM["llm"] = None
+            import gc
+
+            gc.collect()
+
         try:
             from llama_cpp import Llama
         except ImportError as exc:
@@ -514,10 +896,12 @@ class BundledBackend(InferenceBackend):
                 "The bundled model isn't downloaded yet. Run the model "
                 "download before using the local backend."
             )
+        n_gpu_layers = resolve_n_gpu_layers(self.model_key, device, limit_vram)
         try:
             self._llm = Llama(
-                model_path=self._path(),
+                model_path=target_path,
                 n_ctx=self.n_ctx,
+                n_gpu_layers=n_gpu_layers,
                 use_mmap=True,
                 verbose=False,
             )
@@ -535,24 +919,53 @@ class BundledBackend(InferenceBackend):
             if is_mmap_issue or is_macos_load_fail:
                 try:
                     self._llm = Llama(
-                        model_path=self._path(),
+                        model_path=target_path,
                         n_ctx=self.n_ctx,
+                        n_gpu_layers=n_gpu_layers,
                         use_mmap=False,
                         verbose=False,
                     )
-                    return
                 except Exception as retry_exc:
                     load_exc = retry_exc
-            self._llm = None
-            import gc
+                    self._llm = None
+            else:
+                self._llm = None
 
-            gc.collect()
-            raise InferenceUnavailable(
-                f"Engine failed to load model: {load_exc}"
-            ) from load_exc
+            if self._llm is None:
+                import gc
+
+                gc.collect()
+                raise InferenceUnavailable(
+                    f"Engine failed to load model: {load_exc}"
+                ) from load_exc
+
+        if self._llm is not None and not hasattr(self._llm, "_lexicon_no_think_installed"):
+            orig_handler = (
+                self._llm.chat_handler
+                or self._llm._chat_handlers.get(self._llm.chat_format)
+            )
+            if orig_handler is not None:
+                def _no_think_handler(*args, **kwargs):
+                    kwargs["enable_thinking"] = False
+                    return orig_handler(*args, **kwargs)
+
+                self._llm.chat_handler = _no_think_handler
+            self._llm._lexicon_no_think_installed = True
+
+        _CACHED_BUNDLED_LLM["key"] = self.model_key
+        _CACHED_BUNDLED_LLM["path"] = target_path
+        _CACHED_BUNDLED_LLM["device"] = device
+        _CACHED_BUNDLED_LLM["limit_vram"] = limit_vram
+        _CACHED_BUNDLED_LLM["llm"] = self._llm
 
     def unload(self):
         """Free GGUF model memory and force garbage collection."""
+        global _CACHED_BUNDLED_LLM
+        _CACHED_BUNDLED_LLM["key"] = None
+        _CACHED_BUNDLED_LLM["path"] = None
+        _CACHED_BUNDLED_LLM["device"] = None
+        _CACHED_BUNDLED_LLM["limit_vram"] = None
+        _CACHED_BUNDLED_LLM["llm"] = None
         if self._llm is not None:
             self._llm = None
             import gc
@@ -571,6 +984,34 @@ class BundledBackend(InferenceBackend):
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": f"{prompt}\n\n{text}"},
             ]
+
+            # Register native C++ abort callback so cancellation halts llama_decode
+            # in < 1ms rather than running for thousands of tokens on the CPU.
+            has_abort = False
+            _noop_abort = None
+            try:
+                import llama_cpp
+
+                if (
+                    hasattr(llama_cpp, "ggml_abort_callback")
+                    and hasattr(llama_cpp, "llama_set_abort_callback")
+                    and hasattr(self._llm, "ctx")
+                    and self._llm.ctx is not None
+                ):
+                    @llama_cpp.ggml_abort_callback
+                    def _active_abort(_data):
+                        return 1 if (cancel_event is not None and cancel_event.is_set()) else 0
+
+                    @llama_cpp.ggml_abort_callback
+                    def _noop_abort_fn(_data):
+                        return 0
+
+                    _noop_abort = _noop_abort_fn
+                    llama_cpp.llama_set_abort_callback(self._llm.ctx, _active_abort, None)
+                    has_abort = True
+            except Exception:
+                has_abort = False
+
             def _consume_completion(session_llm, call_opts) -> str:
                 result = session_llm.create_chat_completion(
                     messages=messages,
@@ -594,8 +1035,12 @@ class BundledBackend(InferenceBackend):
 
             try:
                 content = _consume_completion(self._llm, opts)
-            except InferenceCancelled:
+            except (InferenceCancelled, RuntimeError) as exc:
                 self._llm = None
+                if cancel_event is not None and cancel_event.is_set():
+                    raise InferenceCancelled("Transform cancelled.") from exc
+                if isinstance(exc, RuntimeError) and "llama_decode returned 2" in str(exc):
+                    raise InferenceCancelled("Transform cancelled.") from exc
                 raise
             except Exception:  # noqa: BLE001 - surface engine errors clearly
                 # Reset the session to remove wedged state.
@@ -606,11 +1051,22 @@ class BundledBackend(InferenceBackend):
                     self._ensure_loaded()
                     _raise_if_cancelled(cancel_event)
                     content = _consume_completion(self._llm, opts)
-                except InferenceCancelled:
+                except (InferenceCancelled, RuntimeError) as exc2:
                     self._llm = None
+                    if cancel_event is not None and cancel_event.is_set():
+                        raise InferenceCancelled("Transform cancelled.") from exc2
+                    if isinstance(exc2, RuntimeError) and "llama_decode returned 2" in str(exc2):
+                        raise InferenceCancelled("Transform cancelled.") from exc2
                     raise
-                except Exception as exc2:
-                    raise InferenceUnavailable(f"Bundled model failed: {exc2}") from exc2
+                except Exception as exc3:
+                    raise InferenceUnavailable(f"Bundled model failed: {exc3}") from exc3
+            finally:
+                if has_abort and _noop_abort is not None and hasattr(self._llm, "ctx") and self._llm.ctx is not None:
+                    try:
+                        import llama_cpp
+                        llama_cpp.llama_set_abort_callback(self._llm.ctx, _noop_abort, None)
+                    except Exception:
+                        pass
             return _clean_completion(content, "The bundled model")
 
 
@@ -732,8 +1188,13 @@ def get_backend(
 
 def unload_active_backend():
     """Unload cached backend model weights from memory."""
-    global _backend
+    global _backend, _CACHED_BUNDLED_LLM
     with _BUNDLED_GENERATION_LOCK:
+        _CACHED_BUNDLED_LLM["key"] = None
+        _CACHED_BUNDLED_LLM["path"] = None
+        _CACHED_BUNDLED_LLM["device"] = None
+        _CACHED_BUNDLED_LLM["limit_vram"] = None
+        _CACHED_BUNDLED_LLM["llm"] = None
         if _backend is not None:
             if hasattr(_backend, "unload"):
                 _backend.unload()

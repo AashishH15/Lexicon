@@ -1431,6 +1431,10 @@ b,
 }
 
 @media (max-width: 640px) {
+  .container {
+    padding: 0 16px;
+  }
+
   .nav-toggle {
     display: inline-flex;
   }

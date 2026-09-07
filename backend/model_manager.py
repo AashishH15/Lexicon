@@ -45,12 +45,12 @@ MODELS = {
         "size": 1_160_000_000,
     },
     "quality": {
-        # Quality Tier: Ling 3.0 Tiny Q4_K_M (~4.92 GB).
-        # High-order prose polish, maximum restraint, zero hallucinations.
-        # 8B MoE total / 1.3B active compute. Score: 25.
-        "repo_id": "bartowski/Ling-3.0-tiny-GGUF",
-        "filename": "Ling-3.0-tiny-Q4_K_M.gguf",
-        "size": 4_920_000_000,
+        # Quality Tier: Qwen 3.8 27B UD-Q4_K_M (~16.5 GB).
+        # Unsloth Dynamic v3.0 quantization.
+        # Score: 26 on Artificial Analysis Intelligence Index.
+        "repo_id": "unsloth/Qwen3.8-27B-GGUF",
+        "filename": "Qwen3.8-27B-UD-Q4_K_M.gguf",
+        "size": 16_464_440_224,
     },
     "legacy-2b": {
         # Previous 2B model kept for backward compatibility.

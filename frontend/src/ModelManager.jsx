@@ -12,9 +12,27 @@ import {
 } from "./api.js";
 
 const MODEL_TIERS = [
-  { key: "0.8b", label: "Light", detail: "Smallest and fastest, high instruction accuracy. ~1.15 GB." },
-  { key: "2b", label: "Standard", detail: "Best balance of quality and phrasing precision. ~3.0 GB." },
-  { key: "quality", label: "Quality", detail: "Maximum restraint and prose polish. 8B MoE / 1.3B active. ~4.9 GB." },
+  {
+    key: "0.8b",
+    label: "Light",
+    detail: "Smallest and fastest, with strong instruction accuracy.",
+    size: "~1.15 GB",
+    recommend: "Fits ~2 GB VRAM",
+  },
+  {
+    key: "2b",
+    label: "Standard",
+    detail: "Best balance of quality and phrasing precision.",
+    size: "~3.0 GB",
+    recommend: "Fits ~6 GB VRAM",
+  },
+  {
+    key: "quality",
+    label: "Quality",
+    detail: "Finest phrasing precision and prose polish.",
+    size: "~16.5 GB",
+    recommend: "Needs ~18 GB VRAM",
+  },
 ];
 
 const OLLAMA_URL = "http://localhost:11434";
@@ -84,8 +102,9 @@ function describeActive(status) {
   }
   if (pref.backend === "bundled") {
     const label = MODEL_TIERS.find((t) => t.key === pref.model_key)?.label;
+    const deviceTag = pref.device ? ` · ${pref.device.toUpperCase()}` : "";
     if (label && status.models_ready?.[pref.model_key]) {
-      return { tone: "bundled", text: `Using local model · ${label}` };
+      return { tone: "bundled", text: `Using local model · ${label}${deviceTag}` };
     }
     return {
       tone: "none",
@@ -100,8 +119,9 @@ function describeActive(status) {
   }
   const autoKey = status.model_key;
   const autoLabel = MODEL_TIERS.find((t) => t.key === autoKey)?.label;
+  const deviceTag = pref.device ? ` · ${pref.device.toUpperCase()}` : "";
   if (autoLabel && status.models_ready?.[autoKey]) {
-    return { tone: "bundled", text: `Using local model · ${autoLabel}` };
+    return { tone: "bundled", text: `Using local model · ${autoLabel}${deviceTag}` };
   }
   return {
     tone: "none",
@@ -649,6 +669,7 @@ export default function ModelManager({
     }
   }
 
+
   async function checkLmStudio() {
     const nextUrl = normalizeLmStudioUrl(lmStudioUrlDraft);
     const nextModel = selectedLmStudioModel.trim();
@@ -859,6 +880,10 @@ export default function ModelManager({
           {MODEL_TIERS.map((tier) => {
             const selected = modelKey === tier.key;
             const ready = status.models_ready?.[tier.key];
+            const isRecommended =
+              (status.hardware?.recommended_tier?.key ||
+                status.gpu_info?.recommended_tier?.key ||
+                "2b") === tier.key;
             const downloading = phase === "downloading";
             return (
               <div
@@ -895,35 +920,48 @@ export default function ModelManager({
                           model_key: tier.key,
                           lmstudio_url: lmStudioUrl,
                           lmstudio_api_key: lmStudioApiKeyForSave(),
+                          device: status.preference?.device || "gpu",
                         });
                       refreshStatus();
                     }
                   }
                 }}
                 className={
-                  "flex flex-col justify-between rounded-lg border p-3 text-left transition-colors min-h-[114px] " +
+                  "flex flex-col rounded-lg border p-3 text-left transition-colors " +
                   (selected
                     ? "border-pale-blue-text bg-pale-blue/40"
                     : "border-hairline bg-canvas hover:border-muted") +
                   (downloading ? " cursor-not-allowed opacity-50" : " cursor-pointer")
                 }
               >
-                <div>
-                  <div className="flex items-center justify-between gap-1.5">
-                    <span className="font-sans text-sm font-medium text-ink">
-                      {tier.label}
-                    </span>
-                    {ready && (
-                      <span className="shrink-0 inline-flex items-center gap-1 font-sans text-[10px] font-medium text-pale-green-text">
-                        <span className="h-1.5 w-1.5 rounded-full bg-pale-green-text" />
-                        installed
-                      </span>
-                    )}
-                  </div>
-                  <span className="mt-1 block font-sans text-[11px] leading-relaxed text-muted">
-                    {tier.detail}
+                <div className="flex items-center justify-between gap-1.5">
+                  <span className="font-sans text-sm font-medium text-ink">
+                    {tier.label}
                   </span>
+                  {ready && (
+                    <span className="inline-flex shrink-0 items-center gap-1 font-sans text-[10px] font-medium text-pale-green-text">
+                      <span className="h-1.5 w-1.5 rounded-full bg-pale-green-text" />
+                      installed
+                    </span>
+                  )}
                 </div>
+                {isRecommended && (
+                  <span
+                    data-testid={`recommended-tier-${tier.key}`}
+                    className="mt-1.5 inline-flex w-fit items-center rounded bg-pale-green/40 px-1.5 py-0.5 font-sans text-[10px] font-semibold text-pale-green-text"
+                  >
+                    Recommended
+                  </span>
+                )}
+                <p
+                  data-testid={`vram-recommend-${tier.key}`}
+                  className="mt-1.5 font-mono text-[10px] text-muted"
+                >
+                  {tier.recommend} · {tier.size}
+                </p>
+                <p className="mt-1 font-sans text-[11px] leading-relaxed text-muted">
+                  {tier.detail}
+                </p>
 
                 {ready && (
                   <div className="mt-2.5 flex items-center gap-1.5">
@@ -969,6 +1007,7 @@ export default function ModelManager({
           })}
         </div>
       )}
+
 
       {/* Settings-only action row: the onboarding modal supplies its own
           footer button, but Settings has no footer, so surface the download

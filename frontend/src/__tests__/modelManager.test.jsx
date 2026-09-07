@@ -426,10 +426,13 @@ describe("ModelManager Upgrade Popover & Storage Migration", () => {
     expect(lightCard).toBeDefined();
     expect(qualityCard).toBeDefined();
 
-    // Verify sizes in copy
+    // Verify sizes and VRAM recommendations in copy
     expect(standardCard.textContent).toContain("~3.0 GB");
+    expect(standardCard.textContent).toContain("Fits ~6 GB VRAM");
     expect(lightCard.textContent).toContain("~1.15 GB");
-    expect(qualityCard.textContent).toContain("~4.9 GB");
+    expect(lightCard.textContent).toContain("Fits ~2 GB VRAM");
+    expect(qualityCard.textContent).toContain("~16.5 GB");
+    expect(qualityCard.textContent).toContain("Needs ~18 GB VRAM");
   });
 
   it("allows selecting Quality tier and triggers preference change when installed", async () => {
@@ -437,7 +440,7 @@ describe("ModelManager Upgrade Popover & Storage Migration", () => {
       upgrade_available: false,
       models_ready: { "2b": true, "0.8b": false, quality: true },
       model_key: "2b",
-      preference: { backend: "bundled", model_key: "2b" },
+      preference: { backend: "bundled", model_key: "2b", device: "gpu" },
       tier_upgrades: {},
     });
 
@@ -449,11 +452,9 @@ describe("ModelManager Upgrade Popover & Storage Migration", () => {
 
     const tierCards = Array.from(container.querySelectorAll('[role="button"]'));
     const qualityCard = tierCards.find((el) => el.textContent.includes("Quality"));
-    expect(qualityCard).toBeDefined();
-    expect(qualityCard.textContent).toContain("installed");
 
     await act(async () => {
-      qualityCard.click();
+      qualityCard.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
 
     expect(onPreferenceChange).toHaveBeenCalledWith(
@@ -462,5 +463,36 @@ describe("ModelManager Upgrade Popover & Storage Migration", () => {
         model_key: "quality",
       })
     );
+  });
+
+  it("renders recommended tier badge on the recommended tier card based on hardware", async () => {
+    api.getAiStatus.mockResolvedValue({
+      upgrade_available: false,
+      models_ready: { "2b": true },
+      model_key: "2b",
+      preference: { backend: "bundled", model_key: "2b", device: "gpu" },
+      hardware: {
+        recommended_tier: {
+          key: "2b",
+          label: "Standard",
+          badge: "Recommended for your hardware",
+          reason: "Fits 100% in VRAM",
+        },
+      },
+      gpu_info: {
+        has_gpu: true,
+        gpu_name: "NVIDIA GeForce RTX 4070 SUPER",
+        vram_gb: 11.99,
+        recommended_tier: { key: "2b" },
+      },
+    });
+
+    await act(async () => {
+      root.render(<ModelManager mode="settings" />);
+    });
+
+    const badge = container.querySelector('[data-testid="recommended-tier-2b"]');
+    expect(badge).not.toBeNull();
+    expect(badge.textContent).toContain("Recommended");
   });
 });

@@ -24,13 +24,23 @@
       <a href="index.html" class="brand">
         <img src="assets/lexicon-logo-type.svg" alt="Lexicon" class="brand-logo-type" />
       </a>
-      <ul class="nav-links">
+      <ul class="nav-links" id="nav-links">
         <li><a href="index.html">Home</a></li>
+        <li><a href="benchmark.html">Benchmark</a></li>
         <li><a href="privacy.html">Privacy</a></li>
         <li><a href="terms.html">Terms</a></li>
         <li><a href="https://discord.gg/nDCedWH3SV" target="_blank" rel="noopener">Discord</a></li>
         <li><a href="https://github.com/AashishH15/Lexicon" target="_blank" rel="noopener">GitHub</a></li>
       </ul>
+      <button type="button" class="nav-toggle" id="nav-toggle" aria-expanded="false" aria-controls="nav-links"
+        aria-label="Open menu">
+        <svg class="nav-toggle-icon nav-toggle-icon-list" width="20" height="20" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
+          <path d="M224,128a8,8,0,0,1-8,8H40a8,8,0,0,1,0-16H216A8,8,0,0,1,224,128ZM40,72H216a8,8,0,0,0,0-16H40a8,8,0,0,0,0,16ZM216,184H40a8,8,0,0,0,0,16H216a8,8,0,0,0,0-16Z"></path>
+        </svg>
+        <svg class="nav-toggle-icon nav-toggle-icon-x" width="20" height="20" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
+          <path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z"></path>
+        </svg>
+      </button>
     </div>
   </nav>
 
@@ -455,6 +465,7 @@
       </div>
     </div>
   </footer>
+  <script src="nav.js"></script>
 </body>
 
 </html>

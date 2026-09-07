@@ -121,6 +121,7 @@ export async function setAiPreference(
   lmstudioModel = "",
   lmstudioUrl = "",
   lmstudioApiKey = null,
+  device = undefined,
 ) {
   const response = await request("/ai/preference", {
     method: "POST",
@@ -132,11 +133,39 @@ export async function setAiPreference(
       lmstudio_model: lmstudioModel,
       lmstudio_url: lmstudioUrl,
       lmstudio_api_key: lmstudioApiKey,
+      device: device !== undefined ? device : undefined,
     }),
   });
   if (!response.ok) {
     const data = await response.json().catch(() => ({}));
     throw new Error(data.error || `Set AI preference failed: ${response.status}`);
+  }
+  return response.json();
+}
+
+// Fetch detailed hardware profile (CPU, Memory, GPU, tier recommendations).
+export async function getHardwareProfile() {
+  const response = await request("/ai/hardware");
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.error || `Get hardware profile failed: ${response.status}`);
+  }
+  return response.json();
+}
+
+// Persist GPU/CPU compute device and memory offload settings.
+export async function setHardwareSettings({ device, limitVramOffload }) {
+  const response = await request("/ai/hardware/settings", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      device,
+      limit_vram_offload: limitVramOffload !== undefined ? limitVramOffload : undefined,
+    }),
+  });
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.error || `Set hardware settings failed: ${response.status}`);
   }
   return response.json();
 }
@@ -228,6 +257,7 @@ export async function transformText({
   backend,
   requestId,
   temperature,
+  maxTokens,
   signal,
 }) {
   const response = await request("/transform", {
@@ -240,6 +270,7 @@ export async function transformText({
       backend,
       request_id: requestId || null,
       temperature: temperature != null ? temperature : undefined,
+      max_tokens: maxTokens != null ? maxTokens : undefined,
     }),
     signal,
   });

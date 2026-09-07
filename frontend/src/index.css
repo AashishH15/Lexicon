@@ -1227,6 +1227,26 @@
       background-color: rgb(47 111 156 / 0.28);
     }
 
+    .lex-app-shell[data-paper-texture="dark-slate"] .bg-pale-blue\/40 {
+      background-color: rgb(47 111 156 / 0.22);
+    }
+
+    .lex-app-shell[data-paper-texture="dark-slate"] .border-pale-blue-text {
+      border-color: #6fa8cc;
+    }
+
+    .lex-app-shell[data-paper-texture="dark-slate"] .bg-surface {
+      background-color: #2c2c2c;
+    }
+
+    .lex-app-shell[data-paper-texture="dark-slate"] .bg-surface\/60 {
+      background-color: rgb(44 44 44 / 0.85);
+    }
+
+    .lex-app-shell[data-paper-texture="dark-slate"] .text-ink\/80 {
+      color: rgb(237 236 232 / 0.88);
+    }
+
     /* Status / accent text that stays dark in light theme needs a lift
        on Dark Slate (Delete, badges, links). */
     .lex-app-shell[data-paper-texture="dark-slate"] .text-pale-red-text {
@@ -1241,6 +1261,10 @@
        previews): darken the fill so the lifted green label stays readable. */
     .lex-app-shell[data-paper-texture="dark-slate"] .bg-pale-green {
       background-color: #2f4a32;
+    }
+
+    .lex-app-shell[data-paper-texture="dark-slate"] .bg-pale-green\/40 {
+      background-color: rgb(47 74 50 / 0.55);
     }
 
     .lex-app-shell[data-paper-texture="dark-slate"] .bg-pale-green\/70 {
@@ -1373,6 +1397,22 @@
 
     body[data-paper-texture="dark-slate"] .lex-pop .bg-pale-blue {
       background-color: #2f6f9c;
+    }
+
+    body[data-paper-texture="dark-slate"] .lex-pop .bg-pale-blue\/40 {
+      background-color: rgb(47 111 156 / 0.22);
+    }
+
+    body[data-paper-texture="dark-slate"] .lex-pop .border-pale-blue-text {
+      border-color: #6fa8cc;
+    }
+
+    body[data-paper-texture="dark-slate"] .lex-pop .bg-surface {
+      background-color: #2c2c2c;
+    }
+
+    body[data-paper-texture="dark-slate"] .lex-pop .text-ink\/80 {
+      color: rgb(237 236 232 / 0.88);
     }
 
     body[data-paper-texture="dark-slate"] .lex-pop .text-pale-blue-text {

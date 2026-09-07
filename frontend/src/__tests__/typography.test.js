@@ -136,6 +136,8 @@ describe("Paper texture catalog invariants", () => {
         // Dark Slate is the dark theme: the app inverts the text to a light
         // ink (C47.4 dark-slate overrides), so check that pair instead.
         expect(contrastRatio("#eceae4", texture.pageColor)).toBeGreaterThanOrEqual(4.5);
+        // Hardware CPU badges sit on elevated bg-surface (#2c2c2c).
+        expect(contrastRatio("#edece8", "#2c2c2c")).toBeGreaterThanOrEqual(4.5);
       } else {
         expect(contrastRatio("#111111", texture.pageColor)).toBeGreaterThanOrEqual(4.5);
       }

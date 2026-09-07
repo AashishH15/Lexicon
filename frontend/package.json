@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "lint": "eslint .",
     "benchmark:deep": "node scripts/deepProofreadBenchmarkCli.mjs",
+    "benchmark:gec": "node scripts/gecFluencyBenchmarkCli.mjs",
     "format": "prettier --write .",
     "test": "vitest run",
     "test:watch": "vitest",
