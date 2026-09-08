@@ -203,4 +203,22 @@ describe("custom keyboard shortcuts", () => {
       "⌘ + ↵",
     );
   });
+
+  it("defaults Redo to Mod+Y and migrates the old Mod+Shift+Z binding", () => {
+    const defaults = getDefaultShortcutBindings();
+    expect(defaults[SHORTCUT_IDS.REDO]).toEqual(["Mod", "Y"]);
+
+    const storage = makeStorage();
+    storage.setItem(
+      "lexicon:shortcuts",
+      JSON.stringify({
+        ...defaults,
+        [SHORTCUT_IDS.REDO]: ["Mod", "Shift", "Z"],
+      }),
+    );
+    expect(loadShortcutBindings(storage)[SHORTCUT_IDS.REDO]).toEqual([
+      "Mod",
+      "Y",
+    ]);
+  });
 });

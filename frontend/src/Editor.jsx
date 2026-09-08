@@ -39,6 +39,63 @@ const BUBBLE_ACTIONS = [
   { id: "code", label: "Inline code", icon: Code, isActive: (e) => e.isActive("code"), run: (e) => e.chain().focus().toggleCode().run() },
 ];
 
+// Marks at a range start. Read the text run at the start position.
+// Keep only marks the parent block allows. Fall back to stored marks.
+function marksAtRangeStart(state, from) {
+  const $from = state.doc.resolve(from);
+  const parent = $from.parent;
+  if (parent && parent.isTextblock) {
+    const after = parent.childAfter($from.parentOffset);
+    if (after.node && after.node.isText) {
+      return after.node.marks.filter((mark) =>
+        parent.type.allowsMarkType(mark.type),
+      );
+    }
+    const before = parent.childBefore($from.parentOffset);
+    if (before.node && before.node.isText) {
+      return before.node.marks.filter((mark) =>
+        parent.type.allowsMarkType(mark.type),
+      );
+    }
+  }
+  return state.storedMarks || [];
+}
+
+// Replace one range with plain text. Use one chain so one undo restores it.
+// Keep marks from the range start. Clamp stale ranges. Never throw.
+export function replaceExpressRange(editor, range, text) {
+  try {
+    if (!editor || !editor.view || !editor.state || !range) {
+      return false;
+    }
+    const clean = typeof text === "string" ? text : "";
+    if (!clean) {
+      return false;
+    }
+    const size = editor.state.doc.content.size;
+    const from = Math.max(0, Math.min(range.from, size));
+    const to = Math.max(from, Math.min(range.to, size));
+    const marks = marksAtRangeStart(editor.state, from);
+    const content =
+      marks.length > 0
+        ? {
+            type: "text",
+            text: clean,
+            marks: marks.map((mark) => ({
+              type: mark.type.name,
+              attrs: mark.attrs,
+            })),
+          }
+        : clean;
+    return (
+      editor.chain().focus().insertContentAt({ from, to }, content).run() ===
+      true
+    );
+  } catch {
+    return false;
+  }
+}
+
 // Selection bubble over highlighted text. Keep format toggles first.
 // The Express button opens the right panel drawer. Same drawer as toolbar.
 export function SelectionBubbleMenu({ editor, onExpress }) {

@@ -233,7 +233,7 @@ export const SHORTCUT_DEFINITIONS = Object.freeze([
   {
     id: SHORTCUT_IDS.REDO,
     action: "Redo",
-    defaultShortcut: ["Mod", "Shift", "Z"],
+    defaultShortcut: ["Mod", "Y"],
     customizable: true,
     scope: "editor",
     keywords: ["history", "edit"],
@@ -473,6 +473,11 @@ export function loadShortcutBindings(storage = getDefaultStorage()) {
   }
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
     return getDefaultShortcutBindings();
+  }
+
+  // Move the old Redo default (Mod+Shift+Z) to Mod+Y so Settings matches Windows.
+  if (shortcutsEqual(parsed[SHORTCUT_IDS.REDO], ["Mod", "Shift", "Z"])) {
+    parsed = { ...parsed, [SHORTCUT_IDS.REDO]: ["Mod", "Y"] };
   }
 
   return getNormalizedBindings(parsed);

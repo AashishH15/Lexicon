@@ -31,7 +31,7 @@ import SlashCommand from "./slashCommand.js";
 import { createLowlight } from "lowlight";
 import { detectTone } from "./toneScore.js";
 import Toolbar from "./Toolbar.jsx";
-import Editor from "./Editor.jsx";
+import Editor, { replaceExpressRange as replaceExpressRangeInEditor } from "./Editor.jsx";
 import ImportExportMenu from "./ImportExportMenu.jsx";
 import ReviewPanel from "./ReviewPanel.jsx";
 import GrammarTooltip from "./GrammarTooltip.jsx";
@@ -2278,6 +2278,30 @@ export default function App() {
       return true;
     }
 
+    // Default undo / redo match TipTap UndoRedo (Mod-z, Shift-Mod-z, Mod-y).
+    // Let that keymap run so Ctrl+Z and Ctrl+Y share one path. Only handle
+    // these here when the user remapped them in Settings.
+    if (
+      definition.id === SHORTCUT_IDS.UNDO &&
+      shortcutsEqual(
+        shortcuts[SHORTCUT_IDS.UNDO],
+        SHORTCUT_DEFINITIONS.find((item) => item.id === SHORTCUT_IDS.UNDO)
+          ?.defaultShortcut,
+      )
+    ) {
+      return false;
+    }
+    if (
+      definition.id === SHORTCUT_IDS.REDO &&
+      shortcutsEqual(
+        shortcuts[SHORTCUT_IDS.REDO],
+        SHORTCUT_DEFINITIONS.find((item) => item.id === SHORTCUT_IDS.REDO)
+          ?.defaultShortcut,
+      )
+    ) {
+      return false;
+    }
+
     const chain = editor.chain().focus();
     let handled = true;
     switch (definition.id) {
@@ -2330,11 +2354,14 @@ export default function App() {
         chain.toggleHeading({ level: 6 });
         break;
       case SHORTCUT_IDS.UNDO:
-        chain.undo();
-        break;
+        // Custom binding only. Skip focus() so history is not disturbed.
+        event.preventDefault();
+        editor.commands.undo();
+        return true;
       case SHORTCUT_IDS.REDO:
-        chain.redo();
-        break;
+        event.preventDefault();
+        editor.commands.redo();
+        return true;
       case SHORTCUT_IDS.INDENT_LIST_ITEM:
         chain.sinkListItem("listItem");
         break;
@@ -2434,6 +2461,35 @@ export default function App() {
       // focus is on another part of the app window.
       if (settingsOpen || !editor) return;
 
+      // Undo / redo when focus is on app chrome (not a foreign text field).
+      // ProseMirror owns these keys while the caret is in the editor.
+      const target = event.target;
+      const inEditor = Boolean(
+        target && typeof target.closest === "function" && target.closest(".ProseMirror"),
+      );
+      const inForeignField = Boolean(
+        target &&
+          typeof target.closest === "function" &&
+          target.closest("input, textarea, select") &&
+          !inEditor,
+      );
+      if (!inEditor && !inForeignField) {
+        if (shortcutMatchesEvent(shortcuts[SHORTCUT_IDS.UNDO], event)) {
+          if (editor.can().undo()) {
+            event.preventDefault();
+            editor.commands.undo();
+          }
+          return;
+        }
+        if (shortcutMatchesEvent(shortcuts[SHORTCUT_IDS.REDO], event)) {
+          if (editor.can().redo()) {
+            event.preventDefault();
+            editor.commands.redo();
+          }
+          return;
+        }
+      }
+
       if (shortcutMatchesEvent(shortcuts[SHORTCUT_IDS.TRIGGER_PROOFREAD], event)) {
         event.preventDefault();
         triggerProofread();
@@ -2445,23 +2501,23 @@ export default function App() {
       // through refs so this handler never acts on a stale closure.
       const matches = matchesRef.current;
       const activeId = activeErrorRef.current;
-      const target =
+      const suggestionTarget =
         (activeId != null && matches.find((m) => m.id === activeId)) ||
         matches[0];
-      if (!target) return;
+      if (!suggestionTarget) return;
 
       if (shortcutMatchesEvent(shortcuts[SHORTCUT_IDS.ACCEPT_SUGGESTION], event)) {
         event.preventDefault();
-        const replacement = target.replacements[0];
+        const replacement = suggestionTarget.replacements[0];
         if (replacement) {
-          handleApplySuggestion(target, replacement);
+          handleApplySuggestion(suggestionTarget, replacement);
         }
         return;
       }
 
       if (shortcutMatchesEvent(shortcuts[SHORTCUT_IDS.DISMISS_SUGGESTION], event)) {
         event.preventDefault();
-        handleDismiss(target);
+        handleDismiss(suggestionTarget);
       }
     };
 
@@ -2566,15 +2622,24 @@ export default function App() {
     if (!editor || !expressRange || !text) {
       return;
     }
-    const size = editor.state.doc.content.size;
-    const from = Math.max(0, Math.min(expressRange.from, size));
-    const to = Math.max(from, Math.min(expressRange.to, size));
-    editor.chain().focus().insertContentAt({ from, to }, text).run();
+    const ok = replaceExpressRangeInEditor(editor, expressRange, text);
+    if (!ok) {
+      return;
+    }
     express.clear();
     setExpressRange(null);
     setExpressOverLimit(false);
     setExpressPendingText(null);
     setActiveTool("");
+    // Replace was clicked in the card. That click steals focus, then the
+    // card unmounts. Refocus so Ctrl+Z hits the editor history again.
+    queueMicrotask(() => {
+      requestAnimationFrame(() => {
+        if (editor && !editor.isDestroyed) {
+          editor.commands.focus();
+        }
+      });
+    });
   }
 
   function handleToolClick(name) {
