@@ -243,6 +243,11 @@
       gap: 8px;
     }
 
+    .kpi-category .badge-pill {
+      flex-shrink: 0;
+      white-space: nowrap;
+    }
+
     .kpi-metric {
       display: flex;
       flex-direction: column;
@@ -1441,18 +1446,18 @@
       <!-- Page Header -->
       <header class="page-header">
         <div class="header-badge-row">
-          <span class="badge-pill badge-blue">Empirical Evaluation</span>
-          <span class="badge-pill badge-green">4-Seed Cross-Validation</span>
-          <span class="badge-pill badge-neutral">100 Unique Sentences / Tier</span>
-          <span class="badge-pill badge-neutral">1,050 Curated Corpus</span>
+          <span class="badge-pill badge-blue">Full-Corpus Evaluation</span>
+          <span class="badge-pill badge-green">Head-to-Head</span>
+          <span class="badge-pill badge-neutral">1,050 Sentences / Engine</span>
+          <span class="badge-pill badge-neutral">en-US Scoring</span>
         </div>
         <div class="title-row">
           <div>
             <h1 class="hero-title">Lexicon Engine <em>Benchmark Suite</em></h1>
             <p class="hero-subtitle">
-              Rigorous empirical evaluation across 4 independent random seeds (100 unique sentences per engine, 500
-              evaluations total) measuring generalization accuracy, latency, and standard deviation (&plusmn;1&sigma;)
-              across expanded 1,050-sentence authentic corpus (350 JFLEG, 350 BEA-2019, 350 LOCNESS).
+              Comprehensive head-to-head on the full 1,050-sentence authentic corpus (350 JFLEG, 350 BEA-2019, 350 LOCNESS).
+              Lexicon tiers and QuillBot Free are scored the same way on every sentence.
+              All engines evaluated in <strong>en-US</strong>; BEA and LOCNESS lean British, so dialect mismatches can count against local models.
             </p>
           </div>
         </div>
@@ -1463,7 +1468,7 @@
         <div class="metrics-guide-header">
           <h2 id="metrics-guide-title">How to read these <em>scores</em></h2>
           <p>
-            Grammar correction rewards careful edits more than aggressive ones. We report the usual GEC metrics below, plus corpus-specific fluency and grammar hit rates.
+            Grammar correction rewards careful edits more than aggressive ones. We report the usual GEC metrics below, plus corpus hit rates for fluency and grammar.
           </p>
         </div>
         <dl class="metrics-guide-grid">
@@ -1489,7 +1494,7 @@
           </div>
           <div class="metric-def">
             <dt>JFLEG &amp; BEA</dt>
-            <dd>Corpus hit rates: JFLEG measures fluency and natural phrasing; BEA measures grammar and usage. Shown as correct / eligible items.</dd>
+            <dd>Corpus hit rates on the full suite: JFLEG measures fluency; BEA/LOCNESS measure grammar and usage. Shown as correct / expected edits.</dd>
           </div>
         </dl>
       </section>
@@ -1519,7 +1524,7 @@
               fill="currentColor" aria-hidden="true">
               <path
                 d="M197.58,129.06,146,110l-19-51.62a15.92,15.92,0,0,0-29.88,0L78,110l-51.62,19a15.92,15.92,0,0,0,0,29.88L78,178l19,51.62a15.92,15.92,0,0,0,29.88,0L146,178l51.62-19a15.92,15.92,0,0,0,0-29.88ZM137,164.22a8,8,0,0,0-4.74,4.74L112,223.85,91.78,169A8,8,0,0,0,87,164.22L32.15,144,87,123.78A8,8,0,0,0,91.78,119L112,64.15,132.22,119a8,8,0,0,0,4.74,4.74L191.85,144ZM144,40a8,8,0,0,1,8-8h16V16a8,8,0,0,1,16,0V32h16a8,8,0,0,1,0,16H184V64a8,8,0,0,1-16,0V48H152A8,8,0,0,1,144,40ZM248,88a8,8,0,0,1-8,8h-8v8a8,8,0,0,1-16,0V96h-8a8,8,0,0,1,0-16h8V72a8,8,0,0,1,16,0v8h8A8,8,0,0,1,248,88Z" />
-            </svg> Publication Quality (Quality 27B)</span>
+            </svg> Highest Accuracy (Quality 27B)</span>
         </button>
       </div>
 
@@ -1532,32 +1537,32 @@
             <span class="badge-pill badge-green">Recommended</span>
           </div>
           <div class="kpi-metric">
-            <span class="kpi-number" style="color: #059669;">71.2</span>
-            <span class="kpi-unit">F₀.₅ · 4-run mean (&plusmn;9.5%)</span>
+            <span class="kpi-number" style="color: #059669;">74.6</span>
+            <span class="kpi-unit">F₀.₅ · full corpus</span>
           </div>
-          <p class="kpi-desc">Standard 4B: local edge model delivering 221 ms live keystroke speed.</p>
+          <p class="kpi-desc">Standard 4B: local sweet spot that beats QuillBot Free at ~233 ms keystroke speed.</p>
           <div class="kpi-stats">
-            <span class="kpi-stat"><strong>84.1%</strong> precision</span>
-            <span class="kpi-stat"><strong>45.1%</strong> recall</span>
-            <span class="kpi-stat"><strong>221 ms</strong></span>
+            <span class="kpi-stat"><strong>90.0%</strong> precision</span>
+            <span class="kpi-stat"><strong>44.3%</strong> recall</span>
+            <span class="kpi-stat"><strong>233 ms</strong></span>
           </div>
         </div>
 
         <div class="kpi-card" role="button" tabindex="0" onclick="setPreset('quality')"
           onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();setPreset('quality')}">
           <div class="kpi-category">
-            <span>Publication Quality</span>
-            <span class="badge-pill badge-purple">SOTA</span>
+            <span>Highest Accuracy</span>
+            <span class="badge-pill badge-purple">Top Score</span>
           </div>
           <div class="kpi-metric">
-            <span class="kpi-number" style="color: #7C3AED;">75.7</span>
-            <span class="kpi-unit">F₀.₅ · 4-run mean (&plusmn;6.9%)</span>
+            <span class="kpi-number" style="color: #7C3AED;">82.9</span>
+            <span class="kpi-unit">F₀.₅ · full corpus</span>
           </div>
-          <p class="kpi-desc">Quality 27B: top F₀.₅ score (75.7%), highest recall (45.7%), and zero clean FPR.</p>
+          <p class="kpi-desc">Quality 27B: top of suite, with highest recall (51.7%) and only 4.3% clean FPR offline.</p>
           <div class="kpi-stats">
-            <span class="kpi-stat"><strong>85.5%</strong> peak run</span>
-            <span class="kpi-stat"><strong>45.7%</strong> recall</span>
-            <span class="kpi-stat"><strong>91.2%</strong> precision</span>
+            <span class="kpi-stat"><strong>97.6%</strong> precision</span>
+            <span class="kpi-stat"><strong>51.7%</strong> recall</span>
+            <span class="kpi-stat"><strong>4.3%</strong> clean FPR</span>
           </div>
         </div>
 
@@ -1568,30 +1573,30 @@
             <span class="badge-pill badge-blue">Rules</span>
           </div>
           <div class="kpi-metric">
-            <span class="kpi-number" style="color: #1F6C9F;">35</span>
+            <span class="kpi-number" style="color: #1F6C9F;">31</span>
             <span class="kpi-unit">ms / sentence</span>
           </div>
-          <p class="kpi-desc">LanguageTool: instant syntax at keystroke speed.</p>
+          <p class="kpi-desc">LanguageTool: instant syntax at keystroke speed with zero clean false alarms.</p>
           <div class="kpi-stats">
-            <span class="kpi-stat"><strong>64.6%</strong> F₀.₅ mean</span>
-            <span class="kpi-stat"><strong>95.0%</strong> precision</span>
+            <span class="kpi-stat"><strong>61.9%</strong> F₀.₅</span>
+            <span class="kpi-stat"><strong>100%</strong> precision</span>
           </div>
         </div>
 
         <div class="kpi-card" style="cursor: default;">
           <div class="kpi-category">
             <span>Eval Scale</span>
-            <span class="badge-pill badge-yellow">5×4 Matrix</span>
+            <span class="badge-pill badge-yellow">Full Suite</span>
           </div>
           <div class="kpi-metric">
-            <span class="kpi-number">500</span>
-            <span class="kpi-unit">sentence evaluations</span>
+            <span class="kpi-number">1,050</span>
+            <span class="kpi-unit">sentences per engine</span>
           </div>
-          <p class="kpi-desc">100 unique sentences across 4 seeds per engine from 1,050 authentic pool.</p>
+          <p class="kpi-desc">Entire JFLEG + BEA-2019 + LOCNESS pool scored once per engine.</p>
           <div class="kpi-stats">
             <span class="kpi-stat"><strong>5</strong> engines</span>
-            <span class="kpi-stat"><strong>4</strong> seeds</span>
-            <span class="kpi-stat"><strong>&plusmn;1&sigma;</strong> variance</span>
+            <span class="kpi-stat"><strong>1,179</strong> expected errors</span>
+            <span class="kpi-stat"><strong>350</strong> clean sentences</span>
           </div>
         </div>
       </div>
@@ -1603,8 +1608,8 @@
         <div class="chart-card">
           <div class="chart-header">
             <div class="chart-title-group">
-              <h2>Cross-Validation <em>Ladder</em></h2>
-              <div class="chart-subtitle">4-Seed Macro Mean with Peak Run Potential across 100 Sentences</div>
+              <h2>Full-Corpus <em>Ladder</em></h2>
+              <div class="chart-subtitle">Scores on all 1,050 sentences (toggle F₀.₅ / Precision / Recall)</div>
             </div>
             <div class="controls-cluster">
               <div class="segmented-control" id="bar-metric-ctrl">
@@ -1622,14 +1627,10 @@
           <div class="chart-legend">
             <div class="legend-entry">
               <div class="legend-swatch" style="background: #111827;"></div>
-              <span>4-Run Macro Mean (&plusmn;1&sigma;)</span>
-            </div>
-            <div class="legend-entry">
-              <div class="legend-swatch" style="background: #059669;"></div>
-              <span>Peak Run Score</span>
+              <span>Full-corpus score</span>
             </div>
             <div class="legend-entry" style="margin-left: auto; color: var(--text-muted); font-style: italic;">
-              Tap or hover bars for variance breakdown
+              Tap or hover bars for metric detail
             </div>
           </div>
         </div>
@@ -1639,10 +1640,10 @@
           <div class="chart-header">
             <div class="chart-title-group">
               <h2>Pareto Efficiency <em>Frontier</em></h2>
-              <div class="chart-subtitle">Macro Mean F₀.₅ Quality vs. Latency Trade-Off</div>
+              <div class="chart-subtitle">F₀.₅ vs. latency trade-off (full 1,050)</div>
             </div>
             <div class="controls-cluster">
-              <span class="badge-pill badge-green" style="font-size: 0.72rem; padding: 3px 8px;">Macro Mean F₀.₅</span>
+              <span class="badge-pill badge-green" style="font-size: 0.72rem; padding: 3px 8px;">F₀.₅</span>
               <button class="btn-toggle-envelope active" id="frontier-toggle-btn" onclick="toggleEnvelope()">
                 <svg class="ph-icon" width="14" height="14" viewBox="0 0 256 256" fill="currentColor"
                   aria-hidden="true">
@@ -1668,19 +1669,11 @@
             </div>
             <div class="legend-entry" data-tier="Standard" onclick="selectTier('Standard')">
               <div class="legend-swatch circle" style="background: #059669;"></div>
-              <span class="label-with-icon">Standard (4B) <svg class="ph-icon" width="12" height="12"
-                  viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
-                  <path
-                    d="M234.29,114.85l-45,38.83L203,211.75a16.4,16.4,0,0,1-24.5,17.82L128,198.49,77.47,229.57A16.4,16.4,0,0,1,53,211.75l13.76-58.07-45-38.83A16.46,16.46,0,0,1,31.08,86l59-4.76,22.76-55.08a16.36,16.36,0,0,1,30.27,0l22.75,55.08,59,4.76a16.46,16.46,0,0,1,9.37,28.86Z" />
-                </svg></span>
+              <span>Standard (4B)</span>
             </div>
             <div class="legend-entry" data-tier="Quality" onclick="selectTier('Quality')">
               <div class="legend-swatch circle" style="background: #7C3AED;"></div>
-              <span class="label-with-icon">Quality (27B) <svg class="ph-icon" width="12" height="12"
-                  viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">
-                  <path
-                    d="M197.58,129.06,146,110l-19-51.62a15.92,15.92,0,0,0-29.88,0L78,110l-51.62,19a15.92,15.92,0,0,0,0,29.88L78,178l19,51.62a15.92,15.92,0,0,0,29.88,0L146,178l51.62-19a15.92,15.92,0,0,0,0-29.88ZM137,164.22a8,8,0,0,0-4.74,4.74L112,223.85,91.78,169A8,8,0,0,0,87,164.22L32.15,144,87,123.78A8,8,0,0,0,91.78,119L112,64.15,132.22,119a8,8,0,0,0,4.74,4.74L191.85,144ZM144,40a8,8,0,0,1,8-8h16V16a8,8,0,0,1,16,0V32h16a8,8,0,0,1,0,16H184V64a8,8,0,0,1-16,0V48H152A8,8,0,0,1,144,40ZM248,88a8,8,0,0,1-8,8h-8v8a8,8,0,0,1-16,0V96h-8a8,8,0,0,1,0-16h8V72a8,8,0,0,1,16,0v8h8A8,8,0,0,1,248,88Z" />
-                </svg></span>
+              <span>Quality (27B)</span>
             </div>
             <div class="legend-entry" data-tier="QuillBot" onclick="selectTier('QuillBot')">
               <div class="legend-swatch circle" style="background: #0284C7;"></div>
@@ -1697,19 +1690,13 @@
         <div class="table-header">
           <div>
             <h2>Evaluation <em id="table-title-em">Leaderboard</em></h2>
-            <p id="table-desc-p">Executive summary of the 4-seed cross-validation benchmark across 5 engines.<br>Click
-              <strong>[ 4 Runs ▾ ]</strong> on any tier to inspect all individual seeds, or toggle to <strong>Detailed
-                Matrix</strong> for the full 25-row dataset.
+            <p id="table-desc-p">Ranking across 5 engines on the full 1,050-sentence corpus.
+              Toggle to <strong>Detailed Matrix</strong> for edit counts, JFLEG/BEA hit rates, and latency.
             </p>
           </div>
           <div class="table-actions">
             <button class="filter-chip" id="btn-reset-sort" onclick="resetTableSort()">Reset Sort</button>
             <button class="filter-chip" onclick="setPreset('all')">Reset Spotlight</button>
-            <button class="filter-chip btn-expand-all" id="btn-toggle-all-drawers" onclick="toggleAllDrawers()"
-              title="Expand or collapse individual seed runs for all engines">
-              <span>Expand All Runs</span>
-              <span class="caret-icon"><svg class="ph-icon" width="12" height="12" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M213.66,101.66l-80,80a8,8,0,0,1-11.32,0l-80-80A8,8,0,0,1,53.66,90.34L128,164.69l74.34-74.35a8,8,0,0,1,11.32,11.32Z"/></svg></span>
-            </button>
           </div>
         </div>
 
@@ -1720,21 +1707,9 @@
             <span class="toolbar-label">View</span>
             <div class="segmented-control" id="table-view-ctrl">
               <button class="segment-btn active" data-view="leaderboard"
-                title="Executive Leaderboard with score bars and expandable run drawers">Leaderboard</button>
+                title="Executive Leaderboard with score bars">Leaderboard</button>
               <button class="segment-btn" data-view="matrix"
-                title="Full 25-row rectangular matrix with all metrics">Detailed Matrix</button>
-            </div>
-          </div>
-
-          <!-- Runs Filter (Only visible in Detailed Matrix view) -->
-          <div class="toolbar-group" id="matrix-runs-group" style="display: none;">
-            <span class="toolbar-label">Runs</span>
-            <div class="segmented-control" id="table-filter-ctrl">
-              <button class="segment-btn active" data-filter="all" title="Show all 25 rows">All (25)</button>
-              <button class="segment-btn" data-filter="mean" title="Show 4-run aggregate means with variance">Means
-                (5)</button>
-              <button class="segment-btn" data-filter="runs" title="Show individual 25-sentence seed runs">Runs
-                (20)</button>
+                title="Full metric matrix for all 5 engines">Detailed Matrix</button>
             </div>
           </div>
 
@@ -1829,29 +1804,15 @@
       return `<svg class="ph-icon" width="${size}" height="${size}" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="${d}"/></svg>`;
     }
 
-    function tierMarkIcon(tierId, size = 12) {
-      if (tierId === "Standard") return phIcon("star", size);
-      if (tierId === "Quality") return phIcon("sparkle", size);
-      return "";
-    }
-
     function stripTierMarks(name) {
       return String(name || "").replace(/[★✦]/g, "").replace(/\s{2,}/g, " ").trim();
     }
 
-    function formatTierLabelHtml(name, tierId, size = 12) {
-      const clean = stripTierMarks(name);
-      const icon = tierMarkIcon(tierId, size);
-      return icon ? `<span class="label-with-icon">${clean} ${icon}</span>` : clean;
+    function formatTierLabelHtml(name) {
+      return stripTierMarks(name);
     }
 
-    function phSvgGlyph(name, x, y, size, fill) {
-      const d = PH[name];
-      if (!d) return "";
-      const s = size / 256;
-      return `<g transform="translate(${x},${y}) scale(${s})" fill="${fill}"><path d="${d}"/></g>`;
-    }
-    // Benchmark Dataset Ground Truth (100-Sentence 4-Seed Cross-Validation Benchmark)
+    // Full-corpus scorecard (N=1,050)
     const benchmarkData = [
       {
         id: "Normal",
@@ -1859,10 +1820,9 @@
         shortName: "Normal (Rules)",
         color: "var(--color-normal)",
         hex: "#1F6C9F",
-        baseline: { f05: 70.31, prec: 100.0, rec: 32.14, latency: 31.8, jfleg: "7/17", bea: "2/11", cleanFpr: 0.0 }, // Peak Run (Seed 50680)
-        random: { f05: 64.61, f05Sd: 5.99, prec: 95.00, precSd: 10.00, rec: 28.53, recSd: 3.27, latency: 35.2, jfleg: "26/69", bea: "8/50", cleanFpr: 0.0, min: 57.14, max: 70.31 }, // Macro Mean
+        score: { f05: 61.88, prec: 100.0, rec: 24.51, latency: 31.2, jfleg: "215/668", bea: "74/511", cleanFpr: 0.0 },
         params: "0B (Deterministic Rules)",
-        desc: "Deterministic rule-based grammar engine. Instant keystroke response (35ms) with zero GPU overhead, catching mechanical syntax with zero clean false alarms."
+        desc: "Deterministic rule-based grammar engine. Instant keystroke response (~31 ms) with zero clean false alarms on the full suite."
       },
       {
         id: "Light",
@@ -1870,10 +1830,9 @@
         shortName: "Light (1B)",
         color: "var(--color-light)",
         hex: "#D97706",
-        baseline: { f05: 66.18, prec: 90.0, rec: 32.14, latency: 392.9, jfleg: "7/17", bea: "2/11", cleanFpr: 0.0 }, // Peak Run (Seed 50680)
-        random: { f05: 62.83, f05Sd: 3.75, prec: 88.98, precSd: 10.35, rec: 29.36, recSd: 3.06, latency: 418.2, jfleg: "27/69", bea: "8/50", cleanFpr: 3.1, min: 57.69, max: 66.18 }, // Macro Mean
+        score: { f05: 61.67, prec: 89.07, rec: 27.65, latency: 352.4, jfleg: "232/668", bea: "94/511", cleanFpr: 11.4 },
         params: "1.0B (Q8_0 Quant)",
-        desc: "Ultra-compact local LLM hybrid. Delivers 62.83 ± 3.8% F₀.₅ on cross-validation with ultra-tight variance, designed for low-memory edge devices."
+        desc: "Ultra-compact local LLM hybrid. Full-corpus F₀.₅ 61.67 does not beat Normal on this suite; built for low-memory edge devices."
       },
       {
         id: "Standard",
@@ -1881,10 +1840,9 @@
         shortName: "Standard (4B)",
         color: "var(--color-standard)",
         hex: "#059669",
-        baseline: { f05: 81.52, prec: 93.75, rec: 53.57, latency: 206.5, jfleg: "10/17", bea: "5/11", cleanFpr: 0.0 }, // Peak Run (Seed 50680)
-        random: { f05: 71.19, f05Sd: 9.47, prec: 84.07, precSd: 7.83, rec: 45.06, recSd: 10.88, latency: 221.0, jfleg: "36/69", bea: "18/50", cleanFpr: 6.3, min: 62.50, max: 81.52 }, // Macro Mean
+        score: { f05: 74.59, prec: 90.0, rec: 44.27, latency: 233.4, jfleg: "350/668", bea: "172/511", cleanFpr: 16.6 },
         params: "4.0B (Q4_K_M Quant)",
-        desc: "The Pareto Efficiency Sweet Spot: Delivers 71.19 ± 9.5% F₀.₅, parity with QuillBot in 221 ms latency with few-shot in-context learning."
+        desc: "Pareto sweet spot: F₀.₅ 74.59 beats QuillBot Free while staying near live keystroke latency (~233 ms)."
       },
       {
         id: "Quality",
@@ -1892,10 +1850,9 @@
         shortName: "Quality (27B)",
         color: "var(--color-quality)",
         hex: "#7C3AED",
-        baseline: { f05: 85.47, prec: 95.24, rec: 60.61, latency: 3612.0, jfleg: "14/20", bea: "6/13", cleanFpr: 0.0 }, // Peak Run (Seed 3840)
-        random: { f05: 75.65, f05Sd: 6.88, prec: 91.23, precSd: 4.00, rec: 45.69, recSd: 10.07, latency: 3315.5, jfleg: "37/69", bea: "18/50", cleanFpr: 0.0, min: 69.77, max: 85.47 }, // Macro Mean
+        score: { f05: 82.86, prec: 97.6, rec: 51.65, latency: 3784.1, jfleg: "395/668", bea: "214/511", cleanFpr: 4.3 },
         params: "27B (Q4_K_M Quant)",
-        desc: "Publication Quality Champion. 75.65 ± 6.9% F₀.₅, delivering top error recall (45.7% vs QuillBot 37.4%) and zero clean false alarms (0.0% vs QuillBot 9.4%)."
+        desc: "Highest-accuracy tier. Top F₀.₅ 82.86 with 51.65% recall and 4.3% clean FPR, fully offline."
       },
       {
         id: "QuillBot",
@@ -1903,10 +1860,9 @@
         shortName: "QuillBot (Free)",
         color: "#0284C7",
         hex: "#0284C7",
-        baseline: { f05: 76.39, prec: 100.0, rec: 39.29, latency: 1810.0, jfleg: "9/17", bea: "2/11", cleanFpr: 0.0 }, // Peak Run (Seed 50680)
-        random: { f05: 71.40, f05Sd: 6.53, prec: 95.14, precSd: 5.73, rec: 37.36, recSd: 9.67, latency: 1815.0, jfleg: "34/69", bea: "11/50", cleanFpr: 9.4, min: 62.50, max: 76.39 }, // Macro Mean
+        score: { f05: 66.11, prec: 84.84, rec: 35.11, latency: 1815.0, jfleg: "259/668", bea: "155/511", cleanFpr: 21.1 },
         params: "Cloud Server API",
-        desc: "Commercial Cloud Grammar Checker. 71.40 ± 6.5% F₀.₅ with 95.1% precision, but advanced fluency rewrites require a paid subscription. Requires sending all text to cloud servers."
+        desc: "Commercial cloud grammar checker (Free Accept-all). F₀.₅ 66.11 on the full suite; trails Standard and Quality. Requires sending text to the cloud."
       }
     ];
 
@@ -1954,12 +1910,10 @@
       const chartH = height - margin.top - margin.bottom;
 
       const groupWidth = chartW / benchmarkData.length;
-      const barWidth = 22;
-      const barGap = 6;
+      const barWidth = 36;
 
       let svgHtml = ``;
 
-      // Subtle horizontal gridlines
       for (let pct = 0; pct <= 100; pct += 25) {
         const y = margin.top + chartH - (pct / 100) * chartH;
         svgHtml += `
@@ -1968,72 +1922,40 @@
         `;
       }
 
-      // Bar groups
       benchmarkData.forEach((d, i) => {
         const isDimmed = activeTierSelection && activeTierSelection !== d.id;
         const groupOpacity = isDimmed ? 0.2 : 1.0;
 
         const cx = margin.left + i * groupWidth + groupWidth / 2;
-        const valMean = currentBarMetric === "f05" ? d.random.f05 : currentBarMetric === "precision" ? d.random.prec : d.random.rec;
-        const valPeak = currentBarMetric === "f05" ? d.baseline.f05 : currentBarMetric === "precision" ? d.baseline.prec : d.baseline.rec;
-        const valSd = currentBarMetric === "f05" ? d.random.f05Sd : currentBarMetric === "precision" ? d.random.precSd : d.random.recSd;
-
-        const hMean = Math.max(2, (valMean / 100) * chartH);
-        const yMean = margin.top + chartH - hMean;
-
-        const hPeak = Math.max(2, (valPeak / 100) * chartH);
-        const yPeak = margin.top + chartH - hPeak;
-
-        const xMean = cx - barWidth - barGap / 2;
-        const xPeak = cx + barGap / 2;
-        const meanTip = `showBarTooltip(event, '${d.tier}', '4-Run Macro Mean', ${valMean}, '${d.random.jfleg}', '${d.random.bea}', '${d.random.cleanFpr}', '${d.random.latency}', ${valSd}, ${d.random.min}, ${d.random.max})`;
-        const peakTip = `showBarTooltip(event, '${d.tier}', 'Peak Run Potential', ${valPeak}, '${d.random.jfleg}', '${d.random.bea}', '${d.random.cleanFpr}', '${d.random.latency}', ${valSd}, ${d.random.min}, ${d.random.max})`;
+        const val = currentBarMetric === "f05" ? d.score.f05 : currentBarMetric === "precision" ? d.score.prec : d.score.rec;
+        const h = Math.max(2, (val / 100) * chartH);
+        const y = margin.top + chartH - h;
+        const x = cx - barWidth / 2;
+        const tip = `showBarTooltip(event, '${d.tier}', ${val}, '${d.score.jfleg}', '${d.score.bea}', '${d.score.cleanFpr}', '${d.score.latency}')`;
 
         svgHtml += `<g opacity="${groupOpacity}" style="transition: opacity 0.25s ease;" onclick="selectTier('${d.id}')">`;
-
-        // 4-Run Macro Mean Bar (Charcoal / Dark Slate)
         svgHtml += `
-          <rect x="${xMean}" y="${yMean}" width="${barWidth}" height="${hMean}" rx="3" fill="#111827"
+          <rect x="${x}" y="${y}" width="${barWidth}" height="${h}" rx="3" fill="${d.hex}"
                 style="cursor:pointer;"
-                onmouseenter="${meanTip}"
+                onmouseenter="${tip}"
                 onmouseleave="hideTooltip()"
-                onclick="event.stopPropagation(); ${meanTip}"/>
-          <text x="${xMean + barWidth / 2}" y="${yMean - 5}" fill="#111827" font-size="10" font-weight="600" text-anchor="middle" font-family="'JetBrains Mono', monospace">${valMean.toFixed(0)}</text>
-        `;
-
-        // Peak Run Bar (Emerald Green)
-        svgHtml += `
-          <rect x="${xPeak}" y="${yPeak}" width="${barWidth}" height="${hPeak}" rx="3" fill="#059669"
-                style="cursor:pointer;"
-                onmouseenter="${peakTip}"
-                onmouseleave="hideTooltip()"
-                onclick="event.stopPropagation(); ${peakTip}"/>
-          <text x="${xPeak + barWidth / 2}" y="${yPeak - 5}" fill="#065F46" font-size="10" font-weight="600" text-anchor="middle" font-family="'JetBrains Mono', monospace">${valPeak.toFixed(0)}</text>
-        `;
-
-        // Category labels
-        svgHtml += `
+                onclick="event.stopPropagation(); ${tip}"/>
+          <text x="${cx}" y="${y - 5}" fill="${d.hex}" font-size="10" font-weight="600" text-anchor="middle" font-family="'JetBrains Mono', monospace">${val.toFixed(0)}</text>
           <text x="${cx}" y="${height - margin.bottom + 16}" fill="#111111" font-size="11" font-weight="600" text-anchor="middle" font-family="'Geist', sans-serif">${d.id}</text>
           <text x="${cx}" y="${height - margin.bottom + 29}" fill="#8A8A87" font-size="9" text-anchor="middle" font-family="'JetBrains Mono', monospace">${d.params.split(' ')[0]}</text>
         `;
-
         svgHtml += `</g>`;
       });
 
       svg.innerHTML = svgHtml;
     }
 
-    function showBarTooltip(e, tier, setLabel, val, jfleg, bea, cleanFpr, latency, sd, min, max) {
+    function showBarTooltip(e, tier, val, jfleg, bea, cleanFpr, latency) {
       const metricName = currentBarMetric === "f05" ? "F₀.₅ Score" : currentBarMetric === "precision" ? "Precision" : "Recall";
-      const varianceHtml = sd !== undefined
-        ? `<div class="tt-row"><span>Standard Deviation:</span><span class="tt-val">&plusmn;${sd.toFixed(1)}%</span></div>
-           <div class="tt-row"><span>Min &ndash; Max Range:</span><span class="tt-val">[${min.toFixed(1)}% &ndash; ${max.toFixed(1)}%]</span></div>`
-        : "";
       const html = `
-        <div class="tt-title"><span style="width: 8px; height: 8px; border-radius: 50%; background: ${setLabel.includes('Mean') ? '#111827' : '#059669'}; display: inline-block;"></span> ${tier}</div>
-        <div class="tt-row"><span>Evaluation Metric:</span><span class="tt-val">${setLabel}</span></div>
+        <div class="tt-title"><span style="width: 8px; height: 8px; border-radius: 50%; background: #111827; display: inline-block;"></span> ${tier}</div>
+        <div class="tt-row"><span>Corpus:</span><span class="tt-val">N=1,050</span></div>
         <div class="tt-row"><span>${metricName}:</span><span class="tt-val" style="color: #059669;">${val.toFixed(2)}%</span></div>
-        ${varianceHtml}
         <div class="tt-row"><span>JFLEG (Fluency):</span><span class="tt-val">${jfleg}</span></div>
         <div class="tt-row"><span>BEA (Grammar):</span><span class="tt-val">${bea}</span></div>
         <div class="tt-row"><span>Clean False Alarms:</span><span class="tt-val">${cleanFpr}%</span></div>
@@ -2095,8 +2017,8 @@
 
       // Axis Labels
       svgHtml += `
-        <text x="${width - margin.right}" y="${height - margin.bottom + 32}" fill="#2E6835" font-size="10" font-weight="600" text-anchor="end" font-family="'Geist', sans-serif">Inference Latency (Faster ───>)</text>
-        <text x="${margin.left}" y="${margin.top - 8}" fill="#636360" font-size="10.5" font-weight="600" font-family="'Geist', sans-serif">Macro Mean F₀.₅ Score (%)</text>
+        <text x="${width - margin.right}" y="${height - margin.bottom + 32}" fill="#2E6835" font-size="10" font-weight="600" text-anchor="end" font-family="'Geist', sans-serif">Inference Latency (Faster --&gt;)</text>
+        <text x="${margin.left}" y="${margin.top - 8}" fill="#636360" font-size="10.5" font-weight="600" font-family="'Geist', sans-serif">F₀.₅ Score (%)</text>
       `;
 
       // Pareto Frontier Envelope Curve
@@ -2105,12 +2027,12 @@
         const pStandard = benchmarkData.find(d => d.id === "Standard");
         const pNormal = benchmarkData.find(d => d.id === "Normal");
 
-        const qX = getX(pQuality.random.latency);
-        const qY = getY(pQuality.random.f05);
-        const sX = getX(pStandard.random.latency);
-        const sY = getY(pStandard.random.f05);
-        const nX = getX(pNormal.random.latency);
-        const nY = getY(pNormal.random.f05);
+        const qX = getX(pQuality.score.latency);
+        const qY = getY(pQuality.score.f05);
+        const sX = getX(pStandard.score.latency);
+        const sY = getY(pStandard.score.f05);
+        const nX = getX(pNormal.score.latency);
+        const nY = getY(pNormal.score.f05);
 
         // Shaded feasible region under the frontier curve
         const areaPath = `M ${qX} ${height - margin.bottom} L ${qX} ${qY} Q ${(qX + sX) / 2} ${qY - 4}, ${sX} ${sY} Q ${(sX + nX) / 2} ${sY + 8}, ${nX} ${nY} L ${nX} ${height - margin.bottom} Z`;
@@ -2123,42 +2045,31 @@
         `;
       }
 
-      // Nodes: Plotting each engine by its 4-Seed Macro Mean F_0.5 score
+      // Nodes: full-corpus F₀.₅ vs latency
       benchmarkData.forEach(d => {
         const isSelected = activeTierSelection === d.id;
         const isDimmed = activeTierSelection && !isSelected;
         const tierOpacity = isDimmed ? 0.18 : 1.0;
 
-        const score = d.random.f05;
-        const latency = d.random.latency;
+        const score = d.score.f05;
+        const latency = d.score.latency;
         const x = getX(latency);
         const y = getY(score);
 
         svgHtml += `<g opacity="${tierOpacity}" style="transition: opacity 0.25s ease;" onclick="selectTier('${d.id}')">`;
 
-        // Single Macro Mean Solid Marker
         svgHtml += `
           <circle cx="${x}" cy="${y}" r="${isSelected ? 9 : 7}" fill="${d.hex}" stroke="#FFFFFF" stroke-width="2.2"
                   style="cursor:pointer; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.18));"
-                  onmouseenter="showParetoCrosshairs(${x}, ${y}, ${latency}, ${score}); showParetoTooltip(event, '${d.tier}', ${score}, ${latency}, ${d.random.f05Sd}, ${d.random.min}, ${d.random.max}, ${d.random.prec}, ${d.random.rec}, '${d.params}', '${d.desc}')"
+                  onmouseenter="showParetoCrosshairs(${x}, ${y}, ${latency}, ${score}); showParetoTooltip(event, '${d.tier}', ${score}, ${latency}, ${d.score.prec}, ${d.score.rec}, '${d.params}', '${d.desc}')"
                   onmouseleave="hideParetoCrosshairs(); hideTooltip()"/>
         `;
 
         // Label
         const labelOffsetX = d.id === "Quality" ? -12 : 12;
         const labelAnchor = d.id === "Quality" ? "end" : "start";
-        const markName = d.id === "Standard" ? "star" : d.id === "Quality" ? "sparkle" : null;
-        const markSize = 10;
-        let labelX = x + labelOffsetX;
-        if (markName && labelAnchor === "start") {
-          svgHtml += phSvgGlyph(markName, labelX, y - 14, markSize, d.hex);
-          labelX += markSize + 3;
-        } else if (markName && labelAnchor === "end") {
-          svgHtml += phSvgGlyph(markName, labelX - markSize, y - 14, markSize, d.hex);
-          labelX -= markSize + 3;
-        }
         svgHtml += `
-          <text x="${labelX}" y="${y - 6}" fill="${d.hex}" font-size="11" font-weight="700" text-anchor="${labelAnchor}" font-family="'Geist', sans-serif">
+          <text x="${x + labelOffsetX}" y="${y - 6}" fill="${d.hex}" font-size="11" font-weight="700" text-anchor="${labelAnchor}" font-family="'Geist', sans-serif">
             ${d.id}
           </text>
           <text x="${x + labelOffsetX}" y="${y + 8}" fill="#636360" font-size="9" text-anchor="${labelAnchor}" font-family="'JetBrains Mono', monospace">
@@ -2197,16 +2108,14 @@
       if (layer) layer.innerHTML = "";
     }
 
-    function showParetoTooltip(e, tier, score, latency, f05Sd, min, max, prec, rec, params, desc) {
+    function showParetoTooltip(e, tier, score, latency, prec, rec, params, desc) {
       const html = `
         <div class="tt-title"><span style="width: 8px; height: 8px; border-radius: 50%; background: #059669; display: inline-block;"></span> ${tier}</div>
-        <div class="tt-row"><span>Evaluation Metric:</span><span class="tt-val">4-Seed Macro Mean</span></div>
-        <div class="tt-row"><span>Mean F_0.5 Score:</span><span class="tt-val" style="color: #2E6835; font-weight: 700;">${score.toFixed(2)}%</span></div>
-        <div class="tt-row"><span>Standard Deviation:</span><span class="tt-val">&plusmn;${f05Sd.toFixed(1)}%</span></div>
-        <div class="tt-row"><span>Min &ndash; Max Range:</span><span class="tt-val">[${min.toFixed(1)}% &ndash; ${max.toFixed(1)}%]</span></div>
+        <div class="tt-row"><span>Corpus:</span><span class="tt-val">N=1,050</span></div>
+        <div class="tt-row"><span>F₀.₅:</span><span class="tt-val" style="color: #2E6835; font-weight: 700;">${score.toFixed(2)}%</span></div>
         <div class="tt-row"><span>Inference Latency:</span><span class="tt-val">${latency.toFixed(1)} ms</span></div>
-        <div class="tt-row"><span>Mean Precision:</span><span class="tt-val">${prec.toFixed(1)}%</span></div>
-        <div class="tt-row"><span>Mean Recall:</span><span class="tt-val">${rec.toFixed(1)}%</span></div>
+        <div class="tt-row"><span>Precision:</span><span class="tt-val">${prec.toFixed(1)}%</span></div>
+        <div class="tt-row"><span>Recall:</span><span class="tt-val">${rec.toFixed(1)}%</span></div>
         <div class="tt-row"><span>Model Parameters:</span><span class="tt-val">${params}</span></div>
         <div style="margin-top: 8px; padding-top: 6px; border-top: 1px solid rgba(0,0,0,0.08); font-size: 0.76rem; color: #636360; line-height: 1.35;">
           ${desc}
@@ -2228,48 +2137,18 @@
       renderBarChart();
       renderParetoChart();
     }
-    // Master Evaluation Table Data (4-Seed Cross-Validation Benchmark: All 20 Runs + 5 Macro Means = 25 Rows)
+    // Full-corpus rows (one definitive score per engine)
     const matrixTableData = [
-      // Normal Proofread (LT Only)
-      { id: 1, tier: "Normal", tierName: "Normal Proofread (LT Only)", color: "#1F6C9F", runType: "random", runIndex: 1, seed: 26061, runLabel: "Run 1 (Seed 26061)", sentences: 25, expected: 30, correct: 8, fp: 2, prec: 80.00, rec: 26.67, f05: 57.14, cleanFpr: 0, cleanFprDisplay: "0% (0/8)", latency: 39.1, jfleg: "6 / 16", jflegVal: 6 / 16, bea: "2 / 14", beaVal: 2 / 14 },
-      { id: 2, tier: "Normal", tierName: "Normal Proofread (LT Only)", color: "#1F6C9F", runType: "random", runIndex: 2, seed: 3840, runLabel: "Run 2 (Seed 3840)", sentences: 25, expected: 33, correct: 10, fp: 0, prec: 100.00, rec: 30.30, f05: 68.49, cleanFpr: 0, cleanFprDisplay: "0% (0/8)", latency: 36.9, jfleg: "8 / 20", jflegVal: 8 / 20, bea: "2 / 13", beaVal: 2 / 13 },
-      { id: 3, tier: "Normal", tierName: "Normal Proofread (LT Only)", color: "#1F6C9F", runType: "random", runIndex: 3, seed: 89122, runLabel: "Run 3 (Seed 89122)", sentences: 25, expected: 28, correct: 7, fp: 0, prec: 100.00, rec: 25.00, f05: 62.50, cleanFpr: 0, cleanFprDisplay: "0% (0/8)", latency: 33.0, jfleg: "5 / 16", jflegVal: 5 / 16, bea: "2 / 12", beaVal: 2 / 12 },
-      { id: 4, tier: "Normal", tierName: "Normal Proofread (LT Only)", color: "#1F6C9F", runType: "random", runIndex: 4, seed: 50680, runLabel: "Run 4 (Seed 50680)", sentences: 25, expected: 28, correct: 9, fp: 0, prec: 100.00, rec: 32.14, f05: 70.31, cleanFpr: 0, cleanFprDisplay: "0% (0/8)", latency: 31.8, jfleg: "7 / 17", jflegVal: 7 / 17, bea: "2 / 11", beaVal: 2 / 11 },
-      { id: 5, tier: "Normal", tierName: "Normal Proofread Aggregate", color: "#1F6C9F", runType: "mean", runLabel: "4-Run Macro Mean", sentences: 100, expected: 119, correct: 34, fp: 2, prec: 95.00, precSd: 10.00, precMin: 80.00, precMax: 100.00, rec: 28.53, recSd: 3.27, recMin: 25.00, recMax: 32.14, f05: 64.61, f05Sd: 5.99, f05Min: 57.14, f05Max: 70.31, cleanFpr: 0, cleanFprDisplay: "0% (0/32)", latency: 35.2, jfleg: "26 / 69 (37.7%)", jflegVal: 26 / 69, bea: "8 / 50 (16.0%)", beaVal: 8 / 50 },
-
-      // Light Tier (MiniCPM 1B Hybrid)
-      { id: 6, tier: "Light", tierName: "Light Tier (MiniCPM 1B Hybrid)", color: "#D97706", runType: "random", runIndex: 1, seed: 26061, runLabel: "Run 1 (Seed 26061)", sentences: 25, expected: 30, correct: 9, fp: 3, prec: 75.00, rec: 30.00, f05: 57.69, cleanFpr: 0, cleanFprDisplay: "0% (0/8)", latency: 474.4, jfleg: "7 / 16", jflegVal: 7 / 16, bea: "2 / 14", beaVal: 2 / 14 },
-      { id: 7, tier: "Light", tierName: "Light Tier (MiniCPM 1B Hybrid)", color: "#D97706", runType: "random", runIndex: 2, seed: 3840, runLabel: "Run 2 (Seed 3840)", sentences: 25, expected: 33, correct: 10, fp: 1, prec: 90.91, rec: 30.30, f05: 64.94, cleanFpr: 12.5, cleanFprDisplay: "12.5% (1/8)", latency: 445.5, jfleg: "8 / 20", jflegVal: 8 / 20, bea: "2 / 13", beaVal: 2 / 13 },
-      { id: 8, tier: "Light", tierName: "Light Tier (MiniCPM 1B Hybrid)", color: "#D97706", runType: "random", runIndex: 3, seed: 89122, runLabel: "Run 3 (Seed 89122)", sentences: 25, expected: 28, correct: 7, fp: 0, prec: 100.00, rec: 25.00, f05: 62.50, cleanFpr: 0, cleanFprDisplay: "0% (0/8)", latency: 360.2, jfleg: "5 / 16", jflegVal: 5 / 16, bea: "2 / 12", beaVal: 2 / 12 },
-      { id: 9, tier: "Light", tierName: "Light Tier (MiniCPM 1B Hybrid)", color: "#D97706", runType: "random", runIndex: 4, seed: 50680, runLabel: "Run 4 (Seed 50680)", sentences: 25, expected: 28, correct: 9, fp: 1, prec: 90.00, rec: 32.14, f05: 66.18, cleanFpr: 0, cleanFprDisplay: "0% (0/8)", latency: 392.9, jfleg: "7 / 17", jflegVal: 7 / 17, bea: "2 / 11", beaVal: 2 / 11 },
-      { id: 10, tier: "Light", tierName: "Light Tier Aggregate", color: "#D97706", runType: "mean", runLabel: "4-Run Macro Mean", sentences: 100, expected: 119, correct: 35, fp: 5, prec: 88.98, precSd: 10.35, precMin: 75.00, precMax: 100.00, rec: 29.36, recSd: 3.06, recMin: 25.00, recMax: 32.14, f05: 62.83, f05Sd: 3.75, f05Min: 57.69, f05Max: 66.18, cleanFpr: 3.1, cleanFprDisplay: "3.1% (1/32)", latency: 418.2, jfleg: "27 / 69 (39.1%)", jflegVal: 27 / 69, bea: "8 / 50 (16.0%)", beaVal: 8 / 50 },
-
-      // Standard Tier (Qwen3.5 4B Hybrid)
-      { id: 11, tier: "Standard", tierName: "Standard Tier (Qwen3.5 4B)", color: "#059669", runType: "random", runIndex: 1, seed: 26061, runLabel: "Run 1 (Seed 26061)", sentences: 25, expected: 30, correct: 12, fp: 4, prec: 75.00, rec: 40.00, f05: 63.83, cleanFpr: 12.5, cleanFprDisplay: "12.5% (1/8)", latency: 237.0, jfleg: "8 / 16", jflegVal: 8 / 16, bea: "4 / 14", beaVal: 4 / 14 },
-      { id: 12, tier: "Standard", tierName: "Standard Tier (Qwen3.5 4B)", color: "#059669", runType: "random", runIndex: 2, seed: 3840, runLabel: "Run 2 (Seed 3840)", sentences: 25, expected: 33, correct: 18, fp: 3, prec: 85.71, rec: 54.55, f05: 76.92, cleanFpr: 12.5, cleanFprDisplay: "12.5% (1/8)", latency: 226.4, jfleg: "12 / 20", jflegVal: 12 / 20, bea: "6 / 13", beaVal: 6 / 13 },
-      { id: 13, tier: "Standard", tierName: "Standard Tier (Qwen3.5 4B)", color: "#059669", runType: "random", runIndex: 3, seed: 89122, runLabel: "Run 3 (Seed 89122)", sentences: 25, expected: 28, correct: 9, fp: 2, prec: 81.82, rec: 32.14, f05: 62.50, cleanFpr: 0, cleanFprDisplay: "0% (0/8)", latency: 214.1, jfleg: "6 / 16", jflegVal: 6 / 16, bea: "3 / 12", beaVal: 3 / 12 },
-      { id: 14, tier: "Standard", tierName: "Standard Tier (Qwen3.5 4B)", color: "#059669", runType: "random", runIndex: 4, seed: 50680, runLabel: "Run 4 (Seed 50680)", sentences: 25, expected: 28, correct: 15, fp: 1, prec: 93.75, rec: 53.57, f05: 81.52, cleanFpr: 0, cleanFprDisplay: "0% (0/8)", latency: 206.5, jfleg: "10 / 17", jflegVal: 10 / 17, bea: "5 / 11", beaVal: 5 / 11 },
-      { id: 15, tier: "Standard", tierName: "Standard Tier Aggregate", color: "#059669", runType: "mean", runLabel: "4-Run Macro Mean", sentences: 100, expected: 119, correct: 54, fp: 10, prec: 84.07, precSd: 7.83, precMin: 75.00, precMax: 93.75, rec: 45.06, recSd: 10.88, recMin: 32.14, recMax: 54.55, f05: 71.19, f05Sd: 9.47, f05Min: 62.50, f05Max: 81.52, cleanFpr: 6.3, cleanFprDisplay: "6.3% (2/32)", latency: 221.0, jfleg: "36 / 69 (52.2%)", jflegVal: 36 / 69, bea: "18 / 50 (36.0%)", beaVal: 18 / 50 },
-
-      // Quality Tier (Qwen3.8 27B Hybrid)
-      { id: 16, tier: "Quality", tierName: "Quality Tier (Qwen3.8 27B)", color: "#7C3AED", runType: "random", runIndex: 1, seed: 26061, runLabel: "Run 1 (Seed 26061)", sentences: 25, expected: 30, correct: 12, fp: 2, prec: 85.71, rec: 40.00, f05: 69.77, cleanFpr: 0, cleanFprDisplay: "0% (0/8)", latency: 3578.0, jfleg: "8 / 16", jflegVal: 8 / 16, bea: "4 / 14", beaVal: 4 / 14 },
-      { id: 17, tier: "Quality", tierName: "Quality Tier (Qwen3.8 27B)", color: "#7C3AED", runType: "random", runIndex: 2, seed: 3840, runLabel: "Run 2 (Seed 3840)", sentences: 25, expected: 33, correct: 20, fp: 1, prec: 95.24, rec: 60.61, f05: 85.47, cleanFpr: 0, cleanFprDisplay: "0% (0/8)", latency: 3612.0, jfleg: "14 / 20", jflegVal: 14 / 20, bea: "6 / 13", beaVal: 6 / 13 },
-      { id: 18, tier: "Quality", tierName: "Quality Tier (Qwen3.8 27B)", color: "#7C3AED", runType: "random", runIndex: 3, seed: 89122, runLabel: "Run 3 (Seed 89122)", sentences: 25, expected: 28, correct: 12, fp: 1, prec: 92.31, rec: 42.86, f05: 75.00, cleanFpr: 0, cleanFprDisplay: "0% (0/8)", latency: 3076.0, jfleg: "8 / 16", jflegVal: 8 / 16, bea: "4 / 12", beaVal: 4 / 12 },
-      { id: 19, tier: "Quality", tierName: "Quality Tier (Qwen3.8 27B)", color: "#7C3AED", runType: "random", runIndex: 4, seed: 50680, runLabel: "Run 4 (Seed 50680)", sentences: 25, expected: 28, correct: 11, fp: 1, prec: 91.67, rec: 39.29, f05: 72.37, cleanFpr: 0, cleanFprDisplay: "0% (0/8)", latency: 2996.0, jfleg: "7 / 17", jflegVal: 7 / 17, bea: "4 / 11", beaVal: 4 / 11 },
-      { id: 20, tier: "Quality", tierName: "Quality Tier Aggregate", color: "#7C3AED", runType: "mean", runLabel: "4-Run Macro Mean", sentences: 100, expected: 119, correct: 55, fp: 5, prec: 91.23, precSd: 4.00, precMin: 85.71, precMax: 95.24, rec: 45.69, recSd: 10.07, recMin: 39.29, recMax: 60.61, f05: 75.65, f05Sd: 6.88, f05Min: 69.77, f05Max: 85.47, cleanFpr: 0, cleanFprDisplay: "0% (0/32)", latency: 3315.5, jfleg: "37 / 69 (53.6%)", jflegVal: 37 / 69, bea: "18 / 50 (36.0%)", beaVal: 18 / 50 },
-
-      // QuillBot (Free Web Grammar Checker)
-      { id: 21, tier: "QuillBot", tierName: "QuillBot (Free Web)", color: "#0284C7", runType: "random", runIndex: 1, seed: 26061, runLabel: "Run 1 (Seed 26061)", sentences: 25, expected: 30, correct: 11, fp: 1, prec: 91.67, rec: 36.67, f05: 70.51, cleanFpr: 12.5, cleanFprDisplay: "12.5% (1/8)", latency: 1850.0, jfleg: "7 / 16", jflegVal: 7 / 16, bea: "4 / 14", beaVal: 4 / 14 },
-      { id: 22, tier: "QuillBot", tierName: "QuillBot (Free Web)", color: "#0284C7", runType: "random", runIndex: 2, seed: 3840, runLabel: "Run 2 (Seed 3840)", sentences: 25, expected: 33, correct: 16, fp: 2, prec: 88.89, rec: 48.48, f05: 76.19, cleanFpr: 25.0, cleanFprDisplay: "25.0% (2/8)", latency: 1780.0, jfleg: "11 / 20", jflegVal: 11 / 20, bea: "5 / 13", beaVal: 5 / 13 },
-      { id: 23, tier: "QuillBot", tierName: "QuillBot (Free Web)", color: "#0284C7", runType: "random", runIndex: 3, seed: 89122, runLabel: "Run 3 (Seed 89122)", sentences: 25, expected: 28, correct: 7, fp: 0, prec: 100.00, rec: 25.00, f05: 62.50, cleanFpr: 0, cleanFprDisplay: "0% (0/8)", latency: 1820.0, jfleg: "7 / 16", jflegVal: 7 / 16, bea: "0 / 12", beaVal: 0 / 12 },
-      { id: 24, tier: "QuillBot", tierName: "QuillBot (Free Web)", color: "#0284C7", runType: "random", runIndex: 4, seed: 50680, runLabel: "Run 4 (Seed 50680)", sentences: 25, expected: 28, correct: 11, fp: 0, prec: 100.00, rec: 39.29, f05: 76.39, cleanFpr: 0, cleanFprDisplay: "0% (0/8)", latency: 1810.0, jfleg: "9 / 17", jflegVal: 9 / 17, bea: "2 / 11", beaVal: 2 / 11 },
-      { id: 25, tier: "QuillBot", tierName: "QuillBot Aggregate", color: "#0284C7", runType: "mean", runLabel: "4-Run Macro Mean", sentences: 100, expected: 119, correct: 45, fp: 3, prec: 95.14, precSd: 5.49, precMin: 88.89, precMax: 100.00, rec: 37.36, recSd: 9.67, recMin: 25.00, recMax: 48.48, f05: 71.40, f05Sd: 6.53, f05Min: 62.50, f05Max: 76.39, cleanFpr: 9.4, cleanFprDisplay: "9.4% (3/32)", latency: 1815.0, jfleg: "34 / 69 (49.3%)", jflegVal: 34 / 69, bea: "11 / 50 (22.0%)", beaVal: 11 / 50 }
+      { id: 1, tier: "Normal", tierName: "Normal Proofread (LT Only)", color: "#1F6C9F", runType: "mean", runLabel: "Full Corpus", sentences: 1050, expected: 1179, correct: 289, fp: 0, prec: 100.00, rec: 24.51, f05: 61.88, cleanFpr: 0, cleanFprDisplay: "0% (0/350)", latency: 31.2, jfleg: "215 / 668 (32.2%)", jflegVal: 215 / 668, bea: "74 / 511 (14.5%)", beaVal: 74 / 511 },
+      { id: 2, tier: "Light", tierName: "Light Tier (MiniCPM 1B Hybrid)", color: "#D97706", runType: "mean", runLabel: "Full Corpus", sentences: 1050, expected: 1179, correct: 326, fp: 40, prec: 89.07, rec: 27.65, f05: 61.67, cleanFpr: 11.4, cleanFprDisplay: "11.4% (40/350)", latency: 352.4, jfleg: "232 / 668 (34.7%)", jflegVal: 232 / 668, bea: "94 / 511 (18.4%)", beaVal: 94 / 511 },
+      { id: 3, tier: "Standard", tierName: "Standard Tier (Qwen3.5 4B)", color: "#059669", runType: "mean", runLabel: "Full Corpus", sentences: 1050, expected: 1179, correct: 522, fp: 58, prec: 90.00, rec: 44.27, f05: 74.59, cleanFpr: 16.6, cleanFprDisplay: "16.6% (58/350)", latency: 233.4, jfleg: "350 / 668 (52.4%)", jflegVal: 350 / 668, bea: "172 / 511 (33.7%)", beaVal: 172 / 511 },
+      { id: 4, tier: "Quality", tierName: "Quality Tier (Qwen3.8 27B)", color: "#7C3AED", runType: "mean", runLabel: "Full Corpus", sentences: 1050, expected: 1179, correct: 609, fp: 15, prec: 97.60, rec: 51.65, f05: 82.86, cleanFpr: 4.3, cleanFprDisplay: "4.3% (15/350)", latency: 3784.1, jfleg: "395 / 668 (59.1%)", jflegVal: 395 / 668, bea: "214 / 511 (41.9%)", beaVal: 214 / 511 },
+      { id: 5, tier: "QuillBot", tierName: "QuillBot (Free Web)", color: "#0284C7", runType: "mean", runLabel: "Full Corpus", sentences: 1050, expected: 1179, correct: 414, fp: 74, prec: 84.84, rec: 35.11, f05: 66.11, cleanFpr: 21.1, cleanFprDisplay: "21.1% (74/350)", latency: 1815.0, jfleg: "259 / 668 (38.8%)", jflegVal: 259 / 668, bea: "155 / 511 (30.3%)", beaVal: 155 / 511 }
     ];
 
     let currentTableViewMode = "leaderboard"; // "leaderboard" | "matrix"
     let currentTableFilter = "all"; // "all" | "mean" | "runs"
     let currentTableSort = { col: null, dir: "desc" };
-    let openDrawers = new Set(); // Stores tier IDs whose drawers are open
     const tierMetadata = {
       Quality: {
         rank: 1,
@@ -2277,23 +2156,23 @@
         name: "Quality Tier",
         modelSubtitle: "Qwen3.8 27B · UD-Q4_K_M",
         accent: "#7C3AED",
-        notes: "Top F₀.₅ and recall, zero clean FPR, fully offline."
-      },
-      QuillBot: {
-        rank: 2,
-        shortName: "QuillBot (Free)",
-        name: "QuillBot Free",
-        modelSubtitle: "Cloud Web Grammar API",
-        accent: "#0284C7",
-        notes: "Cloud reference; high precision, paid upgrades for deeper rewrites."
+        notes: "Top F₀.₅ (82.86) and recall (51.7%), 4.3% clean FPR, fully offline."
       },
       Standard: {
-        rank: 3,
+        rank: 2,
         shortName: "Standard (4B)",
         name: "Standard Tier",
         modelSubtitle: "Qwen3.5 4B · Q4_K_M",
         accent: "#059669",
-        notes: "Best local speed/quality balance (~221 ms)."
+        notes: "Best local speed/quality balance (~233 ms); beats QuillBot Free on this suite."
+      },
+      QuillBot: {
+        rank: 3,
+        shortName: "QuillBot (Free)",
+        name: "QuillBot Free",
+        modelSubtitle: "Cloud Web Grammar API",
+        accent: "#0284C7",
+        notes: "Cloud reference on full corpus; higher clean FPR (21.1%)."
       },
       Normal: {
         rank: 4,
@@ -2301,7 +2180,7 @@
         name: "Normal Proofread",
         modelSubtitle: "LanguageTool · Rule-Based",
         accent: "#1F6C9F",
-        notes: "Instant rule-based baseline (~35 ms), no GPU."
+        notes: "Instant rule-based baseline (~31 ms), zero clean FPR, no GPU."
       },
       Light: {
         rank: 5,
@@ -2309,109 +2188,26 @@
         name: "Light Tier",
         modelSubtitle: "MiniCPM5 1B · Q8_0",
         accent: "#D97706",
-        notes: "Compact edge model for low-memory devices."
+        notes: "Compact edge model; full-corpus score does not beat Normal."
       }
     };
 
-    function renderScoreBar(meanF05, minF05, maxF05, sdF05, color) {
-      const fillPct = Math.min(100, Math.max(0, meanF05));
-      const minPct = Math.min(100, Math.max(0, minF05));
-      const maxPct = Math.min(100, Math.max(0, maxF05));
-      const whiskerLeft = minPct;
-      const whiskerWidth = Math.max(1.5, maxPct - minPct);
-
+    function renderScoreBar(f05, color) {
+      const fillPct = Math.min(100, Math.max(0, f05));
       return `
         <div class="score-bar-wrapper">
-          <div class="score-bar-container" title="Mean F₀.₅: ${meanF05.toFixed(2)}% | Variance: ±${sdF05.toFixed(1)}% | Range: [${minF05.toFixed(1)}% – ${maxF05.toFixed(1)}%]">
+          <div class="score-bar-container" title="F₀.₅: ${f05.toFixed(2)}% on N=1,050">
             <div class="score-bar-fill" style="width: ${fillPct.toFixed(1)}%; background: ${color};"></div>
-            <div class="score-whisker" style="left: ${whiskerLeft.toFixed(1)}%; width: ${whiskerWidth.toFixed(1)}%;">
-              <span class="whisker-cap start"></span>
-              <span class="whisker-line"></span>
-              <span class="whisker-cap end"></span>
-            </div>
           </div>
           <div class="score-bar-text">
-            <span style="color: ${color};">${meanF05.toFixed(2)}%</span>
-            <span class="score-sd">&plusmn;${sdF05.toFixed(1)}%</span>
+            <span style="color: ${color};">${f05.toFixed(2)}%</span>
           </div>
         </div>
       `;
     }
 
-    function toggleDrawer(tierId) {
-      if (openDrawers.has(tierId)) {
-        openDrawers.delete(tierId);
-      } else {
-        openDrawers.add(tierId);
-      }
-      const drawerRow = document.getElementById(`drawer-${tierId}`);
-      const btn = document.getElementById(`btn-drawer-${tierId}`);
-      const isOpen = openDrawers.has(tierId);
-      if (drawerRow) {
-        if (isOpen) drawerRow.classList.add("is-open");
-        else drawerRow.classList.remove("is-open");
-      }
-        if (btn) {
-          if (isOpen) {
-            btn.classList.add("is-open");
-            btn.innerHTML = `<span>4 Runs</span> <span class="caret-icon">${phIcon("caretDown", 12)}</span>`;
-          } else {
-            btn.classList.remove("is-open");
-            btn.innerHTML = `<span>4 Runs</span> <span class="caret-icon">${phIcon("caretDown", 12)}</span>`;
-          }
-        }
-
-      const allTiers = ["Quality", "QuillBot", "Standard", "Light", "Normal"];
-      const btnAll = document.getElementById("btn-toggle-all-drawers");
-      if (btnAll) {
-        if (openDrawers.size === allTiers.length) {
-          btnAll.classList.add("is-open");
-          btnAll.innerHTML = `<span>Collapse All Runs</span> <span class="caret-icon">${phIcon("caretDown", 12)}</span>`;
-        } else {
-          btnAll.classList.remove("is-open");
-          btnAll.innerHTML = `<span>Expand All Runs</span> <span class="caret-icon">${phIcon("caretDown", 12)}</span>`;
-        }
-      }
-    }
-
-    function toggleAllDrawers() {
-      const allTiers = ["Quality", "QuillBot", "Standard", "Light", "Normal"];
-      const shouldOpenAll = openDrawers.size < allTiers.length;
-      if (shouldOpenAll) {
-        allTiers.forEach(t => openDrawers.add(t));
-      } else {
-        openDrawers.clear();
-      }
-      allTiers.forEach(tierId => {
-        const drawerRow = document.getElementById(`drawer-${tierId}`);
-        const btn = document.getElementById(`btn-drawer-${tierId}`);
-        const isOpen = openDrawers.has(tierId);
-        if (drawerRow) {
-          if (isOpen) drawerRow.classList.add("is-open");
-          else drawerRow.classList.remove("is-open");
-        }
-        if (btn) {
-          if (isOpen) {
-            btn.classList.add("is-open");
-            btn.innerHTML = `<span>4 Runs</span> <span class="caret-icon">${phIcon("caretDown", 12)}</span>`;
-          } else {
-            btn.classList.remove("is-open");
-            btn.innerHTML = `<span>4 Runs</span> <span class="caret-icon">${phIcon("caretDown", 12)}</span>`;
-          }
-        }
-      });
-
-      const btnAll = document.getElementById("btn-toggle-all-drawers");
-      if (btnAll) {
-        if (shouldOpenAll) {
-          btnAll.classList.add("is-open");
-          btnAll.innerHTML = `<span>Collapse All Runs</span> <span class="caret-icon">${phIcon("caretDown", 12)}</span>`;
-        } else {
-          btnAll.classList.remove("is-open");
-          btnAll.innerHTML = `<span>Expand All Runs</span> <span class="caret-icon">${phIcon("caretDown", 12)}</span>`;
-        }
-      }
-    }
+    function toggleDrawer() { /* seed drawers retired for full-corpus scorecard */ }
+    function toggleAllDrawers() { /* no-op */ }
 
     function setTableViewMode(mode) {
       currentTableViewMode = mode;
@@ -2420,8 +2216,6 @@
         else b.classList.remove("active");
       });
 
-      const matrixRunsGroup = document.getElementById("matrix-runs-group");
-      const expandAllBtn = document.getElementById("btn-toggle-all-drawers");
       const scrollHint = document.getElementById("matrix-scroll-hint");
       const titleEm = document.getElementById("table-title-em");
       const descP = document.getElementById("table-desc-p");
@@ -2429,18 +2223,14 @@
 
       if (mode === "leaderboard") {
         if (matrixTable) matrixTable.classList.add("is-leaderboard");
-        if (matrixRunsGroup) matrixRunsGroup.style.display = "none";
-        if (expandAllBtn) expandAllBtn.style.display = "";
         if (scrollHint) scrollHint.style.display = "none";
         if (titleEm) titleEm.textContent = "Leaderboard";
-        if (descP) descP.innerHTML = "Executive summary of the 4-seed cross-validation benchmark across 5 engines. Click <strong>[ 4 Runs ▾ ]</strong> on any tier to inspect all individual seeds, or toggle to <strong>Detailed Matrix</strong> for the full 25-row dataset.";
+        if (descP) descP.innerHTML = "Ranking across 5 engines on the full 1,050-sentence corpus. Toggle to <strong>Detailed Matrix</strong> for edit counts, JFLEG/BEA hit rates, and latency.";
       } else {
         if (matrixTable) matrixTable.classList.remove("is-leaderboard");
-        if (matrixRunsGroup) matrixRunsGroup.style.display = "flex";
-        if (expandAllBtn) expandAllBtn.style.display = "none";
         if (scrollHint) scrollHint.style.display = "block";
         if (titleEm) titleEm.textContent = "Matrix";
-        if (descP) descP.innerHTML = "Complete 4-seed cross-validation evaluation across 5 engines (100 unique sentences each, 500 evaluations total). Displays individual runs alongside the Macro Mean with standard deviation (&plusmn;&sigma;) and min-max range.";
+        if (descP) descP.innerHTML = "Full-corpus metrics for all 5 engines (1,050 sentences each, 1,179 expected errors). One definitive row per engine, with no seed sampling.";
       }
 
       renderMatrixTable();
@@ -2458,14 +2248,7 @@
     }
 
     function formatRunCell(r) {
-      if (r.runType === "mean") {
-        return `<div class="run-cell"><span class="run-pill mean">Macro Mean</span><span class="run-cell-sub">4 Seeds (100 Items)</span></div>`;
-      }
-      const seedMatch = String(r.runLabel).match(/Seed\s+(\d+)/i);
-      const runMatch = String(r.runLabel).match(/Run\s+(\d+)/i);
-      const runN = runMatch ? runMatch[1] : (r.runIndex || "");
-      const seed = seedMatch ? seedMatch[1] : (r.seed || "");
-      return `<div class="run-cell"><span class="run-pill random">Run ${runN}</span><span class="run-cell-sub">Seed ${seed}</span></div>`;
+      return `<div class="run-cell"><span class="run-pill mean">Full Corpus</span><span class="run-cell-sub">N=${r.sentences}</span></div>`;
     }
 
     function formatRatioCell(display) {
@@ -2500,12 +2283,11 @@
         thead.innerHTML = `
           <tr>
             <th class="sortable col-engine" data-col="tier" onclick="handleTableSort('tier')" title="Tier &amp; Engine" style="width: 235px;">Tier &amp; Engine <span class="sort-icon" id="sort-tier">${phIcon("caretUpDown", 12)}</span></th>
-            <th class="sortable score-bar-cell" data-col="f05" onclick="handleTableSort('f05')" title="F₀.₅: combined score weighting precision ~2× over recall (standard for grammar correction)" style="min-width: 240px;">F₀.₅ Performance (&plusmn;&sigma;) <span class="sort-icon" id="sort-f05">${phIcon("caretUpDown", 12)}</span></th>
+            <th class="sortable score-bar-cell" data-col="f05" onclick="handleTableSort('f05')" title="F₀.₅: combined score weighting precision ~2× over recall (standard for grammar correction)" style="min-width: 240px;">F₀.₅ <span class="sort-icon" id="sort-f05">${phIcon("caretUpDown", 12)}</span></th>
             <th class="sortable num" data-col="prec" onclick="handleTableSort('prec')" title="Precision: share of suggested edits that were correct" style="min-width: 88px;">Precision <span class="sort-icon" id="sort-prec">${phIcon("caretUpDown", 12)}</span></th>
             <th class="sortable num" data-col="rec" onclick="handleTableSort('rec')" title="Recall: share of real errors that were caught" style="min-width: 88px;">Recall <span class="sort-icon" id="sort-rec">${phIcon("caretUpDown", 12)}</span></th>
             <th class="sortable num" data-col="cleanFpr" onclick="handleTableSort('cleanFpr')" title="Clean FPR: how often already-correct sentences were wrongly edited" style="min-width: 85px;">Clean FPR <span class="sort-icon" id="sort-cleanFpr">${phIcon("caretUpDown", 12)}</span></th>
             <th class="sortable num" data-col="latency" onclick="handleTableSort('latency')" title="Average inference time per sentence" style="min-width: 80px;">Speed <span class="sort-icon" id="sort-latency">${phIcon("caretUpDown", 12)}</span></th>
-            <th style="text-align: center; width: 95px;" title="Inspect individual seed runs">Breakdown</th>
           </tr>
         `;
       } else {
@@ -2568,7 +2350,6 @@
           return (va - vb) * dir;
         });
       } else {
-        // Canonical rank order: Quality, QuillBot, Standard, Light, Normal
         meanRows.sort((a, b) => b.f05 - a.f05);
       }
 
@@ -2579,26 +2360,16 @@
       tbody.innerHTML = meanRows.map((r, idx) => {
         const isActive = activeTierSelection && r.tier === activeTierSelection;
         const meta = tierMetadata[r.tier] || {};
-        const isOpen = openDrawers.has(r.tier);
-        const runsForTier = matrixTableData.filter(item => item.tier === r.tier && item.runType === "random");
-
         let trClass = "";
         if (isActive) trClass += " row-active";
 
-        const isTopF05 = r.f05 === maxF05;
         const isTopPrec = r.prec === maxPrec && maxPrec >= 99.9;
         const isFastest = r.latency === minLatency;
         const fprClass = r.cleanFpr === 0 ? "val-good" : "val-warn";
 
-        let precCellHtml = "";
-        if (r.precSd === 0) {
-          precCellHtml = `<span class="cell-split"><span class="cell-split-main">${r.prec.toFixed(1)}%</span><span class="cell-split-sub">100% in all 4</span></span>`;
-        } else {
-          precCellHtml = `<span class="cell-split"><span class="cell-split-main">${r.prec.toFixed(1)}% <span style="font-size:0.68rem; font-weight:500; opacity:0.8;">&plusmn;${r.precSd.toFixed(1)}%</span></span><span class="cell-split-sub">[${r.precMin.toFixed(1)}% &ndash; ${r.precMax.toFixed(1)}%]</span></span>`;
-        }
-
-        const recCellHtml = `<span class="cell-split"><span class="cell-split-main">${r.rec.toFixed(1)}% <span style="font-size:0.68rem; font-weight:500; opacity:0.8;">&plusmn;${r.recSd.toFixed(1)}%</span></span><span class="cell-split-sub">[${r.recMin.toFixed(1)}% &ndash; ${r.recMax.toFixed(1)}%]</span></span>`;
-        const latCellHtml = `<span class="cell-split"><span class="cell-split-main">${formatLatency(r.latency)}</span><span class="cell-split-sub">macro avg</span></span>`;
+        const precCellHtml = `<span class="cell-num">${r.prec.toFixed(1)}%</span>`;
+        const recCellHtml = `<span class="cell-num">${r.rec.toFixed(1)}%</span>`;
+        const latCellHtml = `<span class="cell-split"><span class="cell-split-main">${formatLatency(r.latency)}</span><span class="cell-split-sub">per sentence</span></span>`;
 
         return `
           <tr class="${trClass.trim()}" data-tier="${r.tier}" onclick="selectTier('${r.tier}')" style="cursor: pointer;">
@@ -2613,103 +2384,20 @@
               </div>
             </td>
             <td class="score-bar-cell">
-              ${renderScoreBar(r.f05, r.f05Min, r.f05Max, r.f05Sd, r.color)}
+              ${renderScoreBar(r.f05, r.color)}
             </td>
             <td class="cell-score num${isTopPrec ? " is-best" : ""}">${precCellHtml}</td>
             <td class="cell-num num">${recCellHtml}</td>
             <td class="num ${fprClass}">${formatRatioCell(r.cleanFprDisplay)}</td>
             <td class="cell-score num${isFastest ? " is-best" : ""}">${latCellHtml}</td>
-            <td style="text-align: center;">
-              <button class="btn-drawer-toggle ${isOpen ? 'is-open' : ''}" id="btn-drawer-${r.tier}" onclick="event.stopPropagation(); toggleDrawer('${r.tier}')" title="Inspect individual seed runs for ${r.tier}">
-                <span>4 Runs</span>
-                <span class="caret-icon">${phIcon("caretDown", 12)}</span>
-              </button>
-            </td>
-          </tr>
-          <tr class="drawer-tr ${isOpen ? 'is-open' : ''}" id="drawer-${r.tier}" data-tier="${r.tier}">
-            <td colspan="7">
-              <div class="drawer-container" style="--tier-accent: ${r.color};">
-                <div class="drawer-header">
-                  <div>
-                    <strong>${meta.name || r.tierName}</strong> · <span>${meta.modelSubtitle}</span> (4-Seed Cross-Validation Breakdown)
-                  </div>
-                  <div style="font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-muted);">
-                    Seeds: 26061, 3840, 89122, 50680 &bull; 25 Sentences / Run &bull; 100 Sentences Total
-                  </div>
-                </div>
-                <div class="drawer-scroll">
-                  <table class="nested-runs-table">
-                    <thead>
-                      <tr>
-                        <th style="text-align: left;">Run / Seed</th>
-                        <th>Items (N)</th>
-                        <th>Expected</th>
-                        <th>Fixes</th>
-                        <th>FP</th>
-                        <th>Precision</th>
-                        <th>Recall</th>
-                        <th>F₀.₅ Score</th>
-                        <th>Clean FPR</th>
-                        <th>Latency</th>
-                        <th>JFLEG Fluency</th>
-                        <th>BEA Grammar</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      ${runsForTier.map(rn => `
-                        <tr>
-                          <td style="text-align: left; font-weight: 600;">Run ${rn.runIndex} <span style="font-size:0.68rem; opacity:0.75; font-weight:normal;">(Seed ${rn.seed})</span></td>
-                          <td>${rn.sentences}</td>
-                          <td>${rn.expected}</td>
-                          <td style="color: ${rn.color}; font-weight:600;">${rn.correct}</td>
-                          <td class="${rn.fp > 0 ? 'val-warn' : ''}">${rn.fp}</td>
-                          <td>${rn.prec.toFixed(1)}%</td>
-                          <td>${rn.rec.toFixed(1)}%</td>
-                          <td style="color: ${rn.color}; font-weight: 700;">${rn.f05.toFixed(2)}</td>
-                          <td class="${rn.cleanFpr === 0 ? 'val-good' : 'val-warn'}">${rn.cleanFprDisplay}</td>
-                          <td>${formatLatency(rn.latency)}</td>
-                          <td>${formatScoreRatio(rn.jfleg)}</td>
-                          <td>${formatScoreRatio(rn.bea)}</td>
-                        </tr>
-                      `).join("")}
-                      <tr class="aggregate-subrow">
-                        <td style="text-align: left; font-weight: 700;">4-Run Macro Mean</td>
-                        <td>100</td>
-                        <td>75</td>
-                        <td style="color: ${r.color};">${r.correct}</td>
-                        <td class="${r.fp > 0 ? 'val-warn' : ''}">${r.fp}</td>
-                        <td>${r.prec.toFixed(1)}%</td>
-                        <td>${r.rec.toFixed(1)}%</td>
-                        <td style="color: ${r.color}; font-weight: 700;">${r.f05.toFixed(2)} &plusmn;${r.f05Sd.toFixed(1)}%</td>
-                        <td class="${r.cleanFpr === 0 ? 'val-good' : 'val-warn'}">${r.cleanFprDisplay}</td>
-                        <td>${formatLatency(r.latency)}</td>
-                        <td>${formatScoreRatio(r.jfleg)}</td>
-                        <td>${formatScoreRatio(r.bea)}</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-                <div class="drawer-footer">
-                  <strong>${meta.modelSubtitle}</strong>: ${meta.notes}
-                  F₀.₅ &sigma; = &plusmn;${r.f05Sd.toFixed(1)}% across 4 seeds.
-                </div>
-              </div>
-            </td>
           </tr>
         `;
       }).join("");
     }
 
     function renderDetailedMatrixRows(tbody) {
-      // 1. Filter rows
       let rows = matrixTableData.slice();
-      if (currentTableFilter === "mean") {
-        rows = rows.filter(r => r.runType === "mean");
-      } else if (currentTableFilter === "runs" || currentTableFilter === "random") {
-        rows = rows.filter(r => r.runType === "random");
-      }
 
-      // 2. Sort rows
       if (currentTableSort.col) {
         const col = currentTableSort.col;
         const dir = currentTableSort.dir === "asc" ? 1 : -1;
@@ -2722,28 +2410,18 @@
           return (va - vb) * dir;
         });
       } else {
-        // Default canonical ordering by id
-        rows.sort((a, b) => a.id - b.id);
+        rows.sort((a, b) => b.f05 - a.f05);
       }
 
-      // 3. Compute top stats among currently visible rows
       const maxF05 = rows.length ? Math.max(...rows.map(r => r.f05)) : -Infinity;
       const maxPrec = rows.length ? Math.max(...rows.map(r => r.prec)) : -Infinity;
       const maxJfleg = rows.length ? Math.max(...rows.map(r => r.jflegVal)) : -Infinity;
       const minLatency = rows.length ? Math.min(...rows.map(r => r.latency)) : Infinity;
 
-      // 4. Render HTML rows
-      let prevTier = null;
       tbody.innerHTML = rows.map(r => {
-        const isMean = r.runType === "mean";
         const isActive = activeTierSelection && r.tier === activeTierSelection;
-        const isTierStart = r.tier !== prevTier;
-        prevTier = r.tier;
-
-        let trClass = "";
-        if (isMean) trClass += " row-mean-highlight";
+        let trClass = "row-mean-highlight";
         if (isActive) trClass += " row-active";
-        if (isTierStart && !currentTableSort.col) trClass += " row-tier-start";
 
         const isTopF05 = r.f05 === maxF05;
         const isTopPrec = r.prec === maxPrec && maxPrec >= 99.9;
@@ -2752,39 +2430,6 @@
 
         const tierLabel = shortTierName(r.tier, r.tierName);
         const fprClass = r.cleanFpr === 0 ? "val-good" : "val-warn";
-
-        // Score formatting with statistical variance
-        let precCellHtml = "";
-        if (isMean) {
-          if (r.precSd === 0) {
-            precCellHtml = `<span class="cell-split"><span class="cell-split-main">${r.prec.toFixed(1)}%</span><span class="cell-split-sub">100% in all 4</span></span>`;
-          } else {
-            precCellHtml = `<span class="cell-split"><span class="cell-split-main">${r.prec.toFixed(1)}% <span style="font-size:0.68rem; font-weight:500; opacity:0.8;">&plusmn;${r.precSd.toFixed(1)}%</span></span><span class="cell-split-sub">[${r.precMin.toFixed(1)}% &ndash; ${r.precMax.toFixed(1)}%]</span></span>`;
-          }
-        } else {
-          precCellHtml = `<span class="cell-num num">${r.prec.toFixed(1)}%</span>`;
-        }
-
-        let recCellHtml = "";
-        if (isMean) {
-          recCellHtml = `<span class="cell-split"><span class="cell-split-main">${r.rec.toFixed(1)}% <span style="font-size:0.68rem; font-weight:500; opacity:0.8;">&plusmn;${r.recSd.toFixed(1)}%</span></span><span class="cell-split-sub">[${r.recMin.toFixed(1)}% &ndash; ${r.recMax.toFixed(1)}%]</span></span>`;
-        } else {
-          recCellHtml = `<span class="cell-num num">${r.rec.toFixed(1)}%</span>`;
-        }
-
-        let f05CellHtml = "";
-        if (isMean) {
-          f05CellHtml = `<span class="cell-split"><span class="cell-split-main" style="color: ${r.color};">${r.f05.toFixed(2)} <span style="font-size:0.68rem; font-weight:500; opacity:0.85;">&plusmn;${r.f05Sd.toFixed(1)}%</span></span><span class="cell-split-sub">[${r.f05Min.toFixed(1)} &ndash; ${r.f05Max.toFixed(1)}]</span></span>`;
-        } else {
-          f05CellHtml = `<span class="cell-score num" style="color: ${r.color};">${r.f05.toFixed(2)}</span>`;
-        }
-
-        let latCellHtml = "";
-        if (isMean) {
-          latCellHtml = `<span class="cell-split"><span class="cell-split-main">${formatLatency(r.latency)}</span><span class="cell-split-sub">macro avg</span></span>`;
-        } else {
-          latCellHtml = `<span class="cell-score num">${formatLatency(r.latency)}</span>`;
-        }
 
         return `
           <tr class="${trClass.trim()}" data-tier="${r.tier}">
@@ -2799,11 +2444,11 @@
             <td class="cell-num num">${r.expected}</td>
             <td class="cell-num num val-tier" style="color: ${r.color};">${r.correct}</td>
             <td class="cell-num num ${r.fp > 0 ? "val-warn" : ""}">${r.fp}</td>
-            <td class="cell-score num${isTopPrec ? " is-best" : ""}">${precCellHtml}</td>
-            <td class="cell-num num">${recCellHtml}</td>
-            <td class="cell-score num${isTopF05 ? " is-best" : ""}">${f05CellHtml}</td>
+            <td class="cell-score num${isTopPrec ? " is-best" : ""}"><span class="cell-num">${r.prec.toFixed(1)}%</span></td>
+            <td class="cell-num num"><span class="cell-num">${r.rec.toFixed(1)}%</span></td>
+            <td class="cell-score num${isTopF05 ? " is-best" : ""}"><span class="cell-score num" style="color: ${r.color};">${r.f05.toFixed(2)}</span></td>
             <td class="num ${fprClass}">${formatRatioCell(r.cleanFprDisplay)}</td>
-            <td class="cell-score num${isFastest ? " is-best" : ""}">${latCellHtml}</td>
+            <td class="cell-score num${isFastest ? " is-best" : ""}"><span class="cell-score num">${formatLatency(r.latency)}</span></td>
             <td class="num${isTopJfleg ? " is-best" : ""}">${formatScoreRatio(r.jfleg)}</td>
             <td class="num">${formatScoreRatio(r.bea)}</td>
           </tr>
@@ -2961,19 +2606,7 @@
       });
     }
 
-    // Table filter toggle
-    const tableFilterCtrl = document.getElementById("table-filter-ctrl");
-    if (tableFilterCtrl) {
-      tableFilterCtrl.addEventListener("click", (e) => {
-        const btn = e.target.closest(".segment-btn");
-        if (btn) {
-          document.querySelectorAll("#table-filter-ctrl .segment-btn").forEach(b => b.classList.remove("active"));
-          btn.classList.add("active");
-          currentTableFilter = btn.getAttribute("data-filter");
-          renderMatrixTable();
-        }
-      });
-    }
+    // Runs filter retired: full-corpus scorecard has one row per engine.
 
     // Table quick rank toggle
     const tableSortCtrl = document.getElementById("table-sort-ctrl");

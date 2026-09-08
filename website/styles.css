@@ -666,7 +666,7 @@ b,
 
 /* Cursor-aware dots: when JS is live, the static pattern is swapped for a
    canvas that gently pushes dots away from the cursor. Same geometry, same
-   look — just dynamic. */
+   look, just dynamic. */
 .dots-live .demo-showcase::before,
 .dots-live .widget-canvas::before,
 .dots-live .editor-live-zone::before,
