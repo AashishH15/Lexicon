@@ -9,28 +9,101 @@ This changelog tracks what is **live** in each release and what is still
 **stubbed** (shown in the interface but not yet functional). Stubbed features
 are listed so the release reads honestly about what works today.
 
-## v0.11.0-beta.1 — Browser Extension Beta
+## v0.11.0 — Browser Extension, 3-Tier Local AI, GPU Acceleration & Deep Proofread
 
-### Browser extension beta (Might be unstable!)
+Lexicon v0.11.0 is a major milestone that transforms Lexicon from a standalone desktop text editor into a comprehensive writing assistant ecosystem. This release introduces companion browser extensions for Chrome and Firefox, a new Quality local model tier plus upgraded Light and Standard GGUF pins, hybrid Deep Proofread, native GPU acceleration with real-time VRAM telemetry, customizable keyboard shortcuts, direct LanguageTool integration without GPL wrappers, selectable PDF export improvements, and an empirical 1,050-sentence benchmark suite with Free-tier cloud comparisons.
 
-This pre-release includes the desktop backend support the extension needs.
-Do **not** use stable v0.10.3 with this extension.
-Please rollback to v0.10.3 if this version doesnt work properly!
+---
 
-### Install order
-1. Install this desktop build (`v0.11.0-beta.1`) from the [release assets](https://github.com/AashishH15/Lexicon/releases/tag/v0.11.0-beta.1)
-2. Open Lexicon
-3. On the same release page, download `lexicon-chrome-0.1.0.zip` and (if you want FireFox) `lexicon-firefox-0.1.0.xpi`
-4. Chrome: unzip `lexicon-chrome-0.1.0.zip` → chrome://extensions → Developer mode → Load unpacked → select the unzipped folder. (*NOTE: There might be another zip within that folder)
-5. Go to `chrome://extensions/shortcuts` and make sure that `Proofread the focused text field` has the shortcut `Alt + Shift + L` if it does not please click the pencil icon and create the shortcut.
-6. Firefox: temporary load of the unsigned `.xpi` via `about:debugging` (This Firefox → Load Temporary Add-on → choose the `.xpi` in the unzipped `lexicon-firefox-extension`)
+### What's New in v0.11.0:
 
-### Known limits
-- Google Docs not supported
-- Firefox package is unsigned (temporary install only)
-- Desktop app must be running!
-- The badge will always show up green if the app isn't running
-> Doesn't need to be open you can X out the app it will stay running (will show up in the system tray chevron icons.)
+#### 🌐 Browser Extensions (Chrome & Firefox):
+- **Cross-Browser Companion**: Packaged extensions for Google Chrome (unpacked `.zip`) and Mozilla Firefox (`.xpi`), allowing users to bring Lexicon's grammar checking and text transforms into web textareas, inputs, and rich editors.
+- **In-Page Squiggles & Floating Suggestions**: Real-time error detection in the active browser tab via `detectEditable.js` and `squiggle.js`, paired with an interactive suggestions card (`suggestions.js`) for one-click fixes.
+- **Deep Shadow DOM & ContentEditable Support**: Accurately traverses nested shadow DOM boundaries and complex web editors without trapping keyboard focus.
+- **In-Browser Text Transforms**: Highlight text in any web field and select an AI transform (Rewrite, Casual, Friendly, Professional, Formal, Concise) to preview and replace in place.
+- **Match Focus & Smooth Auto-Scroll**: Clicking an issue card smoothly scrolls the web page directly to the underlined text with an animated highlight ping.
+- **Dictionary Synchronization**: Personal dictionary additions sync bidirectionally between browser extensions and the desktop backend over the same-device loopback API.
+- **Intelligent Offline Detection**: Extension status badge displays an alert (`!`) when the desktop backend is unreachable rather than reporting a false-positive active state.
+- **Pause Proofreading & Per-Site Disable**: Extension popup toggles to pause proofreading globally (rewrites stay available) or disable Lexicon on the current site, with settings persisted in extension storage.
+- **Keyboard Shortcut (`Alt+Shift+L`)**: Manifest command `lexicon-proofread` proofreads the focused text field from the keyboard on Chrome and Firefox.
+- **Shared Lex Status System (`lexStatus.js`)**: Consistent status icons and labels across the extension popup and suggestion UI (idle, checking, issues, all clear, no connection, disabled, error).
+- **Report / Feedback Affordance**: Extension popup includes a clear path to report issues; Settings → About & Feedback lists Chrome and Firefox extension packages.
+- **Desktop Handshake**: Backend CORS allowlist for pinned extension origins plus a health-check endpoint so the extension can confirm the local Lexicon sidecar is reachable.
+
+#### 🧠 3-Tier Local LLM Architecture & Hybrid Deep Proofread:
+- **New Quality Tier + Light/Standard Model Upgrades**: v0.11.0 introduces a third **Quality** download tier and replaces the previous Light and Standard GGUF pins with stronger curated models. Legacy Light/Standard files can be verified and cleaned up after a safe migration.
+- **3 Curated Model Tiers**:
+  - **Light Tier**: Replaces the previous Light pin with **MiniCPM5-1B** (Q8_0, ~1.15 GB) for fast local rewrites on low-power devices and laptops.
+  - **Standard Tier**: Replaces the previous Standard pin with **Qwen3.5-4B** (Q4_K_M, ~3.01 GB) as the default balance of speed, fluency, and contextual reasoning.
+  - **Quality Tier**: **New tier** pinned to **Qwen3.8-27B** (UD-Q4_K_M, ~16.5 GB) for precision and nuance when you want maximum local accuracy.
+- **Hybrid Deep Proofread Engine (`deepProofread.js`)**: Executes deterministic LanguageTool checks first as a baseline, followed by progressive 500-token chunked local LLM analysis.
+- **Semantic Polarity Guard**: Automatically rejects candidate edits that drop or invert negative polarity words (*not*, *never*, *hardly*, *barely*) without rule justification, eliminating semantic reversal errors.
+- **Greedy Decoding & Anti-Churn Filters**: Enforced `temperature: 0.0` to eliminate stochastic hallucinations on clean text. Blocked preposition cycling, phrase-level synonym churning, and adverb shuffling that alter style without correcting grammatical errors.
+- **Multilingual Deep Proofread (`languageSupport.js`)**: Language-specific prompts, language family categorization, and localized negative polarity filters for non-English text.
+- **Permissive Model JSON Parsing**: More tolerant parsing of model metadata / structured edit payloads so imperfect LLM JSON is less likely to discard valid suggestions.
+- **Automated Verification & Safe Migration**: Model upgrade system verifies GGUF magic bytes and executes a 1-token test inference via `llama_cpp` before safely cleaning up legacy Light/Standard model files.
+- **Model Manager UI (`ModelManager.jsx`)**: Responsive 3-column tier grid with equal-height cards, compact Phosphor action icons (`TrashSimple`, `ArrowsClockwise`), and color-coded status dots for bundled / Ollama / LM Studio / unconfigured states.
+- **Gold vs Purple Suggestion Badges**: Deterministic grammar/spelling cards use warm gold/amber badges; AI clarity and Deep Proofread suggestions use purple badges with a sparkle affordance and purple dotted underlines in the editor.
+- **Disabled Model Reasoning**: Transforms disable thinking (`think: false` / `enable_thinking: false`) and strip leaked `<think>` blocks so rewrites stay faster and free of reasoning chatter.
+- **Bundled Backend Load Resilience**: Retries model load with `use_mmap=False` when mmap/permission failures occur, surfaces clear `Engine failed to load model` errors, and enables macOS `com.apple.security.cs.allow-jit` so llama.cpp can initialize under the app sandbox.
+
+#### ⚡ GPU Hardware Acceleration & Telemetry:
+- **Dedicated Hardware Tab (`HardwareTab.jsx`)**: New Hardware settings panel displaying active compute devices, memory utilization, and acceleration settings.
+- **Dynamic Device Detection**: Detects CUDA, DirectML, ROCm, Vulkan, and Apple Metal hardware on launch.
+- **Dynamic VRAM Layer Offloading**: Automatically calculates optimal `n_gpu_layers` based on model context size and free VRAM headroom, preventing out-of-memory crashes while maximizing generation speed.
+- **Real-Time Telemetry**: Live meters for GPU/CPU utilization and visual VRAM allocation bars (shown locally only; hardware stats are not sent to Lexicon).
+
+#### ⌨️ Customizable Keyboard Shortcuts System:
+- **Dedicated Shortcuts Manager (`shortcuts.js`)**: Complete keyboard shortcut customization panel under Settings with modifier parsing (`Ctrl`, `Cmd`, `Alt`, `Shift`) and conflict detection.
+- **Application Commands**: Customizable shortcuts for Trigger Proofread, Accept Suggestion, Dismiss Suggestion, and Toggle Settings.
+- **Editor Commands**: Remappable formatting shortcuts for Bold, Italic, Underline, Strikethrough, Code, Headings 1 through 6, Lists, Blockquotes, Undo, and Redo.
+
+#### 🔍 Rule-Based Grammar & Style Engine Enhancements:
+- **Direct LanguageTool HTTP Client**: Removed the `language-tool-python` GPL wrapper dependency. Lexicon now communicates directly with the local LanguageTool Java server via its own lightweight, asynchronous HTTP client.
+- **Standalone LT 6.8 Installer**: Added an automated installer for source checkouts that downloads LanguageTool 6.8 and verifies its SHA-256 archive checksum before extracting.
+- **LanguageTool Picky Mode**: Configured LanguageTool requests with `level=picky` for comprehensive grammatical, stylistic, and punctuation coverage.
+- **Proper-Noun Spelling Shield**: Suppresses mid-sentence TitleCase spelling false positives (names and entities) while still flagging sentence-initial issues and common dictionary typos.
+- **POS Lite Heuristic Engine**: Added lightweight part-of-speech tagging to accurately resolve tricky subject-verb agreement across bare plurals and collective nouns.
+- **Expanded Grammar Enhancement Suite (`grammar_enhancements.py`)**:
+  - *Confusion Pairs & Homophones*: Catches common mix-ups including their/there/they're, affect/effect, complement/compliment, loose/lose, and principal/principle.
+  - *Number-Based Articles & Bare Plurals*: Detects *a/an* before numeric phrases and pairs bare plural subjects with plural verbs.
+  - *Double Negatives*: Detects and corrects constructions such as *"don't know nothing"* and *"can't hardly"*.
+  - *Punctuation Correction*: Flags missing sentence terminators, mismatched brackets, and comma splices.
+  - *Mass Nouns & Stative Verbs*: Flags improper pluralization of uncountable nouns (*"informations"*, *"furnitures"*) and improper progressive usage of stative verbs (*"I am knowing"*).
+  - *Hedging, Fillers & Weak Verbs*: Highlights unnecessary conversational hedges and suggests strong, direct active verbs.
+- **Long-Sentence & Hard-Break Detection**: Prose quality checks flag sentences over ~25 words and treat hard line breaks as sentence boundaries.
+- **Smarter Sentence Replacements**: When applying suggestions, Lexicon can replace a full sentence span when the edit is a rewrite rather than a tiny local patch.
+- **UTF-16-Safe Match Offsets**: Grammar enhancement offsets use UTF-16 units so emoji and other multi-byte characters stay aligned with the editor.
+- **Context-Aware Grammar Scanning & Caching (`grammarScan.js`, `grammarCache.js`)**: Implemented paragraph-level hashing with cache hit/miss telemetry, skipping checks for untouched paragraphs during continuous writing.
+
+#### 📄 Export & Desktop Status:
+- **Selectable PDF Export Preview**: Export flow adds a clean preview before save. Windows uses WebView2 native PDF rendering with browser headers/footers disabled; macOS and Linux continue through system print preview.
+- **Clearer PDF Export Guidance**: Export options explain how to keep selectable text and improve failure messaging when a destination cannot preserve it.
+- **Shared Lex Status in the App**: Review and related surfaces use the same Lex status language/icons as the extension for proofread and AI states.
+
+#### 🤖 External AI Providers (LM Studio & Ollama):
+- **LM Studio Integration**: Full support for LM Studio via its local OpenAI-compatible API (`localhost:1234`), custom server URLs, and Bearer API key authentication.
+- **Model Auto-Detection**: Detects available and currently loaded models in LM Studio and Ollama, displaying loaded model status in the Model Manager.
+- **Streamed Responses & Request Cancellation**: Streamed token generation for Ollama and LM Studio transforms, backed by `_start_transform_job` / `_remove_transform_job` request IDs for instant cancellation.
+
+#### 📊 Empirical 1,050-Sentence GEC Benchmark Suite:
+- **Authentic Evaluation Corpus (`gecFluencyBenchmark.json`)**: 1,050 carefully curated sentences across JFLEG (fluency and naturalness), BEA-2019 (grammatical error correction), and LOCNESS (clean native-speaker controls to measure false-positive rate).
+- **Deterministic Evaluation CLI (`npm run benchmark:gec`)**: Standardized benchmark runner computing Precision, Recall, $F_{0.5}$ (weighting precision 4x), and Clean Sentence FPR.
+- **Interactive Public Benchmark Showcase (`website/benchmark.html`)**: Interactive web dashboard featuring Pareto efficiency frontiers (speed vs. accuracy), leaderboard/matrix views, and head-to-head comparisons against publicly available Free Grammarly and QuillBot interfaces under a disclosed protocol.
+- **Comparative Disclaimers**: Benchmark page and Terms of Service document Free-only testing, method limits, and that results are suite-specific independent evaluations (not vendor affiliation or paid-SKU claims).
+
+#### 🛡️ System, Desktop, Website & Compliance Polish:
+- **Desktop Autostart**: Added an option to start Lexicon automatically with the operating system, minimizing to the system tray for instant background availability.
+- **Cross-Platform Process Termination**: Replaced Windows-specific `taskkill` with targeted process-tree termination for the Java LanguageTool process.
+- **Third-Party License Notices (`THIRD_PARTY_NOTICES.md`)**: Comprehensive license disclosures for LanguageTool 6.8, the bundled JRE, frontend and Rust dependencies, and browser extension libraries. Release packaging includes LICENSE and notices in installers and extension packages.
+- **LanguageTool Independence**: Explicit documentation clarifying that Lexicon is an independent, local-first project not affiliated with LanguageTool.
+- **Paper Texture & Light-Theme Surfaces**: Applied `lex-paper-surface` across dialogs, popovers, editor surfaces, and menus; theme-aware skeleton shimmer on Warm Cream / Linen / Newsprint; light-theme popover and portal coverage (including body-mounted slash-command menus); CSS nesting / `@layer` cleanup to silence stylesheet warnings while keeping Plain White and Dark Slate behavior intact.
+- **Settings Navigation & Copy**: Moved **Lex's Engine** higher in the Settings tab order and clarified the local-processing blurb so built-in proofreading and local AI stay on-device, the extension only talks to the app on this computer, and network use is limited to model downloads, updates, or an external AI server you configure.
+- **Brand & Asset Refresh**: Replaced generic icons with the official Lex brand mascot avatar, refined website navigation, and added Discord links across README, app, and site.
+- **Mobile Hamburger Drawer**: Marketing site uses a hamburger nav toggle that opens a mobile drawer for primary links across homepage, benchmark, privacy, and terms pages.
+- **Website Extension & Install Guidance**: Marketing site documents the browser extension beta, FAQ entries, and Windows SmartScreen / macOS Gatekeeper warnings for unsigned builds.
+- **Privacy & Terms Updates**: Privacy Policy and Terms of Service updated for browser-extension loopback use, shared dictionary sync, local GPU/hardware display (not sent to Lexicon), Hugging Face model downloads, optional external AI endpoints, and benchmark comparative claims.
 
 ---
 
