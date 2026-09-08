@@ -195,6 +195,54 @@ export const PROSE_CLARITY_PROMPT =
   "but preserve the original meaning and any uncertainty that is factually important. Output only the rewritten sentence " +
   "and nothing else. No preamble, no quotation marks.";
 
+// Express prompt: fixed instruction for one-call transcreation.
+// The backend sends the user text after this prompt, so keep this static.
+// Use short sentences. Use simple words. Avoid em dashes in this text.
+// Input text stays out of the prompt. The call sends it in the text field.
+export const EXPRESS_TONE_KEYS = [
+  "professional",
+  "casual",
+  "friendly",
+  "formal",
+  "concise",
+];
+
+export const EXPRESS_JSON_TEMPLATE =
+  '{\n' +
+  '  "detectedLanguage": "...",\n' +
+  '  "tones": {\n' +
+  '    "professional": "...",\n' +
+  '    "casual": "...",\n' +
+  '    "friendly": "...",\n' +
+  '    "formal": "...",\n' +
+  '    "concise": "..."\n' +
+  "  }\n" +
+  "}";
+
+export function getExpressPrompt(text) {
+  void text;
+  return (
+    "You are a phrasing specialist for English. " +
+    "Express the input thought in natural, idiomatic English. " +
+    "Do not translate word for word. Do not stay literal. " +
+    "Detect the source language and report it as detectedLanguage. " +
+    "Do not ask the user to pick a source language. " +
+    "If the input is already English, refine the wording for each tone and treat the task as a style set. " +
+    "Keep names, numbers, and intent. Do not add facts. Do not invent details. " +
+    "Keep each version short and fit for one short paragraph. " +
+    "Make the tones clearly different. " +
+    "Use natural contractions in casual. " +
+    "Keep professional polished and safe for the workplace. " +
+    "Keep friendly warm and kind. " +
+    "Keep formal correct and reserved. " +
+    "Make concise clearly shorter than the other versions. " +
+    "Return ONLY one JSON object and nothing else. " +
+    "Use this exact shape with these exact keys:\n" +
+    EXPRESS_JSON_TEMPLATE +
+    "\nNo preamble. No postscript. No explanation. No markdown. No code fence."
+  );
+}
+
 export function promptForTool(name) {
   // Check custom tools first
   const customTools = getCustomTools();
