@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { LEX_STATUS, resolveLexStatus, lexStatusMessage } from "../lexStatus.js";
+import {
+  LEX_STATUS,
+  formatEngineTierLabel,
+  resolveLexStatus,
+  lexStatusMessage,
+} from "../lexStatus.js";
 
 describe("Lex status resolver", () => {
   it("keeps Lex idle until a meaningful operation or result exists", () => {
@@ -128,5 +133,77 @@ describe("Lex status resolver", () => {
         deepMatches: [],
       }),
     ).toBe(LEX_STATUS.ALL_CLEAR);
+  });
+});
+
+describe("formatEngineTierLabel", () => {
+  it("stays empty when AI is not configured", () => {
+    expect(formatEngineTierLabel()).toBe("");
+    expect(formatEngineTierLabel({ configured: false })).toBe("");
+    expect(
+      formatEngineTierLabel({ configured: false, modelKey: "quality" }),
+    ).toBe("");
+  });
+
+  it("names the bundled tiers", () => {
+    expect(
+      formatEngineTierLabel({ configured: true, modelKey: "2b" }),
+    ).toBe("Standard");
+    expect(
+      formatEngineTierLabel({ configured: true, modelKey: "0.8b" }),
+    ).toBe("Light");
+    expect(
+      formatEngineTierLabel({ configured: true, modelKey: "quality" }),
+    ).toBe("Quality");
+  });
+
+  it("falls back to Standard for an unknown tier", () => {
+    expect(formatEngineTierLabel({ configured: true, modelKey: "9b" })).toBe(
+      "Standard",
+    );
+  });
+
+  it("adds the device in uppercase", () => {
+    expect(
+      formatEngineTierLabel({
+        configured: true,
+        modelKey: "2b",
+        device: "gpu",
+      }),
+    ).toBe("Standard · GPU");
+  });
+
+  it("names external servers directly", () => {
+    expect(formatEngineTierLabel({ configured: true, backend: "ollama" })).toBe(
+      "Ollama",
+    );
+    expect(
+      formatEngineTierLabel({ configured: true, backend: "lmstudio" }),
+    ).toBe("LM Studio");
+  });
+
+  it("follows auto detection for external servers", () => {
+    expect(
+      formatEngineTierLabel({
+        configured: true,
+        backend: "auto",
+        activeBackend: "ollama",
+      }),
+    ).toBe("Ollama");
+    expect(
+      formatEngineTierLabel({
+        configured: true,
+        backend: "auto",
+        activeBackend: "lmstudio",
+      }),
+    ).toBe("LM Studio");
+    expect(
+      formatEngineTierLabel({
+        configured: true,
+        backend: "auto",
+        activeBackend: "bundled",
+        modelKey: "quality",
+      }),
+    ).toBe("Quality");
   });
 });

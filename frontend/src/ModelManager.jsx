@@ -157,14 +157,18 @@ function ActiveStatus({ status }) {
  *  - mode: "onboarding" or "settings"
  *  - onPreferenceChange(pref): called after a choice is saved
  *  - renderFooter(api): returns the action buttons
+ *  - initialStatus: last known AI status. Paint it at once,
+ *    then refresh quietly in the background.
  */
 export default function ModelManager({
   mode = "onboarding",
   onPreferenceChange,
   onConfigured,
   renderFooter,
+  initialStatus = null,
 }) {
-  const [status, setStatus] = useState({
+  const initialStatusRef = useRef(initialStatus);
+  const [status, setStatus] = useState(() => ({
     ollama_available: false,
     lmstudio_available: false,
     lmstudio_server_available: false,
@@ -182,8 +186,9 @@ export default function ModelManager({
       lmstudio_url: "",
       lmstudio_api_key_configured: false,
     },
-  });
-  const [probeDone, setProbeDone] = useState(false);
+    ...(initialStatusRef.current || {}),
+  }));
+  const [probeDone, setProbeDone] = useState(() => Boolean(initialStatusRef.current));
   const [showAdvanced, setShowAdvanced] = useState(
     () => localStorage.getItem("lexicon:advanced-open") === "true"
   );
@@ -203,6 +208,9 @@ export default function ModelManager({
   const [progress, setProgress] = useState(null);
   const [deletingKey, setDeletingKey] = useState(null);
   const [error, setError] = useState("");
+  // Tier switch in flight. Show it until the save and refresh land.
+  const [switchingKey, setSwitchingKey] = useState(null);
+  const switchRequestRef = useRef(null);
   const pollRef = useRef(null);
   const userPickedRef = useRef(false);
   const lmStudioApiKeyChangedRef = useRef(false);
@@ -395,7 +403,9 @@ export default function ModelManager({
         if (!lmStudioApiKeyChangedRef.current) setLmStudioApiKeyDraft("");
       })
       .catch(() => {
-        if (!cancelled)
+        // Keep a seeded answer when the refresh fails. A quiet backend
+        // must not wipe the last known state.
+        if (!cancelled && !initialStatusRef.current)
           setStatus({
             ollama_available: false,
             lmstudio_available: false,
@@ -540,6 +550,33 @@ export default function ModelManager({
       if (ready && onConfigured) onConfigured();
     } catch {
       /* best-effort */
+    }
+  }
+
+  // Pick an installed tier in Settings. Save first, then refresh.
+  // Await the save so the refresh cannot read a stale preference.
+  // Keep a switching flag until both land. Ignore an older pick.
+  async function selectInstalledTier(key) {
+    userPickedRef.current = true;
+    setModelKey(key);
+    switchRequestRef.current = key;
+    setSwitchingKey(key);
+    try {
+      if (onPreferenceChange) {
+        await onPreferenceChange({
+          backend: "bundled",
+          model_key: key,
+          lmstudio_url: lmStudioUrl,
+          lmstudio_api_key: lmStudioApiKeyForSave(),
+          device: status.preference?.device || "gpu",
+        });
+      }
+    } catch {
+      // Save failed. Refresh below still resyncs with the server.
+    }
+    await refreshStatus();
+    if (switchRequestRef.current === key) {
+      setSwitchingKey(null);
     }
   }
 
@@ -814,6 +851,10 @@ export default function ModelManager({
             ? `${lmStudioModels.length} models found · ready for JIT loading`
             : "Server detected, but no chat models were found"
           : "No LM Studio server was detected";
+  // Saved active tier. The label below must follow the server truth,
+  // not the local card pick, or the two lines contradict each other.
+  const savedTierKey =
+    status.preference?.model_key || status.model_key || "2b";
 
   return (
     <div>
@@ -863,16 +904,27 @@ export default function ModelManager({
       )}
 
       {/* Active backend readout — gated on probeDone so we don't flash the
-          stale default ("Not configured") before the real status arrives. */}
-      {probeDone ? (
-        <ActiveStatus status={status} />
-      ) : (
+          stale default ("Not configured") before the real status arrives.
+          While a tier switch runs, show it instead of the old tier. */}
+      {!probeDone ? (
         <div className="mt-4 flex items-center gap-2 rounded-lg border border-hairline bg-canvas px-3 py-2">
           <span className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-muted" />
           <span className="animate-pulse font-mono text-[10px] uppercase tracking-widest text-muted">
             Checking AI status…
           </span>
         </div>
+      ) : switchingKey ? (
+        <div className="mt-4 flex items-center gap-2 rounded-lg border border-hairline bg-canvas px-3 py-2">
+          <span className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-pale-blue-text" />
+          <span className="font-sans text-xs text-ink">
+            Switching to{" "}
+            {MODEL_TIERS.find((t) => t.key === switchingKey)?.label ||
+              switchingKey}
+            …
+          </span>
+        </div>
+      ) : (
+        <ActiveStatus status={status} />
       )}
 
       {(wantBundle || mode === "settings") && (
@@ -893,37 +945,23 @@ export default function ModelManager({
                 aria-pressed={selected}
                 onClick={() => {
                   if (downloading) return;
+                  if (mode === "settings" && status.models_ready?.[tier.key]) {
+                    selectInstalledTier(tier.key);
+                    return;
+                  }
                   userPickedRef.current = true;
                   setModelKey(tier.key);
-                  // In settings, selecting an installed tier makes it active.
-                  if (mode === "settings" && status.models_ready?.[tier.key]) {
-                    if (onPreferenceChange)
-                      onPreferenceChange({
-                        backend: "bundled",
-                        model_key: tier.key,
-                        lmstudio_url: lmStudioUrl,
-                        lmstudio_api_key: lmStudioApiKeyForSave(),
-                      });
-                    refreshStatus();
-                  }
                 }}
                 onKeyDown={(e) => {
                   if (downloading) return;
                   if (e.key === "Enter" || e.key === " ") {
                     e.preventDefault();
+                    if (mode === "settings" && status.models_ready?.[tier.key]) {
+                      selectInstalledTier(tier.key);
+                      return;
+                    }
                     userPickedRef.current = true;
                     setModelKey(tier.key);
-                    if (mode === "settings" && status.models_ready?.[tier.key]) {
-                      if (onPreferenceChange)
-                        onPreferenceChange({
-                          backend: "bundled",
-                          model_key: tier.key,
-                          lmstudio_url: lmStudioUrl,
-                          lmstudio_api_key: lmStudioApiKeyForSave(),
-                          device: status.preference?.device || "gpu",
-                        });
-                      refreshStatus();
-                    }
                   }
                 }}
                 className={
@@ -1015,8 +1053,8 @@ export default function ModelManager({
       {mode === "settings" && phase !== "downloading" && (
         <div className="mt-3 flex items-center justify-between gap-3">
           <p className="font-sans text-[11px] text-muted">
-            {status.models_ready?.[modelKey]
-              ? `${MODEL_TIERS.find((t) => t.key === modelKey)?.label} is installed and active.`
+            {status.models_ready?.[savedTierKey]
+              ? `${MODEL_TIERS.find((t) => t.key === savedTierKey)?.label} is installed and active.`
               : "No model downloaded yet. AI tools won't run until you download one!"}
           </p>
           {!status.models_ready?.[modelKey] && (

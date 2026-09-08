@@ -466,6 +466,7 @@ export default function Settings({
   onClose,
   focusSettingKey = null,
   onFocusSettingConsumed,
+  initialAiStatus = null,
   userDictionary,
   onAddWord,
   onRemoveWord,
@@ -1914,6 +1915,7 @@ export default function Settings({
                   <div className="mt-3">
                     <ModelManager
                       mode="settings"
+                      initialStatus={initialAiStatus}
                       onPreferenceChange={(pref) => {
                         return setAiPreference(
                           pref.backend,

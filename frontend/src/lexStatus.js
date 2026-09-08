@@ -57,6 +57,39 @@ function isConnectionError(error) {
   );
 }
 
+// Tier names for the header readout. Keep them aligned with MODEL_TIERS
+// in ModelManager.jsx, which owns the full tier catalog.
+const ENGINE_TIER_LABELS = {
+  "0.8b": "Light",
+  "2b": "Standard",
+  quality: "Quality",
+};
+
+// Short engine label for the header. Empty string means hide the readout.
+// Mirror describeActive: saved backend wins, auto follows the live backend.
+export function formatEngineTierLabel({
+  configured = false,
+  backend = "auto",
+  modelKey = "2b",
+  activeBackend = "",
+  device = "",
+} = {}) {
+  if (!configured) {
+    return "";
+  }
+  if (backend === "ollama" || (backend === "auto" && activeBackend === "ollama")) {
+    return "Ollama";
+  }
+  if (
+    backend === "lmstudio" ||
+    (backend === "auto" && activeBackend === "lmstudio")
+  ) {
+    return "LM Studio";
+  }
+  const label = ENGINE_TIER_LABELS[modelKey] || "Standard";
+  return device ? `${label} · ${String(device).toUpperCase()}` : label;
+}
+
 export function resolveLexStatus({
   activeTool = "",
   checking = false,

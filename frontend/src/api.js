@@ -95,13 +95,48 @@ export async function checkGrammar(
   return data.matches;
 }
 
+// Cache window for AI status probes. Probes hit local servers and
+// hardware checks, so reuse fresh answers across quick callers.
+// A minute covers reopen bursts. Mutations still clear it at once.
+const AI_STATUS_TTL_MS = 60000;
+let aiStatusCache = null; // { at, data } | null
+let aiStatusInflight = null; // shared request | null
+
+// Drop the cached AI status. Call it after a change that moves status.
+export function invalidateAiStatus() {
+  aiStatusCache = null;
+}
+
 // Probe which AI backend is active and what's available.
-export async function getAiStatus() {
-  const response = await request("/ai/status");
-  if (!response.ok) {
-    throw new Error(`AI status failed: ${response.status}`);
+// Reuse a fresh answer. Share one request between quick callers.
+// Pass { force: true } to skip the cache. Never keep a failed probe.
+export async function getAiStatus({ force = false } = {}) {
+  const now = Date.now();
+  if (!force && aiStatusCache && now - aiStatusCache.at < AI_STATUS_TTL_MS) {
+    return aiStatusCache.data;
   }
-  return response.json();
+  if (!force && aiStatusInflight) {
+    return aiStatusInflight;
+  }
+  const task = (async () => {
+    const response = await request("/ai/status");
+    if (!response.ok) {
+      throw new Error(`AI status failed: ${response.status}`);
+    }
+    const data = await response.json();
+    aiStatusCache = { at: Date.now(), data };
+    return data;
+  })();
+  if (!force) {
+    aiStatusInflight = task;
+  }
+  try {
+    return await task;
+  } finally {
+    if (aiStatusInflight === task) {
+      aiStatusInflight = null;
+    }
+  }
 }
 
 // Read the user's persisted backend preference.
@@ -140,7 +175,9 @@ export async function setAiPreference(
     const data = await response.json().catch(() => ({}));
     throw new Error(data.error || `Set AI preference failed: ${response.status}`);
   }
-  return response.json();
+  const saved = await response.json();
+  invalidateAiStatus();
+  return saved;
 }
 
 // Fetch detailed hardware profile (CPU, Memory, GPU, tier recommendations).
@@ -167,7 +204,9 @@ export async function setHardwareSettings({ device, limitVramOffload }) {
     const data = await response.json().catch(() => ({}));
     throw new Error(data.error || `Set hardware settings failed: ${response.status}`);
   }
-  return response.json();
+  const hardware = await response.json();
+  invalidateAiStatus();
+  return hardware;
 }
 
 // Trigger the local-model download (runs synchronously server-side).
@@ -181,7 +220,9 @@ export async function downloadModel(modelKey = "2b") {
     const data = await response.json().catch(() => ({}));
     throw new Error(data.error || `Model download failed: ${response.status}`);
   }
-  return response.json();
+  const started = await response.json();
+  invalidateAiStatus();
+  return started;
 }
 
 // Poll download progress for a specific model key.
@@ -205,7 +246,9 @@ export async function cancelModelDownload(modelKey) {
   if (!response.ok) {
     throw new Error(`Model cancel failed: ${response.status}`);
   }
-  return response.json();
+  const cancelled = await response.json();
+  invalidateAiStatus();
+  return cancelled;
 }
 
 // Remove a downloaded model from disk.
@@ -219,7 +262,9 @@ export async function deleteModel(modelKey = "2b") {
     const data = await response.json().catch(() => ({}));
     throw new Error(data.error || `Model delete failed: ${response.status}`);
   }
-  return response.json();
+  const deleted = await response.json();
+  invalidateAiStatus();
+  return deleted;
 }
 
 // Remove an obsolete previous-generation model file to reclaim disk space.
@@ -233,7 +278,9 @@ export async function cleanupLegacyModel(modelKey = "2b") {
     const data = await response.json().catch(() => ({}));
     throw new Error(data.error || `Legacy cleanup failed: ${response.status}`);
   }
-  return response.json();
+  const cleaned = await response.json();
+  invalidateAiStatus();
+  return cleaned;
 }
 
 // Open a URL in the default OS browser (Tauri) or a new tab (web fallback).

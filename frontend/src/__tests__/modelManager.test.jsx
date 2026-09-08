@@ -2,7 +2,7 @@
 import { act } from "react";
 import React from "react";
 import { createRoot } from "react-dom/client";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -465,8 +465,7 @@ describe("ModelManager Upgrade Popover & Storage Migration", () => {
     );
   });
 
-  it("renders recommended tier badge on the recommended tier card based on hardware", async () => {
-    api.getAiStatus.mockResolvedValue({
+  it("renders recommended tier badge on the recommended tier card based on hardware", async () => {    api.getAiStatus.mockResolvedValue({
       upgrade_available: false,
       models_ready: { "2b": true },
       model_key: "2b",
@@ -494,5 +493,243 @@ describe("ModelManager Upgrade Popover & Storage Migration", () => {
     const badge = container.querySelector('[data-testid="recommended-tier-2b"]');
     expect(badge).not.toBeNull();
     expect(badge.textContent).toContain("Recommended");
+  });
+});
+
+describe("ModelManager tier switching feedback", () => {
+  let container;
+  let root;
+
+  function statusWith(prefKey) {
+    return {
+      ollama_available: false,
+      lmstudio_available: false,
+      lmstudio_server_available: false,
+      lmstudio_auth_required: false,
+      lmstudio_models: [],
+      lmstudio_loaded_models: [],
+      models_ready: { "2b": true, quality: true, "0.8b": true },
+      model_key: prefKey,
+      active_backend: "bundled",
+      preference: { backend: "bundled", model_key: prefKey },
+    };
+  }
+
+  function tierCard(name) {
+    return Array.from(container.querySelectorAll('[role="button"]')).find(
+      (el) => el.textContent.includes(name),
+    );
+  }
+
+  async function mountManager(onPreferenceChange) {
+    api.getAiStatus.mockResolvedValue(statusWith("2b"));
+    await act(async () => {
+      root.render(
+        <ModelManager
+          mode="settings"
+          onPreferenceChange={onPreferenceChange}
+          onConfigured={vi.fn()}
+        />,
+      );
+    });
+    expect(api.getAiStatus).toHaveBeenCalledTimes(1);
+  }
+
+  beforeEach(() => {
+    localStorage.clear();
+    vi.clearAllMocks();
+    container = document.createElement("div");
+    document.body.appendChild(container);
+    root = createRoot(container);
+  });
+
+  afterEach(async () => {
+    await act(async () => {
+      root.unmount();
+    });
+    container.remove();
+  });
+
+  it("shows Switching to Quality while the save is in flight", async () => {
+    let resolveSave;
+    const gate = new Promise((resolve) => {
+      resolveSave = resolve;
+    });
+    const onPreferenceChange = vi.fn(() => gate);
+    await mountManager(onPreferenceChange);
+
+    await act(async () => {
+      tierCard("Quality").dispatchEvent(
+        new MouseEvent("click", { bubbles: true }),
+      );
+    });
+
+    expect(onPreferenceChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        backend: "bundled",
+        model_key: "quality",
+        device: "gpu",
+      }),
+    );
+    expect(container.textContent).toContain("Switching to Quality");
+    expect(api.getAiStatus).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      resolveSave({});
+    });
+  });
+
+  it("refreshes only after the save resolves, then shows the new tier", async () => {
+    let resolveSave;
+    const gate = new Promise((resolve) => {
+      resolveSave = resolve;
+    });
+    await mountManager(vi.fn(() => gate));
+
+    await act(async () => {
+      tierCard("Quality").dispatchEvent(
+        new MouseEvent("click", { bubbles: true }),
+      );
+    });
+    expect(api.getAiStatus).toHaveBeenCalledTimes(1);
+
+    api.getAiStatus.mockResolvedValueOnce(statusWith("quality"));
+    await act(async () => {
+      resolveSave({});
+    });
+
+    expect(api.getAiStatus).toHaveBeenCalledTimes(2);
+    expect(container.textContent).toContain("Using local model · Quality");
+    expect(container.textContent).not.toContain("Switching to");
+  });
+
+  it("labels the active tier from saved preference, not the local pick", async () => {
+    let resolveSave;
+    const gate = new Promise((resolve) => {
+      resolveSave = resolve;
+    });
+    await mountManager(vi.fn(() => gate));
+
+    expect(container.textContent).toContain("Standard is installed and active.");
+
+    await act(async () => {
+      tierCard("Quality").dispatchEvent(
+        new MouseEvent("click", { bubbles: true }),
+      );
+    });
+    expect(container.textContent).toContain("Standard is installed and active.");
+    expect(container.textContent).not.toContain("Quality is installed and active.");
+
+    api.getAiStatus.mockResolvedValueOnce(statusWith("quality"));
+    await act(async () => {
+      resolveSave({});
+    });
+    expect(container.textContent).toContain("Quality is installed and active.");
+  });
+
+  it("clears the switching flag when the save fails", async () => {
+    await mountManager(vi.fn(() => Promise.reject(new Error("nope"))));
+
+    await act(async () => {
+      tierCard("Quality").dispatchEvent(
+        new MouseEvent("click", { bubbles: true }),
+      );
+    });
+
+    expect(container.textContent).not.toContain("Switching to");
+    expect(api.getAiStatus).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("ModelManager seeded status", () => {
+  let container;
+  let root;
+
+  function seedWith(prefKey) {
+    return {
+      ollama_available: false,
+      lmstudio_available: false,
+      lmstudio_server_available: false,
+      lmstudio_auth_required: false,
+      lmstudio_models: [],
+      lmstudio_loaded_models: [],
+      models_ready: { "2b": true, quality: true, "0.8b": true },
+      model_key: prefKey,
+      active_backend: "bundled",
+      preference: { backend: "bundled", model_key: prefKey },
+    };
+  }
+
+  beforeEach(() => {
+    localStorage.clear();
+    vi.clearAllMocks();
+    container = document.createElement("div");
+    document.body.appendChild(container);
+    root = createRoot(container);
+  });
+
+  afterEach(async () => {
+    await act(async () => {
+      root.unmount();
+    });
+    container.remove();
+  });
+
+  it("paints the known answer at once with no checking row", async () => {
+    let resolveRefresh;
+    api.getAiStatus.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveRefresh = () => resolve(seedWith("quality"));
+        }),
+    );
+    await act(async () => {
+      root.render(
+        <ModelManager
+          mode="settings"
+          initialStatus={seedWith("quality")}
+          onPreferenceChange={vi.fn()}
+          onConfigured={vi.fn()}
+        />,
+      );
+    });
+    expect(container.textContent).toContain("Using local model · Quality");
+    expect(container.textContent).not.toContain("Checking AI status");
+    expect(api.getAiStatus).toHaveBeenCalledTimes(1);
+    await act(async () => {
+      resolveRefresh();
+    });
+    expect(container.textContent).toContain("Using local model · Quality");
+  });
+
+  it("refreshes quietly when the seed is stale", async () => {
+    api.getAiStatus.mockResolvedValue(seedWith("quality"));
+    await act(async () => {
+      root.render(
+        <ModelManager
+          mode="settings"
+          initialStatus={seedWith("2b")}
+          onPreferenceChange={vi.fn()}
+          onConfigured={vi.fn()}
+        />,
+      );
+    });
+    expect(container.textContent).toContain("Using local model · Quality");
+    expect(container.textContent).not.toContain("Checking AI status");
+  });
+
+  it("keeps the seed when the background refresh fails", async () => {
+    api.getAiStatus.mockRejectedValue(new Error("offline"));
+    await act(async () => {
+      root.render(
+        <ModelManager
+          mode="settings"
+          initialStatus={seedWith("2b")}
+          onPreferenceChange={vi.fn()}
+          onConfigured={vi.fn()}
+        />,
+      );
+    });
+    expect(container.textContent).toContain("Using local model · Standard");
   });
 });

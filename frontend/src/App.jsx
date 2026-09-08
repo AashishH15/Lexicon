@@ -142,6 +142,7 @@ import {
   scanGrammarWindows,
 } from "./grammarScan.js";
 import {
+  formatEngineTierLabel,
   lexStatusMessage,
   resolveLexStatus,
 } from "./lexStatus.js";
@@ -537,6 +538,9 @@ export default function App() {
   const [aiModelKey, setAiModelKey] = useState("2b");
   const [aiBackendName, setAiBackendName] = useState("auto");
   const [aiActiveBackend, setAiActiveBackend] = useState("");
+  const [aiDevice, setAiDevice] = useState("");
+  // Last full AI status. Seed Settings with it so reopen paints at once.
+  const [aiStatusDetail, setAiStatusDetail] = useState(null);
   const [deepMatches, setDeepMatches] = useState([]);
   const [deepRunning, setDeepRunning] = useState(false);
   const [deepWarming, setDeepWarming] = useState(false);
@@ -581,6 +585,8 @@ export default function App() {
       setAiModelKey(s.preference?.model_key || s.model_key || "2b");
       setAiBackendName(s.preference?.backend || "auto");
       setAiActiveBackend(s.active_backend || "");
+      setAiDevice(s.preference?.device || "");
+      setAiStatusDetail(s);
     } catch {
       setAiConfigured(false);
     }
@@ -1473,7 +1479,7 @@ export default function App() {
       return;
     }
     if (!aiConfigured) {
-      setAiSetupOpen(true);
+      openEngineSettings();
       return;
     }
     if (transformRunningRef.current) {
@@ -2538,6 +2544,15 @@ export default function App() {
     ? {}
     : { modelKey: aiModelKey };
 
+  // Header readout for the active engine. Empty hides the button.
+  const engineTierLabel = formatEngineTierLabel({
+    configured: aiConfigured,
+    backend: aiBackendName,
+    modelKey: aiModelKey,
+    activeBackend: aiActiveBackend,
+    device: aiDevice,
+  });
+
   function openRightPanelForExpress() {
     if (focusMode) {
       openRightPeek();
@@ -2559,7 +2574,7 @@ export default function App() {
       return;
     }
     if (!aiConfigured) {
-      setAiSetupOpen(true);
+      openEngineSettings();
       return;
     }
     if (deepRunningRef.current) {
@@ -2642,6 +2657,13 @@ export default function App() {
     });
   }
 
+  // Open Settings on the Lex's Engine tab. Direct path to a model.
+  // The setup wizard opens on its own at first launch.
+  function openEngineSettings() {
+    setSettingsFocusKey("lex-engine-section");
+    setSettingsOpen(true);
+  }
+
   function handleToolClick(name) {
     const nextTool = activeTool === name ? "" : name;
     setActiveTool(nextTool);
@@ -2710,7 +2732,7 @@ export default function App() {
       return;
     }
     if (!aiConfigured) {
-      setAiSetupOpen(true);
+      openEngineSettings();
       return;
     }
     // Clicking the already-active AI tool again cancels an in-progress run
@@ -3301,6 +3323,17 @@ export default function App() {
           >
             {language}
           </button>
+          {engineTierLabel && (
+            <button
+              type="button"
+              onClick={openEngineSettings}
+              className="rounded px-2 py-1.5 font-mono text-[10px] uppercase tracking-widest text-muted transition-colors hover:text-ink"
+              aria-label="Lex's Engine settings"
+              title="Lex's Engine — open AI settings"
+            >
+              {engineTierLabel}
+            </button>
+          )}
         </div>
       </header>
 
@@ -3355,7 +3388,7 @@ export default function App() {
                 editor={editor}
                 activeTool={activeTool}
                 onToolClick={handleToolClick}
-                onAiSetup={() => setAiSetupOpen(true)}
+                onAiSetup={openEngineSettings}
                 aiConfigured={aiConfigured}
                 panelWidth={leftWidth}
                 isMac={isMac}
@@ -3378,7 +3411,7 @@ export default function App() {
                   </p>
                   <button
                     type="button"
-                    onClick={() => setAiSetupOpen(true)}
+                    onClick={openEngineSettings}
                     className="mt-2 rounded bg-pale-blue-text px-2.5 py-1 font-sans text-xs font-medium text-white transition-colors hover:bg-pale-blue-text/90"
                   >
                     Set up AI
@@ -3650,6 +3683,7 @@ export default function App() {
           }}
           focusSettingKey={settingsFocusKey}
           onFocusSettingConsumed={() => setSettingsFocusKey(null)}
+          initialAiStatus={aiStatusDetail}
           userDictionary={userDictionary}
           onAddWord={handleAddWordToDictionary}
           onRemoveWord={handleRemoveFromDictionary}
