@@ -20,9 +20,11 @@ import {
   CircleNotch,
   X,
   Sparkle,
+  Translate,
   ListMagnifyingGlass,
 } from "@phosphor-icons/react";
 import { getCustomTools } from "./prompts.js";
+import { EXPRESS_TOOL_NAME } from "./useExpress.js";
 import { DEEP_PROOFREAD_TOOL } from "./deepProofread.js";
 import { CUSTOM_ICON_MAP } from "./CustomToolsSettings.jsx";
 import { formatShortcut } from "./shortcuts.js";
@@ -40,6 +42,7 @@ const builtinGroups = [
     tools: [
       { name: "Rewrite", icon: PencilSimple },
       { name: "Concise", icon: TextT },
+      { name: EXPRESS_TOOL_NAME, icon: Translate },
     ],
   },
   {

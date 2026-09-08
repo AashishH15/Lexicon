@@ -6,6 +6,12 @@ import { EXPRESS_TONES, parseExpressJson } from "./expressParser.js";
 // Default tone. Use it on first load.
 export const EXPRESS_DEFAULT_TONE = "professional";
 
+// Tool name. Use it in the toolbar and the review panel.
+export const EXPRESS_TOOL_NAME = "Express in English";
+
+// Max input length. Call sites enforce this cap.
+export const EXPRESS_MAX_CHARS = 600;
+
 // Message for the Light tier. Light cannot do the JSON task well.
 export const EXPRESS_NEEDS_MODEL_MESSAGE =
   "Express in English needs Standard or Quality.";
@@ -13,6 +19,22 @@ export const EXPRESS_NEEDS_MODEL_MESSAGE =
 // Check the model tier. Block Light only. Allow auto and external servers.
 export function isExpressModelAllowed(modelKey) {
   return modelKey !== "0.8b";
+}
+
+// Pick the entry mode. Return run, paste, over-limit, or blocked.
+// Block Light first. Send no request for paste, over-limit, or blocked.
+export function resolveExpressEntry({ text, isModelAllowed } = {}) {
+  if (!isModelAllowed) {
+    return "blocked";
+  }
+  const input = typeof text === "string" ? text : "";
+  if (!input.trim()) {
+    return "paste";
+  }
+  if (input.length > EXPRESS_MAX_CHARS) {
+    return "over-limit";
+  }
+  return "run";
 }
 
 // Thin hook for Express in English. Wrap the shared transform.

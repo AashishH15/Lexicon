@@ -1,5 +1,7 @@
 import SuggestionCard from "./SuggestionCard.jsx";
 import DocStats from "./DocStats.jsx";
+import ExpressCard from "./ExpressCard.jsx";
+import { EXPRESS_TOOL_NAME } from "./useExpress.js";
 import { useEffect, useRef, useState } from "react";
 import { ArrowLineRight, Info, Lightbulb, CircleNotch } from "@phosphor-icons/react";
 
@@ -103,6 +105,17 @@ export default function ReviewPanel({
   deepWarning = "",
   onCancelDeep = null,
   onRetryDeep = null,
+  expressResult = null,
+  expressActiveTone = "professional",
+  expressStatus = "idle",
+  expressError = "",
+  expressHasSelection = true,
+  expressIsOverLimit = false,
+  expressIsModelAllowed = true,
+  onExpressToneChange = null,
+  onExpressReplace = null,
+  onExpressRun = null,
+  onExpressDismiss = null,
 }) {
   const isDeepProofread = activeTool === "Deep Proofread";
   const listMatches = isDeepProofread ? deepMatches : grammarMatches;
@@ -484,6 +497,21 @@ export default function ReviewPanel({
               )}
             </>
           )
+        ) : activeTool === EXPRESS_TOOL_NAME ? (
+          <ExpressCard
+            detectedLanguage={expressResult?.detectedLanguage || "Unknown"}
+            tones={expressResult?.tones || null}
+            activeTone={expressActiveTone}
+            onToneChange={onExpressToneChange}
+            status={expressStatus}
+            error={expressError}
+            hasSelection={expressHasSelection}
+            isOverLimit={expressIsOverLimit}
+            isModelAllowed={expressIsModelAllowed}
+            onReplace={onExpressReplace}
+            onRun={onExpressRun}
+            onDismiss={onExpressDismiss}
+          />
         ) : (
           <TransformView
             tool={activeTool}

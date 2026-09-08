@@ -114,6 +114,43 @@ describe("ExpressCard tones", () => {
     const tab = container.querySelector("button[aria-label='Formal tone']");
     expect(tab.getAttribute("aria-selected")).toBe("true");
   });
+
+  it("keeps tone tabs unselected while waiting for a pick", async () => {
+    await renderCard({
+      props: {
+        hasSelection: true,
+        tones: null,
+        activeTone: "professional",
+        status: "idle",
+      },
+    });
+    expect(container.textContent).toContain("Pick a tone to phrase this selection.");
+    expect(container.textContent).not.toContain("Polished for work");
+    const selected = container.querySelectorAll("button[role='tab'][aria-selected='true']");
+    expect(selected.length).toBe(0);
+  });
+
+  it("keeps paste mode tones quiet until a tone is chosen", async () => {
+    await renderCard({
+      props: {
+        hasSelection: false,
+        tones: null,
+        activeTone: "professional",
+        status: "idle",
+      },
+    });
+    expect(
+      container.querySelectorAll("button[role='tab'][aria-selected='true']").length,
+    ).toBe(0);
+    await act(async () => {
+      container
+        .querySelector("button[aria-label='Casual tone']")
+        .dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    const casual = container.querySelector("button[aria-label='Casual tone']");
+    expect(casual.getAttribute("aria-selected")).toBe("true");
+    expect(container.textContent).toContain("Relaxed, like a text");
+  });
 });
 
 describe("ExpressCard actions", () => {
@@ -175,6 +212,26 @@ describe("ExpressCard empty and gated modes", () => {
 
   it("shows the length note and blocks Run when over limit", async () => {
     const handlers = await renderCard({ props: { hasSelection: false, isOverLimit: true } });
+    expect(container.textContent).toContain("Please select a sentence or short paragraph.");
+    const run = container.querySelector("button[aria-label='Run Express']");
+    expect(run.disabled).toBe(true);
+    await act(async () => {
+      run.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    expect(handlers.onRun).not.toHaveBeenCalled();
+  });
+
+  it("blocks Run when pasted text is over 600 characters", async () => {
+    const handlers = await renderCard({ props: { hasSelection: false, tones: null } });
+    const input = container.querySelector("textarea[aria-label='Text to express in English']");
+    await act(async () => {
+      const nativeSetter = Object.getOwnPropertyDescriptor(
+        window.HTMLTextAreaElement.prototype,
+        "value",
+      ).set;
+      nativeSetter.call(input, "a".repeat(601));
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    });
     expect(container.textContent).toContain("Please select a sentence or short paragraph.");
     const run = container.querySelector("button[aria-label='Run Express']");
     expect(run.disabled).toBe(true);

@@ -10,6 +10,7 @@ import {
   X,
 } from "@phosphor-icons/react";
 import { EXPRESS_TONES } from "./expressParser.js";
+import { EXPRESS_MAX_CHARS } from "./useExpress.js";
 
 // Tone look and hint. Keep hints short. Use plain words.
 const TONE_META = {
@@ -46,6 +47,7 @@ export default function ExpressCard({
 }) {
   const [input, setInput] = useState("");
   const [copied, setCopied] = useState(false);
+  const [pickedTone, setPickedTone] = useState(null);
   const copyTimer = useRef(null);
 
   // Dismiss on Escape. Clean up the listener on unmount.
@@ -68,18 +70,32 @@ export default function ExpressCard({
     };
   }, []);
 
+  const displayTone = pickedTone || activeTone;
   const activeText =
-    tones && typeof tones === "object" ? tones[activeTone] || "" : "";
+    tones && typeof tones === "object" ? tones[displayTone] || "" : "";
   const hasResult = Boolean(activeText);
   const isLoading = status === "warming" || status === "working";
   const isError = status === "error";
+  // Keep chips quiet until the user picks a tone or a run is underway.
+  const toneChosen = Boolean(pickedTone) || hasResult || isLoading;
+  const awaitingTonePick = !toneChosen;
   const showBadge =
     typeof detectedLanguage === "string" &&
     detectedLanguage.trim() !== "" &&
     detectedLanguage !== "Unknown";
-  const activeHint = TONE_META[activeTone] ? TONE_META[activeTone].hint : "";
+  const activeHint =
+    !awaitingTonePick && TONE_META[displayTone]
+      ? TONE_META[displayTone].hint
+      : "";
+  const inputOverLimit = !hasSelection && input.length > EXPRESS_MAX_CHARS;
+  const showOverLimit = isOverLimit || inputOverLimit;
   const runDisabled =
-    isOverLimit || !isModelAllowed || isLoading || input.trim() === "";
+    isOverLimit ||
+    inputOverLimit ||
+    !isModelAllowed ||
+    isLoading ||
+    input.trim() === "";
+  const showResultArea = isLoading || hasResult;
 
   // Copy the active text. Show brief feedback. Never throw.
   async function handleCopy() {
@@ -117,12 +133,19 @@ export default function ExpressCard({
     }
   }
 
+  function handleToneClick(tone) {
+    setPickedTone(tone);
+    if (typeof onToneChange === "function") {
+      onToneChange(tone);
+    }
+  }
+
   return (
     <section
       aria-label="Express in English"
-      className="lex-paper-surface lex-card-enter flex min-h-[340px] flex-col rounded-xl border border-hairline p-6 pb-4"
+      className="lex-paper-surface lex-card-enter flex flex-col rounded-xl border border-hairline p-5"
     >
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 flex-wrap items-center gap-2">
           <h2 className="font-sans text-sm font-semibold text-ink">
             Express in English
@@ -137,17 +160,25 @@ export default function ExpressCard({
           type="button"
           aria-label="Dismiss Express card"
           onClick={() => onDismiss && onDismiss()}
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded text-muted transition-colors hover:bg-hairline/60 hover:text-ink"
+          className="flex h-7 w-7 shrink-0 items-center justify-center rounded text-muted transition-colors hover:bg-hairline/60 hover:text-ink"
         >
-          <X size={16} weight="bold" />
+          <X size={15} weight="bold" />
         </button>
       </div>
 
-      <div role="tablist" aria-label="Tone choices" className="mt-4 flex flex-wrap gap-1.5">
+      <p className="mt-4 font-mono text-[10px] uppercase tracking-[0.08em] text-muted">
+        Tone
+      </p>
+      <div
+        role="tablist"
+        aria-label="Tone choices"
+        className="mt-2 grid grid-cols-2 gap-1.5"
+      >
         {EXPRESS_TONES.map((tone) => {
           const meta = TONE_META[tone];
           const Icon = meta.icon;
-          const selected = tone === activeTone;
+          const selected = toneChosen && tone === displayTone;
+          const isLast = tone === EXPRESS_TONES[EXPRESS_TONES.length - 1];
           return (
             <button
               key={tone}
@@ -155,12 +186,13 @@ export default function ExpressCard({
               role="tab"
               aria-selected={selected ? "true" : "false"}
               aria-label={`${meta.label} tone`}
-              onClick={() => onToneChange && onToneChange(tone)}
+              onClick={() => handleToneClick(tone)}
               className={
-                "flex items-center gap-1.5 rounded px-2 py-1.5 font-sans text-xs font-medium transition-colors focus-visible:ring-1 focus-visible:ring-ink " +
+                "flex items-center justify-center gap-1.5 rounded-lg border px-2.5 py-2 font-sans text-xs font-medium transition-colors focus-visible:ring-1 focus-visible:ring-ink " +
+                (isLast ? "col-span-2 " : "") +
                 (selected
-                  ? "bg-ink text-white"
-                  : "text-ink hover:bg-hairline/60")
+                  ? "border-ink bg-ink text-white"
+                  : "border-hairline bg-transparent text-muted hover:border-muted hover:text-ink")
               }
             >
               <Icon size={14} weight="bold" />
@@ -169,31 +201,75 @@ export default function ExpressCard({
           );
         })}
       </div>
-      {activeHint && (
-        <p className="mt-1.5 font-mono text-[10px] uppercase tracking-[0.08em] text-muted">
-          {activeHint}
+      {activeHint ? (
+        <p className="mt-2 font-sans text-xs text-muted">{activeHint}</p>
+      ) : awaitingTonePick && hasSelection ? (
+        <p className="mt-2 font-sans text-xs text-muted">
+          Pick a tone to phrase this selection.
         </p>
+      ) : awaitingTonePick && !hasSelection ? (
+        <p className="mt-2 font-sans text-xs text-muted">
+          Paste text below. Pick a tone.
+        </p>
+      ) : null}
+
+      {!hasSelection && (
+        <div className="mt-5">
+          <label
+            htmlFor="express-input"
+            className="font-mono text-[10px] uppercase tracking-[0.08em] text-muted"
+          >
+            Paste text
+          </label>
+          <textarea
+            id="express-input"
+            aria-label="Text to express in English"
+            value={input}
+            onChange={(event) => setInput(event.target.value)}
+            placeholder="Paste a sentence or short paragraph..."
+            rows={3}
+            className="mt-1.5 w-full resize-none rounded-lg border border-hairline bg-canvas px-3 py-2.5 font-sans text-sm leading-relaxed text-ink outline-none placeholder:text-muted/70 focus:border-muted"
+          />
+          <button
+            type="button"
+            aria-label="Run Express"
+            disabled={runDisabled}
+            onClick={handleRun}
+            className="mt-3 w-full rounded-lg bg-ink py-2.5 font-sans text-sm font-medium text-white transition-transform duration-150 focus-visible:ring-1 focus-visible:ring-ink active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45"
+          >
+            Run
+          </button>
+        </div>
       )}
 
-      <div
-        data-testid="express-body"
-        className="mt-3 min-h-[96px] flex-1 whitespace-pre-wrap font-sans text-sm leading-loose text-ink"
-      >
-        {isLoading && !hasResult ? (
-          <div aria-hidden="true">
-            <div className="h-3 w-full rounded lex-shimmer" />
-            <div className="mt-3 h-3 w-[90%] rounded lex-shimmer" />
-            <div className="mt-3 h-3 w-[75%] rounded lex-shimmer" />
-          </div>
-        ) : hasResult ? (
-          activeText
-        ) : (
-          <span className="text-muted">Results appear here.</span>
-        )}
-      </div>
+      {showResultArea && (
+        <div
+          data-testid="express-body"
+          className="mt-5 whitespace-pre-wrap rounded-lg border border-hairline bg-canvas px-3.5 py-3 font-sans text-sm leading-relaxed text-ink"
+        >
+          {isLoading && !hasResult ? (
+            <div aria-hidden="true" className="space-y-2.5 py-0.5">
+              <div className="h-2.5 w-full rounded lex-shimmer" />
+              <div className="h-2.5 w-[88%] rounded lex-shimmer" />
+              <div className="h-2.5 w-[70%] rounded lex-shimmer" />
+            </div>
+          ) : (
+            activeText
+          )}
+        </div>
+      )}
+
+      {/* Keep a stable body hook for selection wait / empty tests. */}
+      {!showResultArea && (
+        <div data-testid="express-body" className="sr-only">
+          {hasSelection
+            ? "Pick a tone to phrase this selection."
+            : "Paste text to express in English."}
+        </div>
+      )}
 
       {isLoading && (
-        <p className="mt-3 font-mono text-[10px] lowercase tracking-[0.04em] text-muted">
+        <p className="mt-2.5 font-mono text-[10px] lowercase tracking-[0.04em] text-muted">
           {LOADING_COPY}
         </p>
       )}
@@ -210,50 +286,21 @@ export default function ExpressCard({
         </p>
       )}
 
-      {isOverLimit && (
+      {showOverLimit && (
         <p className="mt-3 font-sans text-xs leading-relaxed text-muted">
           {OVER_LIMIT_NOTE}
         </p>
       )}
 
-      {!hasSelection && (
-        <div className="mt-4">
-          <label
-            htmlFor="express-input"
-            className="font-mono text-[10px] uppercase tracking-[0.08em] text-muted"
-          >
-            Paste text
-          </label>
-          <textarea
-            id="express-input"
-            aria-label="Text to express in English"
-            value={input}
-            onChange={(event) => setInput(event.target.value)}
-            placeholder="Paste a sentence or short paragraph..."
-            rows={3}
-            className="mt-1.5 w-full rounded border border-hairline bg-canvas px-2.5 py-2 font-sans text-sm text-ink outline-none focus:border-muted"
-          />
-          <button
-            type="button"
-            aria-label="Run Express"
-            disabled={runDisabled}
-            onClick={handleRun}
-            className="mt-2.5 w-full rounded bg-ink py-2 font-sans text-sm font-medium text-white transition-transform duration-150 focus-visible:ring-1 focus-visible:ring-ink active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45"
-          >
-            Run
-          </button>
-        </div>
-      )}
-
       {hasResult && (
-        <div className="mt-4 flex items-center gap-3">
+        <div className="mt-4 flex items-center gap-2.5">
           {hasSelection && (
             <button
               type="button"
               aria-label="Replace selection"
               disabled={!activeText || isOverLimit}
               onClick={() => onReplace && onReplace(activeText)}
-              className="flex-1 rounded bg-ink py-2 font-sans text-sm font-medium text-white transition-transform duration-150 focus-visible:ring-1 focus-visible:ring-ink active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45"
+              className="flex-1 rounded-lg bg-ink py-2.5 font-sans text-sm font-medium text-white transition-transform duration-150 focus-visible:ring-1 focus-visible:ring-ink active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45"
             >
               Replace Selection
             </button>
@@ -263,7 +310,7 @@ export default function ExpressCard({
             aria-label="Copy result"
             disabled={!activeText}
             onClick={handleCopy}
-            className="flex flex-1 items-center justify-center gap-1.5 rounded border border-hairline bg-transparent py-2 font-sans text-sm font-medium text-ink transition-transform duration-150 focus-visible:ring-1 focus-visible:ring-ink active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45"
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-hairline bg-transparent py-2.5 font-sans text-sm font-medium text-ink transition-transform duration-150 focus-visible:ring-1 focus-visible:ring-ink active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45"
           >
             {copied ? <Check size={15} weight="bold" /> : <Copy size={15} weight="bold" />}
             <span>{copied ? "Copied" : "Copy"}</span>

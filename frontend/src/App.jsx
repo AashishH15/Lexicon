@@ -41,6 +41,12 @@ import { SETTINGS_DEFAULTS } from "./Settings.jsx";
 const Settings = lazy(() => import("./Settings.jsx"));
 const AiSetupModal = lazy(() => import("./AiSetupModal.jsx"));
 import useTransform from "./useTransform.js";
+import useExpress, {
+  EXPRESS_MAX_CHARS,
+  EXPRESS_TOOL_NAME,
+  isExpressModelAllowed,
+  resolveExpressEntry,
+} from "./useExpress.js";
 import {
   isAiTool,
   promptForTool,
@@ -523,6 +529,14 @@ export default function App() {
   const [transformResults, setTransformResults] = useState([]); // [{ tool, text, from, to, part, total }]
   const [transformProgress, setTransformProgress] = useState(null); // { current, total } | null
   const [transformRunning, setTransformRunning] = useState(false);
+  const express = useExpress();
+  const [expressRange, setExpressRange] = useState(null); // { from, to } | null
+  const [expressOverLimit, setExpressOverLimit] = useState(false);
+  // Selection text waiting for a tone pick before the first Express run.
+  const [expressPendingText, setExpressPendingText] = useState(null);
+  const [aiModelKey, setAiModelKey] = useState("2b");
+  const [aiBackendName, setAiBackendName] = useState("auto");
+  const [aiActiveBackend, setAiActiveBackend] = useState("");
   const [deepMatches, setDeepMatches] = useState([]);
   const [deepRunning, setDeepRunning] = useState(false);
   const [deepWarming, setDeepWarming] = useState(false);
@@ -563,6 +577,10 @@ export default function App() {
             ? s.lmstudio_available
             : Boolean(s.models_ready?.[s.preference?.model_key || s.model_key]);
       setAiConfigured(configured);
+      // Keep prefs for the Express gate. External servers skip the tier gate.
+      setAiModelKey(s.preference?.model_key || s.model_key || "2b");
+      setAiBackendName(s.preference?.backend || "auto");
+      setAiActiveBackend(s.active_backend || "");
     } catch {
       setAiConfigured(false);
     }
@@ -2451,12 +2469,129 @@ export default function App() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [editor, settingsOpen, shortcuts]);
 
+  // Express gate. External servers skip the Light tier check.
+  // Bundled tiers need Standard (2b) or Quality for the JSON task.
+  const isExternalExpressBackend =
+    aiBackendName === "ollama" ||
+    aiBackendName === "lmstudio" ||
+    aiActiveBackend === "ollama" ||
+    aiActiveBackend === "lmstudio";
+  const expressGateKey = isExternalExpressBackend ? "2b" : aiModelKey;
+  const isExpressAllowed = isExpressModelAllowed(expressGateKey);
+  const expressRunOptions = isExternalExpressBackend
+    ? {}
+    : { modelKey: aiModelKey };
+
+  function openRightPanelForExpress() {
+    if (focusMode) {
+      openRightPeek();
+      return;
+    }
+    setRightPanelOpen(true);
+    try {
+      localStorage.setItem(rightPanelKey, "true");
+    } catch {
+      // Storage full. Keep the open panel for this session.
+    }
+  }
+
+  // Open Express in English. Always use the right panel drawer.
+  // With a short selection: open the card and wait for a tone pick.
+  // With no selection: open paste mode. Over-limit and Light never call the model.
+  function openExpress() {
+    if (!editor) {
+      return;
+    }
+    if (!aiConfigured) {
+      setAiSetupOpen(true);
+      return;
+    }
+    if (deepRunningRef.current) {
+      cancelDeepProofread();
+    }
+    const { from, to } = editor.state.selection;
+    const hasSelection = from !== to;
+    const text = hasSelection
+      ? editor.state.doc.textBetween(from, to, " ")
+      : "";
+    setActiveTool(EXPRESS_TOOL_NAME);
+    openRightPanelForExpress();
+    const mode = resolveExpressEntry({
+      text,
+      isModelAllowed: isExpressAllowed,
+    });
+    if (mode === "run") {
+      setExpressRange({ from, to });
+      setExpressOverLimit(false);
+      setExpressPendingText(text);
+      express.cancel();
+      express.clear();
+      return;
+    }
+    setExpressRange(hasSelection ? { from, to } : null);
+    setExpressOverLimit(text.length > EXPRESS_MAX_CHARS);
+    setExpressPendingText(null);
+    // Light, paste, and over-limit never call the model from here.
+    // The card shows the Light note via isModelAllowed.
+    express.cancel();
+    express.clear();
+  }
+
+  function dismissExpress() {
+    express.cancel();
+    express.clear();
+    setExpressRange(null);
+    setExpressOverLimit(false);
+    setExpressPendingText(null);
+    setActiveTool("");
+  }
+
+  // Tone pick. Switch the active tone. Start the first run when a selection is pending.
+  function handleExpressToneChange(tone) {
+    express.setActiveTone(tone);
+    if (
+      !expressPendingText ||
+      express.result ||
+      express.status === "warming" ||
+      express.status === "working" ||
+      !isExpressAllowed
+    ) {
+      return;
+    }
+    express.runExpress(expressPendingText, expressRunOptions);
+  }
+
+  // Replace the express snapshot range in one step. Undo restores it.
+  function replaceExpressRange(text) {
+    if (!editor || !expressRange || !text) {
+      return;
+    }
+    const size = editor.state.doc.content.size;
+    const from = Math.max(0, Math.min(expressRange.from, size));
+    const to = Math.max(from, Math.min(expressRange.to, size));
+    editor.chain().focus().insertContentAt({ from, to }, text).run();
+    express.clear();
+    setExpressRange(null);
+    setExpressOverLimit(false);
+    setExpressPendingText(null);
+    setActiveTool("");
+  }
+
   function handleToolClick(name) {
     const nextTool = activeTool === name ? "" : name;
     setActiveTool(nextTool);
     const leavingProofread = activeTool === "Proofread" && nextTool !== "Proofread";
     const leavingDeep =
       activeTool === DEEP_PROOFREAD_TOOL && nextTool !== DEEP_PROOFREAD_TOOL;
+    const leavingExpress =
+      activeTool === EXPRESS_TOOL_NAME && nextTool !== EXPRESS_TOOL_NAME;
+    if (leavingExpress) {
+      express.cancel();
+      express.clear();
+      setExpressRange(null);
+      setExpressOverLimit(false);
+      setExpressPendingText(null);
+    }
     if (leavingProofread || leavingDeep) {
       if (checkTimer.current) {
         clearTimeout(checkTimer.current);
@@ -2491,6 +2626,18 @@ export default function App() {
     if (name === DEEP_PROOFREAD_TOOL) {
       if (nextTool === DEEP_PROOFREAD_TOOL) {
         runDeepProofread();
+      }
+      return;
+    }
+    if (name === EXPRESS_TOOL_NAME) {
+      if (nextTool === EXPRESS_TOOL_NAME) {
+        openExpress();
+      } else {
+        express.cancel();
+        express.clear();
+        setExpressRange(null);
+        setExpressOverLimit(false);
+        setExpressPendingText(null);
       }
       return;
     }
@@ -3148,8 +3295,12 @@ export default function App() {
                 panelWidth={leftWidth}
                 isMac={isMac}
                 proofreadShortcut={shortcuts[SHORTCUT_IDS.TRIGGER_PROOFREAD]}
-                isWarming={isWarming}
-                transformRunning={transformRunning}
+                isWarming={isWarming || express.isWarming}
+                transformRunning={
+                  transformRunning ||
+                  express.status === "working" ||
+                  express.status === "warming"
+                }
                 deepRunning={deepRunning}
                 deepWarming={deepWarming}
               />
@@ -3227,6 +3378,7 @@ export default function App() {
             emptyDoc={emptyDoc}
             proofreadActive={activeTool === "Proofread"}
             toneResult={toneResult}
+            onExpress={openExpress}
           />
           {transformRunning && (
             <div className="pointer-events-none absolute right-12 top-3 z-10">
@@ -3300,6 +3452,11 @@ export default function App() {
                 }
                 grammarRunRef.current?.invalidate();
                 cancelDeepProofread();
+                express.cancel();
+                express.clear();
+                setExpressRange(null);
+                setExpressOverLimit(false);
+                setExpressPendingText(null);
                 setActiveTool("");
                 setChecking(false);
                 setGrammarMatches([]);
@@ -3331,6 +3488,29 @@ export default function App() {
               deepWarning={deepWarning}
               onCancelDeep={cancelDeepProofread}
               onRetryDeep={runDeepProofread}
+              expressResult={express.result}
+              expressActiveTone={express.activeTone}
+              expressStatus={express.status}
+              expressError={express.error}
+              expressHasSelection={expressRange != null}
+              expressIsOverLimit={expressOverLimit}
+              expressIsModelAllowed={isExpressAllowed}
+              onExpressToneChange={handleExpressToneChange}
+              onExpressReplace={replaceExpressRange}
+              onExpressRun={(pastedText) => {
+                const text = typeof pastedText === "string" ? pastedText.trim() : "";
+                if (!text) {
+                  return;
+                }
+                if (text.length > EXPRESS_MAX_CHARS) {
+                  setExpressOverLimit(true);
+                  return;
+                }
+                setExpressOverLimit(false);
+                setExpressPendingText(null);
+                express.runExpress(text, expressRunOptions);
+              }}
+              onExpressDismiss={dismissExpress}
             />
           </aside>
         </div>
