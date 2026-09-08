@@ -52,6 +52,7 @@
   const HOVER_BRIDGE = 4;
   const TOOLTIP_HIDE_DELAY_MS = 200;
   const TONE_TOOLS = [
+    "Express in English",
     "Friendly",
     "Professional",
     "Academic",
@@ -62,6 +63,59 @@
     "Persuasive",
     "Humorous",
   ];
+
+  // Tone order for Express results. Match shared/expressParser.js.
+  const EXPRESS_TONE_ORDER = [
+    "professional",
+    "casual",
+    "friendly",
+    "formal",
+    "concise",
+  ];
+
+  // Shape an Express result for the tone picker. Never throw.
+  // Returns badge text, tone chips, preview text, and the active tone.
+  function expressToneModel(parsed, activeTone) {
+    try {
+      const tones =
+        parsed && typeof parsed.tones === "object" && parsed.tones !== null
+          ? parsed.tones
+          : {};
+      const detected =
+        parsed && typeof parsed.detectedLanguage === "string"
+          ? parsed.detectedLanguage.trim()
+          : "";
+      const usable = EXPRESS_TONE_ORDER.some((key) =>
+        String(tones[key] || "").trim(),
+      );
+      const tone = EXPRESS_TONE_ORDER.includes(activeTone)
+        ? activeTone
+        : "professional";
+      const label = (key) => key.charAt(0).toUpperCase() + key.slice(1);
+      return {
+        usable,
+        badge:
+          detected && detected.toLowerCase() !== "unknown"
+            ? `${detected} -> English`
+            : "",
+        tones: EXPRESS_TONE_ORDER.map((key) => ({
+          key,
+          label: label(key),
+          text: String(tones[key] || ""),
+        })),
+        preview: String(tones[tone] || ""),
+        activeTone: tone,
+      };
+    } catch (e) {
+      return {
+        usable: false,
+        badge: "",
+        tones: [],
+        preview: "",
+        activeTone: "professional",
+      };
+    }
+  }
 
   const STYLE =
     `.badge{position:fixed;width:${BADGE_SIZE}px;height:${BADGE_SIZE}px;` +
@@ -125,6 +179,10 @@
     ".panel .list::-webkit-scrollbar-thumb,.panel .ai-result::-webkit-scrollbar-thumb{background:#b9b7b0;border-radius:6px}" +
     ".panel .list::-webkit-scrollbar-thumb:hover,.panel .ai-result::-webkit-scrollbar-thumb:hover{background:#9f9d96}" +
     ".panel .ai-error{margin:6px 0 0;color:#9f2f2d;font-size:11px}" +
+    ".panel .ai-lang{margin:6px 0 0;font-size:11px;color:#5f5e5b}" +
+    ".panel .ai-tones{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}" +
+    ".panel .ai-tone{border:1px solid #d8d7d3;border-radius:5px;background:transparent;color:#111111;font:inherit;font-size:11px;padding:3px 7px;cursor:pointer}" +
+    ".panel .ai-tone.active{border-color:#1f6c9f;background:#1f6c9f;color:#ffffff}" +
     `.tooltip{position:fixed;width:${TOOLTIP_WIDTH}px;box-sizing:border-box;padding:12px;` +
     "background:#ffffff;border:1px solid #eaeaea;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.04);" +
     "font:14px/1.45 -apple-system,BlinkMacSystemFont,\"Segoe UI\",Helvetica,Arial,sans-serif;color:#111111;z-index:4}" +
@@ -787,8 +845,8 @@
       error: String(opts.error || ""),
       aiBusy: Boolean(opts.aiBusy),
       aiError: String(opts.aiError || ""),
-      onApply: opts.onApply || (() => {}),
-      onDismiss: opts.onDismiss || (() => {}),
+      onApply: opts.onApply || (() => { }),
+      onDismiss: opts.onDismiss || (() => { }),
       onApplyReplacement: opts.onApplyReplacement || null,
       onDismissMatch: opts.onDismissMatch || null,
       onFocusMatch: opts.onFocusMatch || null,
@@ -1109,13 +1167,16 @@
     const head = document.createElement("div");
     head.className = "head";
     const heading = document.createElement("span");
-    heading.textContent = "Tone";
+    heading.textContent = state.aiExpress ? "Express in English" : "Tone";
     head.appendChild(heading);
     const close = document.createElement("button");
     close.className = "close";
     close.type = "button";
     close.appendChild(closeIcon());
-    close.setAttribute("aria-label", "Close Tone");
+    close.setAttribute(
+      "aria-label",
+      state.aiExpress ? "Close Express in English" : "Close Tone",
+    );
     close.addEventListener("click", () => {
       state.aiPanelOpen = false;
       panel.hidden = true;
@@ -1157,6 +1218,7 @@
       state.aiBusy = true;
       state.error = "";
       state.aiError = "";
+      state.aiExpress = null;
       fieldUpdateBadge(state);
       fieldRenderAiPanel(state);
       fieldPosition(state);
@@ -1166,6 +1228,32 @@
           if (!result || result.ok === false) {
             state.aiError = result?.error || "AI tool failed.";
             state.aiResult = null;
+            fieldUpdateBadge(state);
+            return;
+          }
+          // Express answers with five tones. Offer a picker and mirror
+          // the active tone into the shared replace flow below.
+          if (result.express) {
+            const model = expressToneModel(result, "professional");
+            if (!model.usable) {
+              state.aiError =
+                "The model returned no usable English. Try again.";
+              state.aiResult = null;
+              state.aiExpress = null;
+              fieldUpdateBadge(state);
+              return;
+            }
+            state.aiExpress = {
+              detectedLanguage: result.detectedLanguage || "",
+              tones: result.tones,
+              tone: model.activeTone,
+            };
+            state.aiResult = {
+              text: model.preview,
+              sourceText: result.sourceText || "",
+              selectedText: result.selectedText || "",
+              selection: result.selection || null,
+            };
             fieldUpdateBadge(state);
             return;
           }
@@ -1198,6 +1286,48 @@
     });
     controls.appendChild(run);
     ai.appendChild(controls);
+
+    if (state.aiExpress) {
+      const model = expressToneModel(
+        {
+          detectedLanguage: state.aiExpress.detectedLanguage,
+          tones: state.aiExpress.tones,
+        },
+        state.aiExpress.tone,
+      );
+      if (model.badge) {
+        const lang = document.createElement("p");
+        lang.className = "ai-lang";
+        lang.textContent = model.badge;
+        ai.appendChild(lang);
+      }
+      const tonesRow = document.createElement("div");
+      tonesRow.className = "ai-tones";
+      tonesRow.setAttribute("role", "group");
+      tonesRow.setAttribute("aria-label", "English tone");
+      for (const tone of model.tones) {
+        const chip = document.createElement("button");
+        chip.type = "button";
+        chip.className =
+          "ai-tone" + (tone.key === model.activeTone ? " active" : "");
+        chip.textContent = tone.label;
+        chip.setAttribute(
+          "aria-pressed",
+          tone.key === model.activeTone ? "true" : "false",
+        );
+        chip.addEventListener("click", () => {
+          state.aiExpress.tone = tone.key;
+          if (state.aiResult) {
+            state.aiResult.text = tone.text;
+          }
+          fieldUpdateBadge(state);
+          fieldRenderAiPanel(state);
+          fieldPosition(state);
+        });
+        tonesRow.appendChild(chip);
+      }
+      ai.appendChild(tonesRow);
+    }
 
     if (state.aiResult) {
       const result = document.createElement("div");
@@ -1233,6 +1363,7 @@
               state.aiError = response?.error || "The field changed.";
             } else {
               state.aiResult = null;
+              state.aiExpress = null;
             }
             fieldUpdateBadge(state);
           })
@@ -1456,15 +1587,15 @@
         checking: Boolean(opts.checking),
         offline: Boolean(opts.offline),
         disabled: Boolean(opts.disabled),
-        onApply: opts.onApply || (() => {}),
-        onDismiss: opts.onDismiss || (() => {}),
+        onApply: opts.onApply || (() => { }),
+        onDismiss: opts.onDismiss || (() => { }),
         onApplyReplacement: opts.onApplyReplacement || null,
         onDismissMatch: opts.onDismissMatch || null,
         onFocusMatch: opts.onFocusMatch || null,
         onAddToDictionary: opts.onAddToDictionary || (() => false),
         onTransform: opts.onTransform || null,
         onApplyTransform: opts.onApplyTransform || null,
-        aiTool: "Friendly",
+        aiTool: "Express in English",
         aiBusy: Boolean(opts.aiBusy),
         aiResult: null,
         error: String(opts.error || ""),
@@ -1659,6 +1790,7 @@
     showMatchTooltip,
     hideMatchTooltip,
     scheduleHideMatchTooltip,
+    expressToneModel,
     fieldInViewport,
     badgePosition,
     panelPosition,

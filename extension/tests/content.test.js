@@ -51,6 +51,7 @@ function createHarness(options = {}) {
     showFieldMatchTooltip() {},
   };
   let timerId = 0;
+  let replacedOnce = false;
   const sandbox = {
     document: {
       documentElement: {},
@@ -96,6 +97,12 @@ function createHarness(options = {}) {
           }
           if (message.type === "lexicon:transform-text") {
             transformRequest = message;
+            if (
+              options.transformResult &&
+              typeof options.transformResult === "object"
+            ) {
+              return { ok: true, ...options.transformResult };
+            }
             return {
               ok: true,
               text: options.transformResult || "THE",
@@ -114,16 +121,19 @@ function createHarness(options = {}) {
       detectEditableFields: () => [field],
       detectEditableField: () => field,
       isVisible: () => true,
-      extractEditableText: (target) => ({
-        kind: "textarea",
-        text: target.value,
-        segments: null,
-      }),
+      extractEditableText: (target) => {
+        // Gmail-like editors restructure blocks on edit. Model that by
+        // reporting a trailing break once a replace has landed.
+        let text = target.value;
+        if (options.trailingBreak && replacedOnce) text += "\n";
+        return { kind: "textarea", text, segments: null };
+      },
       normalizeText: (text) => String(text).replace(/\r\n?/g, "\n"),
       getSelection: () => options.selection || null,
       replaceEditableRange: (target, _kind, start, end, text) => {
         target.value =
           target.value.slice(0, start) + text + target.value.slice(end);
+        replacedOnce = true;
         return true;
       },
       editableFromNode: () => field,
@@ -279,6 +289,63 @@ test("AI transforms only the selected text and preserves the rest of the field",
   );
   assert.deepEqual(plain(applied), { ok: true });
   assert.equal(harness.field.value, "teh the");
+});
+
+test("AI replace succeeds when the editor normalizes nearby breaks", async () => {
+  const harness = createHarness({
+    selection: { start: 4, end: 7, text: "teh" },
+    transformResult: "the",
+    trailingBreak: true,
+  });
+  await new Promise((resolve) => setImmediate(resolve));
+
+  await harness.messageHandler({
+    type: "lexicon:highlight",
+    matches: [],
+  });
+
+  const result = await harness.renderedOptions.onTransform("Friendly");
+  const applied = await harness.renderedOptions.onApplyTransform(
+    result.text,
+    result.sourceText,
+    result.selection,
+    result.selectedText,
+  );
+  assert.deepEqual(plain(applied), { ok: true });
+  assert.equal(harness.field.value, "teh the");
+});
+
+test("AI express passes tones through for the tone picker", async () => {
+  const tones = {
+    professional: "Professional text.",
+    casual: "Casual text.",
+    friendly: "Friendly text.",
+    formal: "Formal text.",
+    concise: "Concise text.",
+  };
+  const harness = createHarness({
+    selection: { start: 4, end: 7, text: "teh" },
+    transformResult: {
+      express: true,
+      detectedLanguage: "Spanish",
+      tones,
+    },
+  });
+  await new Promise((resolve) => setImmediate(resolve));
+
+  await harness.messageHandler({
+    type: "lexicon:highlight",
+    matches: [],
+  });
+
+  const result = await harness.renderedOptions.onTransform(
+    "Express in English",
+  );
+  assert.equal(harness.transformRequest.tool, "Express in English");
+  assert.equal(result.express, true);
+  assert.equal(result.detectedLanguage, "Spanish");
+  assert.deepEqual(result.tones, tones);
+  assert.deepEqual(plain(result.selection), { start: 4, end: 7 });
 });
 
 test("ignores synchronous runtime errors from an invalidated extension context", () => {

@@ -11,7 +11,17 @@ import {
   removeDictionaryWord,
   transformText,
 } from "./api.js";
-import { getTransformPrompt, TRANSFORM_TOOLS } from "./prompts.js";
+import {
+  EXPRESS_TOOL,
+  getExpressPrompt,
+  getTransformPrompt,
+  TRANSFORM_TOOLS,
+} from "./prompts.js";
+import {
+  EXPRESS_MAX_CHARS,
+  parseExpressJson,
+  resolveExpressGate,
+} from "./expressParser.js";
 import {
   DEFAULT_SETTINGS,
   SETTINGS_STORAGE_KEY,
@@ -434,6 +444,7 @@ browser.runtime.onMessage.addListener((msg, sender) => {
         return {
           ok: true,
           configured: aiStatusIsConfigured(status),
+          express: resolveExpressGate(status),
         };
       } catch (error) {
         return {
@@ -557,6 +568,48 @@ browser.runtime.onMessage.addListener((msg, sender) => {
         !TRANSFORM_TOOLS.includes(msg.tool)
       ) {
         return { ok: false, error: "invalid-transform-request" };
+      }
+      // Express answers in JSON with five tones. Check the length first
+      // with no network, then the tier, then run one model call.
+      if (msg.tool === EXPRESS_TOOL) {
+        if (msg.text.length > EXPRESS_MAX_CHARS) {
+          return {
+            ok: false,
+            error: "Please select a sentence or short paragraph.",
+          };
+        }
+        await discoverBackend();
+        if (!getBackendBaseUrl()) {
+          return { ok: false, error: "backend_unreachable" };
+        }
+        // A failed probe must not strand a ready model. Run and let
+        // the transform report real errors instead.
+        const gate = await getAiStatus().then(resolveExpressGate, () => "run");
+        if (gate !== "run") {
+          return {
+            ok: false,
+            error:
+              gate === "light"
+                ? "Express in English needs Standard or Quality."
+                : "Set up a model in Lexicon to use Express in English.",
+          };
+        }
+        try {
+          const parsed = parseExpressJson(
+            await transformText(getExpressPrompt(), msg.text),
+          );
+          return {
+            ok: true,
+            express: true,
+            detectedLanguage: parsed.detectedLanguage,
+            tones: parsed.tones,
+          };
+        } catch (error) {
+          return {
+            ok: false,
+            error: error?.message || "transform_failed",
+          };
+        }
       }
       await discoverBackend();
       if (!getBackendBaseUrl()) {

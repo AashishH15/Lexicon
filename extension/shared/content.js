@@ -600,6 +600,28 @@
         error: response?.error || "AI tool failed.",
       };
     }
+    // Express answers with five tones, not one text. Pass the set
+    // through so the panel can offer a tone picker.
+    if (response && response.express) {
+      return {
+        ok: true,
+        express: true,
+        detectedLanguage:
+          typeof response.detectedLanguage === "string"
+            ? response.detectedLanguage
+            : "",
+        tones:
+          response.tones && typeof response.tones === "object"
+            ? response.tones
+            : {},
+        sourceText: current.text,
+        selectedText: selection.text,
+        selection: {
+          start: selection.start,
+          end: selection.end,
+        },
+      };
+    }
     return {
       ok: true,
       text: response.text,
@@ -610,6 +632,22 @@
         end: selection.end,
       },
     };
+  }
+
+  // Confirm an edit landed by rereading only the replaced span.
+  // Framework editors often normalize nearby breaks or spacing, so a
+  // whole-field match reports false failures. Never throw.
+  function editLanded(editableApi, field, start, expected) {
+    try {
+      const after = editableApi.extractEditableText(field).text;
+      const span = after.slice(start, start + expected.length);
+      if (span === expected) return true;
+      const squash = (value) =>
+        value.replace(/[\s\u00a0]+/g, " ").trim();
+      return squash(span) === squash(expected);
+    } catch {
+      return false;
+    }
   }
 
   function applyTransform(
@@ -634,10 +672,6 @@
     ) {
       return { ok: false, error: "The field changed. Try again." };
     }
-    const nextText =
-      sourceText.slice(0, range.start) +
-      expected +
-      sourceText.slice(range.end);
     invalidateCheck(state);
     beginProgrammaticChange(state);
     let replaced = false;
@@ -649,8 +683,7 @@
           range.start,
           range.end,
           expected,
-        ) &&
-        editable.extractEditableText(state.field).text === nextText;
+        ) && editLanded(editable, state.field, range.start, expected);
       if (
         !replaced &&
         range.start === 0 &&
@@ -658,7 +691,7 @@
       ) {
         replaced =
           editable.replaceEditableText(state.field, state.kind, expected) &&
-          editable.extractEditableText(state.field).text === expected;
+          editLanded(editable, state.field, 0, expected);
       }
       refreshStateText(state);
     } finally {

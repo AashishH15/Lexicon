@@ -5,7 +5,17 @@ import {
   checkGrammar,
   transformText,
 } from "./api.js";
-import { getTransformPrompt, TRANSFORM_TOOLS } from "./prompts.js";
+import {
+  EXPRESS_TOOL,
+  getExpressPrompt,
+  getTransformPrompt,
+  TRANSFORM_TOOLS,
+} from "./prompts.js";
+import {
+  EXPRESS_MAX_CHARS,
+  EXPRESS_TONES,
+  parseExpressJson,
+} from "./expressParser.js";
 import { createBackendStatus } from "./backendStatus.js";
 import { normalizeSite } from "./settings.js";
 
@@ -43,6 +53,7 @@ let settings = {
   paused: false,
   siteDisabled: false,
   aiConfigured: null,
+  expressGate: null,
   userDictionary: [],
 };
 const lexStatusApi = globalThis.__lexiconLexStatus;
@@ -466,9 +477,12 @@ async function loadAiStatus() {
     });
     if (monitorState !== "connected" || !response?.ok) return;
     settings.aiConfigured =
-      typeof response.configured === "boolean"
+      typeof response?.configured === "boolean"
         ? response.configured
         : null;
+    if (typeof response?.express === "string") {
+      settings.expressGate = response.express;
+    }
     renderSettings();
   } catch {
     // The connection indicator remains authoritative if the AI probe fails.
@@ -566,7 +580,22 @@ function showRewrite(
   box.className = "rewrite";
   box.textContent = text;
   resultsEl.appendChild(box);
+  attachReplaceButton(
+    () => text,
+    targetFieldId,
+    targetFrameId,
+    sourceText,
+    selectedRange,
+  );
+}
 
+function attachReplaceButton(
+  getText,
+  targetFieldId,
+  targetFrameId,
+  sourceText,
+  selectedRange,
+) {
   const replaceBtn = document.createElement("button");
   replaceBtn.type = "button";
   replaceBtn.textContent = "Replace selection";
@@ -575,7 +604,7 @@ function showRewrite(
     try {
       const response = await sendToContent({
         type: "lexicon:replace-selection",
-        text,
+        text: getText(),
         sourceText,
         selectedText: selectedRange?.text || sourceText,
         selection: selectedRange,
@@ -599,6 +628,62 @@ function showRewrite(
     }
   });
   resultsEl.appendChild(replaceBtn);
+}
+
+function toneLabel(tone) {
+  return tone.charAt(0).toUpperCase() + tone.slice(1);
+}
+
+function showExpressTones(
+  parsed,
+  targetFieldId,
+  targetFrameId,
+  sourceText,
+  selectedRange,
+) {
+  const tones =
+    parsed && typeof parsed.tones === "object" ? parsed.tones : {};
+  const hasText = EXPRESS_TONES.some((tone) =>
+    String(tones[tone] || "").trim(),
+  );
+  if (!hasText) {
+    showEmpty("The model returned no usable English. Try again.");
+    return;
+  }
+  const detected =
+    typeof parsed?.detectedLanguage === "string"
+      ? parsed.detectedLanguage.trim()
+      : "";
+  if (detected && detected.toLowerCase() !== "unknown") {
+    const badge = document.createElement("p");
+    badge.className = "empty";
+    badge.textContent = `${detected} -> English`;
+    resultsEl.appendChild(badge);
+  }
+  const toneSelect = document.createElement("select");
+  toneSelect.setAttribute("aria-label", "English tone");
+  for (const tone of EXPRESS_TONES) {
+    const option = document.createElement("option");
+    option.value = tone;
+    option.textContent = toneLabel(tone);
+    toneSelect.appendChild(option);
+  }
+  const box = document.createElement("div");
+  box.className = "rewrite";
+  const renderTone = () => {
+    box.textContent = String(tones[toneSelect.value] || "");
+  };
+  toneSelect.addEventListener("change", renderTone);
+  renderTone();
+  resultsEl.appendChild(toneSelect);
+  resultsEl.appendChild(box);
+  attachReplaceButton(
+    () => box.textContent,
+    targetFieldId,
+    targetFrameId,
+    sourceText,
+    selectedRange,
+  );
 }
 
 function isBackendUnavailable(error) {
@@ -684,6 +769,16 @@ async function onRewrite() {
   if (!text || !transformTextValue || !targetFieldId || settings.siteDisabled) {
     return;
   }
+  if (rewriteToolEl.value === EXPRESS_TOOL) {
+    await onExpress(
+      transformTextValue,
+      targetFieldId,
+      targetFrameId,
+      fieldText,
+      selection,
+    );
+    return;
+  }
   setActionsEnabled(false);
   setOperationStatus("checking", {
     message: "I’m working on your selection…",
@@ -703,6 +798,55 @@ async function onRewrite() {
       selection,
     );
     setOperationStatus("idle", { message: "I’m ready to review this." });
+  } catch (error) {
+    showError(error);
+  } finally {
+    refreshActions();
+  }
+}
+
+async function onExpress(
+  transformTextValue,
+  targetFieldId,
+  targetFrameId,
+  sourceText,
+  selectedRange,
+) {
+  // Mirror the desktop entry order. Gate the tier first, then the length.
+  // Neither gate sends a model request.
+  if (settings.expressGate !== "run") {
+    clearResults();
+    showEmpty(
+      settings.expressGate === "light"
+        ? "Express in English needs Standard or Quality."
+        : "Set up a model in Lexicon to use Express in English.",
+    );
+    return;
+  }
+  if (transformTextValue.length > EXPRESS_MAX_CHARS) {
+    clearResults();
+    showEmpty("Please select a sentence or short paragraph.");
+    return;
+  }
+  setActionsEnabled(false);
+  setOperationStatus("checking", {
+    message: "Phrasing in English...",
+    aiBusy: true,
+  });
+  clearResults();
+  try {
+    const raw = await transformText(
+      getExpressPrompt(),
+      transformTextValue,
+    );
+    showExpressTones(
+      parseExpressJson(raw),
+      targetFieldId,
+      targetFrameId,
+      sourceText,
+      selectedRange,
+    );
+    setOperationStatus("idle", { message: "Pick a tone, then replace." });
   } catch (error) {
     showError(error);
   } finally {

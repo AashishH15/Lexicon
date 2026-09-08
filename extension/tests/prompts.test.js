@@ -9,7 +9,9 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import {
+  EXPRESS_TOOL,
   REWRITE_PROMPT,
+  getExpressPrompt,
   getTransformPrompt,
   TRANSFORM_TOOLS,
 } from "../shared/prompts.js";
@@ -40,8 +42,11 @@ test("popup rewrite base instruction matches the desktop Rewrite tool", () => {
   assert.equal(base, desktopRewrite);
 });
 
-test("every transform tool appends the same OUTPUT_RULES", () => {
-  for (const tool of TRANSFORM_TOOLS) {
+test("every plain-text tool appends the same OUTPUT_RULES", () => {
+  // Express answers in JSON with its own output rules. Skip it here.
+  const plainTools = TRANSFORM_TOOLS.filter((tool) => tool !== EXPRESS_TOOL);
+  assert.ok(plainTools.length > 0);
+  for (const tool of plainTools) {
     const prompt = getTransformPrompt(tool);
     assert.ok(prompt.endsWith(OUTPUT_RULES), `missing OUTPUT_RULES for ${tool}`);
   }
@@ -90,7 +95,7 @@ test("tone prompts follow the desktop tone instruction template", () => {
     "original meaning, facts, and any names. Keep the same language and " +
     "the same paragraph breaks.";
   const toneNames = TRANSFORM_TOOLS.filter(
-    (t) => t !== "Rewrite" && t !== "Concise",
+    (t) => t !== "Rewrite" && t !== "Concise" && t !== EXPRESS_TOOL,
   );
   for (const tone of toneNames) {
     const block = extSource.match(
@@ -104,5 +109,40 @@ test("tone prompts follow the desktop tone instruction template", () => {
       getTransformPrompt(tone).slice(0, -OUTPUT_RULES.length),
     );
     assert.equal(base, normalize(template(descriptor)), `${tone} template drifted`);
+  }
+});
+
+test("Express in English is a transform tool with its own prompt", () => {
+  assert.equal(EXPRESS_TOOL, "Express in English");
+  assert.ok(TRANSFORM_TOOLS.includes(EXPRESS_TOOL));
+  assert.equal(getTransformPrompt(EXPRESS_TOOL), getExpressPrompt());
+});
+
+test("Express prompt carries the exact JSON keys", () => {
+  const prompt = getExpressPrompt();
+  for (const key of [
+    '"detectedLanguage"',
+    '"tones"',
+    '"professional"',
+    '"casual"',
+    '"friendly"',
+    '"formal"',
+    '"concise"',
+  ]) {
+    assert.ok(prompt.includes(key), `missing key ${key}`);
+  }
+  assert.ok(prompt.includes("Return ONLY one JSON object"));
+  assert.ok(prompt.includes("Do not use em dashes or en dashes"));
+  assert.ok(prompt.includes("idiomatic"));
+});
+
+test("Express prompt keys match the desktop template", () => {
+  assert.ok(DESKTOP_PROMPTS.includes("getExpressPrompt"));
+  assert.ok(DESKTOP_PROMPTS.includes('"detectedLanguage"'));
+  for (const tone of ["professional", "casual", "friendly", "formal", "concise"]) {
+    assert.ok(
+      DESKTOP_PROMPTS.includes(`"${tone}"`),
+      `desktop template missing ${tone}`,
+    );
   }
 });

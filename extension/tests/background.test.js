@@ -381,3 +381,228 @@ test("does not replace a newer extension cache with a stale revision", async () 
     globalThis.fetch = previousFetch;
   }
 });
+
+function aiStatusPayload(modelKey, ready = true) {
+  return {
+    preference: { backend: "bundled", model_key: modelKey },
+    models_ready: { [modelKey]: ready },
+    model_key: modelKey,
+  };
+}
+
+async function getAiStatusResponse(payload) {
+  const previousFetch = globalThis.fetch;
+  const response = (body) => ({
+    ok: true,
+    async json() {
+      return body;
+    },
+  });
+  globalThis.fetch = async (url) => {
+    if (new URL(url).pathname === "/extension/ping") {
+      return response({ ok: true, app: "lexicon" });
+    }
+    if (new URL(url).pathname === "/ai/status") {
+      return response(payload);
+    }
+    throw new Error(`unexpected request: ${url}`);
+  };
+  try {
+    return await messageHandler({ type: "lexicon:get-ai-status" }, {});
+  } finally {
+    globalThis.fetch = previousFetch;
+    // Reset the probed base URL so later tests start disconnected.
+    await messageHandler({ type: "lexicon:get-ai-status" }, {});
+  }
+}
+
+test("get-ai-status reports the express gate for Standard", async () => {
+  const result = await getAiStatusResponse(aiStatusPayload("2b"));
+  assert.equal(result.ok, true);
+  assert.equal(result.configured, true);
+  assert.equal(result.express, "run");
+});
+
+test("get-ai-status reports the express gate for Light", async () => {
+  const result = await getAiStatusResponse(aiStatusPayload("0.8b"));
+  assert.equal(result.ok, true);
+  assert.equal(result.express, "light");
+});
+
+test("get-ai-status reports the express gate when nothing is ready", async () => {
+  const result = await getAiStatusResponse(aiStatusPayload("2b", false));
+  assert.equal(result.ok, true);
+  assert.equal(result.configured, false);
+  assert.equal(result.express, "setup");
+});
+
+function expressTones() {
+  return {
+    professional: "Professional text.",
+    casual: "Casual text.",
+    friendly: "Friendly text.",
+    formal: "Formal text.",
+    concise: "Concise text.",
+  };
+}
+
+async function transformResponse({ status, modelText, onTransform } = {}) {
+  const previousFetch = globalThis.fetch;
+  storedSettings = {};
+  const response = (body) => ({
+    ok: true,
+    async json() {
+      return body;
+    },
+  });
+  let transformCalls = 0;
+  globalThis.fetch = async (url, options) => {
+    const path = new URL(url).pathname;
+    if (path === "/extension/ping") {
+      return response({ ok: true, app: "lexicon" });
+    }
+    if (path === "/ai/status") {
+      return response(status);
+    }
+    if (path === "/transform") {
+      transformCalls += 1;
+      if (onTransform) onTransform(JSON.parse(options.body));
+      return response({ text: modelText });
+    }
+    throw new Error(`unexpected request: ${url}`);
+  };
+  try {
+    const result = await messageHandler(
+      { type: "lexicon:transform-text", tool: "Express in English", text: "Hola." },
+      {},
+    );
+    return { result, transformCalls };
+  } finally {
+    globalThis.fetch = previousFetch;
+    await messageHandler({ type: "lexicon:get-ai-status" }, {});
+  }
+}
+
+test("express transform returns parsed tones on Standard", async () => {
+  const raw = JSON.stringify({ detectedLanguage: "Spanish", tones: expressTones() });
+  let sentPrompt = "";
+  const { result, transformCalls } = await transformResponse({
+    status: aiStatusPayload("2b"),
+    modelText: raw,
+    onTransform: (body) => {
+      sentPrompt = body.prompt;
+    },
+  });
+  assert.equal(result.ok, true);
+  assert.equal(result.express, true);
+  assert.equal(result.detectedLanguage, "Spanish");
+  assert.deepEqual(result.tones, expressTones());
+  assert.equal(transformCalls, 1);
+  assert.ok(sentPrompt.includes('"detectedLanguage"'));
+});
+
+test("express transform blocks long input with no model call", async () => {
+  const previousFetch = globalThis.fetch;
+  let transformCalls = 0;
+  globalThis.fetch = async (url) => {
+    const path = new URL(url).pathname;
+    if (path === "/extension/ping") {
+      return { ok: true, async json() { return { ok: true, app: "lexicon" }; } };
+    }
+    if (path === "/transform") {
+      transformCalls += 1;
+      return { ok: true, async json() { return { text: "{}" }; } };
+    }
+    throw new Error(`unexpected request: ${url}`);
+  };
+  try {
+    const result = await messageHandler(
+      { type: "lexicon:transform-text", tool: "Express in English", text: "a".repeat(601) },
+      {},
+    );
+    assert.equal(result.ok, false);
+    assert.equal(result.error, "Please select a sentence or short paragraph.");
+    assert.equal(transformCalls, 0);
+  } finally {
+    globalThis.fetch = previousFetch;
+    await messageHandler({ type: "lexicon:get-ai-status" }, {});
+  }
+});
+
+test("express transform blocks Light with no model call", async () => {
+  const raw = JSON.stringify({ detectedLanguage: "Spanish", tones: expressTones() });
+  let transformCalls = 0;
+  const previousFetch = globalThis.fetch;
+  const response = (body) => ({
+    ok: true,
+    async json() {
+      return body;
+    },
+  });
+  globalThis.fetch = async (url) => {
+    const path = new URL(url).pathname;
+    if (path === "/extension/ping") {
+      return response({ ok: true, app: "lexicon" });
+    }
+    if (path === "/ai/status") {
+      return response(aiStatusPayload("0.8b"));
+    }
+    if (path === "/transform") {
+      transformCalls += 1;
+      return response({ text: raw });
+    }
+    throw new Error(`unexpected request: ${url}`);
+  };
+  try {
+    const result = await messageHandler(
+      { type: "lexicon:transform-text", tool: "Express in English", text: "Hola." },
+      {},
+    );
+    assert.equal(result.ok, false);
+    assert.equal(result.error, "Express in English needs Standard or Quality.");
+    assert.equal(transformCalls, 0);
+  } finally {
+    globalThis.fetch = previousFetch;
+    await messageHandler({ type: "lexicon:get-ai-status" }, {});
+  }
+});
+
+test("express transform asks for setup when nothing is ready", async () => {
+  const previousFetch = globalThis.fetch;
+  let transformCalls = 0;
+  const response = (body) => ({
+    ok: true,
+    async json() {
+      return body;
+    },
+  });
+  globalThis.fetch = async (url) => {
+    const path = new URL(url).pathname;
+    if (path === "/extension/ping") {
+      return response({ ok: true, app: "lexicon" });
+    }
+    if (path === "/ai/status") {
+      return response(aiStatusPayload("2b", false));
+    }
+    if (path === "/transform") {
+      transformCalls += 1;
+      return response({ text: "{}" });
+    }
+    throw new Error(`unexpected request: ${url}`);
+  };
+  try {
+    const result = await messageHandler(
+      { type: "lexicon:transform-text", tool: "Express in English", text: "Hola." },
+      {},
+    );
+    assert.equal(result.ok, false);
+    assert.equal(
+      result.error,
+      "Set up a model in Lexicon to use Express in English.",
+    );
+    assert.equal(transformCalls, 0);
+  } finally {
+    globalThis.fetch = previousFetch;
+    await messageHandler({ type: "lexicon:get-ai-status" }, {});
+  }
+});

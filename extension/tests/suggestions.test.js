@@ -657,3 +657,206 @@ test("Tone uses a dedicated badge popover and keeps the proofread panel clear", 
   });
 });
 
+function makePanelHarness() {
+  let rootEl = null;
+  const makeElement = (tag) => ({
+    tagName: tag.toUpperCase(),
+    className: "",
+    classList: {
+      classes: new Set(),
+      add(...classes) {
+        classes.forEach((name) => this.classes.add(name));
+      },
+      remove(...classes) {
+        classes.forEach((name) => this.classes.delete(name));
+      },
+      toggle(name, value) {
+        if (value) this.classes.add(name);
+        else this.classes.delete(name);
+      },
+    },
+    style: {},
+    children: [],
+    hidden: false,
+    textContent: "",
+    title: "",
+    value: "",
+    listeners: {},
+    offsetHeight: 100,
+    appendChild(child) {
+      this.children.push(child);
+      return child;
+    },
+    replaceChildren(...nodes) {
+      this.children = nodes;
+    },
+    addEventListener(type, handler) {
+      this.listeners[type] = handler;
+    },
+    removeEventListener() {},
+    setAttribute() {},
+    remove() {},
+    attachShadow() {
+      rootEl = {
+        children: [],
+        appendChild(child) {
+          this.children.push(child);
+          return child;
+        },
+      };
+      return rootEl;
+    },
+  });
+  const sandbox = {
+    document: {
+      documentElement: { appendChild() {} },
+      createElement: makeElement,
+    },
+    window: {
+      innerWidth: 1000,
+      innerHeight: 800,
+      addEventListener() {},
+      removeEventListener() {},
+    },
+    globalThis: {},
+  };
+  sandbox.globalThis = sandbox;
+  vm.createContext(sandbox);
+  vm.runInContext(source, sandbox);
+  vm.runInContext(statusSource, sandbox);
+  return sandbox.__lexiconSuggestions;
+}
+
+const EXPRESS_TONES_FIXTURE = {
+  professional: "Professional text.",
+  casual: "Casual text.",
+  friendly: "Friendly text.",
+  formal: "Formal text.",
+  concise: "Concise text.",
+};
+
+test("expressToneModel shapes picker data with a language badge", async () => {
+  const api = makePanelHarness();
+  const model = api.expressToneModel(
+    { detectedLanguage: "Spanish", tones: EXPRESS_TONES_FIXTURE },
+    "casual",
+  );
+  assert.equal(model.usable, true);
+  assert.equal(model.badge, "Spanish -> English");
+  assert.equal(model.activeTone, "casual");
+  assert.equal(model.preview, "Casual text.");
+  // Compare serialized: values cross the vm sandbox realm boundary.
+  assert.equal(
+    JSON.stringify(model.tones.map((tone) => tone.key)),
+    JSON.stringify(["professional", "casual", "friendly", "formal", "concise"]),
+  );
+  assert.equal(
+    JSON.stringify(model.tones.map((tone) => tone.label)),
+    JSON.stringify(["Professional", "Casual", "Friendly", "Formal", "Concise"]),
+  );
+});
+
+test("expressToneModel falls back without a badge for unknown input", async () => {
+  const api = makePanelHarness();
+  const unknown = api.expressToneModel(
+    { detectedLanguage: "Unknown", tones: EXPRESS_TONES_FIXTURE },
+    "pirate",
+  );
+  assert.equal(unknown.badge, "");
+  assert.equal(unknown.activeTone, "professional");
+  assert.equal(unknown.preview, "Professional text.");
+  const broken = api.expressToneModel(null, null);
+  assert.equal(broken.usable, false);
+  assert.equal(broken.badge, "");
+});
+
+test("Express in English runs in the badge panel with a tone picker", async () => {
+  const api = makePanelHarness();
+  const field = {
+    tagName: "TEXTAREA",
+    getBoundingClientRect: () => ({
+      top: 100,
+      bottom: 180,
+      left: 50,
+      right: 400,
+      height: 80,
+    }),
+    addEventListener() {},
+    removeEventListener() {},
+  };
+  let pickedTool = "";
+  let replacement = null;
+  api.showField(field, [], {
+    onTransform: async (tool) => {
+      pickedTool = tool;
+      if (tool === "Express in English") {
+        return {
+          ok: true,
+          express: true,
+          detectedLanguage: "Spanish",
+          tones: EXPRESS_TONES_FIXTURE,
+          sourceText: "Hola.",
+          selectedText: "Hola.",
+          selection: { start: 0, end: 5 },
+        };
+      }
+      return { ok: true, text: "Improved text", sourceText: "Hola." };
+    },
+    onApplyTransform: async (text, sourceText) => {
+      replacement = { text, sourceText };
+      return { ok: true };
+    },
+  });
+
+  const state = api.fieldState(field);
+  state.aiTriggerEl.listeners.click({
+    preventDefault() {},
+    stopPropagation() {},
+  });
+  const ai = state.aiPanelEl.children.find((child) => child.className === "ai");
+  assert.ok(ai);
+  const controls = ai.children[0];
+  const select = controls.children[0];
+  assert.ok(
+    select.children.map((option) => option.value).includes("Express in English"),
+  );
+  assert.equal(select.children[0].value, "Express in English");
+  select.value = "Express in English";
+  const run = controls.children[1];
+  run.listeners.click();
+  await new Promise((resolve) => setTimeout(resolve, 10));
+
+  assert.equal(pickedTool, "Express in English");
+  const resultAi = state.aiPanelEl.children.find(
+    (child) => child.className === "ai",
+  );
+  const badge = resultAi.children.find((child) => child.className === "ai-lang");
+  assert.equal(badge.textContent, "Spanish -> English");
+  const tonesRow = resultAi.children.find(
+    (child) => child.className === "ai-tones",
+  );
+  assert.equal(tonesRow.children.length, 5);
+  const preview = resultAi.children.find(
+    (child) => child.className === "ai-result",
+  );
+  assert.equal(preview.textContent, "Professional text.");
+  const casualChip = tonesRow.children[1];
+  casualChip.listeners.click();
+  const updatedAi = state.aiPanelEl.children.find(
+    (child) => child.className === "ai",
+  );
+  const updatedPreview = updatedAi.children.find(
+    (child) => child.className === "ai-result",
+  );
+  assert.equal(updatedPreview.textContent, "Casual text.");
+  const replace = updatedAi.children.find(
+    (child) => child.className === "ai-replace",
+  );
+  replace.listeners.click();
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  assert.deepEqual(replacement, {
+    text: "Casual text.",
+    sourceText: "Hola.",
+  });
+});
+

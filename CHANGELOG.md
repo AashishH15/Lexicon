@@ -22,6 +22,7 @@ Lexicon v0.11.0 is a major milestone that transforms Lexicon from a standalone d
 - **In-Page Squiggles & Floating Suggestions**: Real-time error detection in the active browser tab via `detectEditable.js` and `squiggle.js`, paired with an interactive suggestions card (`suggestions.js`) for one-click fixes.
 - **Deep Shadow DOM & ContentEditable Support**: Accurately traverses nested shadow DOM boundaries and complex web editors without trapping keyboard focus.
 - **In-Browser Text Transforms**: Highlight text in any web field and select an AI transform (Rewrite, Casual, Friendly, Professional, Formal, Concise) to preview and replace in place.
+- **Express in English for the Extension**: The in-page badge panel offers Express in English next to Tone. It phrases highlighted text (up to 600 characters) into five English tones with a tone picker, language badge, and the same Replace selection flow; the popup transform list carries it too. Standard or Quality model required; Light and missing setups get guidance instead of a model call.
 - **Match Focus & Smooth Auto-Scroll**: Clicking an issue card smoothly scrolls the web page directly to the underlined text with an animated highlight ping.
 - **Dictionary Synchronization**: Personal dictionary additions sync bidirectionally between browser extensions and the desktop backend over the same-device loopback API.
 - **Intelligent Offline Detection**: Extension status badge displays an alert (`!`) when the desktop backend is unreachable rather than reporting a false-positive active state.
