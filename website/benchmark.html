@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Benchmark Suite | Lexicon</title>
   <meta name="description"
-    content="Lexicon Engine Benchmark: Empirical Task 9 GEC & ESL Fluency evaluation across deterministic LanguageTool and local LLM tiers." />
+    content="Independent Lexicon benchmark on a fixed 1,050-sentence grammar and fluency corpus, including Lexicon tiers and publicly available Free versions of Grammarly and QuillBot. Results depend on method; see disclaimer." />
   <link rel="canonical" href="https://lexicon-writer.pages.dev/benchmark.html" />
   <link rel="icon" type="image/png" href="assets/lexicon-logo-windows.png" />
 
@@ -103,6 +103,12 @@
       max-width: 760px;
       margin-top: 10px;
       line-height: 1.6;
+    }
+
+    .hero-subtitle a {
+      color: var(--text-primary);
+      text-decoration: underline;
+      text-underline-offset: 2px;
     }
 
     /* Preset Filter Bar */
@@ -513,6 +519,73 @@
       padding: 28px;
       box-shadow: var(--shadow-card);
       margin-bottom: 40px;
+    }
+
+    .benchmark-disclaimer {
+      margin: -12px 0 32px;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      width: 100%;
+      max-width: none;
+    }
+
+    .benchmark-disclaimer summary {
+      list-style: none;
+      cursor: pointer;
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+      color: var(--text-muted);
+      line-height: 1.45;
+      user-select: none;
+    }
+
+    .benchmark-disclaimer summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .benchmark-disclaimer summary::before {
+      content: "+ ";
+      font-weight: 600;
+      color: var(--text-secondary);
+    }
+
+    .benchmark-disclaimer[open] summary::before {
+      content: "– ";
+    }
+
+    .benchmark-disclaimer summary:hover {
+      color: var(--text-secondary);
+    }
+
+    .benchmark-disclaimer-body {
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid var(--border-color);
+      max-width: none;
+    }
+
+    .benchmark-disclaimer-body p {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+      margin: 0 0 0.65em;
+    }
+
+    .benchmark-disclaimer-body p:last-child {
+      margin-bottom: 0;
+    }
+
+    .benchmark-disclaimer a {
+      color: var(--text-secondary);
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+
+    .benchmark-disclaimer a:hover {
+      color: var(--text-primary);
     }
 
     .table-header {
@@ -1447,7 +1520,7 @@
       <header class="page-header">
         <div class="header-badge-row">
           <span class="badge-pill badge-blue">Full-Corpus Evaluation</span>
-          <span class="badge-pill badge-green">Head-to-Head</span>
+          <span class="badge-pill badge-green">Fixed Corpus</span>
           <span class="badge-pill badge-neutral">1,050 Sentences / Engine</span>
           <span class="badge-pill badge-neutral">en-US Scoring</span>
         </div>
@@ -1455,9 +1528,11 @@
           <div>
             <h1 class="hero-title">Lexicon Engine <em>Benchmark Suite</em></h1>
             <p class="hero-subtitle">
-              Comprehensive head-to-head on the full 1,050-sentence authentic corpus (350 JFLEG, 350 BEA-2019, 350 LOCNESS).
-              Lexicon tiers and QuillBot Free are scored the same way on every sentence.
-              All engines evaluated in <strong>en-US</strong>; BEA and LOCNESS lean British, so dialect mismatches can count against local models.
+              Independent scores on a fixed 1,050-sentence corpus (350 JFLEG, 350 BEA-2019, 350 LOCNESS).
+              Lexicon tiers and publicly available <strong>Free</strong> Grammarly and QuillBot interfaces are measured under the protocols on this page.
+              Figures describe this suite only. They are not a claim that any product is better or worse in every real-world use.
+              All Lexicon scoring uses <strong>en-US</strong>; BEA and LOCNESS lean British, so dialect mismatches can affect local models.
+              See the <a href="#benchmark-disclaimer">disclaimer</a>.
             </p>
           </div>
         </div>
@@ -1490,7 +1565,7 @@
           </div>
           <div class="metric-def">
             <dt>Latency</dt>
-            <dd>Average time to process one sentence. Lower is better for live typing; Quality trades speed for accuracy.</dd>
+            <dd>Average time to process one sentence. Lex tiers: sequential local inference. Cloud grammar checkers: live time to first underlines on a single test sentence. Lower is better for live typing.</dd>
           </div>
           <div class="metric-def">
             <dt>JFLEG &amp; BEA</dt>
@@ -1534,13 +1609,13 @@
           onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();setPreset('sweet')}">
           <div class="kpi-category">
             <span>Sweet Spot</span>
-            <span class="badge-pill badge-green">Recommended</span>
+            <span class="badge-pill badge-green">On this suite</span>
           </div>
           <div class="kpi-metric">
             <span class="kpi-number" style="color: #059669;">74.6</span>
             <span class="kpi-unit">F₀.₅ · full corpus</span>
           </div>
-          <p class="kpi-desc">Standard 4B: local sweet spot that beats QuillBot Free at ~233 ms keystroke speed.</p>
+          <p class="kpi-desc">Standard 4B: strong local F₀.₅ on this corpus with ~233 ms sequential inference latency.</p>
           <div class="kpi-stats">
             <span class="kpi-stat"><strong>90.0%</strong> precision</span>
             <span class="kpi-stat"><strong>44.3%</strong> recall</span>
@@ -1552,13 +1627,13 @@
           onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();setPreset('quality')}">
           <div class="kpi-category">
             <span>Highest Accuracy</span>
-            <span class="badge-pill badge-purple">Top Score</span>
+            <span class="badge-pill badge-purple">Highest here</span>
           </div>
           <div class="kpi-metric">
             <span class="kpi-number" style="color: #7C3AED;">82.9</span>
             <span class="kpi-unit">F₀.₅ · full corpus</span>
           </div>
-          <p class="kpi-desc">Quality 27B: top of suite, with highest recall (51.7%) and only 4.3% clean FPR offline.</p>
+          <p class="kpi-desc">Quality 27B: highest Lexicon F₀.₅ on this suite (51.7% recall, 4.3% clean FPR), fully offline.</p>
           <div class="kpi-stats">
             <span class="kpi-stat"><strong>97.6%</strong> precision</span>
             <span class="kpi-stat"><strong>51.7%</strong> recall</span>
@@ -1640,7 +1715,7 @@
           <div class="chart-header">
             <div class="chart-title-group">
               <h2>Pareto Efficiency <em>Frontier</em></h2>
-              <div class="chart-subtitle">F₀.₅ vs. latency trade-off (full 1,050)</div>
+              <div class="chart-subtitle">F₀.₅ vs. latency (full 1,050).</div>
             </div>
             <div class="controls-cluster">
               <span class="badge-pill badge-green" style="font-size: 0.72rem; padding: 3px 8px;">F₀.₅</span>
@@ -1675,6 +1750,10 @@
               <div class="legend-swatch circle" style="background: #7C3AED;"></div>
               <span>Quality (27B)</span>
             </div>
+            <div class="legend-entry" data-tier="Grammarly" onclick="selectTier('Grammarly')">
+              <div class="legend-swatch circle" style="background: #0D9488;"></div>
+              <span>Grammarly (Free)</span>
+            </div>
             <div class="legend-entry" data-tier="QuillBot" onclick="selectTier('QuillBot')">
               <div class="legend-swatch circle" style="background: #0284C7;"></div>
               <span>QuillBot (Free)</span>
@@ -1690,8 +1769,9 @@
         <div class="table-header">
           <div>
             <h2>Evaluation <em id="table-title-em">Leaderboard</em></h2>
-            <p id="table-desc-p">Ranking across 5 engines on the full 1,050-sentence corpus.
+            <p id="table-desc-p">Scores for 6 configurations on this 1,050-sentence corpus (Free cloud tools where noted).
               Toggle to <strong>Detailed Matrix</strong> for edit counts, JFLEG/BEA hit rates, and latency.
+              Rankings are for this suite only.
             </p>
           </div>
           <div class="table-actions">
@@ -1709,7 +1789,7 @@
               <button class="segment-btn active" data-view="leaderboard"
                 title="Executive Leaderboard with score bars">Leaderboard</button>
               <button class="segment-btn" data-view="matrix"
-                title="Full metric matrix for all 5 engines">Detailed Matrix</button>
+                title="Full metric matrix for all 6 engines">Detailed Matrix</button>
             </div>
           </div>
 
@@ -1741,6 +1821,34 @@
           </table>
         </div>
       </div>
+
+      <details class="benchmark-disclaimer" id="benchmark-disclaimer">
+        <summary>Independent evaluation of Free interfaces on this suite. Not affiliated with Grammarly or QuillBot. Expand for full disclaimer.</summary>
+        <div class="benchmark-disclaimer-body">
+          <p>
+            These results are an independent evaluation published by Lexicon for informational and comparative research purposes.
+            They were produced by me (Aashish Harishchandre) using the methods described on this page.
+            Lexicon is not sponsored by, affiliated with, endorsed by, or certified by Grammarly Inc., QuillBot, their parents, or any other third-party vendor named here.
+            Product names and marks are trademarks of their respective owners and appear only under nominative fair use to identify the publicly available tools that were tested.
+          </p>
+          <p>
+            Third-party rows refer to <strong>Free</strong> web experiences available at the time of testing (for example Grammarly Free Docs with Pro-locked suggestions dismissed, and QuillBot Free Accept-all).
+            They do not measure paid Pro, Business, Enterprise, or other premium SKUs, and they are not claims about those products.
+            Scores depend on corpus choice, scoring protocol, product version, feature entitlements, network conditions, device performance, and how suggestions were accepted or dismissed.
+            Vendor products, pricing, and UIs change over time. Results on this page may become outdated and may not match other labs or vendor marketing.
+          </p>
+          <p>
+            Latency for cloud tools comes from limited live probes (time to first underlines on sample text), not a full-corpus timing study.
+            Lexicon latency uses instrumented local sequential inference and is not an identical protocol.
+            Quality metrics for Lexicon and third-party Free outputs use the same corpus and scoring rules described on this page; that still does not make every metric perfectly comparable across product designs.
+          </p>
+          <p>
+            Nothing here is a warranty, guarantee, or promise of accuracy, completeness, superiority, or real-world performance for Lexicon or any compared product.
+            Do not treat these numbers as the sole basis for purchasing, business, academic, or legal decisions.
+            Additional terms appear in the <a href="terms.html#benchmarks">Terms of Service</a>.
+          </p>
+        </div>
+      </details>
 
     </div>
   </main>
@@ -1842,7 +1950,7 @@
         hex: "#059669",
         score: { f05: 74.59, prec: 90.0, rec: 44.27, latency: 233.4, jfleg: "350/668", bea: "172/511", cleanFpr: 16.6 },
         params: "4.0B (Q4_K_M Quant)",
-        desc: "Pareto sweet spot: F₀.₅ 74.59 beats QuillBot Free while staying near live keystroke latency (~233 ms)."
+        desc: "Local hybrid tier with F₀.₅ 74.59 on this corpus and ~233 ms sequential inference latency."
       },
       {
         id: "Quality",
@@ -1852,7 +1960,17 @@
         hex: "#7C3AED",
         score: { f05: 82.86, prec: 97.6, rec: 51.65, latency: 3784.1, jfleg: "395/668", bea: "214/511", cleanFpr: 4.3 },
         params: "27B (Q4_K_M Quant)",
-        desc: "Highest-accuracy tier. Top F₀.₅ 82.86 with 51.65% recall and 4.3% clean FPR, fully offline."
+        desc: "Highest Lexicon F₀.₅ on this suite (82.86) with 51.65% recall and 4.3% clean FPR, fully offline."
+      },
+      {
+        id: "Grammarly",
+        tier: "Grammarly (Free Docs Grammar Checker)",
+        shortName: "Grammarly (Free)",
+        color: "#0D9488",
+        hex: "#0D9488",
+        score: { f05: 73.35, prec: 86.71, rec: 45.38, latency: 750.0, jfleg: "290/668", bea: "245/511", cleanFpr: 23.4 },
+        params: "Cloud Docs (Free)",
+        desc: "Public Free Docs interface only (unlocked Accept; Pro cards dismissed). F₀.₅ 73.35 on this suite. Live grammar-check probe ~750 ms to first underlines (~0.6–1.0s). Not a Pro measurement."
       },
       {
         id: "QuillBot",
@@ -1860,9 +1978,9 @@
         shortName: "QuillBot (Free)",
         color: "#0284C7",
         hex: "#0284C7",
-        score: { f05: 66.11, prec: 84.84, rec: 35.11, latency: 1815.0, jfleg: "259/668", bea: "155/511", cleanFpr: 21.1 },
+        score: { f05: 66.11, prec: 84.84, rec: 35.11, latency: 950.0, jfleg: "259/668", bea: "155/511", cleanFpr: 21.1 },
         params: "Cloud Server API",
-        desc: "Commercial cloud grammar checker (Free Accept-all). F₀.₅ 66.11 on the full suite; trails Standard and Quality. Requires sending text to the cloud."
+        desc: "Public Free web grammar checker (Accept-all). F₀.₅ 66.11 on this suite. Live grammar-check probe ~950 ms to first underlines (~0.8–1.2s). Not a paid-plan measurement."
       }
     ];
 
@@ -1931,7 +2049,8 @@
         const h = Math.max(2, (val / 100) * chartH);
         const y = margin.top + chartH - h;
         const x = cx - barWidth / 2;
-        const tip = `showBarTooltip(event, '${d.tier}', ${val}, '${d.score.jfleg}', '${d.score.bea}', '${d.score.cleanFpr}', '${d.score.latency}')`;
+        const tipLatency = d.score.latency == null ? "Cloud" : d.score.latency;
+        const tip = `showBarTooltip(event, '${d.tier}', ${val}, '${d.score.jfleg}', '${d.score.bea}', '${d.score.cleanFpr}', '${tipLatency}')`;
 
         svgHtml += `<g opacity="${groupOpacity}" style="transition: opacity 0.25s ease;" onclick="selectTier('${d.id}')">`;
         svgHtml += `
@@ -1952,6 +2071,9 @@
 
     function showBarTooltip(e, tier, val, jfleg, bea, cleanFpr, latency) {
       const metricName = currentBarMetric === "f05" ? "F₀.₅ Score" : currentBarMetric === "precision" ? "Precision" : "Recall";
+      const latencyLabel = latency === "Cloud" || latency == null || latency === "null"
+        ? "Cloud (not timed)"
+        : `${latency} ms`;
       const html = `
         <div class="tt-title"><span style="width: 8px; height: 8px; border-radius: 50%; background: #111827; display: inline-block;"></span> ${tier}</div>
         <div class="tt-row"><span>Corpus:</span><span class="tt-val">N=1,050</span></div>
@@ -1959,7 +2081,7 @@
         <div class="tt-row"><span>JFLEG (Fluency):</span><span class="tt-val">${jfleg}</span></div>
         <div class="tt-row"><span>BEA (Grammar):</span><span class="tt-val">${bea}</span></div>
         <div class="tt-row"><span>Clean False Alarms:</span><span class="tt-val">${cleanFpr}%</span></div>
-        <div class="tt-row"><span>Inference Latency:</span><span class="tt-val">${latency} ms</span></div>
+        <div class="tt-row"><span>Inference Latency:</span><span class="tt-val">${latencyLabel}</span></div>
       `;
       showTooltip(e, html);
     }
@@ -2045,23 +2167,27 @@
         `;
       }
 
-      // Nodes: full-corpus F₀.₅ vs latency
+      // Nodes: full-corpus F₀.₅ vs latency (skip engines without timed latency)
       benchmarkData.forEach(d => {
+        const latency = d.score.latency;
+        if (latency == null || !Number.isFinite(latency)) return;
+
         const isSelected = activeTierSelection === d.id;
         const isDimmed = activeTierSelection && !isSelected;
         const tierOpacity = isDimmed ? 0.18 : 1.0;
 
         const score = d.score.f05;
-        const latency = d.score.latency;
         const x = getX(latency);
         const y = getY(score);
+
+        const safeDesc = String(d.desc || "").replace(/\\/g, "\\\\").replace(/'/g, "\\'");
 
         svgHtml += `<g opacity="${tierOpacity}" style="transition: opacity 0.25s ease;" onclick="selectTier('${d.id}')">`;
 
         svgHtml += `
           <circle cx="${x}" cy="${y}" r="${isSelected ? 9 : 7}" fill="${d.hex}" stroke="#FFFFFF" stroke-width="2.2"
                   style="cursor:pointer; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.18));"
-                  onmouseenter="showParetoCrosshairs(${x}, ${y}, ${latency}, ${score}); showParetoTooltip(event, '${d.tier}', ${score}, ${latency}, ${d.score.prec}, ${d.score.rec}, '${d.params}', '${d.desc}')"
+                  onmouseenter="showParetoCrosshairs(${x}, ${y}, ${latency}, ${score}); showParetoTooltip(event, '${d.tier}', ${score}, ${latency}, ${d.score.prec}, ${d.score.rec}, '${d.params}', '${safeDesc}')"
                   onmouseleave="hideParetoCrosshairs(); hideTooltip()"/>
         `;
 
@@ -2143,7 +2269,8 @@
       { id: 2, tier: "Light", tierName: "Light Tier (MiniCPM 1B Hybrid)", color: "#D97706", runType: "mean", runLabel: "Full Corpus", sentences: 1050, expected: 1179, correct: 326, fp: 40, prec: 89.07, rec: 27.65, f05: 61.67, cleanFpr: 11.4, cleanFprDisplay: "11.4% (40/350)", latency: 352.4, jfleg: "232 / 668 (34.7%)", jflegVal: 232 / 668, bea: "94 / 511 (18.4%)", beaVal: 94 / 511 },
       { id: 3, tier: "Standard", tierName: "Standard Tier (Qwen3.5 4B)", color: "#059669", runType: "mean", runLabel: "Full Corpus", sentences: 1050, expected: 1179, correct: 522, fp: 58, prec: 90.00, rec: 44.27, f05: 74.59, cleanFpr: 16.6, cleanFprDisplay: "16.6% (58/350)", latency: 233.4, jfleg: "350 / 668 (52.4%)", jflegVal: 350 / 668, bea: "172 / 511 (33.7%)", beaVal: 172 / 511 },
       { id: 4, tier: "Quality", tierName: "Quality Tier (Qwen3.8 27B)", color: "#7C3AED", runType: "mean", runLabel: "Full Corpus", sentences: 1050, expected: 1179, correct: 609, fp: 15, prec: 97.60, rec: 51.65, f05: 82.86, cleanFpr: 4.3, cleanFprDisplay: "4.3% (15/350)", latency: 3784.1, jfleg: "395 / 668 (59.1%)", jflegVal: 395 / 668, bea: "214 / 511 (41.9%)", beaVal: 214 / 511 },
-      { id: 5, tier: "QuillBot", tierName: "QuillBot (Free Web)", color: "#0284C7", runType: "mean", runLabel: "Full Corpus", sentences: 1050, expected: 1179, correct: 414, fp: 74, prec: 84.84, rec: 35.11, f05: 66.11, cleanFpr: 21.1, cleanFprDisplay: "21.1% (74/350)", latency: 1815.0, jfleg: "259 / 668 (38.8%)", jflegVal: 259 / 668, bea: "155 / 511 (30.3%)", beaVal: 155 / 511 }
+      { id: 5, tier: "Grammarly", tierName: "Grammarly (Free Docs)", color: "#0D9488", runType: "mean", runLabel: "Full Corpus", sentences: 1050, expected: 1179, correct: 535, fp: 82, prec: 86.71, rec: 45.38, f05: 73.35, cleanFpr: 23.4, cleanFprDisplay: "23.4% (82/350)", latency: 750.0, jfleg: "290 / 668 (43.4%)", jflegVal: 290 / 668, bea: "245 / 511 (47.9%)", beaVal: 245 / 511 },
+      { id: 6, tier: "QuillBot", tierName: "QuillBot (Free Web)", color: "#0284C7", runType: "mean", runLabel: "Full Corpus", sentences: 1050, expected: 1179, correct: 414, fp: 74, prec: 84.84, rec: 35.11, f05: 66.11, cleanFpr: 21.1, cleanFprDisplay: "21.1% (74/350)", latency: 950.0, jfleg: "259 / 668 (38.8%)", jflegVal: 259 / 668, bea: "155 / 511 (30.3%)", beaVal: 155 / 511 }
     ];
 
     let currentTableViewMode = "leaderboard"; // "leaderboard" | "matrix"
@@ -2156,7 +2283,7 @@
         name: "Quality Tier",
         modelSubtitle: "Qwen3.8 27B · UD-Q4_K_M",
         accent: "#7C3AED",
-        notes: "Top F₀.₅ (82.86) and recall (51.7%), 4.3% clean FPR, fully offline."
+        notes: "Highest Lexicon F₀.₅ (82.86) and recall (51.7%) on this suite; 4.3% clean FPR; offline."
       },
       Standard: {
         rank: 2,
@@ -2164,18 +2291,26 @@
         name: "Standard Tier",
         modelSubtitle: "Qwen3.5 4B · Q4_K_M",
         accent: "#059669",
-        notes: "Best local speed/quality balance (~233 ms); beats QuillBot Free on this suite."
+        notes: "Strong local speed/quality balance on this suite (~233 ms sequential inference)."
+      },
+      Grammarly: {
+        rank: 3,
+        shortName: "Grammarly (Free)",
+        name: "Grammarly Free",
+        modelSubtitle: "Cloud Docs · Free only",
+        accent: "#0D9488",
+        notes: "Public Free Docs only (Pro dismissed). F₀.₅ 73.35 on this suite; clean FPR 23.4%. Probe latency ~750 ms."
       },
       QuillBot: {
-        rank: 3,
+        rank: 4,
         shortName: "QuillBot (Free)",
         name: "QuillBot Free",
-        modelSubtitle: "Cloud Web Grammar API",
+        modelSubtitle: "Cloud Web · Free only",
         accent: "#0284C7",
-        notes: "Cloud reference on full corpus; higher clean FPR (21.1%)."
+        notes: "Public Free Accept-all only. F₀.₅ 66.11 on this suite; clean FPR 21.1%. Probe latency ~950 ms."
       },
       Normal: {
-        rank: 4,
+        rank: 5,
         shortName: "Normal (LT)",
         name: "Normal Proofread",
         modelSubtitle: "LanguageTool · Rule-Based",
@@ -2183,7 +2318,7 @@
         notes: "Instant rule-based baseline (~31 ms), zero clean FPR, no GPU."
       },
       Light: {
-        rank: 5,
+        rank: 6,
         shortName: "Light (1B)",
         name: "Light Tier",
         modelSubtitle: "MiniCPM5 1B · Q8_0",
@@ -2225,12 +2360,12 @@
         if (matrixTable) matrixTable.classList.add("is-leaderboard");
         if (scrollHint) scrollHint.style.display = "none";
         if (titleEm) titleEm.textContent = "Leaderboard";
-        if (descP) descP.innerHTML = "Ranking across 5 engines on the full 1,050-sentence corpus. Toggle to <strong>Detailed Matrix</strong> for edit counts, JFLEG/BEA hit rates, and latency.";
+        if (descP) descP.innerHTML = "Scores for 6 configurations on this 1,050-sentence corpus (Free cloud tools where noted). Toggle to <strong>Detailed Matrix</strong> for edit counts, JFLEG/BEA hit rates, and latency. Rankings are for this suite only.";
       } else {
         if (matrixTable) matrixTable.classList.remove("is-leaderboard");
         if (scrollHint) scrollHint.style.display = "block";
         if (titleEm) titleEm.textContent = "Matrix";
-        if (descP) descP.innerHTML = "Full-corpus metrics for all 5 engines (1,050 sentences each, 1,179 expected errors). One definitive row per engine, with no seed sampling.";
+        if (descP) descP.innerHTML = "Full-corpus metrics for all 6 configurations (1,050 sentences each, 1,179 expected errors). One row per configuration. Third-party rows are Free interfaces only unless stated otherwise.";
       }
 
       renderMatrixTable();
@@ -2242,6 +2377,7 @@
         Light: "Light (1B)",
         Standard: "Standard (4B)",
         Quality: "Quality (27B)",
+        Grammarly: "Grammarly (Free)",
         QuillBot: "QuillBot (Free)"
       };
       return map[tierId] || stripTierMarks(tierName);
@@ -2271,6 +2407,7 @@
     }
 
     function formatLatency(ms) {
+      if (ms == null || !Number.isFinite(ms)) return "Cloud";
       if (ms >= 1000) return `${(ms / 1000).toFixed(2)} s`;
       return `${ms.toFixed(1)} ms`;
     }
@@ -2347,6 +2484,11 @@
           let va = a[col];
           let vb = b[col];
           if (typeof va === "string") return va.localeCompare(vb) * dir;
+          const aMissing = va == null || !Number.isFinite(va);
+          const bMissing = vb == null || !Number.isFinite(vb);
+          if (aMissing && bMissing) return 0;
+          if (aMissing) return 1;
+          if (bMissing) return -1;
           return (va - vb) * dir;
         });
       } else {
@@ -2355,7 +2497,8 @@
 
       const maxF05 = Math.max(...meanRows.map(r => r.f05));
       const maxPrec = Math.max(...meanRows.map(r => r.prec));
-      const minLatency = Math.min(...meanRows.map(r => r.latency));
+      const timedLatencies = meanRows.map(r => r.latency).filter((v) => v != null && Number.isFinite(v));
+      const minLatency = timedLatencies.length ? Math.min(...timedLatencies) : Infinity;
 
       tbody.innerHTML = meanRows.map((r, idx) => {
         const isActive = activeTierSelection && r.tier === activeTierSelection;
@@ -2364,12 +2507,14 @@
         if (isActive) trClass += " row-active";
 
         const isTopPrec = r.prec === maxPrec && maxPrec >= 99.9;
-        const isFastest = r.latency === minLatency;
+        const isFastest = r.latency != null && Number.isFinite(r.latency) && r.latency === minLatency;
         const fprClass = r.cleanFpr === 0 ? "val-good" : "val-warn";
 
         const precCellHtml = `<span class="cell-num">${r.prec.toFixed(1)}%</span>`;
         const recCellHtml = `<span class="cell-num">${r.rec.toFixed(1)}%</span>`;
-        const latCellHtml = `<span class="cell-split"><span class="cell-split-main">${formatLatency(r.latency)}</span><span class="cell-split-sub">per sentence</span></span>`;
+        const latCellHtml = r.latency == null || !Number.isFinite(r.latency)
+          ? `<span class="cell-split"><span class="cell-split-main">Cloud</span><span class="cell-split-sub">not timed</span></span>`
+          : `<span class="cell-split"><span class="cell-split-main">${formatLatency(r.latency)}</span><span class="cell-split-sub">per sentence</span></span>`;
 
         return `
           <tr class="${trClass.trim()}" data-tier="${r.tier}" onclick="selectTier('${r.tier}')" style="cursor: pointer;">
@@ -2407,6 +2552,11 @@
           if (typeof va === "string") {
             return va.localeCompare(vb) * dir;
           }
+          const aMissing = va == null || !Number.isFinite(va);
+          const bMissing = vb == null || !Number.isFinite(vb);
+          if (aMissing && bMissing) return 0;
+          if (aMissing) return 1;
+          if (bMissing) return -1;
           return (va - vb) * dir;
         });
       } else {
@@ -2416,7 +2566,8 @@
       const maxF05 = rows.length ? Math.max(...rows.map(r => r.f05)) : -Infinity;
       const maxPrec = rows.length ? Math.max(...rows.map(r => r.prec)) : -Infinity;
       const maxJfleg = rows.length ? Math.max(...rows.map(r => r.jflegVal)) : -Infinity;
-      const minLatency = rows.length ? Math.min(...rows.map(r => r.latency)) : Infinity;
+      const timedLatencies = rows.map(r => r.latency).filter((v) => v != null && Number.isFinite(v));
+      const minLatency = timedLatencies.length ? Math.min(...timedLatencies) : Infinity;
 
       tbody.innerHTML = rows.map(r => {
         const isActive = activeTierSelection && r.tier === activeTierSelection;
@@ -2426,7 +2577,7 @@
         const isTopF05 = r.f05 === maxF05;
         const isTopPrec = r.prec === maxPrec && maxPrec >= 99.9;
         const isTopJfleg = r.jflegVal === maxJfleg && maxJfleg > 0.5;
-        const isFastest = r.latency === minLatency;
+        const isFastest = r.latency != null && Number.isFinite(r.latency) && r.latency === minLatency;
 
         const tierLabel = shortTierName(r.tier, r.tierName);
         const fprClass = r.cleanFpr === 0 ? "val-good" : "val-warn";
