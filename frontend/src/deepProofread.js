@@ -746,14 +746,15 @@ function isWellFormedItem(item) {
   if (typeof item !== "object" || item === null || Array.isArray(item)) {
     return false;
   }
-  const keys = Object.keys(item).sort();
-  return (
-    keys.length === 2 &&
-    keys[0] === "replacement" &&
-    keys[1] === "source" &&
-    typeof item.source === "string" &&
-    typeof item.replacement === "string"
-  );
+  return typeof item.source === "string" && typeof item.replacement === "string";
+}
+
+/** Strip optional model metadata; keep only source/replacement for validation. */
+export function normalizeDeepEditItem(item) {
+  return {
+    source: String(item?.source ?? ""),
+    replacement: String(item?.replacement ?? ""),
+  };
 }
 
 export function validateDeepEdits(chunkText, items, options = {}) {
@@ -773,10 +774,11 @@ export function validateDeepEdits(chunkText, items, options = {}) {
       rejected.malformed += 1;
       continue;
     }
+    const normalized = normalizeDeepEditItem(rawItem);
     const item =
-      countWords(rawItem.source) > DEEP_MAX_SOURCE_WORDS
-        ? shrinkEditSpan(rawItem.source, rawItem.replacement, text)
-        : rawItem;
+      countWords(normalized.source) > DEEP_MAX_SOURCE_WORDS
+        ? shrinkEditSpan(normalized.source, normalized.replacement, text)
+        : normalized;
     if (item.replacement === "") {
       rejected.empty += 1;
       continue;

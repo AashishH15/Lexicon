@@ -23,6 +23,7 @@ import {
   isRelativeAgreementChurn,
   isSynonymChurn,
   mergeHybridDeepMatches,
+  normalizeDeepEditItem,
   relocateDeepMatches,
   shouldClearDeepResults,
   spansOverlap,
@@ -143,15 +144,49 @@ describe("validateDeepEdits", () => {
     expect(result.rejected.empty).toBe(1);
   });
 
-  it("rejects wrong keys and extra keys", () => {
+  it("rejects wrong keys and missing source/replacement", () => {
     const result = validateDeepEdits(chunk, [
       { source: "he never went nowhere today" },
-      { source: "he never went nowhere today", replacement: "x", extra: 1 },
       "nope",
       null,
+      { replacement: "x" },
     ]);
     expect(result.edits).toHaveLength(0);
     expect(result.rejected.malformed).toBe(4);
+  });
+
+  it("Phase 5.1: accepts optional category/explanation metadata and strips them", () => {
+    const text = "He don't have no money because he never went nowhere today ok.";
+    const result = validateDeepEdits(text, [
+      {
+        source: "He don't have no money",
+        replacement: "He doesn't have any money",
+        category: "grammar",
+        explanation: "Double negative",
+      },
+    ]);
+    expect(result.edits).toHaveLength(1);
+    expect(result.edits[0]).toMatchObject({
+      source: "He don't have no money",
+      replacement: "He doesn't have any money",
+    });
+    expect(result.edits[0].category).toBeUndefined();
+    expect(result.edits[0].explanation).toBeUndefined();
+    expect(result.rejected.malformed).toBe(0);
+  });
+
+  it("Phase 5.1: accepts unexpected auxiliary keys without malformed rejection", () => {
+    const text = "He don't have no money because he never went nowhere today ok.";
+    const result = validateDeepEdits(text, [
+      {
+        source: "He don't have no money",
+        replacement: "He doesn't have any money",
+        confidence: 0.92,
+        extra: { nested: true },
+      },
+    ]);
+    expect(result.edits).toHaveLength(1);
+    expect(result.rejected.malformed).toBe(0);
   });
 
   it("rejects sources outside the 3-12 word span", () => {
@@ -978,6 +1013,49 @@ describe("multilingual deep proofread guardrails", () => {
     expect(calls).toBe(1);
     expect(result.status).toBe("complete");
     expect(result.aiSkipped).toBeFalsy();
+  });
+});
+
+describe("Phase 5.1 permissive schema", () => {
+  it("normalizeDeepEditItem strips auxiliary fields", () => {
+    expect(
+      normalizeDeepEditItem({
+        source: "a b",
+        replacement: "c d",
+        category: "fluency",
+        explanation: "x",
+      }),
+    ).toEqual({ source: "a b", replacement: "c d" });
+  });
+
+  it("Quality single-pass still accepts metadata-bearing edits without a second model call", async () => {
+    const text = "She don't like apples.";
+    const snapshot = { text, map: identityMap(text) };
+    let calls = 0;
+    const result = await executeDeepScan({
+      snapshot,
+      chunks: [{ text, textStart: 0 }],
+      modelKey: "quality",
+      callModel: async () => {
+        calls += 1;
+        return JSON.stringify([
+          {
+            source: "She don't like apples",
+            replacement: "She doesn't like apples",
+            category: "grammar",
+            explanation: "subject-verb agreement",
+          },
+        ]);
+      },
+      isCancelled: () => false,
+      readCurrentText: () => text,
+      onProgress: () => {},
+      noteActivity: async () => {},
+    });
+    expect(calls).toBe(1);
+    expect(result.status).toBe("complete");
+    expect(result.matches).toHaveLength(1);
+    expect(result.matches[0].original).toBe("She don't like apples");
   });
 });
 
