@@ -1,5 +1,8 @@
 <p align="center">
-  <img src="media/lexicon-logo-type.png" alt="Lexicon" width="320" />
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="media/lexicon-logo-type-readme-dark.png" />
+    <img src="media/lexicon-logo-type.png" alt="Lexicon" width="320" />
+  </picture>
 </p>
 
 <p align="center">
