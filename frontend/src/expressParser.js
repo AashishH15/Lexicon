@@ -37,8 +37,19 @@ function sliceJsonObject(text) {
 }
 
 // Clean a value. Return a trimmed string or an empty string.
+// Replace em and en dashes with a comma so UI copy stays clean.
 function cleanString(value) {
-  return typeof value === "string" ? value.trim() : "";
+  if (typeof value !== "string") {
+    return "";
+  }
+  return value
+    .replace(/\u2014/g, ",")
+    .replace(/\u2013/g, ",")
+    .replace(/,\s*,/g, ",")
+    .replace(/\s+,/g, ",")
+    .replace(/,\s*/g, ", ")
+    .replace(/\s{2,}/g, " ")
+    .trim();
 }
 
 // Make a lookup map with lower case keys. Accept mixed case keys.

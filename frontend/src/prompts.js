@@ -236,6 +236,7 @@ export function getExpressPrompt(text) {
     "Keep friendly warm and kind. " +
     "Keep formal correct and reserved. " +
     "Make concise clearly shorter than the other versions. " +
+    "Do not use em dashes or en dashes. Use commas or periods instead. " +
     "Return ONLY one JSON object and nothing else. " +
     "Use this exact shape with these exact keys:\n" +
     EXPRESS_JSON_TEMPLATE +

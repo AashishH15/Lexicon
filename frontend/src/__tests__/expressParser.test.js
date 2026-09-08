@@ -129,6 +129,23 @@ describe("parseExpressJson happy path", () => {
     expect(result.tones.professional).toBe("Hello.");
   });
 
+  it("replaces em and en dashes in tone text", () => {
+    const em = String.fromCharCode(8212);
+    const en = String.fromCharCode(8211);
+    const raw = JSON.stringify({
+      detectedLanguage: "German",
+      tones: fullTones({
+        casual: `Hans crushed it in 2024${em}I'm glad.`,
+        friendly: `Nice work${en}well done.`,
+      }),
+    });
+    const result = parseExpressJson(raw);
+    expect(result.tones.casual).toBe("Hans crushed it in 2024, I'm glad.");
+    expect(result.tones.friendly).toBe("Nice work, well done.");
+    expect(result.tones.casual).not.toContain(em);
+    expect(result.tones.friendly).not.toContain(en);
+  });
+
   it("accepts mixed-case language and tone keys", () => {
     const raw = JSON.stringify({
       DetectedLanguage: "Spanish",
