@@ -105,6 +105,17 @@ Lexicon v0.11.0 is a major milestone that transforms Lexicon from a standalone d
 - **Website Extension & Install Guidance**: Marketing site documents the browser extension beta, FAQ entries, and Windows SmartScreen / macOS Gatekeeper warnings for unsigned builds.
 - **Privacy & Terms Updates**: Privacy Policy and Terms of Service updated for browser-extension loopback use, shared dictionary sync, local GPU/hardware display (not sent to Lexicon), Hugging Face model downloads, optional external AI endpoints, and benchmark comparative claims.
 
+#### ✍️ Express in English (Multilingual Transcreation):
+- **Five Idiomatic Tones From Any Language**: Write a short thought in Spanish, German, French, Chinese, Hindi, or plain English and get back natural English in Professional, Casual, Friendly, Formal, and Concise voices in a single local-model pass (Standard or Quality tiers).
+- **Two Ways In**: Run it from the sidebar under Refinement or straight from the selection bubble. Selections up to 600 characters run directly; longer picks get a nudge to shorten, and an empty selection opens a paste-and-Run card.
+- **Replace in One Undo**: Replace Selection swaps the exact highlight in a single step, so one Ctrl+Z (Cmd+Z on macOS) restores the original, keeps bold and italics, and leaves the cursor right after the new text. Copy includes brief confirmation feedback.
+
+#### 🔄 Engine Status & Switching You Can Trust:
+- **Honest Tier Switching**: Picking a downloaded tier now shows an explicit "Switching to…" state while the choice saves, and the "installed and active" label follows the saved preference instead of the click, so the panel can no longer contradict itself. The save completes before the status refresh, which ends the old need to click a tier twice.
+- **Instant Status on Reopen**: Lex's Engine reopens with the last known answer painted immediately and re-checks quietly in the background. Behind it, AI status responses are cached for a minute with concurrent requests shared and automatic invalidation on any model change, so the "Checking AI Status" spinner is gone in the common case.
+- **Engine at a Glance**: The top bar now names the active engine (for example Standard · GPU, Ollama, or LM Studio) next to the language button. Selecting it jumps straight to Lex's Engine.
+- **Set Up AI Goes Direct**: The Set up AI button and locked AI tools now open Settings on Lex's Engine instead of restarting the 5-step first-run wizard (which still appears on its own for brand-new installs).
+
 ---
 
 ## v0.10.3 — Hotfix: Windows Bundled JRE Path Crash
