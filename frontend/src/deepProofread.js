@@ -606,6 +606,16 @@ export function spansOverlap(aOffset, aLength, bOffset, bLength) {
   return aOffset < bOffset + bLength && bOffset < aOffset + aLength;
 }
 
+// True when the outer span fully covers the inner span, edges included.
+// Equal spans contain each other; use tie order at the call site.
+export function spansContain(outerOffset, outerLength, innerOffset, innerLength) {
+  const outerStart = Number(outerOffset) || 0;
+  const outerEnd = outerStart + (Number(outerLength) || 0);
+  const innerStart = Number(innerOffset) || 0;
+  const innerEnd = innerStart + (Number(innerLength) || 0);
+  return outerStart <= innerStart && innerEnd <= outerEnd;
+}
+
 export function isDeepSnapshotStale(currentText, snapshotText) {
   return currentText !== snapshotText;
 }
@@ -1007,12 +1017,21 @@ export function deepEditsToMatches({ edits, chunk, snapshot, startId }) {
 
 export function dedupeDeepMatches(deepMatches, baseMatches) {
   const base = Array.isArray(baseMatches) ? baseMatches : [];
-  return (Array.isArray(deepMatches) ? deepMatches : []).filter(
-    (match) =>
-      !base.some((other) =>
-        spansOverlap(match.offset, match.length, other.offset, other.length),
+  return (Array.isArray(deepMatches) ? deepMatches : []).filter((match) => {
+    const matchOffset = Number(match.offset) || 0;
+    const matchLength = Number(match.length) || 0;
+    // Drop only when a standard match fully covers this deep match.
+    // A deep match that covers standard ones subsumes them instead,
+    // so holistic rewrites survive their own typos.
+    return !base.some((other) =>
+      spansContain(
+        Number(other.offset) || 0,
+        Number(other.length) || 0,
+        matchOffset,
+        matchLength,
       ),
-  );
+    );
+  });
 }
 
 export function dedupeIdenticalDeepMatches(matches) {
@@ -1025,6 +1044,36 @@ export function dedupeIdenticalDeepMatches(matches) {
     seen.add(key);
     return true;
   });
+}
+
+let restoreCounter = 0;
+
+// Put back baseline matches covered by a dismissed AI rewrite.
+// Give fresh ids so cards and decorations stay unique. Never throw.
+export function reinstateSubsumedMatches(list, dismissedId) {
+  try {
+    const items = Array.isArray(list) ? list : [];
+    const kept = items.filter((match) => match && match.id !== dismissedId);
+    const target = items.find((match) => match && match.id === dismissedId);
+    const subsumed =
+      target && Array.isArray(target.subsumedMatches)
+        ? target.subsumedMatches
+        : [];
+    if (subsumed.length === 0) {
+      return kept;
+    }
+    restoreCounter += 1;
+    const nonce = restoreCounter;
+    const restored = subsumed
+      .filter((match) => match && typeof match === "object")
+      .map((match, index) => ({
+        ...match,
+        id: `deep-restored-${nonce}-${index}`,
+      }));
+    return [...kept, ...restored];
+  } catch (e) {
+    return Array.isArray(list) ? list.filter((match) => match && match.id !== dismissedId) : [];
+  }
 }
 
 export function relocateDeepMatches(text, matches) {
@@ -1049,8 +1098,67 @@ export function relocateDeepMatches(text, matches) {
   return relocated;
 }
 
-export function shouldClearDeepResults({
-  running,
+// Relocate deep results to edited text, including baseline matches
+// covered by a rewrite. Drop spans that no longer locate. Never throw.
+export function relocateDeepResults(text, matches) {
+  try {
+    const relocated = relocateDeepMatches(
+      text,
+      Array.isArray(matches) ? matches : [],
+    );
+    return relocated.map((match) => {
+      if (
+        !Array.isArray(match.subsumedMatches) ||
+        match.subsumedMatches.length === 0
+      ) {
+        return match;
+      }
+      return {
+        ...match,
+        subsumedMatches: relocateDeepMatches(text, match.subsumedMatches),
+      };
+    });
+  } catch (e) {
+    return Array.isArray(matches) ? matches : [];
+  }
+}
+
+// Decide an automatic follow-up deep pass. Run again only when the
+// toggle is on, fixes just emptied the list, and no run is active.
+// Dismissals never trigger. Never throw.
+export function shouldAutoRecheck({
+  enabled = false,
+  emptiedByApply = false,
+  running = false,
+} = {}) {
+  try {
+    return Boolean(enabled && emptiedByApply && !running);
+  } catch (e) {
+    return false;
+  }
+}
+
+// Decide a reactive proofread check. Ignore other tools. With auto
+// re-check off, clear stale marks but run nothing. Never throw.
+export function planProofreadCheck({
+  toolActive = false,
+  autoRecheck = true,
+  immediate = false,
+} = {}) {
+  try {
+    if (!toolActive) {
+      return "ignore";
+    }
+    if (!autoRecheck) {
+      return "clear-only";
+    }
+    return immediate ? "run-now" : "debounced";
+  } catch (e) {
+    return "ignore";
+  }
+}
+
+export function shouldClearDeepResults({  running,
   snapshotText,
   currentText,
   ownApply,
@@ -1079,9 +1187,11 @@ export function mergeHybridDeepMatches({
     engine: m.engine || "proofread",
   }));
 
-  // Discard any AI matches that overlap baseline matches or an earlier AI
-  // match. The deterministic engine wins against AI, and stable offset/length
-  // ordering keeps overlapping chunk-boundary proposals deterministic.
+  // Collision rule: a suggestion fully inside another yields to it.
+  // An AI rewrite that covers baseline spans subsumes them instead, so
+  // one Accept fixes phrasing and typos together. Partly overlapping
+  // spans both stay: hiding either would hide real signal. Stable
+  // offset/length ordering keeps chunk-boundary proposals deterministic.
   const acceptedAi = [];
   const sortedAi = deep
     .map((match, index) => ({ match, index }))
@@ -1096,8 +1206,24 @@ export function mergeHybridDeepMatches({
   for (const { match: aiMatch } of sortedAi) {
     const aiOffset = Number(aiMatch.offset) || 0;
     const aiLength = Number(aiMatch.length) || 0;
-    const collidesWithBaseline = taggedBaseline.some((baseMatch) =>
-      spansOverlap(
+    // A baseline span that fully covers the AI span still wins, ties
+    // included. Anything smaller yields to the broader suggestion.
+    const contained = taggedBaseline.some((baseMatch) =>
+      spansContain(
+        Number(baseMatch.offset) || 0,
+        Number(baseMatch.length) || 0,
+        aiOffset,
+        aiLength,
+      ),
+    );
+    if (contained) {
+      continue;
+    }
+    // Suppress baseline spans this rewrite fully covers. Accepting it
+    // resolves them too. Dismissing it brings them back, so keep them
+    // on the match instead of dropping them silently.
+    const subsumed = taggedBaseline.filter((baseMatch) =>
+      spansContain(
         aiOffset,
         aiLength,
         Number(baseMatch.offset) || 0,
@@ -1112,17 +1238,27 @@ export function mergeHybridDeepMatches({
         Number(kept.length) || 0,
       ),
     );
-    if (collidesWithBaseline || collidesWithAi) {
+    if (collidesWithAi) {
       continue;
     }
     acceptedAi.push({
       ...aiMatch,
       engine: "ai",
       category: "Clarity",
+      subsumedMatches: subsumed,
     });
   }
 
-  const combined = [...taggedBaseline, ...acceptedAi];
+  const subsumedSet = new Set();
+  for (const kept of acceptedAi) {
+    for (const covered of kept.subsumedMatches || []) {
+      subsumedSet.add(covered);
+    }
+  }
+  const combined = [
+    ...taggedBaseline.filter((match) => !subsumedSet.has(match)),
+    ...acceptedAi,
+  ];
   combined.sort((a, b) => (Number(a.offset) || 0) - (Number(b.offset) || 0));
 
   return combined.map((match, idx) => ({

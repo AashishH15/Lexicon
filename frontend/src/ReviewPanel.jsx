@@ -1,5 +1,6 @@
 import SuggestionCard from "./SuggestionCard.jsx";
 import DocStats from "./DocStats.jsx";
+import Toggle from "./Toggle.jsx";
 import ExpressCard from "./ExpressCard.jsx";
 import { EXPRESS_TOOL_NAME } from "./useExpress.js";
 import { useEffect, useRef, useState } from "react";
@@ -7,6 +8,28 @@ import { ArrowLineRight, Info, Lightbulb, CircleNotch } from "@phosphor-icons/re
 
 import { openExternalUrl } from "./api.js";
 import LexStatus from "./LexStatus.jsx";
+
+// Hover hint row for the auto re-check toggles. The row owns positioning
+// so the card aligns to the panel edge and never scrolls it sideways.
+function RecheckRow({ label, tip, children }) {
+  return (
+    <div className="group relative mb-3 flex items-center justify-between gap-2 pr-1">
+      <span className="flex items-center gap-1.5 font-sans text-xs text-muted">
+        {label}
+        <span className="inline-flex">
+          <Info size={13} weight="bold" className="text-muted" aria-label={`About ${label}`} role="img" />
+        </span>
+      </span>
+      {children}
+      <span
+        data-testid="auto-recheck-tip"
+        className="lex-paper-surface pointer-events-none absolute right-0 top-full z-30 mt-1.5 w-60 rounded-md border border-hairline p-3 font-sans text-[11px] leading-relaxed text-muted opacity-0 shadow-sm transition-opacity duration-150 group-hover:pointer-events-auto group-hover:opacity-100"
+      >
+        {tip}
+      </span>
+    </div>
+  );
+}
 
 const BLOOM_MESSAGES = [
   "No issues detected. Your draft is clear.",
@@ -105,6 +128,10 @@ export default function ReviewPanel({
   deepWarning = "",
   onCancelDeep = null,
   onRetryDeep = null,
+  autoRecheck = false,
+  onToggleAutoRecheck = null,
+  proofreadAutoRecheck = false,
+  onToggleProofreadAutoRecheck = null,
   expressResult = null,
   expressActiveTone = "professional",
   expressStatus = "idle",
@@ -353,6 +380,30 @@ export default function ReviewPanel({
                   {deepWarning}
                 </div>
               )}
+              {isDeepProofread && (
+                <RecheckRow
+                  label="Auto re-check"
+                  tip="When on, Deep Proofread runs again by itself after your fixes clear every suggestion, until none remain. Dismissals never start a run."
+                >
+                  <Toggle
+                    checked={autoRecheck}
+                    onChange={(next) => onToggleAutoRecheck && onToggleAutoRecheck(next)}
+                    label="Auto re-check"
+                  />
+                </RecheckRow>
+              )}
+              {!isDeepProofread && (
+                <RecheckRow
+                  label="Auto re-check"
+                  tip="When on, Proofread re-scans the draft as you type. Turn it off to scan only when you run a check or resolve a suggestion."
+                >
+                  <Toggle
+                    checked={proofreadAutoRecheck}
+                    onChange={(next) => onToggleProofreadAutoRecheck && onToggleProofreadAutoRecheck(next)}
+                    label="Auto re-check"
+                  />
+                </RecheckRow>
+              )}
               {count === 0 ? (
             showBloom ? (
               <div className="lex-bloom flex w-full items-center gap-2.5 rounded-xl bg-[#EDF3EC] px-4 py-3 text-[#346538] border border-[#D3E2D0]">
@@ -363,19 +414,41 @@ export default function ReviewPanel({
                 <span className="font-sans text-sm">{bloomMessageRef.current}</span>
               </div>
             ) : (
-              <div className="flex items-center gap-2">
-                <ReviewStatusMark
-                  status={lexStatus}
-                  message={lexStatusLabel}
-                />
-                <p className="text-sm leading-relaxed text-muted">
-                  {isDeepProofread
-                    ? "No deep issues found in this draft."
-                    : userResolvedAll
-                      ? "No issues remain in this draft."
-                      : "No issues found in this draft."}
-                </p>
-              </div>
+              <>
+                <div className="flex items-center gap-2">
+                  <ReviewStatusMark
+                    status={lexStatus}
+                    message={lexStatusLabel}
+                  />
+                  <p className="text-sm leading-relaxed text-muted">
+                    {isDeepProofread
+                      ? "No deep issues found in this draft."
+                      : userResolvedAll
+                        ? "No issues remain in this draft."
+                        : "No issues found in this draft."}
+                  </p>
+                </div>
+                {isDeepProofread && onRetryDeep && (
+                  <button
+                    type="button"
+                    aria-label="Check draft again"
+                    onClick={onRetryDeep}
+                    className="mt-3 rounded-full bg-pale-green px-2.5 py-px font-mono text-[10px] uppercase tracking-widest text-pale-green-text transition-colors hover:bg-pale-green/70 focus-visible:ring-1 focus-visible:ring-ink"
+                  >
+                    Check again
+                  </button>
+                )}
+                {!isDeepProofread && onRetry && (
+                  <button
+                    type="button"
+                    aria-label="Check draft again"
+                    onClick={onRetry}
+                    className="mt-3 rounded-full bg-pale-green px-2.5 py-px font-mono text-[10px] uppercase tracking-widest text-pale-green-text transition-colors hover:bg-pale-green/70 focus-visible:ring-1 focus-visible:ring-ink"
+                  >
+                    Check again
+                  </button>
+                )}
+              </>
             )
               ) : (
             <>

@@ -132,7 +132,10 @@ import {
   executeDeepScan,
   isDeepSnapshotStale,
   mergeHybridDeepMatches,
-  relocateDeepMatches,
+  planProofreadCheck,
+  reinstateSubsumedMatches,
+  relocateDeepResults,
+  shouldAutoRecheck,
   shouldClearDeepResults,
 } from "./deepProofread.js";
 import { DecorationSet } from "@tiptap/pm/view";
@@ -547,6 +550,16 @@ export default function App() {
   const [deepProgress, setDeepProgress] = useState(null); // { current, total } | null
   const [deepError, setDeepError] = useState("");
   const [deepWarning, setDeepWarning] = useState("");
+  // Follow-up deep pass after fixes clear the list. Off by default.
+  const [autoRecheck, setAutoRecheck] = useState(
+    () => localStorage.getItem("lexicon:deepAutoRecheck") === "true",
+  );
+  const autoRecheckRef = useRef(autoRecheck);
+  // Reactive proofread scans while typing. Off by default.
+  const [proofreadAutoRecheck, setProofreadAutoRecheck] = useState(
+    () => localStorage.getItem("lexicon:proofreadAutoRecheck") === "true",
+  );
+  const proofreadAutoRecheckRef = useRef(proofreadAutoRecheck);
   const deepMatchesRef = useRef([]);
   const deepRunningRef = useRef(false);
   const deepRunIdRef = useRef(0);
@@ -664,6 +677,8 @@ export default function App() {
   dismissedKeysRef.current = dismissedKeys;
   deepMatchesRef.current = deepMatches;
   deepRunningRef.current = deepRunning;
+  autoRecheckRef.current = autoRecheck;
+  proofreadAutoRecheckRef.current = proofreadAutoRecheck;
 
   const lowlightRef = useRef(createLowlight());
   const [lowlightReady, setLowlightReady] = useState(false);
@@ -1812,7 +1827,10 @@ export default function App() {
     setHoveredError(null);
     if (isDeep) {
       const fresh = buildTextWithMap(editor.state.doc);
-      const next = relocateDeepMatches(
+      // Relocate covered matches too, so a later dismiss restores
+      // spans that still locate. Then chain one verification pass
+      // when fixes just emptied the list and auto re-check is on.
+      const next = relocateDeepResults(
         fresh.text,
         deepMatchesRef.current.filter((m) => m.id !== match.id),
       );
@@ -1824,6 +1842,15 @@ export default function App() {
         activeErrorRef.current = null;
       }
       renderModeDecorations();
+      if (
+        shouldAutoRecheck({
+          enabled: autoRecheckRef.current,
+          emptiedByApply: next.length === 0,
+          running: deepRunningRef.current,
+        })
+      ) {
+        runDeepProofread();
+      }
       return;
     }
     runGrammarCheck();
@@ -1851,7 +1878,12 @@ export default function App() {
     rememberDismissed(match, text);
     dismissError(editor, match.id);
     if (activeToolRef.current === DEEP_PROOFREAD_TOOL) {
-      const next = deepMatchesRef.current.filter((m) => m.id !== match.id);
+      // Dismissing an AI rewrite brings back the baseline matches it
+      // covered, unless those were already dismissed on their own.
+      const next = reinstateSubsumedMatches(
+        deepMatchesRef.current,
+        match.id,
+      ).filter((m) => !dismissedKeysRef.current.has(matchKey(m, text)));
       setDeepMatches(next);
       deepMatchesRef.current = next;
       if (next.length === 0) {
@@ -1952,6 +1984,17 @@ export default function App() {
     if (activeToolRef.current === DEEP_PROOFREAD_TOOL) {
       setDeepMatches([]);
       deepMatchesRef.current = [];
+      // Chain one verification pass when fixes just cleared the list
+      // and auto re-check is on. Dismissals never chain.
+      if (
+        shouldAutoRecheck({
+          enabled: autoRecheckRef.current,
+          emptiedByApply: edits.length > 0,
+          running: deepRunningRef.current,
+        })
+      ) {
+        runDeepProofread();
+      }
       return;
     }
     setGrammarMatches([]);
@@ -2664,6 +2707,26 @@ export default function App() {
     setSettingsOpen(true);
   }
 
+  function handleAutoRecheckChange(next) {
+    const value = Boolean(next);
+    setAutoRecheck(value);
+    try {
+      localStorage.setItem("lexicon:deepAutoRecheck", String(value));
+    } catch {
+      // Storage full. Keep the toggle for this session.
+    }
+  }
+
+  function handleProofreadAutoRecheckChange(next) {
+    const value = Boolean(next);
+    setProofreadAutoRecheck(value);
+    try {
+      localStorage.setItem("lexicon:proofreadAutoRecheck", String(value));
+    } catch {
+      // Storage full. Keep the toggle for this session.
+    }
+  }
+
   function handleToolClick(name) {
     const nextTool = activeTool === name ? "" : name;
     setActiveTool(nextTool);
@@ -3030,7 +3093,12 @@ export default function App() {
   // 300-400ms is the sweet spot
   const GRAMMAR_DEBOUNCE_MS = 350;
   function scheduleCheck(immediate = false) {
-    if (activeToolRef.current !== "Proofread") {
+    const plan = planProofreadCheck({
+      toolActive: activeToolRef.current === "Proofread",
+      autoRecheck: proofreadAutoRecheckRef.current,
+      immediate,
+    });
+    if (plan === "ignore") {
       return;
     }
     if (checkTimer.current) {
@@ -3047,7 +3115,10 @@ export default function App() {
         clearGrammarDecorations(editor);
       }
     }
-    if (immediate) {
+    if (plan === "clear-only") {
+      return;
+    }
+    if (plan === "run-now") {
       runGrammarCheck(true);
       return;
     }
@@ -3586,6 +3657,10 @@ export default function App() {
               deepWarning={deepWarning}
               onCancelDeep={cancelDeepProofread}
               onRetryDeep={runDeepProofread}
+              autoRecheck={autoRecheck}
+              onToggleAutoRecheck={handleAutoRecheckChange}
+              proofreadAutoRecheck={proofreadAutoRecheck}
+              onToggleProofreadAutoRecheck={handleProofreadAutoRecheckChange}
               expressResult={express.result}
               expressActiveTone={express.activeTone}
               expressStatus={express.status}

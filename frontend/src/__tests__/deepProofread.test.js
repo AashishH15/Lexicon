@@ -24,8 +24,13 @@ import {
   isSynonymChurn,
   mergeHybridDeepMatches,
   normalizeDeepEditItem,
+  planProofreadCheck,
+  reinstateSubsumedMatches,
   relocateDeepMatches,
+  relocateDeepResults,
+  shouldAutoRecheck,
   shouldClearDeepResults,
+  spansContain,
   spansOverlap,
   validateDeepEdits,
   wrapDeepChunk,
@@ -513,11 +518,17 @@ describe("deep match conversion and dedup", () => {
     expect(dropped).toBe(1);
   });
 
-  it("removes deep matches that overlap deterministic matches", () => {
+  it("drops deep matches fully covered by deterministic matches", () => {
     const deep = [{ offset: 3, length: 5, replacements: ["x"] }];
     const base = [{ offset: 0, length: 10 }];
     expect(dedupeDeepMatches(deep, base)).toHaveLength(0);
     expect(dedupeDeepMatches(deep, [{ offset: 20, length: 2 }])).toHaveLength(1);
+  });
+
+  it("keeps deep matches that cover deterministic matches", () => {
+    const deep = [{ offset: 0, length: 10, replacements: ["x"] }];
+    const base = [{ offset: 3, length: 2 }];
+    expect(dedupeDeepMatches(deep, base)).toHaveLength(1);
   });
 
   it("removes identical duplicates from overlapping chunks", () => {
@@ -785,20 +796,61 @@ describe("mergeHybridDeepMatches", () => {
     expect(merged.map((m) => m.id)).toEqual([0, 1, 2]);
   });
 
-  it("discards AI matches that collide with baseline spans", () => {
+  it("keeps AI matches that only touch baseline spans at the edge", () => {
     const baselineMatches = [
       { offset: 10, length: 5, message: "Deterministic rule", replacements: ["lose"] },
     ];
     const deepMatches = [
-      { offset: 8, length: 10, message: "AI phrasing", replacements: ["different"] },
+      { offset: 13, length: 10, message: "AI phrasing", replacements: ["different"] },
       { offset: 40, length: 6, message: "AI unique", replacements: ["better"] },
     ];
     const merged = mergeHybridDeepMatches({ baselineMatches, deepMatches });
-    expect(merged).toHaveLength(2);
+    expect(merged).toHaveLength(3);
     expect(merged[0].offset).toBe(10);
     expect(merged[0].engine).toBe("proofread");
-    expect(merged[1].offset).toBe(40);
+    expect(merged[1].offset).toBe(13);
     expect(merged[1].engine).toBe("ai");
+    expect(merged[2].offset).toBe(40);
+    expect(merged[2].engine).toBe("ai");
+  });
+
+  it("subsumes baseline matches fully covered by an AI rewrite", () => {
+    const baselineMatches = [
+      { offset: 0, length: 4, message: "Typo", replacements: ["Held"] },
+      { offset: 10, length: 4, message: "Typo", replacements: ["who"] },
+    ];
+    const deepMatches = [
+      { offset: 0, length: 22, message: "Awkward phrasing", replacements: ["Hello"] },
+    ];
+    const merged = mergeHybridDeepMatches({ baselineMatches, deepMatches });
+    expect(merged).toHaveLength(1);
+    expect(merged[0].engine).toBe("ai");
+    expect(merged[0].subsumedMatches).toHaveLength(2);
+    expect(merged[0].subsumedMatches.map((m) => m.offset)).toEqual([0, 10]);
+  });
+
+  it("drops an AI match fully covered by a baseline span", () => {
+    const baselineMatches = [
+      { offset: 0, length: 10, message: "Deterministic rule", replacements: ["lose"] },
+    ];
+    const deepMatches = [
+      { offset: 3, length: 2, message: "AI tweak", replacements: ["win"] },
+    ];
+    const merged = mergeHybridDeepMatches({ baselineMatches, deepMatches });
+    expect(merged).toHaveLength(1);
+    expect(merged[0].engine).toBe("proofread");
+  });
+
+  it("lets the deterministic match win equal spans", () => {
+    const baselineMatches = [
+      { offset: 5, length: 5, message: "Deterministic rule", replacements: ["lose"] },
+    ];
+    const deepMatches = [
+      { offset: 5, length: 5, message: "AI phrasing", replacements: ["win"] },
+    ];
+    const merged = mergeHybridDeepMatches({ baselineMatches, deepMatches });
+    expect(merged).toHaveLength(1);
+    expect(merged[0].engine).toBe("proofread");
   });
 
   it("keeps only one deterministic AI proposal across overlapping chunks", () => {
@@ -827,6 +879,53 @@ describe("mergeHybridDeepMatches", () => {
     expect(mergeHybridDeepMatches({ baselineMatches: baseline, deepMatches: [] })).toHaveLength(1);
     const deep = [{ offset: 5, length: 3, message: "test" }];
     expect(mergeHybridDeepMatches({ baselineMatches: [], deepMatches: deep })).toHaveLength(1);
+  });
+});
+
+describe("spansContain", () => {
+  it("covers contained and equal spans with inclusive edges", () => {
+    expect(spansContain(0, 10, 3, 2)).toBe(true);
+    expect(spansContain(0, 10, 0, 10)).toBe(true);
+    expect(spansContain(25, 22, 43, 4)).toBe(true);
+  });
+
+  it("rejects straddling and disjoint spans", () => {
+    expect(spansContain(8, 10, 13, 10)).toBe(false);
+    expect(spansContain(13, 10, 8, 10)).toBe(false);
+    expect(spansContain(0, 5, 20, 2)).toBe(false);
+  });
+});
+
+describe("reinstateSubsumedMatches", () => {
+  it("removes the dismissed AI card and restores its covered matches", () => {
+    const covered = [
+      { offset: 0, length: 4, message: "Typo", replacements: ["Held"] },
+      { offset: 10, length: 4, message: "Typo", replacements: ["who"] },
+    ];
+    const list = [
+      {
+        id: "deep-0",
+        offset: 0,
+        length: 22,
+        message: "Awkward phrasing",
+        replacements: ["Hello"],
+        engine: "ai",
+        subsumedMatches: covered,
+      },
+    ];
+    const next = reinstateSubsumedMatches(list, "deep-0");
+    expect(next.find((m) => m.id === "deep-0")).toBe(undefined);
+    expect(next).toHaveLength(2);
+    expect(next.map((m) => m.offset)).toEqual([0, 10]);
+    expect(next.every((m) => typeof m.id === "string" && m.id !== "deep-0")).toBe(true);
+    expect(new Set(next.map((m) => m.id)).size).toBe(2);
+  });
+
+  it("leaves the list alone without subsumed matches", () => {
+    const list = [{ id: "deep-0", offset: 0, length: 5, message: "Typo" }];
+    expect(reinstateSubsumedMatches(list, "deep-0")).toEqual([]);
+    expect(reinstateSubsumedMatches(list, "deep-9")).toEqual(list);
+    expect(reinstateSubsumedMatches([], "deep-0")).toEqual([]);
   });
 });
 
@@ -1056,6 +1155,101 @@ describe("Phase 5.1 permissive schema", () => {
     expect(result.status).toBe("complete");
     expect(result.matches).toHaveLength(1);
     expect(result.matches[0].original).toBe("She don't like apples");
+  });
+});
+
+describe("relocateDeepResults", () => {
+  it("relocates covered matches along with their rewrite", () => {
+    const list = [
+      {
+        id: "deep-0",
+        offset: 0,
+        length: 11,
+        original: "She go home",
+        replacements: ["She goes home"],
+        subsumedMatches: [
+          { offset: 4, length: 2, original: "go", replacements: ["goes"] },
+        ],
+      },
+    ];
+    const next = relocateDeepResults("Well. She go home now.", list);
+    expect(next).toHaveLength(1);
+    expect(next[0].offset).toBe(6);
+    expect(next[0].subsumedMatches).toHaveLength(1);
+    expect(next[0].subsumedMatches[0].offset).toBe(10);
+  });
+
+  it("drops covered matches that no longer locate", () => {
+    const list = [
+      {
+        id: "deep-0",
+        offset: 0,
+        length: 11,
+        original: "She go home",
+        replacements: ["She goes home"],
+        subsumedMatches: [
+          { offset: 4, length: 2, original: "go", replacements: ["goes"] },
+          { offset: 99, length: 3, original: "zzz", replacements: ["z"] },
+        ],
+      },
+    ];
+    const next = relocateDeepResults("She go home now.", list);
+    expect(next).toHaveLength(1);
+    expect(next[0].offset).toBe(0);
+    expect(next[0].subsumedMatches).toHaveLength(1);
+    expect(next[0].subsumedMatches[0].original).toBe("go");
+  });
+
+  it("leaves matches without covered spans alone", () => {
+    const list = [{ id: "deep-0", offset: 0, length: 3, original: "abc" }];
+    expect(relocateDeepResults("abc", list)).toEqual(list);
+  });
+});
+
+describe("shouldAutoRecheck", () => {  it("runs again only after fixes with the toggle on", () => {
+    expect(
+      shouldAutoRecheck({ enabled: true, emptiedByApply: true, running: false }),
+    ).toBe(true);
+  });
+
+  it("never runs after dismissals, while busy, or when off", () => {
+    expect(
+      shouldAutoRecheck({ enabled: true, emptiedByApply: false, running: false }),
+    ).toBe(false);
+    expect(
+      shouldAutoRecheck({ enabled: true, emptiedByApply: true, running: true }),
+    ).toBe(false);
+    expect(
+      shouldAutoRecheck({ enabled: false, emptiedByApply: true, running: false }),
+    ).toBe(false);
+    expect(shouldAutoRecheck()).toBe(false);
+  });
+});
+
+describe("planProofreadCheck", () => {
+  it("stays idle without the proofread tool", () => {
+    expect(
+      planProofreadCheck({ toolActive: false, autoRecheck: true, immediate: true }),
+    ).toBe("ignore");
+    expect(planProofreadCheck()).toBe("ignore");
+  });
+
+  it("clears without running when auto re-check is off", () => {
+    expect(
+      planProofreadCheck({ toolActive: true, autoRecheck: false, immediate: true }),
+    ).toBe("clear-only");
+    expect(
+      planProofreadCheck({ toolActive: true, autoRecheck: false, immediate: false }),
+    ).toBe("clear-only");
+  });
+
+  it("runs at once or debounced when on", () => {
+    expect(
+      planProofreadCheck({ toolActive: true, autoRecheck: true, immediate: true }),
+    ).toBe("run-now");
+    expect(
+      planProofreadCheck({ toolActive: true, autoRecheck: true, immediate: false }),
+    ).toBe("debounced");
   });
 });
 
