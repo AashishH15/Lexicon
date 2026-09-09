@@ -46,6 +46,8 @@
   const PANEL_WIDTH = 320;
   const PANEL_MAX_HEIGHT = 360;
   const PANEL_GAP = 8;
+  const PANEL_DRAG_KEEP_X = 80; // Least panel width kept inside the window.
+  const PANEL_DRAG_KEEP_Y = 48; // Least panel height kept inside the window.
   const TOOLTIP_WIDTH = 288;
   const AI_TRIGGER_WIDTH = 76;
   const AI_TRIGGER_GAP = 5;
@@ -146,6 +148,13 @@
     "font:13px/1.45 -apple-system,BlinkMacSystemFont,\"Segoe UI\",Helvetica,Arial,sans-serif;color:#111111;overflow:hidden;z-index:3}" +
     `.panel[hidden]{display:none}` +
     ".panel .head{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-bottom:1px solid #eaeaea;font-weight:600}" +
+    ".panel .head{gap:6px}" +
+    ".panel .drag-handle{flex:none;display:inline-flex;align-items:center;justify-content:center;width:44px;height:24px;margin:0 auto;cursor:grab;border-radius:4px;color:#3f3e3b;" +
+    "touch-action:none;user-select:none}" +
+    ".panel .drag-handle:hover{color:#111111;background:#ebeae6}" +
+    ".panel .drag-icon{display:inline-flex;width:28px;height:18px;align-items:center;justify-content:center}" +
+    ".panel .drag-icon svg{display:block;width:28px;height:18px;fill:currentColor}" +
+    ".panel .drag-handle.dragging{cursor:grabbing}" +
     ".panel .close{border:none;background:none;color:#5f5e5b;font:inherit;cursor:pointer;padding:0 2px}" +
     ".panel .close-icon{display:inline-flex;width:14px;height:14px;align-items:center;justify-content:center}" +
     ".panel .close-icon svg{display:block;width:14px;height:14px;fill:currentColor}" +
@@ -973,32 +982,97 @@
     state.aiTriggerEl.style.right = "auto";
     const fieldRect = state.field.getBoundingClientRect();
     if (state.panelOpen) {
-      fieldPositionPanel(state.panelEl, badge, fieldRect);
+      fieldPositionPanel(state.panelEl, badge, fieldRect, state.dragOffset);
     } else {
       state.panelEl.hidden = true;
     }
     if (state.aiPanelOpen) {
-      fieldPositionPanel(state.aiPanelEl, badge, fieldRect);
+      fieldPositionPanel(state.aiPanelEl, badge, fieldRect, state.dragOffset);
     } else {
       state.aiPanelEl.hidden = true;
     }
   }
 
-  function fieldPositionPanel(panel, badge, fieldRect) {
+  function fieldPositionPanel(panel, badge, fieldRect, offset) {
     panel.style.maxHeight = `${Math.max(
       80,
       Math.min(PANEL_MAX_HEIGHT, window.innerHeight - 16),
     )}px`;
     panel.hidden = false;
     const position = panelPosition(badge, panel.offsetHeight, fieldRect);
-    panel.style.left = `${position.left}px`;
-    if (Number.isFinite(position.bottom)) {
-      panel.style.top = "auto";
-      panel.style.bottom = `${position.bottom}px`;
-    } else {
-      panel.style.bottom = "auto";
-      panel.style.top = `${position.top}px`;
+    const dx = Number(offset?.x) || 0;
+    const dy = Number(offset?.y) || 0;
+    if (!dx && !dy) {
+      panel.style.left = `${position.left}px`;
+      if (Number.isFinite(position.bottom)) {
+        panel.style.top = "auto";
+        panel.style.bottom = `${position.bottom}px`;
+      } else {
+        panel.style.bottom = "auto";
+        panel.style.top = `${position.top}px`;
+      }
+      return;
     }
+    // A dragged panel keeps its user offset from the computed spot.
+    // Resolve bottom anchoring to top coordinates, shift, then clamp
+    // so the head stays reachable inside the window.
+    let top;
+    if (Number.isFinite(position.bottom)) {
+      top =
+        window.innerHeight -
+        position.bottom -
+        (panel.offsetHeight || 0) +
+        dy;
+    } else {
+      top = position.top + dy;
+    }
+    const left = Math.max(
+      8,
+      Math.min(position.left + dx, window.innerWidth - PANEL_DRAG_KEEP_X),
+    );
+    panel.style.left = `${left}px`;
+    panel.style.bottom = "auto";
+    panel.style.top = `${Math.max(
+      8,
+      Math.min(top, window.innerHeight - PANEL_DRAG_KEEP_Y),
+    )}px`;
+  }
+
+  // Drag the badge panel by its head grip. Pointer capture keeps the
+  // drag alive outside the panel. The grip is pointer-only; keyboard
+  // users work with the panel where it opens.
+  function bindPanelDrag(state, handle) {
+    handle.addEventListener("pointerdown", (event) => {
+      if (event.button !== undefined && event.button !== 0) return;
+      event.preventDefault();
+      event.stopPropagation();
+      const startX = event.clientX;
+      const startY = event.clientY;
+      const base = state.dragOffset || { x: 0, y: 0 };
+      handle.classList.add("dragging");
+      try {
+        handle.setPointerCapture?.(event.pointerId);
+      } catch {
+        // Older engines track the pointer without capture.
+      }
+      const onMove = (moveEvent) => {
+        moveEvent.preventDefault?.();
+        state.dragOffset = {
+          x: base.x + moveEvent.clientX - startX,
+          y: base.y + moveEvent.clientY - startY,
+        };
+        fieldPosition(state);
+      };
+      const onUp = () => {
+        handle.classList.remove("dragging");
+        handle.removeEventListener("pointermove", onMove);
+        handle.removeEventListener("pointerup", onUp);
+        handle.removeEventListener("pointercancel", onUp);
+      };
+      handle.addEventListener("pointermove", onMove);
+      handle.addEventListener("pointerup", onUp);
+      handle.addEventListener("pointercancel", onUp);
+    });
   }
 
   function positionFields() {
@@ -1046,6 +1120,13 @@
     const title = document.createElement("span");
     title.textContent = "Lexicon";
     head.appendChild(title);
+    const grip = document.createElement("span");
+    grip.className = "drag-handle";
+    grip.setAttribute("title", "Drag to move panel");
+    grip.setAttribute("aria-hidden", "true");
+    grip.appendChild(dotsSixIcon());
+    head.appendChild(grip);
+    bindPanelDrag(state, grip);
     const close = document.createElement("button");
     close.className = "close";
     close.appendChild(closeIcon());
@@ -1182,6 +1263,15 @@
     return phosphorIcon(
       "magic-icon",
       "M252,152a12,12,0,0,1-12,12H228v12a12,12,0,0,1-24,0V164H192a12,12,0,0,1,0-24h12V128a12,12,0,0,1,24,0v12h12A12,12,0,0,1,252,152ZM56,76H68V88a12,12,0,0,0,24,0V76h12a12,12,0,1,0,0-24H92V40a12,12,0,0,0-24,0V52H56a12,12,0,0,0,0,24ZM184,188h-4v-4a12,12,0,0,0-24,0v4h-4a12,12,0,0,0,0,24h4v4a12,12,0,0,0,24,0v-4h4a12,12,0,0,0,0-24ZM222.14,82.83,82.82,222.14a20,20,0,0,1-28.28,0L33.85,201.46a20,20,0,0,1,0-28.29L173.17,33.86a20,20,0,0,1,28.28,0l20.69,20.68A20,20,0,0,1,222.14,82.83ZM159,112,144,97,53.65,187.31l15,15Zm43.31-43.31-15-15L161,80l15,15Z",
+    );
+  }
+
+  // Phosphor DotsSix, bold weight, matching the icon set used
+  // across the app. Filled by CSS like the other panel icons.
+  function dotsSixIcon() {
+    return phosphorIcon(
+      "drag-icon",
+      "M76,92A16,16,0,1,1,60,76,16,16,0,0,1,76,92Zm52-16a16,16,0,1,0,16,16A16,16,0,0,0,128,76Zm68,32a16,16,0,1,0-16-16A16,16,0,0,0,196,108ZM60,148a16,16,0,1,0,16,16A16,16,0,0,0,60,148Zm68,0a16,16,0,1,0,16,16A16,16,0,0,0,128,148Zm68,0a16,16,0,1,0,16,16A16,16,0,0,0,196,148Z",
     );
   }
 
@@ -1625,6 +1715,7 @@
         deepOffer: opts.deepOffer || "none",
         deepRunning: Boolean(opts.deepRunning),
         deepEmptyNote: Boolean(opts.deepEmptyNote),
+        dragOffset: null,
         aiTool: "Express in English",
         aiBusy: Boolean(opts.aiBusy),
         aiResult: null,

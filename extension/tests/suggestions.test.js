@@ -1031,3 +1031,116 @@ test("names a deep run that found nothing more", () => {
   );
 });
 
+const dragMatch = {
+  offset: 0,
+  length: 3,
+  message: "Possible typo",
+  replacements: ["The"],
+};
+
+function openPanel(api, field) {
+  api.showField(field, [dragMatch], {});
+  api.fieldState(field).badgeEl.listeners.click({
+    preventDefault() {},
+    stopPropagation() {},
+  });
+  return api.fieldState(field).panelEl;
+}
+
+function panelHeadHandle(panel) {
+  const head = panel.children[0];
+  return head.children.find((child) =>
+    String(child.className || "").includes("drag-handle"),
+  );
+}
+
+test("panel drag handle uses the Phosphor dots icon", () => {
+  const { api, field } = loadPanelHarness();
+  const panel = openPanel(api, field);
+  const handle = panelHeadHandle(panel);
+  const icon = handle.children.find((child) =>
+    String(child.className || "").includes("drag-icon"),
+  );
+  assert.ok(icon);
+  assert.ok(String(icon.innerHTML || "").includes("<svg"));
+  assert.ok(String(icon.innerHTML || "").includes("M76,92"));
+});
+
+test("panel header offers a drag handle that moves the panel", () => {
+  const { api, field } = loadPanelHarness();
+  const panel = openPanel(api, field);
+  const handle = panelHeadHandle(panel);
+  assert.ok(handle);
+  const beforeLeft = Number.parseFloat(panel.style.left);
+  const beforeTop = Number.parseFloat(panel.style.top);
+
+  handle.listeners.pointerdown({
+    button: 0,
+    clientX: 100,
+    clientY: 100,
+    pointerId: 1,
+    preventDefault() {},
+    stopPropagation() {},
+  });
+  handle.listeners.pointermove({ clientX: 130, clientY: 85, preventDefault() {} });
+  handle.listeners.pointerup({});
+
+  assert.equal(api.fieldState(field).dragOffset.x, 30);
+  assert.equal(api.fieldState(field).dragOffset.y, -15);
+  assert.equal(panel.style.left, `${beforeLeft + 30}px`);
+  assert.equal(panel.style.top, `${beforeTop - 15}px`);
+});
+
+test("panel drag ignores non-primary buttons", () => {
+  const { api, field } = loadPanelHarness();
+  const panel = openPanel(api, field);
+  const handle = panelHeadHandle(panel);
+  handle.listeners.pointerdown({
+    button: 2,
+    clientX: 100,
+    clientY: 100,
+    pointerId: 1,
+    preventDefault() {},
+    stopPropagation() {},
+  });
+  assert.equal(handle.listeners.pointermove, undefined);
+  assert.equal(api.fieldState(field).dragOffset, null);
+});
+
+test("panel drag clamps to the viewport", () => {
+  const { api, field } = loadPanelHarness();
+  const panel = openPanel(api, field);
+  const handle = panelHeadHandle(panel);
+  handle.listeners.pointerdown({
+    button: 0,
+    clientX: 500,
+    clientY: 400,
+    pointerId: 1,
+    preventDefault() {},
+    stopPropagation() {},
+  });
+  handle.listeners.pointermove({ clientX: -5000, clientY: 5000, preventDefault() {} });
+  handle.listeners.pointerup({});
+  assert.equal(panel.style.left, "8px");
+  assert.ok(Number.parseFloat(panel.style.top) <= 800 - 48);
+});
+
+test("panel drag offset survives re-renders", () => {
+  const { api, field } = loadPanelHarness();
+  const panel = openPanel(api, field);
+  const handle = panelHeadHandle(panel);
+  handle.listeners.pointerdown({
+    button: 0,
+    clientX: 100,
+    clientY: 100,
+    pointerId: 1,
+    preventDefault() {},
+    stopPropagation() {},
+  });
+  handle.listeners.pointermove({ clientX: 120, clientY: 110, preventDefault() {} });
+  handle.listeners.pointerup({});
+  api.showField(field, [dragMatch], {});
+  assert.equal(api.fieldState(field).dragOffset.x, 20);
+  assert.equal(api.fieldState(field).dragOffset.y, 10);
+});
+

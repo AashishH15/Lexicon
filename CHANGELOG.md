@@ -34,6 +34,7 @@ Lexicon v0.11.0 is a major milestone that transforms Lexicon from a standalone d
 - **Run Deep Proofread in the Badge Panel**: every All clear offers a local-AI clarity and flow pass over the full field (chunked for long text), with clarity rows styled distinctly from grammar rows in the same list. A run that finds nothing says so instead of going silent.
 - **Deep Proofread Auto-Run Toggle (off by default)**: a new popup setting auto-runs the deeper check after an accepted fix. Dismissals never auto-run.
 - **Popup Engine Readout**: the popup header names the active engine (for example Standard · GPU, Ollama, or LM Studio) and hides itself when the backend is unreachable or unconfigured.
+- **Draggable Suggestion Panel**: the badge panel header carries a Phosphor grip handle. Drag the panel anywhere; it keeps its offset, follows the field on scroll, survives re-renders, and clamps so the header stays reachable.
 
 #### 🧠 3-Tier Local LLM Architecture & Hybrid Deep Proofread:
 - **New Quality Tier + Light/Standard Model Upgrades**: v0.11.0 introduces a third **Quality** download tier and replaces the previous Light and Standard GGUF pins with stronger curated models. Legacy Light/Standard files can be verified and cleaned up after a safe migration.
