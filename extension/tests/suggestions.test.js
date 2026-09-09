@@ -863,7 +863,7 @@ test("Express in English runs in the badge panel with a tone picker", async () =
   });
 });
 
-function loadPanelHarness() {
+function loadPanelHarness({ resize } = {}) {
   const makeElement = (tag) => ({
     tagName: tag.toUpperCase(),
     className: "",
@@ -929,6 +929,9 @@ function loadPanelHarness() {
       innerHeight: 800,
       addEventListener() {},
       removeEventListener() {},
+      ...(resize === undefined
+        ? {}
+        : { getComputedStyle: () => ({ resize }) }),
     },
     globalThis: {},
   };
@@ -1142,5 +1145,26 @@ test("panel drag offset survives re-renders", () => {
   api.showField(field, [dragMatch], {});
   assert.equal(api.fieldState(field).dragOffset.x, 20);
   assert.equal(api.fieldState(field).dragOffset.y, 10);
+});
+
+test("badge leaves room for the native resize grip on resizable fields", () => {
+  const { api, field } = loadPanelHarness({ resize: "both" });
+  const pos = api.badgePosition(field);
+  // Badge edge stops 20px short of the field corner grip zone.
+  assert.equal(pos.left, 400 - 26 - 20);
+  assert.equal(pos.top, 180 - 26);
+});
+
+test("badge treats textareas with automatic resize as resizable", () => {
+  const { api, field } = loadPanelHarness({ resize: "auto" });
+  const pos = api.badgePosition(field);
+  assert.equal(pos.left, 400 - 26 - 20);
+});
+
+test("badge stays corner-flush on fixed fields", () => {
+  const { api, field } = loadPanelHarness({ resize: "none" });
+  const pos = api.badgePosition(field);
+  assert.equal(pos.left, 400 - 26);
+  assert.equal(pos.top, 180 - 26);
 });
 

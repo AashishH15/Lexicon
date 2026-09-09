@@ -13,8 +13,9 @@ const source = readFileSync(
   "utf-8",
 );
 
-function loadSquiggle({ spanRect = null } = {}) {
+function loadSquiggle({ spanRect = null, scrollX = 0, scrollY = 0 } = {}) {
   let layer = null;
+  const mirrors = [];
   const makeElement = (tagName) => ({
     tagName: tagName.toUpperCase(),
     style: {},
@@ -61,6 +62,9 @@ function loadSquiggle({ spanRect = null } = {}) {
       documentElement: {
         appendChild(element) {
           if (element.id === "lexicon-squiggle-layer") layer = element;
+          if (String(element.id || "").startsWith("lexicon-squiggle-mirror")) {
+            mirrors.push(element);
+          }
         },
       },
       getElementById() {
@@ -94,6 +98,8 @@ function loadSquiggle({ spanRect = null } = {}) {
     window: {
       addEventListener() {},
       removeEventListener() {},
+      scrollX,
+      scrollY,
     },
     getComputedStyle() {
       return {
@@ -127,6 +133,7 @@ function loadSquiggle({ spanRect = null } = {}) {
   vm.createContext(sandbox);
   vm.runInContext(source, sandbox);
   sandbox.__lexiconSquiggle.__testLayer = () => layer;
+  sandbox.__lexiconSquiggle.__testMirrors = () => mirrors;
   return sandbox.__lexiconSquiggle;
 }
 
@@ -243,4 +250,49 @@ test("scrollToMatch can briefly flash the matching squiggle", () => {
     ),
     true,
   );
+});
+
+function textareaField(overrides = {}) {
+  return {
+    tagName: "TEXTAREA",
+    value: "teh teh",
+    offsetWidth: 240,
+    clientWidth: 240,
+    clientHeight: 60,
+    scrollTop: 0,
+    scrollLeft: 0,
+    getBoundingClientRect: () => ({
+      top: 100,
+      bottom: 160,
+      left: 20,
+      right: 260,
+      width: 240,
+      height: 60,
+    }),
+    addEventListener() {},
+    removeEventListener() {},
+    ...overrides,
+  };
+}
+
+test("textarea mirror compensates page scroll", () => {
+  const api = loadSquiggle({ scrollX: 30, scrollY: 400 });
+  api.applyFieldSquiggles(textareaField(), [{ start: 0, end: 3 }], "teh teh");
+  const mirrors = api.__testMirrors();
+  assert.equal(mirrors.length, 1);
+  assert.equal(mirrors[0].style.left, "50px");
+  assert.equal(mirrors[0].style.top, "500px");
+});
+
+test("textarea mirror compensates field scroll", () => {
+  const api = loadSquiggle();
+  api.applyFieldSquiggles(
+    textareaField({ scrollTop: 40, scrollLeft: 12 }),
+    [{ start: 0, end: 3 }],
+    "teh teh",
+  );
+  const mirrors = api.__testMirrors();
+  assert.equal(mirrors.length, 1);
+  assert.equal(mirrors[0].style.left, "8px");
+  assert.equal(mirrors[0].style.top, "60px");
 });

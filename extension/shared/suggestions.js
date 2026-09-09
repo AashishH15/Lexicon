@@ -43,6 +43,7 @@
     };
 
   const BADGE_SIZE = 26;
+  const RESIZE_CLEARANCE = 20; // Free corner kept for the native resize grip.
   const PANEL_WIDTH = 320;
   const PANEL_MAX_HEIGHT = 360;
   const PANEL_GAP = 8;
@@ -314,13 +315,39 @@
     );
   }
 
+  // True when the field shows a native resize grip in its corner.
+  // Textareas carry one by default; other elements need an explicit
+  // resize value. Never throw; unknown engines keep corner placement.
+  function fieldAllowsResize(field) {
+    try {
+      if (
+        typeof window === "undefined" ||
+        typeof window.getComputedStyle !== "function"
+      ) {
+        return false;
+      }
+      const resize = window.getComputedStyle(field).resize || "";
+      if (
+        resize === "both" ||
+        resize === "vertical" ||
+        resize === "horizontal"
+      ) {
+        return true;
+      }
+      return field?.tagName === "TEXTAREA" && resize !== "none";
+    } catch {
+      return false;
+    }
+  }
+
   function badgePosition(field) {
     const rect = field.getBoundingClientRect();
     const visibleRight = Math.min(rect.right, window.innerWidth - 8);
     const visibleBottom = Math.min(rect.bottom, window.innerHeight - 8);
     const visibleTop = Math.max(rect.top, 8);
+    const clearance = fieldAllowsResize(field) ? RESIZE_CLEARANCE : 0;
     return {
-      left: Math.max(8, visibleRight - BADGE_SIZE),
+      left: Math.max(8, visibleRight - BADGE_SIZE - clearance),
       top: Math.max(visibleTop, visibleBottom - BADGE_SIZE),
     };
   }

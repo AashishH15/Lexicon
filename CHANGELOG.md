@@ -35,6 +35,7 @@ Lexicon v0.11.0 is a major milestone that transforms Lexicon from a standalone d
 - **Deep Proofread Auto-Run Toggle (off by default)**: a new popup setting auto-runs the deeper check after an accepted fix. Dismissals never auto-run.
 - **Popup Engine Readout**: the popup header names the active engine (for example Standard · GPU, Ollama, or LM Studio) and hides itself when the backend is unreachable or unconfigured.
 - **Draggable Suggestion Panel**: the badge panel header carries a Phosphor grip handle. Drag the panel anywhere; it keeps its offset, follows the field on scroll, survives re-renders, and clamps so the header stays reachable.
+- **Scroll-True Squiggles**: textarea underlines now compensate page and field scroll, so they track the text while scrolling and stay visible on scrolled pages instead of drifting off-screen.
 
 #### 🧠 3-Tier Local LLM Architecture & Hybrid Deep Proofread:
 - **New Quality Tier + Light/Standard Model Upgrades**: v0.11.0 introduces a third **Quality** download tier and replaces the previous Light and Standard GGUF pins with stronger curated models. Legacy Light/Standard files can be verified and cleaned up after a safe migration.

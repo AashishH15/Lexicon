@@ -73,6 +73,23 @@
     }
   }
 
+  // Origin of the hidden textarea mirror in document coordinates.
+  // The mirror is absolutely positioned, but the field rect is
+  // viewport relative, so page scroll must be added back. Without it
+  // every squiggle drifts by the scroll amount and leaves the screen
+  // on scrolled pages.
+  function mirrorOrigin(field) {
+    const rect = field.getBoundingClientRect();
+    const scrollX =
+      (typeof window !== "undefined" && window.scrollX) || 0;
+    const scrollY =
+      (typeof window !== "undefined" && window.scrollY) || 0;
+    return {
+      left: rect.left + scrollX - (field.scrollLeft || 0),
+      top: rect.top + scrollY - (field.scrollTop || 0),
+    };
+  }
+
   function mergeRanges(ranges) {
     const sorted = [...ranges].sort((a, b) => a.start - b.start);
     const out = [];
@@ -176,9 +193,9 @@
 
   function positionTextarea(layer) {
     const { field, mirror, spans } = state;
-    const rect = field.getBoundingClientRect();
-    mirror.style.left = `${rect.left}px`;
-    mirror.style.top = `${rect.top - field.scrollTop}px`;
+    const origin = mirrorOrigin(field);
+    mirror.style.left = `${origin.left}px`;
+    mirror.style.top = `${origin.top}px`;
     for (const item of spans) {
       const spanRect = item.el.getBoundingClientRect();
       addSquiggle(layer, spanRect, item.index);
@@ -439,9 +456,9 @@
 
   function positionFieldTextarea(layer, fieldState) {
     const { field, mirror, spans } = fieldState;
-    const rect = field.getBoundingClientRect();
-    mirror.style.left = `${rect.left}px`;
-    mirror.style.top = `${rect.top - field.scrollTop}px`;
+    const origin = mirrorOrigin(field);
+    mirror.style.left = `${origin.left}px`;
+    mirror.style.top = `${origin.top}px`;
     for (const item of spans) {
       const spanRect = item.el.getBoundingClientRect();
       addFieldSquiggle(fieldState, layer, spanRect, item.index);
