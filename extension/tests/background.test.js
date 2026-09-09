@@ -436,6 +436,66 @@ test("get-ai-status reports the express gate when nothing is ready", async () =>
   assert.equal(result.express, "setup");
 });
 
+function engineStatusPayload(overrides = {}) {
+  return {
+    preference: { backend: "bundled", model_key: "2b", device: "gpu" },
+    models_ready: { "2b": true },
+    model_key: "2b",
+    active_backend: "",
+    ...overrides,
+  };
+}
+
+test("get-ai-status reports the engine tier and device", async () => {
+  const result = await getAiStatusResponse(engineStatusPayload());
+  assert.equal(result.ok, true);
+  assert.equal(result.engine, "Standard · GPU");
+});
+
+test("get-ai-status reports Quality and Light tiers", async () => {
+  const quality = await getAiStatusResponse(
+    engineStatusPayload({
+      preference: { backend: "bundled", model_key: "quality", device: "cpu" },
+      models_ready: { quality: true },
+      model_key: "quality",
+    }),
+  );
+  assert.equal(quality.engine, "Quality · CPU");
+  const light = await getAiStatusResponse(
+    engineStatusPayload({
+      preference: { backend: "bundled", model_key: "0.8b", device: "gpu" },
+      models_ready: { "0.8b": true },
+      model_key: "0.8b",
+    }),
+  );
+  assert.equal(light.engine, "Light · GPU");
+});
+
+test("get-ai-status names external backends instead of tiers", async () => {
+  const ollama = await getAiStatusResponse(
+    engineStatusPayload({
+      preference: { backend: "ollama", model_key: "2b", device: "gpu" },
+      ollama_available: true,
+    }),
+  );
+  assert.equal(ollama.engine, "Ollama");
+  const lmstudio = await getAiStatusResponse(
+    engineStatusPayload({
+      preference: { backend: "lmstudio", model_key: "2b", device: "gpu" },
+      lmstudio_available: true,
+    }),
+  );
+  assert.equal(lmstudio.engine, "LM Studio");
+});
+
+test("get-ai-status hides the engine when nothing is ready", async () => {
+  const result = await getAiStatusResponse(
+    engineStatusPayload({ models_ready: { "2b": false } }),
+  );
+  assert.equal(result.ok, true);
+  assert.equal(result.engine, "");
+});
+
 function expressTones() {
   return {
     auto: "Auto text.",

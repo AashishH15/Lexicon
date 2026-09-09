@@ -646,7 +646,7 @@
     } else if (state.matches.length === 0) {
       const empty = document.createElement("p");
       empty.className = "empty";
-      empty.textContent = "All clear — I found no issues.";
+      empty.textContent = "All clear. I found no issues.";
       list.appendChild(empty);
     } else {
       for (let i = 0; i < state.matches.length; i++) {
@@ -1086,7 +1086,7 @@
       empty.className = "empty";
       empty.textContent = state.deepEmptyNote
         ? "Deep proofread found nothing more."
-        : "All clear — I found no issues.";
+        : "All clear. I found no issues.";
       list.appendChild(empty);
       if (state.deepOffer === "invite" && typeof state.onDeepProofread === "function") {
         const invite = document.createElement("div");
@@ -1097,7 +1097,7 @@
         const run = document.createElement("button");
         run.className = "deep-run";
         run.type = "button";
-        run.textContent = "Go deeper";
+        run.textContent = "Run Deep Proofread";
         run.addEventListener("click", () => state.onDeepProofread());
         invite.appendChild(run);
         list.appendChild(invite);

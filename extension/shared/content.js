@@ -453,12 +453,9 @@
 
   // Mirror shouldOfferDeep in shared/deepProofread.js. The content
   // script loads as a classic script, so it cannot import the module.
-  // Dismiss-only emptying invites but never auto-runs. A quiet field
-  // with no activity stays quiet.
+  // Every All clear invites the deeper check. Auto-run still needs an
+  // accepted fix plus the toggle.
   function offerDeep(state) {
-    if (!state.activity) {
-      return "none";
-    }
     if (state.activity === "apply" && deepAutoRun) {
       return "auto";
     }
@@ -602,7 +599,10 @@
       // verification check used to consume the one-shot activity and
       // wipe the invite about a second after it appeared.
       const fresh = offerDeep(state);
-      const offer = fresh !== "none" ? fresh : state.pendingOffer;
+      const unmuted = fresh !== "none" ? fresh : state.pendingOffer;
+      // A deep run that just found nothing leaves its note instead of
+      // re-inviting. Typing clears the note and the invite returns.
+      const offer = unmuted === "invite" && state.deepEmptyNote ? "none" : unmuted;
       state.activity = null;
       state.pendingOffer = offer === "auto" ? "none" : offer;
       state.deepOffer = offer === "invite" ? "invite" : "none";
@@ -632,6 +632,9 @@
     suggestions.showField(state.field, cleaned, {
       ...suggestionHandlers(state),
       error: "",
+      deepOffer: "none",
+      deepRunning: false,
+      deepEmptyNote: false,
     });
     return ranges.length;
   }

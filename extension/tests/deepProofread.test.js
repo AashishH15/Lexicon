@@ -111,13 +111,9 @@ test("drops deep matches covered by grammar matches", () => {
   assert.deepEqual(kept.map((match) => match.offset), [40]);
 });
 
-test("offers deep only after suggestion activity", () => {
+test("offers deep on every empty result, auto only after an apply", () => {
   assert.equal(
     shouldOfferDeep({ empty: false, hadApply: true, hadDismiss: false, autoEnabled: true }),
-    "none",
-  );
-  assert.equal(
-    shouldOfferDeep({ empty: true, hadApply: false, hadDismiss: false, autoEnabled: true }),
     "none",
   );
   assert.equal(
@@ -130,6 +126,10 @@ test("offers deep only after suggestion activity", () => {
   );
   assert.equal(
     shouldOfferDeep({ empty: true, hadApply: false, hadDismiss: true, autoEnabled: true }),
+    "invite",
+  );
+  assert.equal(
+    shouldOfferDeep({ empty: true, hadApply: false, hadDismiss: false, autoEnabled: false }),
     "invite",
   );
 });

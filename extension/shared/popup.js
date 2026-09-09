@@ -20,6 +20,7 @@ import { createBackendStatus } from "./backendStatus.js";
 import { normalizeSite } from "./settings.js";
 
 const statusEl = document.getElementById("status");
+const engineEl = document.getElementById("engine");
 const lexStatusEl = document.getElementById("lex-status");
 const statusIconEl = document.getElementById("status-icon");
 const inputEl = document.getElementById("input");
@@ -56,6 +57,7 @@ let settings = {
   siteDisabled: false,
   aiConfigured: null,
   expressGate: null,
+  engine: "",
   userDictionary: [],
 };
 const lexStatusApi = globalThis.__lexiconLexStatus;
@@ -162,6 +164,10 @@ function renderLexStatus() {
   statusIconEl.src = lexStatusApi.iconUrl(status);
   statusIconEl.alt = "";
   statusEl.textContent = message;
+  if (engineEl) {
+    engineEl.textContent = settings.engine || "";
+    engineEl.hidden = !settings.engine || monitorState !== "connected";
+  }
 }
 
 function clearFieldTarget(message) {
@@ -388,6 +394,7 @@ async function loadSettings() {
       deepAutoRun: false,
       siteDisabled: false,
       aiConfigured: null,
+      engine: "",
       userDictionary: [],
     };
   }
@@ -512,6 +519,7 @@ async function loadAiStatus() {
     if (typeof response?.express === "string") {
       settings.expressGate = response.express;
     }
+    settings.engine = typeof response?.engine === "string" ? response.engine : "";
     renderSettings();
   } catch {
     // The connection indicator remains authoritative if the AI probe fails.

@@ -382,6 +382,39 @@ function aiStatusIsConfigured(status) {
   );
 }
 
+// Short engine readout for the popup header. Mirrors
+// formatEngineTierLabel in frontend/src/lexStatus.js. Empty string
+// means hide the readout.
+function engineTierLabel(status) {
+  try {
+    if (!status || typeof status !== "object" || Array.isArray(status)) {
+      return "";
+    }
+    if (!aiStatusIsConfigured(status)) {
+      return "";
+    }
+    const preference =
+      status.preference && typeof status.preference === "object"
+        ? status.preference
+        : {};
+    const backend = preference.backend || "auto";
+    const active = status.active_backend || "";
+    if (backend === "ollama" || active === "ollama") {
+      return "Ollama";
+    }
+    if (backend === "lmstudio" || active === "lmstudio") {
+      return "LM Studio";
+    }
+    const key = preference.model_key || status.model_key || "2b";
+    const tiers = { "0.8b": "Light", "2b": "Standard", quality: "Quality" };
+    const label = tiers[key] || "Standard";
+    const device = preference.device || "";
+    return device ? `${label} · ${String(device).toUpperCase()}` : label;
+  } catch {
+    return "";
+  }
+}
+
 if (browser.tabs.onRemoved) {
   browser.tabs.onRemoved.addListener((tabId) => {
     activeFrameByTab.delete(tabId);
@@ -453,6 +486,7 @@ browser.runtime.onMessage.addListener((msg, sender) => {
           ok: true,
           configured: aiStatusIsConfigured(status),
           express: resolveExpressGate(status),
+          engine: engineTierLabel(status),
         };
       } catch (error) {
         return {

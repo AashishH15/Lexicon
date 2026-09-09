@@ -42,6 +42,18 @@ h1 {
   color: #346538;
 }
 
+.status-lines {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.engine {
+  margin: 0;
+  font-size: 10px;
+  color: #5f5e5b;
+}
+
 .lex-status {
   display: flex;
   min-width: 0;

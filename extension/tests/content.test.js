@@ -403,11 +403,12 @@ test("empty result after an apply invites a deeper check", async () => {
   assert.equal(harness.renderedOptions.deepOffer, "invite");
   assert.equal(harness.deepRequest, null);
 
-  // Fresh grammar work supersedes the invite. Afterwards the field is
-  // quiet again with no new activity.
+  // Fresh grammar work supersedes the invite, but every All clear
+  // offers the deeper check again.
   await harness.messageHandler({ type: "lexicon:highlight", matches: [typoMatch()] });
-  await harness.messageHandler({ type: "lexicon:highlight", matches: [] });
   assert.equal(harness.renderedOptions.deepOffer, "none");
+  await harness.messageHandler({ type: "lexicon:highlight", matches: [] });
+  assert.equal(harness.renderedOptions.deepOffer, "invite");
 });
 
 test("auto-runs deep after an apply when the toggle is on", async () => {
@@ -456,18 +457,18 @@ test("dismiss-only emptying invites but never auto-runs", async () => {
   assert.equal(harness.deepRequest, null);
 });
 
-test("quiet field with no activity stays quiet", async () => {
+test("quiet field with no activity still offers a deeper check", async () => {
   const harness = createHarness({ settings: { deepAutoRun: true } });
   await new Promise((resolve) => setImmediate(resolve));
 
   await harness.messageHandler({ type: "lexicon:highlight", matches: [] });
   await flushDeep();
 
-  assert.equal(harness.renderedOptions.deepOffer, "none");
+  assert.equal(harness.renderedOptions.deepOffer, "invite");
   assert.equal(harness.deepRequest, null);
 });
 
-test("deep suggestion activity does not re-arm another deep run", async () => {
+test("deep suggestion activity never auto-runs", async () => {
   const deep = {
     offset: 0,
     length: 3,
@@ -486,7 +487,7 @@ test("deep suggestion activity does not re-arm another deep run", async () => {
   await harness.messageHandler({ type: "lexicon:highlight", matches: [] });
   await flushDeep();
 
-  assert.equal(harness.renderedOptions.deepOffer, "none");
+  assert.equal(harness.renderedOptions.deepOffer, "invite");
   assert.equal(harness.deepRequest, null);
 });
 
@@ -504,4 +505,5 @@ test("a deep run that finds nothing leaves a visible note", async () => {
 
   assert.equal(harness.deepRequestCount, 1);
   assert.equal(harness.renderedOptions.deepEmptyNote, true);
+  assert.equal(harness.renderedOptions.deepOffer, "none");
 });

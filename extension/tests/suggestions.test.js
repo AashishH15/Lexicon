@@ -995,7 +995,7 @@ test("invites a deeper check after suggestion activity empties the list", () => 
   const run = invite.children.find((child) =>
     String(child.className || "").includes("deep-run"),
   );
-  assert.equal(run.textContent, "Go deeper");
+  assert.equal(run.textContent, "Run Deep Proofread");
   run.listeners.click();
   assert.equal(deepRuns, 1);
 });

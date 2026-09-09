@@ -273,13 +273,10 @@ export function dedupeDeepMatches(deepMatches, baseMatches) {
 }
 
 // Decide the post-typing follow-up after a normal run completes.
-// Dismiss-only emptying invites but never auto-runs. A quiet field
-// with no activity stays quiet.
+// Every All clear invites the deeper check. Auto-run still needs an
+// accepted fix plus the toggle. Dismiss-only emptying never auto-runs.
 export function shouldOfferDeep({ empty, hadApply, hadDismiss, autoEnabled }) {
   if (!empty) {
-    return "none";
-  }
-  if (!hadApply && !hadDismiss) {
     return "none";
   }
   if (hadApply && autoEnabled) {
