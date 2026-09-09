@@ -22,6 +22,7 @@ import {
   Sparkle,
   Translate,
   ListMagnifyingGlass,
+  Info,
 } from "@phosphor-icons/react";
 import { getCustomTools } from "./prompts.js";
 import { EXPRESS_TOOL_NAME } from "./useExpress.js";
@@ -122,8 +123,21 @@ export default function Toolbar({
     >
       {groups.map((group) => (
         <div key={group.label}>
-          <p className="font-mono text-[10px] uppercase tracking-[0.08em] text-muted mb-2">
+          <p className="group relative font-mono text-[10px] uppercase tracking-[0.08em] text-muted mb-2 flex items-center gap-1.5">
             {group.label}
+            {group.label === "Analysis" && (
+              <span className="inline-flex normal-case tracking-normal">
+                <Info size={12} weight="bold" aria-label="About Proofread and Deep Proofread" role="img" />
+                <span
+                  data-testid="analysis-tip"
+                  className="lex-paper-surface pointer-events-none absolute left-0 top-full z-30 mt-1 w-60 max-w-full rounded-md border border-hairline p-3 font-sans text-[11px] leading-relaxed text-muted opacity-0 shadow-sm transition-opacity duration-150 group-hover:pointer-events-auto group-hover:opacity-100"
+                >
+                  Proofread runs fast deterministic checks while you write. Deep Proofread adds a slower local-AI clarity pass for finished drafts: run it after Proofread is clean.
+                  <br />
+                  • Proofread is meant for <b>Live Writing</b>. <br /> • Deep Proofread is meant for <b>Finished Drafts</b>.
+                </span>
+              </span>
+            )}
           </p>
           <ul className="flex flex-col">
             {group.tools.map(({ name, icon: Icon }) => {

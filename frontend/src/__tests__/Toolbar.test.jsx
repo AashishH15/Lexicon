@@ -88,3 +88,25 @@ describe("Toolbar Express entry", () => {
     expect(button.title).toContain("Set up");
   });
 });
+
+describe("Toolbar Analysis info", () => {
+  it("explains when to use Proofread vs Deep Proofread", async () => {
+    await renderToolbar(baseProps());
+    const info = container.querySelector(
+      '[aria-label="About Proofread and Deep Proofread"]',
+    );
+    expect(info).not.toBe(null);
+    expect(container.textContent).toContain("fast deterministic checks");
+    expect(container.textContent).toContain("after Proofread is clean");
+  });
+
+  it("caps the info card to the label width", async () => {
+    await renderToolbar(baseProps());
+    const info = container.querySelector(
+      '[aria-label="About Proofread and Deep Proofread"]',
+    );
+    const card = info.closest("p").querySelector("[data-testid='analysis-tip']");
+    expect(card).not.toBe(null);
+    expect(card.classList.contains("max-w-full")).toBe(true);
+  });
+});
