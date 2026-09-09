@@ -23,6 +23,14 @@ import {
   resolveExpressGate,
 } from "./expressParser.js";
 import {
+  dedupeDeepMatches,
+  deepEditsToMatches,
+  getDeepProofreadPrompt,
+  parseDeepEdits,
+  splitDeepChunks,
+  validateDeepEdits,
+} from "./deepProofread.js";
+import {
   DEFAULT_SETTINGS,
   SETTINGS_STORAGE_KEY,
   isSiteDisabled,
@@ -525,6 +533,21 @@ browser.runtime.onMessage.addListener((msg, sender) => {
     })();
   }
 
+  if (msg?.type === "lexicon:set-deep-auto-run") {
+    return (async () => {
+      try {
+        const settings = await readSettings();
+        const saved = await saveSettings(
+          { ...settings, deepAutoRun: Boolean(msg.enabled) },
+          Number.isInteger(msg.tabId) ? msg.tabId : undefined,
+        );
+        return settingsForSite(saved, msg.site || senderSite(sender));
+      } catch (error) {
+        return { ok: false, error: error?.message || "settings-save-failed" };
+      }
+    })();
+  }
+
   if (msg?.type === "lexicon:active-field") {
     const tabId = sender?.tab?.id;
     if (Number.isInteger(tabId) && Number.isInteger(sender.frameId)) {
@@ -627,6 +650,79 @@ browser.runtime.onMessage.addListener((msg, sender) => {
           error: error?.message || "transform_failed",
         };
       }
+    })();
+  }
+
+  if (msg?.type === "lexicon:deep-proofread") {
+    return (async () => {
+      rememberFrame(sender?.tab?.id, sender?.frameId);
+      const settings = settingsForSite(
+        await synchronizeDictionary(),
+        senderSite(sender),
+      );
+      if (settings.siteDisabled) {
+        return { ok: false, error: "site-disabled", matches: [] };
+      }
+      if (settings.paused) {
+        return { ok: false, error: "proofreading-paused", matches: [] };
+      }
+      const text = String(msg.text || "");
+      if (!text.trim()) {
+        return { ok: true, matches: [] };
+      }
+      await discoverBackend();
+      if (!getBackendBaseUrl()) {
+        return { ok: false, error: "backend_unreachable", matches: [] };
+      }
+      let status;
+      try {
+        status = await getAiStatus();
+      } catch {
+        return { ok: false, error: "ai-status-unavailable", matches: [] };
+      }
+      if (!aiStatusIsConfigured(status)) {
+        return { ok: false, error: "ai-not-configured", matches: [] };
+      }
+      const modelKey =
+        status?.preference?.model_key || status?.model_key || "2b";
+      const prompt = getDeepProofreadPrompt(modelKey);
+      const chunks = splitDeepChunks(text);
+      if (chunks.length === 0) {
+        return { ok: true, matches: [] };
+      }
+      const baseline = Array.isArray(msg.baseline) ? msg.baseline : [];
+      const matches = [];
+      let nextId = 0;
+      try {
+        for (const chunk of chunks) {
+          const raw = await transformText(prompt, chunk.text);
+          let items;
+          try {
+            items = parseDeepEdits(raw);
+          } catch {
+            return {
+              ok: false,
+              error: "deep-proofread-unusable",
+              matches: [],
+            };
+          }
+          const { edits } = validateDeepEdits(chunk.text, items);
+          const converted = deepEditsToMatches({
+            edits,
+            chunkStart: chunk.start,
+            startId: nextId,
+          });
+          matches.push(...converted.matches);
+          nextId = converted.nextId;
+        }
+      } catch (error) {
+        return {
+          ok: false,
+          error: error?.message || "transform_failed",
+          matches: [],
+        };
+      }
+      return { ok: true, matches: dedupeDeepMatches(matches, baseline) };
     })();
   }
 

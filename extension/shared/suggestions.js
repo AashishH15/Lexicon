@@ -160,6 +160,12 @@
     ".panel .row .text{flex:1;min-width:0}" +
     ".panel .row .message{margin:0 0 2px}" +
     ".panel .row .suggestion{margin:0;color:#5f5e5b;font-size:12px}" +
+    ".panel .row.deep{border-left-color:#1f6c9f;background:#eef4fa}" +
+    ".panel .row.deep:hover{background:#e2edf7}" +
+    ".panel .deep-invite{margin:4px 3px 2px;padding:8px 9px;border:1px dashed #b9b7b0;border-radius:6px;background:#ffffff}" +
+    ".panel .deep-invite p{margin:0 0 6px;font-size:12px;color:#5f5e5b}" +
+    ".panel .deep-run{border:1px solid #1f6c9f;border-radius:6px;background:#1f6c9f;color:#ffffff;font:inherit;font-weight:600;padding:5px 10px;cursor:pointer}" +
+    ".panel .deep-run:hover{filter:brightness(1.08)}" +
     ".panel .actions{flex:none;display:flex;flex-direction:column;gap:4px}" +
     ".panel .apply{border:1px solid #1f6c9f;border-radius:6px;background:#1f6c9f;color:#ffffff;font:inherit;font-weight:600;padding:4px 10px;cursor:pointer}" +
     ".panel .apply:hover{filter:brightness(1.08)}" +
@@ -1056,7 +1062,9 @@
     if (state.checking) {
       const empty = document.createElement("p");
       empty.className = "empty";
-      empty.textContent = "I’m checking…";
+      empty.textContent = state.deepRunning
+        ? "Running a deeper clarity check…"
+        : "I’m checking…";
       list.appendChild(empty);
     } else if (state.offline) {
       const empty = document.createElement("p");
@@ -1076,14 +1084,31 @@
     } else if (state.matches.length === 0) {
       const empty = document.createElement("p");
       empty.className = "empty";
-      empty.textContent = "All clear — I found no issues.";
+      empty.textContent = state.deepEmptyNote
+        ? "Deep proofread found nothing more."
+        : "All clear — I found no issues.";
       list.appendChild(empty);
+      if (state.deepOffer === "invite" && typeof state.onDeepProofread === "function") {
+        const invite = document.createElement("div");
+        invite.className = "deep-invite";
+        const copy = document.createElement("p");
+        copy.textContent = "Want a second opinion on clarity and flow?";
+        invite.appendChild(copy);
+        const run = document.createElement("button");
+        run.className = "deep-run";
+        run.type = "button";
+        run.textContent = "Go deeper";
+        run.addEventListener("click", () => state.onDeepProofread());
+        invite.appendChild(run);
+        list.appendChild(invite);
+      }
     } else {
       for (let i = 0; i < state.matches.length; i++) {
         const match = state.matches[i];
         const row = document.createElement("div");
         row.className =
-          state.activeMatchIndex === i ? "row active" : "row";
+          (state.activeMatchIndex === i ? "row active" : "row") +
+          (match && match.deep ? " deep" : "");
         bindMatchRowActivation(row, () => {
           setActiveMatchRow(state, i);
           if (typeof state.onFocusMatch === "function") {
@@ -1596,6 +1621,10 @@
         onAddToDictionary: opts.onAddToDictionary || (() => false),
         onTransform: opts.onTransform || null,
         onApplyTransform: opts.onApplyTransform || null,
+        onDeepProofread: opts.onDeepProofread || null,
+        deepOffer: opts.deepOffer || "none",
+        deepRunning: Boolean(opts.deepRunning),
+        deepEmptyNote: Boolean(opts.deepEmptyNote),
         aiTool: "Express in English",
         aiBusy: Boolean(opts.aiBusy),
         aiResult: null,
@@ -1691,6 +1720,12 @@
       if (opts.onApplyTransform) {
         state.onApplyTransform = opts.onApplyTransform;
       }
+      if (opts.onDeepProofread) {
+        state.onDeepProofread = opts.onDeepProofread;
+      }
+      state.deepOffer = opts.deepOffer || "none";
+      state.deepRunning = Boolean(opts.deepRunning);
+      state.deepEmptyNote = Boolean(opts.deepEmptyNote);
       if (opts.aiBusy !== undefined) state.aiBusy = Boolean(opts.aiBusy);
       if (opts.aiError !== undefined) state.aiError = String(opts.aiError || "");
       state.panelOpen = keepOpen;

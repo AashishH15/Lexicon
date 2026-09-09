@@ -607,3 +607,112 @@ test("express transform asks for setup when nothing is ready", async () => {
     await messageHandler({ type: "lexicon:get-ai-status" }, {});
   }
 });
+
+async function deepProofreadResponse({ status, modelText, text, baseline } = {}) {
+  const previousFetch = globalThis.fetch;
+  storedSettings = {};
+  const response = (body) => ({
+    ok: true,
+    async json() {
+      return body;
+    },
+  });
+  let transformCalls = 0;
+  globalThis.fetch = async (url, options) => {
+    const path = new URL(url).pathname;
+    if (path === "/extension/ping") {
+      return response({ ok: true, app: "lexicon" });
+    }
+    if (path === "/ai/status") {
+      return response(status || aiStatusPayload("2b"));
+    }
+    if (path === "/transform") {
+      transformCalls += 1;
+      return response({ text: modelText });
+    }
+    throw new Error(`unexpected request: ${url}`);
+  };
+  try {
+    const result = await messageHandler(
+      {
+        type: "lexicon:deep-proofread",
+        text: text || "She is capable to handle the project today.",
+        baseline: baseline || [],
+      },
+      {},
+    );
+    return { result, transformCalls };
+  } finally {
+    globalThis.fetch = previousFetch;
+    await messageHandler({ type: "lexicon:get-ai-status" }, {});
+  }
+}
+
+test("deep proofread returns clarity matches with absolute offsets", async () => {
+  const raw = JSON.stringify([
+    { source: "capable to handle", replacement: "capable of handling" },
+  ]);
+  const { result, transformCalls } = await deepProofreadResponse({ modelText: raw });
+  assert.equal(result.ok, true);
+  assert.equal(transformCalls, 1);
+  assert.equal(result.matches.length, 1);
+  assert.equal(result.matches[0].offset, 7);
+  assert.deepEqual(result.matches[0].replacements, ["capable of handling"]);
+  assert.equal(result.matches[0].rule.id, "LEXICON_DEEP");
+  assert.equal(result.matches[0].deep, true);
+});
+
+test("deep proofread drops matches covered by grammar matches", async () => {
+  const raw = JSON.stringify([
+    { source: "capable to handle", replacement: "capable of handling" },
+  ]);
+  const { result } = await deepProofreadResponse({
+    modelText: raw,
+    baseline: [{ offset: 0, length: 40 }],
+  });
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.matches, []);
+});
+
+test("deep proofread reports unusable model output", async () => {
+  const { result, transformCalls } = await deepProofreadResponse({
+    modelText: "not json",
+  });
+  assert.equal(result.ok, false);
+  assert.equal(result.error, "deep-proofread-unusable");
+  assert.equal(transformCalls, 1);
+});
+
+test("deep proofread blocks when no model is ready", async () => {
+  const { result, transformCalls } = await deepProofreadResponse({
+    status: aiStatusPayload("2b", false),
+    modelText: "[]",
+  });
+  assert.equal(result.ok, false);
+  assert.equal(result.error, "ai-not-configured");
+  assert.equal(transformCalls, 0);
+});
+
+test("deep proofread returns empty for blank text with no model call", async () => {
+  const { result, transformCalls } = await deepProofreadResponse({
+    text: "   ",
+    modelText: "[]",
+  });
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.matches, []);
+  assert.equal(transformCalls, 0);
+});
+
+test("deep auto-run toggle persists through settings", async () => {
+  storedSettings = {};
+  const saved = await messageHandler(
+    { type: "lexicon:set-deep-auto-run", enabled: true },
+    {},
+  );
+  assert.equal(saved.deepAutoRun, true);
+  const off = await messageHandler(
+    { type: "lexicon:set-deep-auto-run", enabled: false },
+    {},
+  );
+  assert.equal(off.deepAutoRun, false);
+});

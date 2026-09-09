@@ -28,6 +28,7 @@ const rewriteToolEl = document.getElementById("rewrite-tool");
 const rewriteBtn = document.getElementById("rewrite");
 const resultsEl = document.getElementById("results");
 const pauseProofreadingEl = document.getElementById("pause-proofreading");
+const deepAutoRunEl = document.getElementById("deep-auto-run");
 const disableSiteEl = document.getElementById("disable-site");
 const siteNameEl = document.getElementById("site-name");
 const settingsStatusEl = document.getElementById("settings-status");
@@ -51,6 +52,7 @@ let monitorState = "checking";
 let operationStatus = null;
 let settings = {
   paused: false,
+  deepAutoRun: false,
   siteDisabled: false,
   aiConfigured: null,
   expressGate: null,
@@ -226,6 +228,7 @@ async function selectField(fieldId) {
 
 function renderSettings() {
   pauseProofreadingEl.checked = Boolean(settings.paused);
+  deepAutoRunEl.checked = Boolean(settings.deepAutoRun);
   disableSiteEl.checked = Boolean(settings.siteDisabled);
   disableSiteEl.disabled = !currentSite;
   siteNameEl.textContent = currentSite || "this site";
@@ -382,6 +385,7 @@ async function loadSettings() {
   } catch {
     settings = {
       paused: false,
+      deepAutoRun: false,
       siteDisabled: false,
       aiConfigured: null,
       userDictionary: [],
@@ -419,6 +423,31 @@ async function updatePause(event) {
     settingsStatusEl.textContent = "Could not update the proofreading setting.";
   } finally {
     pauseProofreadingEl.disabled = false;
+    renderSettings();
+  }
+}
+
+async function updateDeepAutoRun(event) {
+  const previous = settings.deepAutoRun;
+  deepAutoRunEl.disabled = true;
+  try {
+    const response = await browser.runtime.sendMessage({
+      type: "lexicon:set-deep-auto-run",
+      enabled: event.target.checked,
+      site: currentSite,
+    });
+    if (response?.ok === false) throw new Error(response.error);
+    settings = {
+      ...settings,
+      ...response,
+      deepAutoRun: Boolean(response.deepAutoRun),
+    };
+  } catch {
+    settings.deepAutoRun = previous;
+    deepAutoRunEl.checked = previous;
+    settingsStatusEl.textContent = "Could not update the Deep Proofread setting.";
+  } finally {
+    deepAutoRunEl.disabled = false;
     renderSettings();
   }
 }
@@ -860,6 +889,7 @@ fieldSelectEl.addEventListener("change", () => {
   selectField(fieldSelectEl.value);
 });
 pauseProofreadingEl.addEventListener("change", updatePause);
+deepAutoRunEl.addEventListener("change", updateDeepAutoRun);
 disableSiteEl.addEventListener("change", updateSiteDisabled);
 dictionaryAddButtonEl.addEventListener("click", addDictionaryWordFromPopup);
 dictionaryWordEl.addEventListener("keydown", (event) => {

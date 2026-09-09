@@ -25,6 +25,7 @@ test("normalizeSettings removes invalid and duplicate disabled sites", () => {
     }),
     {
       paused: true,
+      deepAutoRun: false,
       disabledSites: ["example.com"],
       userDictionary: [],
       dictionaryRevision: 0,
@@ -88,4 +89,10 @@ test("isSiteDisabled matches the normalized host name", () => {
   });
   assert.equal(isSiteDisabled(settings, "https://EXAMPLE.com/form"), true);
   assert.equal(isSiteDisabled(settings, "other.example.com"), false);
+});
+
+test("normalizeSettings keeps the deep auto-run toggle off by default", () => {
+  assert.equal(normalizeSettings({}).deepAutoRun, false);
+  assert.equal(normalizeSettings({ deepAutoRun: 1 }).deepAutoRun, true);
+  assert.equal(normalizeSettings({ deepAutoRun: false }).deepAutoRun, false);
 });

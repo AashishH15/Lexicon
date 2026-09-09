@@ -39,6 +39,7 @@ const SHIP_FILES = [
   "backendStatus.js",
   "prompts.js",
   "expressParser.js",
+  "deepProofread.js",
   "settings.js",
   "popup.html",
   "popup.css",

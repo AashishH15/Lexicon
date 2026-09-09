@@ -22,6 +22,7 @@
   let settingsReady = false;
   let proofreadingPaused = false;
   let siteDisabled = false;
+  let deepAutoRun = false;
   let userDictionary = new Set();
   let nextFieldId = 1;
   let frameHasFields = null;
@@ -85,6 +86,7 @@
     settingsReady = true;
     proofreadingPaused = Boolean(nextSettings?.paused);
     siteDisabled = isSiteDisabledBySettings(nextSettings);
+    deepAutoRun = Boolean(nextSettings?.deepAutoRun);
     userDictionary = nextDictionary;
     const enabled = isProofreadingEnabled();
     if (!enabled) {
@@ -188,6 +190,12 @@
       mutationObserver: null,
       selection: null,
       dismissedKeys: new Set(),
+      activity: null,
+      pendingOffer: "none",
+      deepOffer: "none",
+      deepRunning: false,
+      deepEmptyNote: false,
+      deepToken: 0,
     };
     fieldStates.set(field, state);
     return state;
@@ -443,11 +451,98 @@
     hideStateVisuals(state);
   }
 
+  // Mirror shouldOfferDeep in shared/deepProofread.js. The content
+  // script loads as a classic script, so it cannot import the module.
+  // Dismiss-only emptying invites but never auto-runs. A quiet field
+  // with no activity stays quiet.
+  function offerDeep(state) {
+    if (!state.activity) {
+      return "none";
+    }
+    if (state.activity === "apply" && deepAutoRun) {
+      return "auto";
+    }
+    return "invite";
+  }
+
+  async function runDeepProofread(state) {
+    if (
+      !state ||
+      state.deepRunning ||
+      !isProofreadingEnabled() ||
+      !state.visible ||
+      !fieldIsAttached(state.field)
+    ) {
+      return;
+    }
+    refreshStateText(state);
+    const text = state.text;
+    if (!text.trim()) {
+      return;
+    }
+    const token = (state.deepToken || 0) + 1;
+    state.deepToken = token;
+    state.deepRunning = true;
+    state.pendingOffer = "none";
+    state.deepOffer = "none";
+    state.deepEmptyNote = false;
+    invalidateCheck(state);
+    suggestions.showField(state.field, state.matches || [], {
+      ...suggestionHandlers(state),
+      checking: true,
+      deepRunning: true,
+      deepOffer: "none",
+    });
+    let response;
+    try {
+      response = await browser.runtime.sendMessage({
+        type: "lexicon:deep-proofread",
+        text,
+        baseline: state.matches || [],
+      });
+    } catch {
+      response = null;
+    }
+    if (
+      token !== state.deepToken ||
+      !state.visible ||
+      !fieldIsAttached(state.field)
+    ) {
+      return;
+    }
+    const after = editable.extractEditableText(state.field);
+    if (after.text !== text) {
+      refreshStateText(state);
+      state.deepRunning = false;
+      scheduleFieldCheck(state);
+      return;
+    }
+    state.deepRunning = false;
+    if (response && response.ok === true && Array.isArray(response.matches)) {
+      state.deepEmptyNote = response.matches.length === 0;
+      applyHighlight(state, response.matches);
+      return;
+    }
+    if (
+      response &&
+      response.ok === false &&
+      (response.error === "proofreading-paused" ||
+        response.error === "site-disabled")
+    ) {
+      return;
+    }
+    showError(state, (response && response.error) || "check_failed");
+  }
+
   function showChecking(state) {
     state.checking = true;
     state.offline = false;
     state.error = "";
     state.matches = [];
+    state.pendingOffer = "none";
+    state.deepOffer = "none";
+    state.deepRunning = false;
+    state.deepEmptyNote = false;
     squiggle.clearFieldSquiggles(state.field);
     suggestions.showField(state.field, [], {
       ...suggestionHandlers(state),
@@ -503,13 +598,30 @@
     state.error = "";
     state.checkedText = state.text;
     if (cleaned.length === 0) {
+      // A pending invite survives later empty rechecks. The post-apply
+      // verification check used to consume the one-shot activity and
+      // wipe the invite about a second after it appeared.
+      const fresh = offerDeep(state);
+      const offer = fresh !== "none" ? fresh : state.pendingOffer;
+      state.activity = null;
+      state.pendingOffer = offer === "auto" ? "none" : offer;
+      state.deepOffer = offer === "invite" ? "invite" : "none";
       squiggle.clearFieldSquiggles(state.field);
       suggestions.showField(state.field, [], {
         ...suggestionHandlers(state),
         error: "",
+        deepOffer: state.deepOffer,
+        deepRunning: false,
+        deepEmptyNote: state.deepEmptyNote,
       });
+      if (offer === "auto") {
+        runDeepProofread(state);
+      }
       return 0;
     }
+    state.pendingOffer = "none";
+    state.deepOffer = "none";
+    state.deepEmptyNote = false;
     const ranges = rangesForMatches(state, cleaned);
     squiggle.applyFieldSquiggles(
       state.field,
@@ -555,6 +667,7 @@
         const match = state.matches && state.matches[index];
         if (match) dismissMatch(state, match);
       },
+      onDeepProofread: () => runDeepProofread(state),
       onApplyReplacement: (match, replacement) => {
         applyMatch(state, match, replacement);
       },
@@ -734,6 +847,9 @@
   function dismissMatch(state, match) {
     if (!state.matches || !match) return;
     suggestions.hideFieldMatchTooltip();
+    if (!match.deep && !state.activity) {
+      state.activity = "dismiss";
+    }
     state.dismissedKeys.add(matchKey(match, state.text));
     const remaining = state.matches.filter((item) => item !== match);
     redrawMatches(state, remaining);
@@ -787,6 +903,9 @@
     if (!dictionaryWord) return false;
     userDictionary.add(dictionaryWord);
     suggestions.hideFieldMatchTooltip();
+    if (!match.deep && !state.activity) {
+      state.activity = "dismiss";
+    }
 
     const remaining = [];
     for (const item of state.matches) {
@@ -823,6 +942,9 @@
     if (current.text !== state.text) {
       onFieldInput(state);
       return;
+    }
+    if (!match.deep) {
+      state.activity = "apply";
     }
     const expected =
       state.text.slice(0, match.offset) +

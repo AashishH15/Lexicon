@@ -863,3 +863,171 @@ test("Express in English runs in the badge panel with a tone picker", async () =
   });
 });
 
+function loadPanelHarness() {
+  const makeElement = (tag) => ({
+    tagName: tag.toUpperCase(),
+    className: "",
+    classList: {
+      classes: new Set(),
+      add(...classes) {
+        classes.forEach((name) => this.classes.add(name));
+      },
+      remove(...classes) {
+        classes.forEach((name) => this.classes.delete(name));
+      },
+      toggle(name, value) {
+        if (value) this.classes.add(name);
+        else this.classes.delete(name);
+      },
+      contains(name) {
+        return this.classes.has(name);
+      },
+    },
+    style: {},
+    children: [],
+    hidden: false,
+    textContent: "",
+    title: "",
+    value: "",
+    disabled: false,
+    listeners: {},
+    offsetHeight: 100,
+    scrollCalls: [],
+    appendChild(child) {
+      this.children.push(child);
+      return child;
+    },
+    replaceChildren(...nodes) {
+      this.children = nodes;
+    },
+    addEventListener(type, handler) {
+      this.listeners[type] = handler;
+    },
+    removeEventListener() {},
+    setAttribute() {},
+    scrollIntoView(options) {
+      this.scrollCalls.push(options);
+    },
+    remove() {},
+    attachShadow() {
+      return {
+        children: [],
+        appendChild(child) {
+          this.children.push(child);
+          return child;
+        },
+      };
+    },
+  });
+  const sandbox = {
+    document: {
+      documentElement: { appendChild() {} },
+      createElement: makeElement,
+    },
+    window: {
+      innerWidth: 1000,
+      innerHeight: 800,
+      addEventListener() {},
+      removeEventListener() {},
+    },
+    globalThis: {},
+  };
+  sandbox.globalThis = sandbox;
+  vm.createContext(sandbox);
+  vm.runInContext(statusSource, sandbox);
+  vm.runInContext(source, sandbox);
+  const field = {
+    tagName: "TEXTAREA",
+    getBoundingClientRect: () => ({
+      top: 100,
+      bottom: 180,
+      left: 50,
+      right: 400,
+      height: 80,
+    }),
+    addEventListener() {},
+    removeEventListener() {},
+  };
+  return { api: sandbox.__lexiconSuggestions, field };
+}
+
+test("marks deep clarity rows with a distinct class", () => {
+  const { api, field } = loadPanelHarness();
+  api.showField(
+    field,
+    [
+      {
+        offset: 0,
+        length: 3,
+        message: "Possible typo",
+        replacements: ["The"],
+      },
+      {
+        offset: 10,
+        length: 17,
+        message: "Deep proofread suggestion.",
+        replacements: ["capable of handling"],
+        deep: true,
+      },
+    ],
+    {},
+  );
+  const rows = api.fieldState(field).panelEl.children[1].children;
+  assert.equal(rows.length, 2);
+  assert.ok(!rows[0].className.includes("deep"));
+  assert.ok(rows[1].className.includes("deep"));
+});
+
+test("invites a deeper check after suggestion activity empties the list", () => {
+  const { api, field } = loadPanelHarness();
+  let deepRuns = 0;
+  api.showField(field, [], {
+    deepOffer: "invite",
+    onDeepProofread: () => {
+      deepRuns += 1;
+    },
+  });
+  const list = api.fieldState(field).panelEl.children[1];
+  const invite = list.children.find((child) =>
+    String(child.className || "").includes("deep-invite"),
+  );
+  assert.ok(invite);
+  const run = invite.children.find((child) =>
+    String(child.className || "").includes("deep-run"),
+  );
+  assert.equal(run.textContent, "Go deeper");
+  run.listeners.click();
+  assert.equal(deepRuns, 1);
+});
+
+test("shows no invite for a quiet field", () => {
+  const { api, field } = loadPanelHarness();
+  api.showField(field, [], {});
+  const list = api.fieldState(field).panelEl.children[1];
+  assert.ok(
+    !list.children.some((child) =>
+      String(child.className || "").includes("deep-invite"),
+    ),
+  );
+});
+
+test("names the deeper run while it checks", () => {
+  const { api, field } = loadPanelHarness();
+  api.showField(field, [], { checking: true, deepRunning: true });
+  const list = api.fieldState(field).panelEl.children[1];
+  assert.equal(
+    list.children[0].textContent,
+    "Running a deeper clarity check…",
+  );
+});
+
+test("names a deep run that found nothing more", () => {
+  const { api, field } = loadPanelHarness();
+  api.showField(field, [], { deepEmptyNote: true });
+  const list = api.fieldState(field).panelEl.children[1];
+  assert.equal(
+    list.children[0].textContent,
+    "Deep proofread found nothing more.",
+  );
+});
+

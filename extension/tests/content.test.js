@@ -52,6 +52,8 @@ function createHarness(options = {}) {
   };
   let timerId = 0;
   let replacedOnce = false;
+  let deepRequest = null;
+  let deepRequestCount = 0;
   const sandbox = {
     document: {
       documentElement: {},
@@ -89,6 +91,7 @@ function createHarness(options = {}) {
               paused: false,
               disabledSites: [],
               userDictionary: [],
+              ...(options.settings || {}),
             };
           }
           if (message.type === "lexicon:add-to-dictionary") {
@@ -107,6 +110,12 @@ function createHarness(options = {}) {
               ok: true,
               text: options.transformResult || "THE",
             };
+          }
+          if (message.type === "lexicon:deep-proofread") {
+            deepRequest = message;
+            deepRequestCount += 1;
+            if (options.deepResult !== undefined) return options.deepResult;
+            return { ok: true, matches: options.deepMatches || [] };
           }
           return { ok: true };
         },
@@ -130,9 +139,17 @@ function createHarness(options = {}) {
       },
       normalizeText: (text) => String(text).replace(/\r\n?/g, "\n"),
       getSelection: () => options.selection || null,
+      isNotionEditor: () => false,
+      isYoutubeEditor: () => false,
+      isFrameworkEditor: () => false,
       replaceEditableRange: (target, _kind, start, end, text) => {
         target.value =
           target.value.slice(0, start) + text + target.value.slice(end);
+        replacedOnce = true;
+        return true;
+      },
+      replaceEditableText: (target, _kind, text) => {
+        target.value = text;
         replacedOnce = true;
         return true;
       },
@@ -165,6 +182,12 @@ function createHarness(options = {}) {
     },
     get transformRequest() {
       return transformRequest;
+    },
+    get deepRequest() {
+      return deepRequest;
+    },
+    get deepRequestCount() {
+      return deepRequestCount;
     },
     get focusedMatch() {
       return focusedMatch;
@@ -350,4 +373,135 @@ test("AI express passes tones through for the tone picker", async () => {
 
 test("ignores synchronous runtime errors from an invalidated extension context", () => {
   assert.doesNotThrow(() => createHarness({ throwOnNotification: true }));
+});
+
+const typoMatch = () => ({
+  offset: 0,
+  length: 3,
+  message: "Possible typo",
+  replacements: ["the"],
+});
+
+async function flushDeep() {
+  for (let i = 0; i < 5; i++) {
+    await new Promise((resolve) => setImmediate(resolve));
+  }
+}
+
+test("empty result after an apply invites a deeper check", async () => {
+  const harness = createHarness();
+  await new Promise((resolve) => setImmediate(resolve));
+
+  await harness.messageHandler({ type: "lexicon:highlight", matches: [typoMatch()] });
+  harness.renderedOptions.onApply(0);
+  assert.equal(harness.renderedOptions.deepOffer, "invite");
+  assert.equal(typeof harness.renderedOptions.onDeepProofread, "function");
+
+  // The invite survives the post-apply verification recheck instead of
+  // vanishing a second later.
+  await harness.messageHandler({ type: "lexicon:highlight", matches: [] });
+  assert.equal(harness.renderedOptions.deepOffer, "invite");
+  assert.equal(harness.deepRequest, null);
+
+  // Fresh grammar work supersedes the invite. Afterwards the field is
+  // quiet again with no new activity.
+  await harness.messageHandler({ type: "lexicon:highlight", matches: [typoMatch()] });
+  await harness.messageHandler({ type: "lexicon:highlight", matches: [] });
+  assert.equal(harness.renderedOptions.deepOffer, "none");
+});
+
+test("auto-runs deep after an apply when the toggle is on", async () => {
+  const deep = {
+    offset: 0,
+    length: 3,
+    message: "Deep proofread suggestion.",
+    replacements: ["THE"],
+    deep: true,
+  };
+  const harness = createHarness({
+    settings: { deepAutoRun: true },
+    deepMatches: [deep],
+  });
+  await new Promise((resolve) => setImmediate(resolve));
+
+  await harness.messageHandler({ type: "lexicon:highlight", matches: [typoMatch()] });
+  harness.renderedOptions.onApply(0);
+  await harness.messageHandler({ type: "lexicon:highlight", matches: [] });
+  await flushDeep();
+
+  assert.ok(harness.deepRequest);
+  assert.equal(harness.deepRequest.type, "lexicon:deep-proofread");
+  assert.equal(harness.deepRequest.text, "the teh");
+  assert.equal(harness.renderedMatches.length, 1);
+  assert.equal(harness.renderedMatches[0].deep, true);
+
+  // A later empty check does not fire a second deep run.
+  await harness.messageHandler({ type: "lexicon:highlight", matches: [] });
+  await flushDeep();
+  assert.equal(harness.deepRequestCount, 1);
+});
+
+test("dismiss-only emptying invites but never auto-runs", async () => {
+  const harness = createHarness({ settings: { deepAutoRun: true } });
+  await new Promise((resolve) => setImmediate(resolve));
+
+  await harness.messageHandler({ type: "lexicon:highlight", matches: [typoMatch()] });
+  harness.renderedOptions.onDismiss(0);
+  assert.equal(harness.renderedOptions.deepOffer, "invite");
+
+  // The invite survives later empty rechecks without ever auto-running.
+  await harness.messageHandler({ type: "lexicon:highlight", matches: [] });
+  await flushDeep();
+  assert.equal(harness.renderedOptions.deepOffer, "invite");
+  assert.equal(harness.deepRequest, null);
+});
+
+test("quiet field with no activity stays quiet", async () => {
+  const harness = createHarness({ settings: { deepAutoRun: true } });
+  await new Promise((resolve) => setImmediate(resolve));
+
+  await harness.messageHandler({ type: "lexicon:highlight", matches: [] });
+  await flushDeep();
+
+  assert.equal(harness.renderedOptions.deepOffer, "none");
+  assert.equal(harness.deepRequest, null);
+});
+
+test("deep suggestion activity does not re-arm another deep run", async () => {
+  const deep = {
+    offset: 0,
+    length: 3,
+    message: "Deep proofread suggestion.",
+    replacements: ["THE"],
+    deep: true,
+  };
+  const harness = createHarness({
+    settings: { deepAutoRun: true },
+    deepMatches: [],
+  });
+  await new Promise((resolve) => setImmediate(resolve));
+
+  await harness.messageHandler({ type: "lexicon:highlight", matches: [deep] });
+  harness.renderedOptions.onApply(0);
+  await harness.messageHandler({ type: "lexicon:highlight", matches: [] });
+  await flushDeep();
+
+  assert.equal(harness.renderedOptions.deepOffer, "none");
+  assert.equal(harness.deepRequest, null);
+});
+
+test("a deep run that finds nothing leaves a visible note", async () => {
+  const harness = createHarness({
+    settings: { deepAutoRun: true },
+    deepMatches: [],
+  });
+  await new Promise((resolve) => setImmediate(resolve));
+
+  await harness.messageHandler({ type: "lexicon:highlight", matches: [typoMatch()] });
+  harness.renderedOptions.onApply(0);
+  await harness.messageHandler({ type: "lexicon:highlight", matches: [] });
+  await flushDeep();
+
+  assert.equal(harness.deepRequestCount, 1);
+  assert.equal(harness.renderedOptions.deepEmptyNote, true);
 });

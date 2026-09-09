@@ -2,6 +2,7 @@ export const SETTINGS_STORAGE_KEY = "lexiconSettings";
 
 export const DEFAULT_SETTINGS = Object.freeze({
   paused: false,
+  deepAutoRun: false,
   disabledSites: [],
   userDictionary: [],
   dictionaryRevision: 0,
@@ -78,6 +79,7 @@ export function normalizeSettings(value) {
     : [];
   return {
     paused: Boolean(value?.paused),
+    deepAutoRun: Boolean(value?.deepAutoRun),
     disabledSites: [...new Set(sites)],
     userDictionary: normalizeDictionary(value?.userDictionary),
     dictionaryRevision: normalizeDictionaryRevision(value?.dictionaryRevision),
