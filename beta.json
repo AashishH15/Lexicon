@@ -1,31 +1,31 @@
 {
-  "version": "0.11.0-beta.3.1",
-  "notes": "**Pre-release (beta)** \u2014 for beta testers only. Expect changes and possible rough edges; report issues on GitHub.\n\nRefactor process termination in LanguageTool integration\n\nThis commit simplifies the process termination logic in the LanguageTool backend by removing the Windows-specific taskkill command and replacing it with a more general approach using process termination methods. Additionally, new tests have been added to ensure that the termination logic behaves correctly for both running and already exited processes, enhancing reliability and maintainability.",
-  "pub_date": "2026-08-19T22:37:10.236844+00:00",
+  "version": "0.11.0-beta.5",
+  "notes": "**Pre-release (beta)** \u2014 for beta testers only. Expect changes and possible rough edges; report issues on GitHub.\n\nUpdated website",
+  "pub_date": "2026-09-09T02:29:26.821285+00:00",
   "platforms": {
     "windows-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRZzFWbHZabk9JZ0dzeEVaRDJKaUZ2dmxvYnBJdkpxNzRPbWZvVGVHRWhaVUhFalpPaXBQcXNQZm1DZXE3MnN4SXE0QW0wWTFiSk5BUFNqOWo4TmVJN1FxOHpFVFo3cmd3PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg3MTc4ODM1CWZpbGU6TGV4aWNvbl8wLjExLjAtYmV0YS4zLjFfeDY0LXNldHVwLmV4ZQowS1dad0tjTDU5UWNFaUlCN25YVjdXRzMwb1NkWW40MG4wR2pQVU9PUFl3THJndENBY2srK08wV0xHTzlNL2ZVMHdSaVdaWnlUV3BlVFBNUEdqVVVEUT09Cg==",
-      "url": "https://github.com/AashishH15/Lexicon/releases/download/v0.11.0-beta.3.1/Lexicon_0.11.0-beta.3.1_x64-setup.exe"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRZzFWbHZabk9JZ0I1QkN1eGxua01ZazAzNmtQWWlVSzVEZENReFh2VDV3enFFT1d2TEh0Vnd2STdqaVgrdjc3SlhkcFhvQTJ4WGZqTDFRczhkVUxodHUraTNoRkFJbWdrPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg4OTIwNDc1CWZpbGU6TGV4aWNvbl8wLjExLjAtYmV0YS41X3g2NC1zZXR1cC5leGUKU2ExaVlOekRiYklwSW1xVzAzWkE4c3ZlQyt0S3ZlTk9nbklmVSs0TXFYbTZvdWwxT3VQWTU3NWRYbTE4cHZCV3FBQml2N1BEVy9hZGxYMjJRUWdBQXc9PQo=",
+      "url": "https://github.com/AashishH15/Lexicon/releases/download/v0.11.0-beta.5/Lexicon_0.11.0-beta.5_x64-setup.exe"
     },
     "windows-aarch64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRZzFWbHZabk9JZ0o1RDNMQTRrYnNoNytaUGRaVjZSNGpnaWFVSjl4MEhQd1cxWjNaaG1kNkdid2xBL0JCeTRMQ3ZjR3ZSaUtJcXgycVVpRldUeERIYWUrT3V3YmRrekFnPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg3MTc4NDQ1CWZpbGU6TGV4aWNvbl8wLjExLjAtYmV0YS4zLjFfYXJtNjQtc2V0dXAuZXhlCkMwYit1dDRQdENSYzdnblEyTER2elJWWk5GVXNoV284WEF5RHBtaG4xZXNPQzVpcm9qdjhDZzJsU2EwcTZpaERBZzJUOW5wWjd4L1JqTnN4VUFlMUJ3PT0K",
-      "url": "https://github.com/AashishH15/Lexicon/releases/download/v0.11.0-beta.3.1/Lexicon_0.11.0-beta.3.1_arm64-setup.exe"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRZzFWbHZabk9JZ0JzYzRQNE1WOHNDWTRaWis4blZUNSsrcHRVRVU3TG41RG1KbG0vWlJ3WS9SRU12MkplMmNhdkxITWdSMzNCZjNBMU9JN1JvUlRSSjhSN0pxNkJscVFrPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg4OTIwMzEwCWZpbGU6TGV4aWNvbl8wLjExLjAtYmV0YS41X2FybTY0LXNldHVwLmV4ZQpLRyt0SmFRQnIwdzQ4MW1IOU83R1V0RnlYQ3ZPT01TTEhIbkhaY1N0cGpnQTduckhOenFRRWdLWWdTZWVkQlZuWW53dytsajhna0U4bEhEZWMzQVpBQT09Cg==",
+      "url": "https://github.com/AashishH15/Lexicon/releases/download/v0.11.0-beta.5/Lexicon_0.11.0-beta.5_arm64-setup.exe"
     },
     "windows-i686": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRZzFWbHZabk9JZ0Y3M2JlN0VsMW9SdXN1SG5SYzFDMXFQbk1mbUlRT0lkZXRlRUNQTW53Nkd5UWZZWWhNcHVYUTVvN3pSbHNPbThYaVRCUVpGY0swRVltUXE2S1lwcHdZPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg3MTc4MzEyCWZpbGU6TGV4aWNvbl8wLjExLjAtYmV0YS4zLjFfeDg2LXNldHVwLmV4ZQp4a0UzM3cxQzlYUER6VnFPNEVXK2l6WnpvK01FeUhza3B5cDlKUmlkVlpDbHBtR3ZZR0FZc2pUbHlaSjRSNUNqSW4xTWdzWlp0WHM0ZE43NVFybjBDUT09Cg==",
-      "url": "https://github.com/AashishH15/Lexicon/releases/download/v0.11.0-beta.3.1/Lexicon_0.11.0-beta.3.1_x86-setup.exe"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRZzFWbHZabk9JZ0FrTDVhWTMzOUxWb3pPdnlLbmdkd0JtQmhhZCttaVB6RVN3a1g5M2NuQTVWQ1NvNFJidEFHc0JlZUc0aUR5WWdHb1pVK2g5ZDlXUG9JSGJuMmp1OXdJPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg4OTIwMjA3CWZpbGU6TGV4aWNvbl8wLjExLjAtYmV0YS41X3g4Ni1zZXR1cC5leGUKNThQbytONlZHUnB3M3Q1bythbzRPdWFNanljMGg5Ykl4VGFaUUJVQVJGM2lMUmlCd0lLOTZZb1NjcDNWNFJvaVZFaGtreTFqSmZ3OXpkUVRuVEdsRFE9PQo=",
+      "url": "https://github.com/AashishH15/Lexicon/releases/download/v0.11.0-beta.5/Lexicon_0.11.0-beta.5_x86-setup.exe"
     },
     "darwin-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRZzFWbHZabk9JZ0hFOHZCeEszQVJuNDhTZFArczAvMGxWOVdUZFZ4MHlSM25XMGhYakovTmZVQnJHUEpSUWZuejdBYzMydUpMaGxxbFVJTUdKWUpvdEtKTlN3N0hZdkF3PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg3MTc4ODgwCWZpbGU6TGV4aWNvbi5hcHAudGFyLmd6CktLeDV6eVRoY1V2Q1lEcjlDb1FkODl6QlVxTUo0a2NNdm5HWmdzdnU3QTQ0aHhxMEl4aDlBaUlvUUdZL2J4OERPc2E4QVdjazJnQ1g1cDNOVG9BREF3PT0K",
-      "url": "https://github.com/AashishH15/Lexicon/releases/download/v0.11.0-beta.3.1/lexicon-macos-x64.app.tar.gz"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRZzFWbHZabk9JZ0FzemZEdTI4NzIySkcyUFpJN3c0bUNiNmRhbnJxT21EdTNrM2JLN1BZYUJZZmdCSlVYVzlOaDhZZ2wzODhhRGtUY01XSk14N3dBQlNIYTRaU2FTUGdVPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg4OTIwNzgzCWZpbGU6TGV4aWNvbi5hcHAudGFyLmd6CkYrdHV5S0l1ZTFRRTVScm5CeEtHQWJlNEJiNVdoRGpodW5DWGtUOWhtK1J5K2ZLWUZYc3dGU0NmbUc0dFc2cHV1U3l2T2k0UFY2WWE3R1p5Zk5Fd0RnPT0K",
+      "url": "https://github.com/AashishH15/Lexicon/releases/download/v0.11.0-beta.5/lexicon-macos-x64.app.tar.gz"
     },
     "darwin-aarch64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRZzFWbHZabk9JZ0RlMDl6TFc1TDlwN2ZRR0I1YnZTOVkxbkJlbUMwSWtiS0drTWk0R1NpMURja1FYK3lRVVVBUmY5UjdtQmNKTzQ4Wk5MZnhodVZtVXE2U3FzU2VzdkFRPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg3MTc4MTMxCWZpbGU6TGV4aWNvbi5hcHAudGFyLmd6CnhCbldsdGR5L2pkL2pzb0JHNlJENVRTeVJqWkJ6MFhQbzQrN3htS0swRzVsb3Z6ZElYMUg5Q25PUWtQVk9Uc1ozKy94MytaM1hQcTN4WXU1RzR6WkFRPT0K",
-      "url": "https://github.com/AashishH15/Lexicon/releases/download/v0.11.0-beta.3.1/lexicon-macos-arm64.app.tar.gz"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRZzFWbHZabk9JZ0pYYStCcERPZm0vWURQbXQrdHNLTHhYOEE5OVJsYm9zN2EzbmR2RThaVDJkRWplVit1MDljWkQwamkrL0lwWldoczExLzFVTWQ4NXhMbnVZV2dpa3dNPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg4OTE5ODU5CWZpbGU6TGV4aWNvbi5hcHAudGFyLmd6CjdzL09lVDdVcktJa3NSUUgxeEhwSjRvM3BNUm43NEVlbVFKVTVaZXpDQXZkSjVlVi9vdllVazF1bDRZazJRQUZnOTh1UXZuRmVmWGpiVzhvWWdPMEFBPT0K",
+      "url": "https://github.com/AashishH15/Lexicon/releases/download/v0.11.0-beta.5/lexicon-macos-arm64.app.tar.gz"
     },
     "linux-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRZzFWbHZabk9JZ1BJb09JMjVwSDhPaHI3OEhhcmozRHkycGdBN0UxeHJIcllBdVF0bEcrWmhNb2NSS1VUWW5SRjR3c3dmNzFDclczampIWDA0ZkR1TEdGWWM4M3ZwZEFrPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg3MTc4MDgyCWZpbGU6TGV4aWNvbl8wLjExLjAtYmV0YS4zLjFfYW1kNjQuZGViCm5QVWVDWVVsTTJlZkk3Vy8zRjNNVlhrUEk3T3J4VGlINFF6VkRROUdxVXpUeEJKK1krdE8wRFh5ZzZhcGZ5eGlmT3c5Zm1sQ1B4NXpwcGpkNzlxMEJ3PT0K",
-      "url": "https://github.com/AashishH15/Lexicon/releases/download/v0.11.0-beta.3.1/Lexicon_0.11.0-beta.3.1_amd64.deb"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRZzFWbHZabk9JZ0l3WWpUZ1Z4TDM3TkVKdE5Wa1FOeUJIKzRqNEZFUFdkeFEyUlRhVlMyanpnZmVJck9PRjNKV2NuZFdDZDUxUnROVFpvWHphdEx6OTkya0dySllQb0F3PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzg4OTE5OTYwCWZpbGU6TGV4aWNvbl8wLjExLjAtYmV0YS41X2FtZDY0LmRlYgo4dkpyWkoyMUtkYk8wSnBKWWhMb1R2RTI3Y1MyN3N0WVRpSTlOcm9xeVpXbUpzQ1BuZnErMGUraUxJcGJEVlluRXpWSTR3NXM1NGJDbi9tL2pHM0lCdz09Cg==",
+      "url": "https://github.com/AashishH15/Lexicon/releases/download/v0.11.0-beta.5/Lexicon_0.11.0-beta.5_amd64.deb"
     }
   }
 }
