@@ -639,6 +639,8 @@ test("Tone uses a dedicated badge popover and keeps the proofread panel clear", 
   const ai = state.aiPanelEl.children.find((child) => child.className === "ai");
   assert.ok(ai);
   const controls = ai.children[0];
+  const select = controls.children[0];
+  select.value = "Friendly";
   const run = controls.children[1];
   run.listeners.click();
   await new Promise((resolve) => setTimeout(resolve, 10));
@@ -728,6 +730,7 @@ function makePanelHarness() {
 }
 
 const EXPRESS_TONES_FIXTURE = {
+  auto: "Auto text.",
   professional: "Professional text.",
   casual: "Casual text.",
   friendly: "Friendly text.",
@@ -748,11 +751,11 @@ test("expressToneModel shapes picker data with a language badge", async () => {
   // Compare serialized: values cross the vm sandbox realm boundary.
   assert.equal(
     JSON.stringify(model.tones.map((tone) => tone.key)),
-    JSON.stringify(["professional", "casual", "friendly", "formal", "concise"]),
+    JSON.stringify(["auto", "professional", "casual", "friendly", "formal", "concise"]),
   );
   assert.equal(
     JSON.stringify(model.tones.map((tone) => tone.label)),
-    JSON.stringify(["Professional", "Casual", "Friendly", "Formal", "Concise"]),
+    JSON.stringify(["Auto", "Professional", "Casual", "Friendly", "Formal", "Concise"]),
   );
 });
 
@@ -763,8 +766,8 @@ test("expressToneModel falls back without a badge for unknown input", async () =
     "pirate",
   );
   assert.equal(unknown.badge, "");
-  assert.equal(unknown.activeTone, "professional");
-  assert.equal(unknown.preview, "Professional text.");
+  assert.equal(unknown.activeTone, "auto");
+  assert.equal(unknown.preview, "Auto text.");
   const broken = api.expressToneModel(null, null);
   assert.equal(broken.usable, false);
   assert.equal(broken.badge, "");
@@ -835,12 +838,12 @@ test("Express in English runs in the badge panel with a tone picker", async () =
   const tonesRow = resultAi.children.find(
     (child) => child.className === "ai-tones",
   );
-  assert.equal(tonesRow.children.length, 5);
+  assert.equal(tonesRow.children.length, 6);
   const preview = resultAi.children.find(
     (child) => child.className === "ai-result",
   );
-  assert.equal(preview.textContent, "Professional text.");
-  const casualChip = tonesRow.children[1];
+  assert.equal(preview.textContent, "Auto text.");
+  const casualChip = tonesRow.children[2];
   casualChip.listeners.click();
   const updatedAi = state.aiPanelEl.children.find(
     (child) => child.className === "ai",

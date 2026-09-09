@@ -3,15 +3,17 @@
 // Use short sentences. Use simple words. Avoid em dashes in this file.
 
 // Fixed tone list. Keep this order in the UI.
-export const EXPRESS_TONES = ["professional", "casual", "friendly", "formal", "concise"];
+export const EXPRESS_TONES = ["auto", "professional", "casual", "friendly", "formal", "concise"];
 
 // Fallback order for a missing tone. Use the closest tone first.
+// Auto is the neutral last resort when nothing closer has text.
 const EXPRESS_FALLBACKS = {
-  professional: ["formal", "friendly", "casual", "concise"],
-  casual: ["friendly", "professional", "formal", "concise"],
-  friendly: ["casual", "professional", "formal", "concise"],
-  formal: ["professional", "friendly", "casual", "concise"],
-  concise: ["professional", "formal", "friendly", "casual"],
+  auto: ["professional", "formal", "friendly", "casual", "concise"],
+  professional: ["formal", "friendly", "casual", "concise", "auto"],
+  casual: ["friendly", "professional", "formal", "concise", "auto"],
+  friendly: ["casual", "professional", "formal", "concise", "auto"],
+  formal: ["professional", "friendly", "casual", "concise", "auto"],
+  concise: ["professional", "formal", "friendly", "casual", "auto"],
 };
 
 const UNKNOWN_LANGUAGE = "Unknown";
@@ -66,13 +68,7 @@ function lowerKeyMap(source) {
 
 // Make an empty tone set. Use it when input has no usable text.
 function emptyTones() {
-  return {
-    professional: "",
-    casual: "",
-    friendly: "",
-    formal: "",
-    concise: "",
-  };
+  return Object.fromEntries(EXPRESS_TONES.map((tone) => [tone, ""]));
 }
 
 // Copy one text into all tones. Use it when JSON is unusable.
@@ -80,13 +76,7 @@ function singleToneResult(text) {
   const clean = cleanString(text);
   return {
     detectedLanguage: UNKNOWN_LANGUAGE,
-    tones: {
-      professional: clean,
-      casual: clean,
-      friendly: clean,
-      formal: clean,
-      concise: clean,
-    },
+    tones: Object.fromEntries(EXPRESS_TONES.map((tone) => [tone, clean])),
   };
 }
 
@@ -152,13 +142,9 @@ export function parseExpressJson(raw) {
       toneSource = parsed;
     }
     const toneMap = lowerKeyMap(toneSource);
-    const tones = {
-      professional: cleanString(toneMap["professional"]),
-      casual: cleanString(toneMap["casual"]),
-      friendly: cleanString(toneMap["friendly"]),
-      formal: cleanString(toneMap["formal"]),
-      concise: cleanString(toneMap["concise"]),
-    };
+    const tones = Object.fromEntries(
+      EXPRESS_TONES.map((tone) => [tone, cleanString(toneMap[tone])]),
+    );
 
     const filled = fillMissingTones(tones);
     const hasTone = EXPRESS_TONES.some((tone) => cleanString(filled[tone]));

@@ -3,8 +3,8 @@ import useTransform from "./useTransform.js";
 import { getExpressPrompt } from "./prompts.js";
 import { EXPRESS_TONES, parseExpressJson } from "./expressParser.js";
 
-// Default tone. Use it on first load.
-export const EXPRESS_DEFAULT_TONE = "professional";
+// Default tone. Auto translates with no picked tone.
+export const EXPRESS_DEFAULT_TONE = "auto";
 
 // Tool name. Use it in the toolbar and the review panel.
 export const EXPRESS_TOOL_NAME = "Express in English";

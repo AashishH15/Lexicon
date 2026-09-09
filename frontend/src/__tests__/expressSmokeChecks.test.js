@@ -9,6 +9,7 @@ import {
 
 describe("expressSmokeChecks", () => {
   const sampleTones = {
+    auto: "Maria was pleased with the 2024 results.",
     professional: "I am pleased with the results for Maria in 2024.",
     casual: "I'm really happy with Maria's results in 2024.",
     friendly: "So glad Maria did well in 2024.",

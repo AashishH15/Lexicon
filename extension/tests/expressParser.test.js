@@ -14,6 +14,7 @@ import {
 
 function fullTones(overrides = {}) {
   return {
+    auto: "Auto text.",
     professional: "Professional text.",
     casual: "Casual text.",
     friendly: "Friendly text.",
@@ -35,8 +36,9 @@ function bundledStatus(modelKey, ready = true) {
   };
 }
 
-test("lists five tones in desktop order with a 600 char cap", () => {
+test("lists six tones with auto first and a 600 char cap", () => {
   assert.deepEqual(EXPRESS_TONES, [
+    "auto",
     "professional",
     "casual",
     "friendly",
@@ -51,6 +53,7 @@ test("lists five tones in desktop order with a 600 char cap", () => {
 test("parses pure JSON", () => {
   const result = parseExpressJson(rawJson());
   assert.equal(result.detectedLanguage, "Spanish");
+  assert.equal(result.tones.auto, "Auto text.");
   assert.equal(result.tones.professional, "Professional text.");
   assert.equal(result.tones.concise, "Concise text.");
 });
@@ -78,6 +81,22 @@ test("fills a missing tone from the closest available tone", () => {
 test("uses Unknown when the language is missing", () => {
   const result = parseExpressJson(JSON.stringify({ tones: fullTones() }));
   assert.equal(result.detectedLanguage, "Unknown");
+});
+
+test("falls back to professional for a missing auto tone", () => {
+  const tones = fullTones();
+  delete tones.auto;
+  const result = parseExpressJson(rawJson("Spanish", tones));
+  assert.equal(result.tones.auto, "Professional text.");
+});
+
+test("fills every tone from auto when it is the only tone", () => {
+  const result = parseExpressJson(
+    JSON.stringify({ detectedLanguage: "Spanish", tones: { auto: "Only auto." } }),
+  );
+  for (const tone of EXPRESS_TONES) {
+    assert.equal(result.tones[tone], "Only auto.");
+  }
 });
 
 test("treats truncated JSON and plain text as one tone", () => {

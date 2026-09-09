@@ -7,6 +7,7 @@ import {
   Lightning,
   Scroll,
   Smiley,
+  Translate,
   X,
 } from "@phosphor-icons/react";
 import { EXPRESS_TONES } from "./expressParser.js";
@@ -14,6 +15,7 @@ import { EXPRESS_MAX_CHARS } from "./useExpress.js";
 
 // Tone look and hint. Keep hints short. Use plain words.
 const TONE_META = {
+  auto: { label: "Auto", icon: Translate, hint: "Faithful to the original" },
   professional: { label: "Professional", icon: Briefcase, hint: "Polished for work" },
   casual: { label: "Casual", icon: Coffee, hint: "Relaxed, like a text" },
   friendly: { label: "Friendly", icon: Smiley, hint: "Warm and kind" },
@@ -33,7 +35,7 @@ const COPY_RESET_MS = 1200;
 export default function ExpressCard({
   detectedLanguage = "Unknown",
   tones = null,
-  activeTone = "professional",
+  activeTone = "auto",
   onToneChange,
   status = "idle",
   error = "",
@@ -178,7 +180,10 @@ export default function ExpressCard({
           const meta = TONE_META[tone];
           const Icon = meta.icon;
           const selected = toneChosen && tone === displayTone;
-          const isLast = tone === EXPRESS_TONES[EXPRESS_TONES.length - 1];
+          // Span two columns only when the last tab sits alone in a row.
+          const isLast =
+            EXPRESS_TONES.length % 2 === 1 &&
+            tone === EXPRESS_TONES[EXPRESS_TONES.length - 1];
           return (
             <button
               key={tone}

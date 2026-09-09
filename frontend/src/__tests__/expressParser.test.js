@@ -28,7 +28,7 @@ describe("getExpressPrompt", () => {
     const prompt = getExpressPrompt(SAMPLES.german);
     expect(prompt).toContain("detectedLanguage");
     expect(prompt).toContain("tones");
-    for (const tone of ["professional", "casual", "friendly", "formal", "concise"]) {
+    for (const tone of ["auto", "professional", "casual", "friendly", "formal", "concise"]) {
       expect(prompt).toContain(`"${tone}"`);
     }
   });
@@ -63,19 +63,26 @@ describe("getExpressPrompt", () => {
     expect(prompt).toMatch(/workplace/);
   });
 
+  it("asks auto to match the source register with no added flair", () => {
+    const prompt = getExpressPrompt(SAMPLES.spanish).toLowerCase();
+    expect(prompt).toMatch(/auto/);
+    expect(prompt).toMatch(/faithful/);
+  });
+
   it("uses no em dashes in the prompt", () => {
     expect(getExpressPrompt(SAMPLES.spanish)).not.toContain(String.fromCharCode(8212));
   });
 });
 
 describe("EXPRESS_TONES", () => {
-  it("lists the five tones in a fixed order", () => {
-    expect(EXPRESS_TONES).toEqual(["professional", "casual", "friendly", "formal", "concise"]);
+  it("lists the six tones with auto first", () => {
+    expect(EXPRESS_TONES).toEqual(["auto", "professional", "casual", "friendly", "formal", "concise"]);
   });
 });
 
 function fullTones(overrides = {}) {
   return {
+    auto: "Auto text.",
     professional: "Professional text.",
     casual: "Casual text.",
     friendly: "Friendly text.",
@@ -93,6 +100,7 @@ describe("parseExpressJson happy path", () => {
   it("parses pure JSON", () => {
     const result = parseExpressJson(rawJson());
     expect(result.detectedLanguage).toBe("Spanish");
+    expect(result.tones.auto).toBe("Auto text.");
     expect(result.tones.professional).toBe("Professional text.");
     expect(result.tones.casual).toBe("Casual text.");
     expect(result.tones.friendly).toBe("Friendly text.");
@@ -191,7 +199,7 @@ describe("parseExpressJson recovery", () => {
     expect(Object.values(result.tones).every((v) => typeof v === "string" && v.length > 0)).toBe(true);
   });
 
-  it("fills several missing tones so all five keys exist", () => {
+  it("fills several missing tones so all six keys exist", () => {
     const raw = JSON.stringify({
       detectedLanguage: "German",
       tones: { professional: "Only one tone." },
@@ -200,6 +208,25 @@ describe("parseExpressJson recovery", () => {
     for (const tone of EXPRESS_TONES) {
       expect(typeof result.tones[tone]).toBe("string");
       expect(result.tones[tone].length).toBeGreaterThan(0);
+    }
+    expect(result.tones.auto).toBe("Only one tone.");
+  });
+
+  it("falls back to professional for a missing auto tone", () => {
+    const tones = fullTones();
+    delete tones.auto;
+    const result = parseExpressJson(rawJson("Spanish", tones));
+    expect(result.tones.auto).toBe("Professional text.");
+  });
+
+  it("fills every tone from auto when it is the only tone", () => {
+    const raw = JSON.stringify({
+      detectedLanguage: "Spanish",
+      tones: { auto: "Only auto." },
+    });
+    const result = parseExpressJson(raw);
+    for (const tone of EXPRESS_TONES) {
+      expect(result.tones[tone]).toBe("Only auto.");
     }
   });
 

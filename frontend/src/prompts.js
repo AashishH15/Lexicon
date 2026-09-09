@@ -200,6 +200,7 @@ export const PROSE_CLARITY_PROMPT =
 // Use short sentences. Use simple words. Avoid em dashes in this text.
 // Input text stays out of the prompt. The call sends it in the text field.
 export const EXPRESS_TONE_KEYS = [
+  "auto",
   "professional",
   "casual",
   "friendly",
@@ -211,6 +212,7 @@ export const EXPRESS_JSON_TEMPLATE =
   '{\n' +
   '  "detectedLanguage": "...",\n' +
   '  "tones": {\n' +
+  '    "auto": "...",\n' +
   '    "professional": "...",\n' +
   '    "casual": "...",\n' +
   '    "friendly": "...",\n' +
@@ -231,6 +233,7 @@ export function getExpressPrompt(text) {
     "Keep names, numbers, and intent. Do not add facts. Do not invent details. " +
     "Keep each version short and fit for one short paragraph. " +
     "Make the tones clearly different. " +
+    "For auto, translate faithfully and match the source register and intent without added flair. " +
     "Use natural contractions in casual. " +
     "Keep professional polished and safe for the workplace. " +
     "Keep friendly warm and kind. " +

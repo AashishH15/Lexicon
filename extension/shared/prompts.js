@@ -77,6 +77,7 @@ const EXPRESS_JSON_TEMPLATE =
   '{\n' +
   '  "detectedLanguage": "...",\n' +
   '  "tones": {\n' +
+  '    "auto": "...",\n' +
   '    "professional": "...",\n' +
   '    "casual": "...",\n' +
   '    "friendly": "...",\n' +
@@ -96,6 +97,7 @@ export function getExpressPrompt() {
     "Keep names, numbers, and intent. Do not add facts. Do not invent details. " +
     "Keep each version short and fit for one short paragraph. " +
     "Make the tones clearly different. " +
+    "For auto, translate faithfully and match the source register and intent without added flair. " +
     "Use natural contractions in casual. " +
     "Keep professional polished and safe for the workplace. " +
     "Keep friendly warm and kind. " +

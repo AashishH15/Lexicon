@@ -18,6 +18,7 @@ vi.mock("../api.js", () => ({
 
 function testTones() {
   return {
+    auto: "Auto text.",
     professional: "Professional text.",
     casual: "Casual text.",
     friendly: "Friendly text.",
@@ -82,9 +83,9 @@ describe("useExpress defaults", () => {
     mounted.container.remove();
   });
 
-  it("starts idle with professional tone and no result", () => {
-    expect(EXPRESS_DEFAULT_TONE).toBe("professional");
-    expect(mounted.ref.current.activeTone).toBe("professional");
+  it("starts idle with auto tone and no result", () => {
+    expect(EXPRESS_DEFAULT_TONE).toBe("auto");
+    expect(mounted.ref.current.activeTone).toBe("auto");
     expect(mounted.ref.current.result).toBe(null);
     expect(mounted.ref.current.status).toBe("idle");
     expect(mounted.ref.current.activeText).toBe("");
@@ -126,7 +127,7 @@ describe("useExpress run with Standard", () => {
     expect(parsed.detectedLanguage).toBe("Spanish");
     expect(mounted.ref.current.result.detectedLanguage).toBe("Spanish");
     expect(mounted.ref.current.result.tones.casual).toBe("Casual text.");
-    expect(mounted.ref.current.activeText).toBe("Professional text.");
+    expect(mounted.ref.current.activeText).toBe("Auto text.");
   });
 
   it("switches active text when the tone changes", async () => {
@@ -147,7 +148,7 @@ describe("useExpress run with Standard", () => {
     act(() => {
       mounted.ref.current.setActiveTone("pirate");
     });
-    expect(mounted.ref.current.activeTone).toBe("professional");
+    expect(mounted.ref.current.activeTone).toBe("auto");
   });
 
   it("parses a fenced model reply", async () => {

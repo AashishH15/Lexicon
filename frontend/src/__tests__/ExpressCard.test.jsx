@@ -115,6 +115,25 @@ describe("ExpressCard tones", () => {
     expect(tab.getAttribute("aria-selected")).toBe("true");
   });
 
+  it("lists Auto first with its faithful hint", async () => {
+    const handlers = await renderCard();
+    const tabs = Array.from(container.querySelectorAll("button[role='tab']"));
+    expect(tabs).toHaveLength(6);
+    expect(tabs[0].getAttribute("aria-label")).toBe("Auto tone");
+    await act(async () => {
+      tabs[0].dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    expect(handlers.onToneChange).toHaveBeenCalledWith("auto");
+    expect(container.textContent).toContain("Faithful to the original");
+  });
+
+  it("keeps an even tab grid with no orphan span", async () => {
+    await renderCard();
+    expect(
+      container.querySelectorAll("button[role='tab'].col-span-2").length,
+    ).toBe(0);
+  });
+
   it("keeps tone tabs unselected while waiting for a pick", async () => {
     await renderCard({
       props: {

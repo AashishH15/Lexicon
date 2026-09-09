@@ -438,6 +438,7 @@ test("get-ai-status reports the express gate when nothing is ready", async () =>
 
 function expressTones() {
   return {
+    auto: "Auto text.",
     professional: "Professional text.",
     casual: "Casual text.",
     friendly: "Friendly text.",

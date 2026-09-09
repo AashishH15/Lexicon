@@ -123,6 +123,7 @@ test("Express prompt carries the exact JSON keys", () => {
   for (const key of [
     '"detectedLanguage"',
     '"tones"',
+    '"auto"',
     '"professional"',
     '"casual"',
     '"friendly"',
@@ -134,12 +135,13 @@ test("Express prompt carries the exact JSON keys", () => {
   assert.ok(prompt.includes("Return ONLY one JSON object"));
   assert.ok(prompt.includes("Do not use em dashes or en dashes"));
   assert.ok(prompt.includes("idiomatic"));
+  assert.ok(prompt.includes("faithful"));
 });
 
 test("Express prompt keys match the desktop template", () => {
   assert.ok(DESKTOP_PROMPTS.includes("getExpressPrompt"));
   assert.ok(DESKTOP_PROMPTS.includes('"detectedLanguage"'));
-  for (const tone of ["professional", "casual", "friendly", "formal", "concise"]) {
+  for (const tone of ["auto", "professional", "casual", "friendly", "formal", "concise"]) {
     assert.ok(
       DESKTOP_PROMPTS.includes(`"${tone}"`),
       `desktop template missing ${tone}`,

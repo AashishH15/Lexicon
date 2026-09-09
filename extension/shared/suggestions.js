@@ -66,6 +66,7 @@
 
   // Tone order for Express results. Match shared/expressParser.js.
   const EXPRESS_TONE_ORDER = [
+    "auto",
     "professional",
     "casual",
     "friendly",
@@ -90,7 +91,7 @@
       );
       const tone = EXPRESS_TONE_ORDER.includes(activeTone)
         ? activeTone
-        : "professional";
+        : "auto";
       const label = (key) => key.charAt(0).toUpperCase() + key.slice(1);
       return {
         usable,
@@ -112,7 +113,7 @@
         badge: "",
         tones: [],
         preview: "",
-        activeTone: "professional",
+        activeTone: "auto",
       };
     }
   }
@@ -1234,7 +1235,7 @@
           // Express answers with five tones. Offer a picker and mirror
           // the active tone into the shared replace flow below.
           if (result.express) {
-            const model = expressToneModel(result, "professional");
+            const model = expressToneModel(result, "auto");
             if (!model.usable) {
               state.aiError =
                 "The model returned no usable English. Try again.";
