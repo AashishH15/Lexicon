@@ -31,6 +31,9 @@ Lexicon v0.11.0 is a major milestone that transforms Lexicon from a standalone d
 - **Shared Lex Status System (`lexStatus.js`)**: Consistent status icons and labels across the extension popup and suggestion UI (idle, checking, issues, all clear, no connection, disabled, error).
 - **Report / Feedback Affordance**: Extension popup includes a clear path to report issues; Settings → About & Feedback lists Chrome and Firefox extension packages.
 - **Desktop Handshake**: Backend CORS allowlist for pinned extension origins plus a health-check endpoint so the extension can confirm the local Lexicon sidecar is reachable.
+- **Run Deep Proofread in the Badge Panel**: every All clear offers a local-AI clarity and flow pass over the full field (chunked for long text), with clarity rows styled distinctly from grammar rows in the same list. A run that finds nothing says so instead of going silent.
+- **Deep Proofread Auto-Run Toggle (off by default)**: a new popup setting auto-runs the deeper check after an accepted fix. Dismissals never auto-run.
+- **Popup Engine Readout**: the popup header names the active engine (for example Standard · GPU, Ollama, or LM Studio) and hides itself when the backend is unreachable or unconfigured.
 
 #### 🧠 3-Tier Local LLM Architecture & Hybrid Deep Proofread:
 - **New Quality Tier + Light/Standard Model Upgrades**: v0.11.0 introduces a third **Quality** download tier and replaces the previous Light and Standard GGUF pins with stronger curated models. Legacy Light/Standard files can be verified and cleaned up after a safe migration.
@@ -48,6 +51,9 @@ Lexicon v0.11.0 is a major milestone that transforms Lexicon from a standalone d
 - **Gold vs Purple Suggestion Badges**: Deterministic grammar/spelling cards use warm gold/amber badges; AI clarity and Deep Proofread suggestions use purple badges with a sparkle affordance and purple dotted underlines in the editor.
 - **Disabled Model Reasoning**: Transforms disable thinking (`think: false` / `enable_thinking: false`) and strip leaked `<think>` blocks so rewrites stay faster and free of reasoning chatter.
 - **Bundled Backend Load Resilience**: Retries model load with `use_mmap=False` when mmap/permission failures occur, surfaces clear `Engine failed to load model` errors, and enables macOS `com.apple.security.cs.allow-jit` so llama.cpp can initialize under the app sandbox.
+- **Subsuming Clarity Rewrites**: an AI clarity rewrite now absorbs the grammar cards it fully covers instead of stacking behind them. Dismissing the rewrite restores the covered cards; accepting it clears both. Covered spans track later edits so follow-up dismissals stay accurate.
+- **Opt-In Auto Re-Check**: Deep Proofread and regular Proofread each get a persisted auto re-check toggle (off by default) that chains one verification pass after fixes empty the list. Dismissals, cancels, and errors never chain. Proofread now waits for a manual rescan by default, with Check again buttons in both empty states.
+- **Analysis Heading Info**: hovering the info mark by the Analysis heading explains when to use fast Proofread while writing versus the slower Deep Proofread clarity pass for finished drafts.
 
 #### ⚡ GPU Hardware Acceleration & Telemetry:
 - **Dedicated Hardware Tab (`HardwareTab.jsx`)**: New Hardware settings panel displaying active compute devices, memory utilization, and acceleration settings.
