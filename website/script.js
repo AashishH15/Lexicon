@@ -1701,6 +1701,198 @@
     row.insertBefore(secondary, note || null);
   }
 
+  function initExpressDemo() {
+    const card = document.getElementById('express-demo-card');
+    if (!card) return;
+
+    const langBtns = Array.prototype.slice.call(card.querySelectorAll('.express-lang-btn'));
+    const toneBtns = Array.prototype.slice.call(card.querySelectorAll('.express-tone-btn'));
+    const sourceTextEl = document.getElementById('express-source-text');
+    const badgeEl = document.getElementById('express-lang-badge');
+    const outputBoxEl = document.getElementById('express-output-box');
+    const toneHintEl = document.getElementById('express-tone-hint');
+
+    if (!sourceTextEl || !badgeEl || !outputBoxEl || !toneHintEl) return;
+
+    const data = {
+      spanish: {
+        badge: 'SPANISH -> ENGLISH',
+        source: 'Estoy muy contento con los resultados de Maria en 2024.',
+        tones: {
+          auto: {
+            text: 'I am very pleased with Maria\'s results in 2024.',
+            hint: 'Faithful to the original source register'
+          },
+          professional: {
+            text: 'I am highly satisfied with Maria\'s performance metrics for 2024.',
+            hint: 'Polished, authoritative, and business-ready'
+          },
+          casual: {
+            text: 'I\'m super happy with Maria\'s results in 2024!',
+            hint: 'Relaxed, conversational, and direct'
+          },
+          friendly: {
+            text: 'I\'m really glad to see Maria\'s great results in 2024.',
+            hint: 'Warm, approachable, and encouraging'
+          },
+          formal: {
+            text: 'I express utmost satisfaction regarding the results of Maria in 2024.',
+            hint: 'Dignified, precise, and reserved'
+          },
+          concise: {
+            text: 'Very pleased with Maria\'s 2024 results.',
+            hint: 'Direct, brief, and punchy'
+          }
+        }
+      },
+      german: {
+        badge: 'GERMAN -> ENGLISH',
+        source: 'Sehr geehrte Damen und Herren, ich schreibe Ihnen bezuglich des Treffens am Montag um 10 Uhr.',
+        tones: {
+          auto: {
+            text: 'Dear Sir or Madam, I am writing to confirm our meeting scheduled for Monday at 10 o\'clock.',
+            hint: 'Faithful to the original source register'
+          },
+          professional: {
+            text: 'Dear Sir or Madam, I am writing regarding our meeting scheduled for Monday at 10:00 AM.',
+            hint: 'Polished, authoritative, and business-ready'
+          },
+          casual: {
+            text: 'Hey there, just wanted to touch base about our meeting on Monday at 10.',
+            hint: 'Relaxed, conversational, and direct'
+          },
+          friendly: {
+            text: 'Hello everyone, hope you are well. Just following up on our Monday 10 AM meeting.',
+            hint: 'Warm, approachable, and encouraging'
+          },
+          formal: {
+            text: 'Dear Sir or Madam, I am writing to you regarding the meeting convened for Monday at 10:00 hours.',
+            hint: 'Dignified, precise, and reserved'
+          },
+          concise: {
+            text: 'Regarding our meeting Monday at 10 AM.',
+            hint: 'Direct, brief, and punchy'
+          }
+        }
+      },
+      hindi: {
+        badge: 'HINDI -> ENGLISH',
+        source: 'Main 2024 mein Maria ke results se bahut khush hoon.',
+        tones: {
+          auto: {
+            text: 'I am very happy with Maria\'s results in 2024.',
+            hint: 'Faithful to the original source register'
+          },
+          professional: {
+            text: 'I am extremely pleased with Maria\'s performance outcomes in 2024.',
+            hint: 'Polished, authoritative, and business-ready'
+          },
+          casual: {
+            text: 'So happy about Maria\'s 2024 results!',
+            hint: 'Relaxed, conversational, and direct'
+          },
+          friendly: {
+            text: 'Really thrilled with Maria\'s wonderful results in 2024!',
+            hint: 'Warm, approachable, and encouraging'
+          },
+          formal: {
+            text: 'I convey my complete satisfaction with the results achieved by Maria in 2024.',
+            hint: 'Dignified, precise, and reserved'
+          },
+          concise: {
+            text: 'Very pleased with Maria\'s 2024 results.',
+            hint: 'Direct, brief, and punchy'
+          }
+        }
+      }
+    };
+
+    let currentLang = 'spanish';
+    let currentTone = 'auto';
+
+    // Auto-cycle: walk every tone of one language, then move to the next.
+    // Orders derive from the data so new languages or tones join freely.
+    // Manual picks and hover pause the cycle; reduced motion disables it.
+    const LANG_ORDER = Object.keys(data);
+    const TONE_ORDER = Object.keys(data.spanish.tones);
+    const CYCLE_MS = 2200;
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let cycleTimer = null;
+    let userTookOver = false;
+
+    function stepCycle() {
+      const toneIndex = TONE_ORDER.indexOf(currentTone);
+      if (toneIndex >= 0 && toneIndex < TONE_ORDER.length - 1) {
+        currentTone = TONE_ORDER[toneIndex + 1];
+      } else {
+        const langIndex = LANG_ORDER.indexOf(currentLang);
+        currentLang = LANG_ORDER[(langIndex + 1) % LANG_ORDER.length];
+        currentTone = TONE_ORDER[0];
+      }
+      render();
+    }
+
+    function startCycle() {
+      if (reduceMotion || userTookOver || cycleTimer) return;
+      cycleTimer = setInterval(stepCycle, CYCLE_MS);
+    }
+
+    function stopCycle() {
+      if (cycleTimer) {
+        clearInterval(cycleTimer);
+        cycleTimer = null;
+      }
+    }
+
+    function render() {
+      const langData = data[currentLang] || data.spanish;
+      const toneData = langData.tones[currentTone] || langData.tones.auto;
+
+      badgeEl.textContent = langData.badge;
+      sourceTextEl.textContent = langData.source;
+      outputBoxEl.textContent = toneData.text;
+      toneHintEl.textContent = toneData.hint;
+
+      langBtns.forEach(function (btn) {
+        btn.classList.toggle('active', btn.getAttribute('data-lang') === currentLang);
+      });
+
+      toneBtns.forEach(function (btn) {
+        btn.classList.toggle('active', btn.getAttribute('data-tone') === currentTone);
+      });
+    }
+
+    langBtns.forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        const lang = btn.getAttribute('data-lang');
+        if (lang && data[lang]) {
+          userTookOver = true;
+          stopCycle();
+          currentLang = lang;
+          render();
+        }
+      });
+    });
+
+    toneBtns.forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        const tone = btn.getAttribute('data-tone');
+        if (tone) {
+          userTookOver = true;
+          stopCycle();
+          currentTone = tone;
+          render();
+        }
+      });
+    });
+
+    card.addEventListener('mouseenter', stopCycle);
+    card.addEventListener('mouseleave', startCycle);
+
+    render();
+    startCycle();
+  }
+
   document.addEventListener('DOMContentLoaded', function () {
     initSmoothScroll();
     initReleaseInfo();
@@ -1714,6 +1906,7 @@
     initHeroVisibility();
     initTypingDemo();
     initEditorDemo();
+    initExpressDemo();
     initExportStudioDemo();
     initAppearanceDemo();
     initExtensionDemo();

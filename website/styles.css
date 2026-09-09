@@ -3172,3 +3172,395 @@ section[id] {
     width: 100%;
   }
 }
+
+/* ==========================================================================
+   v0.11.0 Feature Additions: Express in English, Deep Proofread,
+   Hardware Telemetry, Shortcuts Studio & Local AI Ecosystem
+   ========================================================================== */
+
+/* Badges & Color Accents */
+/* Deep Proofread Hybrid Architecture Card */
+.hybrid-proofread-card {
+  grid-column: 1 / -1;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-card-lg);
+  padding: 32px;
+  margin: 12px 0 20px;
+  box-shadow: var(--shadow-card);
+  transition: var(--transition);
+}
+
+.hybrid-proofread-card:hover {
+  border-color: var(--border-dark);
+  box-shadow: var(--shadow-card-hover);
+}
+
+.hybrid-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.hybrid-body-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+  margin-top: 18px;
+}
+
+.hybrid-tier-box {
+  background: var(--bg-canvas);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-card);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.hybrid-tier-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.hybrid-tier-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.hybrid-tier-desc {
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  line-height: 1.55;
+  margin: 0;
+}
+
+.hybrid-sample-box {
+  background: #FFFFFF;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 8px;
+  padding: 12px 14px;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  font-family: var(--font-sans);
+}
+
+/* Express in English Live Showcase */
+.express-live-zone {
+  grid-column: 1 / -1;
+  position: relative;
+  z-index: 0;
+  margin: 20px 0;
+}
+
+.express-demo-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-card-lg);
+  box-shadow: var(--shadow-live-widget);
+  overflow: hidden;
+  transition: var(--transition);
+}
+
+.express-demo-card:hover {
+  border-color: var(--border-dark);
+  box-shadow: var(--shadow-card-hover);
+}
+
+.express-card-top {
+  padding: 28px 32px 20px;
+}
+
+.express-lang-selector {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 18px 0 16px;
+}
+
+.express-lang-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-right: 4px;
+}
+
+.express-lang-btn {
+  background: var(--bg-canvas);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
+  font-size: 0.85rem;
+  font-weight: 500;
+  padding: 6px 14px;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+
+.express-lang-btn:hover {
+  border-color: var(--border-dark);
+  color: var(--text-primary);
+  background: var(--bg-subtle);
+}
+
+.express-lang-btn.active {
+  background: #111111;
+  border-color: #111111;
+  color: #FFFFFF;
+}
+
+.express-tone-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.express-tone-btn {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-family: var(--font-sans);
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  cursor: pointer;
+  transition: var(--transition-fast);
+  text-align: center;
+}
+
+.express-tone-btn:hover {
+  border-color: var(--border-dark);
+  color: var(--text-primary);
+  background: var(--bg-canvas);
+}
+
+.express-tone-btn.active {
+  background: #111111;
+  border-color: #111111;
+  color: #FFFFFF;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.express-body-container {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  border-top: 1px solid var(--border-color);
+  background: var(--bg-canvas-deep);
+}
+
+.express-source-pane {
+  padding: 24px 28px;
+  border-right: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.express-pane-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.express-source-text {
+  font-family: var(--font-serif);
+  font-size: 1.12rem;
+  color: var(--text-primary);
+  line-height: 1.6;
+  margin: 0;
+  font-style: italic;
+}
+
+.express-result-pane {
+  padding: 24px 28px;
+  background: var(--bg-surface);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.express-tone-hint {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+
+.express-output-box {
+  font-family: var(--font-sans);
+  font-size: 1.05rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  line-height: 1.6;
+  margin: 0;
+  min-height: 64px;
+}
+
+/* Hardware Telemetry & GPU Acceleration Card */
+.hardware-card {
+  grid-column: span 2;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-card);
+  padding: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-shadow: var(--shadow-card);
+  transition: var(--transition);
+}
+
+.hardware-card:hover {
+  border-color: var(--border-dark);
+  box-shadow: var(--shadow-card-hover);
+  transform: translateY(-3px);
+}
+
+.hardware-chip-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.hw-tag {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 500;
+  padding: 3px 8px;
+  border-radius: 4px;
+  background: var(--bg-subtle);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+}
+
+.hw-tag.active {
+  background: #EBF7EE;
+  color: #276738;
+  border-color: #BEE3C8;
+}
+
+.vram-meter-box {
+  background: var(--bg-canvas);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.vram-meter-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+  color: var(--text-secondary);
+}
+
+.vram-track {
+  height: 8px;
+  background: rgba(0, 0, 0, 0.08);
+  border-radius: 99px;
+  overflow: hidden;
+  position: relative;
+}
+
+.vram-fill {
+  height: 100%;
+  width: 48%;
+  background: linear-gradient(90deg, #346538, #58A65C);
+  border-radius: 99px;
+}
+
+/* Shortcuts Studio Card */
+.shortcuts-card {
+  grid-column: span 1;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-card);
+  padding: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  box-shadow: var(--shadow-card);
+  transition: var(--transition);
+}
+
+.shortcuts-card:hover {
+  border-color: var(--border-dark);
+  box-shadow: var(--shadow-card-hover);
+  transform: translateY(-3px);
+}
+
+/* Local AI Ecosystem Section */
+.ecosystem-section-wrap {
+  margin-top: 36px;
+  padding-top: 32px;
+  border-top: 1px solid var(--border-color);
+}
+
+/* Extension Grid Balanced Layout */
+.extension-grid-6 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+  margin-top: 48px;
+}
+
+@media (max-width: 900px) {
+  .express-body-container {
+    grid-template-columns: 1fr;
+  }
+  .express-source-pane {
+    border-right: none;
+    border-bottom: 1px solid var(--border-color);
+  }
+  .express-tone-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .hybrid-body-grid {
+    grid-template-columns: 1fr;
+  }
+  .hardware-card {
+    grid-column: span 1;
+  }
+  .extension-grid-6 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  .express-card-top {
+    padding: 20px 18px 16px;
+  }
+  .express-source-pane,
+  .express-result-pane {
+    padding: 18px 18px;
+  }
+  .express-tone-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .extension-grid-6 {
+    grid-template-columns: 1fr;
+  }
+}
