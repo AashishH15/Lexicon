@@ -46,3 +46,18 @@ export function getNonEnglishDeepProofreadNotice(code) {
     "and may produce incorrect suggestions. Review AI clarity edits carefully."
   );
 }
+
+/**
+ * Decide what a language switch must refresh so results always match the
+ * selected variant. "Deep Proofread" mirrors DEEP_PROOFREAD_TOOL without
+ * importing it; this module stays dependency free.
+ */
+export function planLanguageRefresh({ activeTool = "" } = {}) {
+  if (activeTool === "Proofread") {
+    return "recheck-proofread";
+  }
+  if (activeTool === "Deep Proofread") {
+    return "rerun-deep";
+  }
+  return "clear-stale";
+}

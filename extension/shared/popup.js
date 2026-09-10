@@ -58,6 +58,7 @@ let settings = {
   aiConfigured: null,
   expressGate: null,
   engine: "",
+  proofreadLanguage: "",
   userDictionary: [],
 };
 const lexStatusApi = globalThis.__lexiconLexStatus;
@@ -395,6 +396,7 @@ async function loadSettings() {
       siteDisabled: false,
       aiConfigured: null,
       engine: "",
+      proofreadLanguage: "",
       userDictionary: [],
     };
   }
@@ -520,6 +522,8 @@ async function loadAiStatus() {
       settings.expressGate = response.express;
     }
     settings.engine = typeof response?.engine === "string" ? response.engine : "";
+    settings.proofreadLanguage =
+      typeof response?.language === "string" ? response.language : "";
     renderSettings();
   } catch {
     // The connection indicator remains authoritative if the AI probe fails.
@@ -767,7 +771,7 @@ async function onProofread() {
   try {
     const matches = await checkGrammar(
       text,
-      "en-US",
+      settings.proofreadLanguage || "en-US",
       settings.userDictionary || [],
     );
     const response = await sendToContent({

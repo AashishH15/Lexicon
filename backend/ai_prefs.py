@@ -7,6 +7,7 @@ module reads this file after the application restarts.
 
 import json
 import os
+import re
 
 from model_manager import models_dir
 
@@ -22,11 +23,21 @@ DEFAULT_PREFS = {
     "lmstudio_api_key": "",
     "device": "gpu",
     "limit_vram_offload": True,
+    "proofreading_language": "en-US",
 }
 
 _VALID_BACKENDS = ("auto", "ollama", "lmstudio", "bundled")
 _VALID_KEYS = ("2b", "0.8b", "quality")
 _VALID_DEVICES = ("cpu", "gpu")
+_LANGUAGE_RE = re.compile(r"^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$")
+
+
+def normalize_language(value) -> str:
+    """Keep BCP 47-ish language tags, fall back to en-US otherwise."""
+    text = value.strip() if isinstance(value, str) else ""
+    if len(text) > 32 or not _LANGUAGE_RE.match(text):
+        return DEFAULT_PREFS["proofreading_language"]
+    return text
 
 
 def default_device() -> str:
@@ -79,6 +90,7 @@ def load_prefs() -> dict:
         "lmstudio_api_key": lmstudio_api_key,
         "device": device,
         "limit_vram_offload": limit_vram_offload,
+        "proofreading_language": normalize_language(data.get("proofreading_language")),
     }
 
 
@@ -91,6 +103,7 @@ def save_prefs(
     lmstudio_api_key: str | None = None,
     device: str | None = None,
     limit_vram_offload: bool | None = None,
+    proofreading_language: str | None = None,
 ) -> dict:
     """Persist a choice. Unknown values are coerced to defaults."""
     if backend not in _VALID_BACKENDS:
@@ -114,6 +127,11 @@ def save_prefs(
             "limit_vram_offload",
             DEFAULT_PREFS["limit_vram_offload"],
         )
+    if proofreading_language is None:
+        proofreading_language = current.get(
+            "proofreading_language",
+            DEFAULT_PREFS["proofreading_language"],
+        )
     prefs = {
         "backend": backend,
         "model_key": model_key,
@@ -123,6 +141,7 @@ def save_prefs(
         "lmstudio_api_key": lmstudio_api_key.strip(),
         "device": device,
         "limit_vram_offload": bool(limit_vram_offload),
+        "proofreading_language": normalize_language(proofreading_language),
     }
     try:
         with open(PREFS_PATH, "w", encoding="utf-8") as fh:

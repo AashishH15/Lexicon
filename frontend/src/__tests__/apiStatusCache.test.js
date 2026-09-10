@@ -8,6 +8,7 @@ import {
   getAiStatus,
   invalidateAiStatus,
   setAiPreference,
+  setProofreadingLanguage,
 } from "../api.js";
 
 function okJson(data) {
@@ -123,5 +124,16 @@ describe("ai status mutations", () => {
     const cached = await getAiStatus();
     expect(cached.marker).toBe("first");
     expect(fetchMock.mock.calls.length).toBe(callsAfterSave);
+  });
+});
+
+describe("proofreading language", () => {
+  it("posts the selected language", async () => {
+    fetchMock.mockResolvedValue(okJson({ proofreading_language: "es" }));
+    const saved = await setProofreadingLanguage("es");
+    expect(saved.proofreading_language).toBe("es");
+    const [url, options] = fetchMock.mock.calls[0];
+    expect(url).toContain("/proofreading/language");
+    expect(JSON.parse(options.body)).toEqual({ language: "es" });
   });
 });

@@ -111,9 +111,72 @@ export function getExpressPrompt() {
   );
 }
 
-export function getTransformPrompt(tool) {
-  if (tool === EXPRESS_TOOL) return getExpressPrompt();
-  if (tool === "Rewrite") return REWRITE_PROMPT;
-  if (tool === "Concise") return CONCISE_PROMPT;
-  return tonePrompt(TONE_DESCRIPTORS[tool]);
+export function getTransformPrompt(tool, language = "en-US") {
+  const base =
+    tool === EXPRESS_TOOL
+      ? getExpressPrompt()
+      : tool === "Rewrite"
+        ? REWRITE_PROMPT
+        : tool === "Concise"
+          ? CONCISE_PROMPT
+          : tonePrompt(TONE_DESCRIPTORS[tool]);
+  if (tool === EXPRESS_TOOL) {
+    return base;
+  }
+  return base + keepLanguageAppendix(language);
+}
+
+// Compact label table for the keep-language appendix. The desktop app
+// owns the full 49-locale catalog; unknown codes fall back to the raw
+// tag, which still guides the model.
+const PROMPT_LANGUAGE_LABELS = {
+  ar: "Arabic",
+  ca: "Catalan",
+  da: "Danish",
+  de: "German",
+  el: "Greek",
+  en: "English",
+  es: "Spanish",
+  fi: "Finnish",
+  fr: "French",
+  he: "Hebrew",
+  hi: "Hindi",
+  it: "Italian",
+  ja: "Japanese",
+  ko: "Korean",
+  nl: "Dutch",
+  no: "Norwegian",
+  pl: "Polish",
+  pt: "Portuguese",
+  ru: "Russian",
+  sv: "Swedish",
+  tr: "Turkish",
+  uk: "Ukrainian",
+  zh: "Chinese",
+};
+
+// Name a BCP 47 tag for prompts. Returns "" for English and blank input.
+export function promptLanguageLabel(code) {
+  const tag = String(code ?? "").trim();
+  if (!tag) {
+    return "";
+  }
+  const family = tag.split("-")[0].toLowerCase();
+  if (!family || family === "en") {
+    return "";
+  }
+  return PROMPT_LANGUAGE_LABELS[family] || tag;
+}
+
+// Small models translate non-English drafts unless the target language
+// is named outright. Mirrors the desktop promptForTool appendix.
+export function keepLanguageAppendix(language) {
+  const label = promptLanguageLabel(language);
+  if (!label) {
+    return "";
+  }
+  return (
+    ` Keep the text in ${label}.` +
+    " Do not translate it into English or any other language."
+  );
 }

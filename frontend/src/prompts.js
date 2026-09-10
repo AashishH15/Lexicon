@@ -3,6 +3,7 @@
 // short, concrete, and explicit about output format — small models drift
 // toward adding preamble/commentary and blur vague adjectives together
 // unless told exactly what to do and not do.
+import { getLanguageLabel, languageFamily } from "./languageSupport.js";
 
 const OUTPUT_RULES =
   " Output only the result and nothing else. No preamble, no headings, no explanation, and do not wrap it in quotation marks.";
@@ -247,19 +248,32 @@ export function getExpressPrompt(text) {
   );
 }
 
-export function promptForTool(name) {
+// Small models translate non-English drafts unless the target language
+// is named outright. Mirror the Deep Proofread keep-language appendix.
+function keepLanguageAppendix(language) {
+  const code = String(language || "").trim();
+  if (!code || languageFamily(code) === "en") {
+    return "";
+  }
+  return (
+    ` Keep the text in ${getLanguageLabel(code)}.` +
+    " Do not translate it into English or any other language."
+  );
+}
+
+export function promptForTool(name, language = "") {
   // Check custom tools first
   const customTools = getCustomTools();
   const customTool = customTools.find((t) => t.name === name || t.id === name);
   if (customTool) {
-    return customTool.prompt.trim() + OUTPUT_RULES;
+    return customTool.prompt.trim() + OUTPUT_RULES + keepLanguageAppendix(language);
   }
 
   // Check built-in prompt overrides
   if (DEFAULT_INSTRUCTIONS[name]) {
     const overrides = getPromptOverrides();
     const base = overrides[name] || DEFAULT_INSTRUCTIONS[name];
-    return base.trim() + OUTPUT_RULES;
+    return base.trim() + OUTPUT_RULES + keepLanguageAppendix(language);
   }
 
   return null;

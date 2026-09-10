@@ -29,6 +29,13 @@ test("selects the few-shot prompt for small tiers", () => {
   assert.doesNotMatch(large, /Examples:/);
 });
 
+test("names the draft language for non-English runs", () => {
+  const prompt = getDeepProofreadPrompt("2b", "es");
+  assert.match(prompt, /Spanish/);
+  assert.match(prompt, /Do not translate/);
+  assert.doesNotMatch(getDeepProofreadPrompt("2b", "en-US"), /Do not translate/);
+});
+
 test("parses a JSON array and strips fences", () => {
   const edits = parseDeepEdits(
     '```json\n[{"source": "capable to handle", "replacement": "capable of handling"}]\n```',

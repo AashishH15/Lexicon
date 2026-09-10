@@ -5,6 +5,7 @@ import {
   isEnglishLocale,
   languageFamily,
   normalizeLanguageTag,
+  planLanguageRefresh,
 } from "../languageSupport.js";
 
 describe("languageSupport Deep Proofread notices", () => {
@@ -40,5 +41,25 @@ describe("languageFamily", () => {
     expect(languageFamily("pt-BR")).toBe("pt");
     expect(languageFamily("zh-CN")).toBe("zh");
     expect(languageFamily("ca-ES-valencia")).toBe("ca");
+  });
+});
+
+describe("planLanguageRefresh", () => {
+  it("rechecks proofread results in the new language", () => {
+    expect(planLanguageRefresh({ activeTool: "Proofread" })).toBe(
+      "recheck-proofread",
+    );
+  });
+
+  it("reruns the deep pass in the new language", () => {
+    expect(planLanguageRefresh({ activeTool: "Deep Proofread" })).toBe(
+      "rerun-deep",
+    );
+  });
+
+  it("clears stale cards when no analysis is displayed", () => {
+    expect(planLanguageRefresh({ activeTool: "" })).toBe("clear-stale");
+    expect(planLanguageRefresh({})).toBe("clear-stale");
+    expect(planLanguageRefresh({ activeTool: "Rewrite" })).toBe("clear-stale");
   });
 });

@@ -180,6 +180,21 @@ export async function setAiPreference(
   return saved;
 }
 
+// Persist the proofreading language so the desktop app and the browser
+// extension check the same variant. Never unloads the model.
+export async function setProofreadingLanguage(language) {
+  const response = await request("/proofreading/language", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ language }),
+  });
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.error || `Set proofreading language failed: ${response.status}`);
+  }
+  return response.json();
+}
+
 // Fetch detailed hardware profile (CPU, Memory, GPU, tier recommendations).
 export async function getHardwareProfile() {
   const response = await request("/ai/hardware");

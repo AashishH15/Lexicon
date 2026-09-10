@@ -382,6 +382,42 @@ function aiStatusIsConfigured(status) {
   );
 }
 
+// Proofreading language shared with the desktop app through the
+// backend preference. Cached briefly so per-keystroke checks stay
+// cheap. Falls back to en-US on older backends and outages.
+const LANGUAGE_CACHE_TTL_MS = 60000;
+let cachedLanguage = null; // { value, at } | null
+
+export function resetExtensionLanguageCache() {
+  cachedLanguage = null;
+}
+
+function rememberLanguage(status) {
+  const tag = status?.preference?.proofreading_language;
+  const value =
+    typeof tag === "string" && tag.trim() ? tag.trim() : "en-US";
+  cachedLanguage = { value, at: Date.now() };
+  return value;
+}
+
+async function extensionLanguage() {
+  if (
+    cachedLanguage &&
+    Date.now() - cachedLanguage.at < LANGUAGE_CACHE_TTL_MS
+  ) {
+    return cachedLanguage.value;
+  }
+  try {
+    await discoverBackend();
+    if (!getBackendBaseUrl()) {
+      return cachedLanguage?.value || "en-US";
+    }
+    return rememberLanguage(await getAiStatus());
+  } catch {
+    return cachedLanguage?.value || "en-US";
+  }
+}
+
 // Short engine readout for the popup header. Mirrors
 // formatEngineTierLabel in frontend/src/lexStatus.js. Empty string
 // means hide the readout.
@@ -450,7 +486,7 @@ async function proofreadTab(tabId) {
 
   const matches = await checkGrammar(
     response.text,
-    "en-US",
+    await extensionLanguage(),
     settings.userDictionary,
   );
   await sendToActiveFrame(tabId, {
@@ -487,6 +523,7 @@ browser.runtime.onMessage.addListener((msg, sender) => {
           configured: aiStatusIsConfigured(status),
           express: resolveExpressGate(status),
           engine: engineTierLabel(status),
+          language: rememberLanguage(status),
         };
       } catch (error) {
         return {
@@ -674,7 +711,7 @@ browser.runtime.onMessage.addListener((msg, sender) => {
       }
       try {
         const text = await transformText(
-          getTransformPrompt(msg.tool),
+          getTransformPrompt(msg.tool, await extensionLanguage()),
           msg.text,
         );
         return { ok: true, text };
@@ -719,7 +756,7 @@ browser.runtime.onMessage.addListener((msg, sender) => {
       }
       const modelKey =
         status?.preference?.model_key || status?.model_key || "2b";
-      const prompt = getDeepProofreadPrompt(modelKey);
+      const prompt = getDeepProofreadPrompt(modelKey, rememberLanguage(status));
       const chunks = splitDeepChunks(text);
       if (chunks.length === 0) {
         return { ok: true, matches: [] };
@@ -783,7 +820,7 @@ browser.runtime.onMessage.addListener((msg, sender) => {
     try {
       const matches = await checkGrammar(
         msg.text,
-        msg.language || "en-US",
+        msg.language || (await extensionLanguage()),
         settings.userDictionary,
       );
       return { ok: true, matches };

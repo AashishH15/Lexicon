@@ -3,6 +3,8 @@
 // the same. Chunking is character based here because the extension
 // has no sentence engine. Pure helpers only; no DOM access.
 
+import { promptLanguageLabel } from "./prompts.js";
+
 export const DEEP_PROOFREAD_TOOL = "Deep Proofread";
 export const DEEP_RULE_ID = "LEXICON_DEEP";
 export const DEEP_RULE_DESCRIPTION = "Lexicon deep proofread";
@@ -50,10 +52,22 @@ const DEEP_PROMPT_FEW_SHOT =
   "If the text has no errors, return []. Output only JSON, no explanation, no markdown fences.";
 
 // Tier-adaptive prompt selector. Small tiers use the few-shot prompt.
-export function getDeepProofreadPrompt(modelKey = "2b") {
-  return modelKey === "2b" || modelKey === "standard"
-    ? DEEP_PROMPT_FEW_SHOT
-    : DEEP_PROMPT_ZERO_SHOT;
+// Non-English runs name the draft language so the model does not
+// translate it. Label table lives in prompts.js.
+export function getDeepProofreadPrompt(modelKey = "2b", language = "en-US") {
+  const base =
+    modelKey === "2b" || modelKey === "standard"
+      ? DEEP_PROMPT_FEW_SHOT
+      : DEEP_PROMPT_ZERO_SHOT;
+  const label = promptLanguageLabel(language);
+  if (!label) {
+    return base;
+  }
+  return (
+    base +
+    ` Keep every correction in the same language as the draft (${label}).` +
+    " Do not translate the text into English."
+  );
 }
 
 function stripCodeFences(raw) {

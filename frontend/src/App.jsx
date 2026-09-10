@@ -66,6 +66,7 @@ import {
   checkGrammar,
   getAiStatus,
   setAiPreference,
+  setProofreadingLanguage,
   ensureBackend,
   getDictionary,
   addDictionaryWord,
@@ -149,6 +150,7 @@ import {
   lexStatusMessage,
   resolveLexStatus,
 } from "./lexStatus.js";
+import { planLanguageRefresh } from "./languageSupport.js";
 import {
   SHORTCUT_DEFINITIONS,
   SHORTCUT_IDS,
@@ -2107,6 +2109,9 @@ export default function App() {
   function handleLanguageChange(nextLanguage) {
     setLanguage(nextLanguage);
     localStorage.setItem(languageKey, nextLanguage);
+    // Share with the extension through the backend. Best effort; the
+    // local setting applies to this app regardless.
+    setProofreadingLanguage(nextLanguage).catch(() => {});
   }
 
   function handleFontSizeChange(nextSize) {
@@ -2445,6 +2450,7 @@ export default function App() {
 
   function handleResetDefaults() {
     setLanguage(SETTINGS_DEFAULTS.language);
+    setProofreadingLanguage(SETTINGS_DEFAULTS.language).catch(() => {});
     setFontSize(SETTINGS_DEFAULTS.fontSize);
     setFocusMode(SETTINGS_DEFAULTS.focusMode);
     setLineSpacing(SETTINGS_DEFAULTS.lineSpacing);
@@ -2469,8 +2475,21 @@ export default function App() {
   }
 
   useEffect(() => {
-    if (activeTool === "Proofread") {
+    // A language switch must refresh whatever is displayed so cards
+    // always match the selected variant. Failures surface through the
+    // normal run error paths, which proves whether the switch applied.
+    const plan = planLanguageRefresh({ activeTool });
+    if (plan === "recheck-proofread") {
       runGrammarCheck();
+    } else if (plan === "rerun-deep") {
+      runDeepProofread();
+    } else {
+      setGrammarMatches([]);
+      setDeepMatches([]);
+      deepMatchesRef.current = [];
+      if (editor) {
+        clearGrammarDecorations(editor);
+      }
     }
   }, [language, proseScanEnabled]);
 
@@ -2885,7 +2904,7 @@ export default function App() {
     }
     const { from, to } = editor.state.selection;
     const hasSelection = from !== to;
-    const prompt = promptForTool(name);
+    const prompt = promptForTool(name, language);
     if (!prompt) {
       return;
     }

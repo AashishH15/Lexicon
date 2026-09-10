@@ -776,3 +776,95 @@ test("deep auto-run toggle persists through settings", async () => {
   );
   assert.equal(off.deepAutoRun, false);
 });
+
+async function resetLanguageCache() {
+  const module = await import("../shared/background.js?background-test");
+  module.resetExtensionLanguageCache();
+}
+
+function languageStatusPayload(language) {
+  return {
+    preference: { backend: "bundled", model_key: "2b", proofreading_language: language },
+    models_ready: { "2b": true },
+    model_key: "2b",
+  };
+}
+
+test("check-text uses the app proofreading language", async () => {
+  await resetLanguageCache();
+  const previousFetch = globalThis.fetch;
+  storedSettings = {};
+  let requestLanguage = "";
+  globalThis.fetch = async (url, options = {}) => {
+    const path = new URL(url).pathname;
+    if (path === "/extension/ping") {
+      return { ok: true, async json() { return { ok: true, app: "lexicon" }; } };
+    }
+    if (path === "/ai/status") {
+      return { ok: true, async json() { return languageStatusPayload("es"); } };
+    }
+    if (path === "/grammar/check") {
+      requestLanguage = JSON.parse(options.body).language;
+      return { ok: true, async json() { return { matches: [] }; } };
+    }
+    throw new Error(`unexpected request: ${url}`);
+  };
+  try {
+    const response = await messageHandler(
+      { type: "lexicon:check-text", text: "Hola." },
+      { tab: { id: 7 }, frameId: 2, url: "https://forms.example.test" },
+    );
+    assert.equal(response.ok, true);
+    assert.equal(requestLanguage, "es");
+  } finally {
+    globalThis.fetch = previousFetch;
+    await resetLanguageCache();
+    await messageHandler({ type: "lexicon:get-ai-status" }, {});
+  }
+});
+
+test("get-ai-status reports the proofreading language", async () => {
+  const result = await getAiStatusResponse(languageStatusPayload("de"));
+  assert.equal(result.ok, true);
+  assert.equal(result.language, "de");
+});
+
+test("transform prompts keep the draft language", async () => {
+  await resetLanguageCache();
+  const previousFetch = globalThis.fetch;
+  storedSettings = {};
+  const response = (body) => ({
+    ok: true,
+    async json() {
+      return body;
+    },
+  });
+  let sentPrompt = "";
+  globalThis.fetch = async (url, options) => {
+    const path = new URL(url).pathname;
+    if (path === "/extension/ping") {
+      return response({ ok: true, app: "lexicon" });
+    }
+    if (path === "/ai/status") {
+      return response(languageStatusPayload("es"));
+    }
+    if (path === "/transform") {
+      sentPrompt = JSON.parse(options.body).prompt;
+      return response({ text: "Hola reescrito." });
+    }
+    throw new Error(`unexpected request: ${url}`);
+  };
+  try {
+    const result = await messageHandler(
+      { type: "lexicon:transform-text", tool: "Professional", text: "Hola." },
+      {},
+    );
+    assert.equal(result.ok, true);
+    assert.ok(sentPrompt.includes("Spanish"));
+    assert.ok(sentPrompt.includes("Do not translate"));
+  } finally {
+    globalThis.fetch = previousFetch;
+    await resetLanguageCache();
+    await messageHandler({ type: "lexicon:get-ai-status" }, {});
+  }
+});

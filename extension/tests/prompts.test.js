@@ -148,3 +148,15 @@ test("Express prompt keys match the desktop template", () => {
     );
   }
 });
+
+test("transform prompts name the draft language for non-English checks", () => {
+  const prompt = getTransformPrompt("Professional", "es");
+  assert.ok(prompt.includes("Spanish"));
+  assert.ok(prompt.includes("Do not translate"));
+  assert.ok(getTransformPrompt("Rewrite", "es").includes("Do not translate"));
+});
+
+test("transform prompts stay unchanged for English", () => {
+  assert.ok(!getTransformPrompt("Professional", "en-US").includes("Do not translate"));
+  assert.ok(!getTransformPrompt("Professional").includes("Do not translate"));
+});

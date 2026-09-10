@@ -432,6 +432,7 @@ class AiPreferenceRequest(BaseModel):
     lmstudio_api_key: str | None = None  # Optional LM Studio API token.
     device: str | None = None  # "gpu" or "cpu"
     limit_vram_offload: bool | None = None
+    proofreading_language: str | None = None  # BCP 47 tag shared with the extension.
 
 
 @app.post("/ai/preference")
@@ -453,12 +454,36 @@ def ai_preference_set(request: AiPreferenceRequest):
         request.lmstudio_api_key,
         device=request.device,
         limit_vram_offload=request.limit_vram_offload,
+        proofreading_language=request.proofreading_language,
     )
     if device_changed or offload_changed:
         unload_active_backend()
     # Force the cached backend to re-resolve against the new preference.
     get_backend(force_refresh=True)
     return public_prefs(prefs)
+
+
+class ProofreadingLanguageRequest(BaseModel):
+    language: str = "en-US"  # BCP 47 tag shared by the desktop app and the extension.
+
+
+@app.post("/proofreading/language")
+def proofreading_language_set(request: ProofreadingLanguageRequest):
+    """Persist the proofreading language so the desktop app and the browser
+    extension check the same variant. Changing it never unloads the model."""
+    current = load_prefs()
+    prefs = save_prefs(
+        current.get("backend", "auto"),
+        current.get("model_key", "2b"),
+        current.get("ollama_model", ""),
+        current.get("lmstudio_model", ""),
+        current.get("lmstudio_url", ""),
+        current.get("lmstudio_api_key", ""),
+        device=current.get("device"),
+        limit_vram_offload=current.get("limit_vram_offload"),
+        proofreading_language=request.language,
+    )
+    return {"proofreading_language": prefs["proofreading_language"]}
 
 
 @app.post("/model/cancel")
