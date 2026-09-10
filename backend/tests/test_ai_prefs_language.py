@@ -8,6 +8,8 @@ if str(BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(BACKEND_DIR))
 
 import ai_prefs  # noqa: E402
+import inference  # noqa: E402
+import main  # noqa: E402
 from main import ProofreadingLanguageRequest, proofreading_language_set  # noqa: E402
 
 
@@ -55,3 +57,41 @@ def test_proofreading_language_endpoint_coerces_garbage(tmp_path, monkeypatch):
         ProofreadingLanguageRequest(language="not a tag!!")
     )
     assert resp["proofreading_language"] == "en-US"
+
+
+def _raise_if_probed(name):
+    def _raise(*args, **kwargs):
+        raise AssertionError(f"{name} must not be probed")
+    return _raise
+
+
+def test_status_lite_skips_external_probes_for_bundled(tmp_path, monkeypatch):
+    _prefs_path(tmp_path, monkeypatch)
+    monkeypatch.setattr(inference, "_backend", None)
+    ai_prefs.save_prefs("bundled", "2b", proofreading_language="es")
+    monkeypatch.setattr(main, "OllamaBackend", _raise_if_probed("OllamaBackend"))
+    monkeypatch.setattr(main, "LMStudioBackend", _raise_if_probed("LMStudioBackend"))
+    resp = main.ai_status_lite()
+    assert resp["ollama_available"] is False
+    assert resp["lmstudio_available"] is False
+    assert resp["preference"]["proofreading_language"] == "es"
+    assert resp["active_backend"] == "bundled"
+    assert "gpu_info" not in resp
+    assert "hardware" not in resp
+    assert "tier_upgrades" not in resp
+
+
+def test_status_lite_reports_ollama_when_preferred(tmp_path, monkeypatch):
+    _prefs_path(tmp_path, monkeypatch)
+    monkeypatch.setattr(inference, "_backend", None)
+    ai_prefs.save_prefs("ollama", "2b", proofreading_language="de")
+    monkeypatch.setattr(main, "LMStudioBackend", _raise_if_probed("LMStudioBackend"))
+
+    class FakeOllama:
+        def _chat_models(self):
+            return ["llama3"]
+
+    monkeypatch.setattr(main, "OllamaBackend", FakeOllama)
+    resp = main.ai_status_lite()
+    assert resp["ollama_available"] is True
+    assert resp["preference"]["proofreading_language"] == "de"

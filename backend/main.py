@@ -463,6 +463,62 @@ def ai_preference_set(request: AiPreferenceRequest):
     return public_prefs(prefs)
 
 
+@app.get("/ai/status/lite")
+def ai_status_lite():
+    """Fast subset of /ai/status for hot paths (extension popup and badge).
+
+    Skips GPU detection, hardware diagnostics, upgrade metadata, model
+    lists, and any external probe the saved preference does not need, so
+    a bundled setup answers from local state alone.
+    """
+    from concurrent.futures import ThreadPoolExecutor
+
+    prefs = load_prefs()
+    backend_choice = prefs.get("backend", "auto")
+    ollama_models: list = []
+    lmstudio_models: list = []
+
+    def probe_ollama():
+        try:
+            return OllamaBackend()._chat_models()
+        except Exception:
+            return []
+
+    def probe_lmstudio():
+        try:
+            return LMStudioBackend(
+                base_url=prefs.get("lmstudio_url") or LM_STUDIO_SERVER,
+                model=prefs.get("lmstudio_model") or None,
+                api_key=prefs.get("lmstudio_api_key") or None,
+            )._models()
+        except Exception:
+            return []
+
+    jobs = {}
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        if backend_choice in ("auto", "ollama"):
+            jobs["ollama"] = executor.submit(probe_ollama)
+        if backend_choice in ("auto", "lmstudio"):
+            jobs["lmstudio"] = executor.submit(probe_lmstudio)
+        if "ollama" in jobs:
+            ollama_models = jobs["ollama"].result()
+        if "lmstudio" in jobs:
+            lmstudio_models = jobs["lmstudio"].result()
+
+    active = get_backend(
+        probe_results={"ollama": ollama_models, "lmstudio": lmstudio_models}
+    )
+    return {
+        "preference": public_prefs(prefs),
+        "models_ready": models_ready(),
+        "model_key": prefs.get("model_key") or "2b",
+        "ollama_available": bool(ollama_models),
+        "lmstudio_available": bool(lmstudio_models),
+        "active_backend": active.name,
+        "active_model_key": getattr(active, "model_key", None),
+    }
+
+
 class ProofreadingLanguageRequest(BaseModel):
     language: str = "en-US"  # BCP 47 tag shared by the desktop app and the extension.
 

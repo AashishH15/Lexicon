@@ -611,6 +611,13 @@ export default function App() {
     refreshAiConfigured();
   }, [refreshAiConfigured]);
 
+  // Publish the saved proofreading language once at startup. Selections
+  // made before this sharing existed would otherwise never reach the
+  // backend, leaving the extension on the default.
+  useEffect(() => {
+    setProofreadingLanguage(loadLanguage()).catch(() => {});
+  }, []);
+
   // Settings-panel model changes (delete / re-select) fire this so the
   // toolbar can un-grey without the modal close path.
   useEffect(() => {

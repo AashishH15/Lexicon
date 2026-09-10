@@ -138,6 +138,13 @@ h1 {
   font-size: 11px;
 }
 
+.proofread-language {
+  min-height: 16px;
+  margin: 4px 0 0;
+  color: #5f5e5b;
+  font-size: 11px;
+}
+
 .dictionary {
   margin-bottom: 10px;
   padding: 8px 10px;

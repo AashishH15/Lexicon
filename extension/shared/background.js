@@ -8,6 +8,7 @@ import {
   getBackendBaseUrl,
   getDictionary,
   getAiStatus,
+  getAiStatusLite,
   removeDictionaryWord,
   transformText,
 } from "./api.js";
@@ -412,9 +413,19 @@ async function extensionLanguage() {
     if (!getBackendBaseUrl()) {
       return cachedLanguage?.value || "en-US";
     }
-    return rememberLanguage(await getAiStatus());
+    return rememberLanguage(await getAiStatusFast());
   } catch {
     return cachedLanguage?.value || "en-US";
+  }
+}
+
+// Fast AI status for hot paths. Falls back to the full status on
+// older backends without the lite endpoint.
+async function getAiStatusFast() {
+  try {
+    return await getAiStatusLite();
+  } catch {
+    return getAiStatus();
   }
 }
 
@@ -517,7 +528,7 @@ browser.runtime.onMessage.addListener((msg, sender) => {
         return { ok: false, error: "backend_unreachable", configured: false };
       }
       try {
-        const status = await getAiStatus();
+        const status = await getAiStatusFast();
         return {
           ok: true,
           configured: aiStatusIsConfigured(status),
@@ -678,7 +689,7 @@ browser.runtime.onMessage.addListener((msg, sender) => {
         }
         // A failed probe must not strand a ready model. Run and let
         // the transform report real errors instead.
-        const gate = await getAiStatus().then(resolveExpressGate, () => "run");
+        const gate = await getAiStatusFast().then(resolveExpressGate, () => "run");
         if (gate !== "run") {
           return {
             ok: false,
@@ -747,7 +758,7 @@ browser.runtime.onMessage.addListener((msg, sender) => {
       }
       let status;
       try {
-        status = await getAiStatus();
+        status = await getAiStatusFast();
       } catch {
         return { ok: false, error: "ai-status-unavailable", matches: [] };
       }

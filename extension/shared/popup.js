@@ -33,6 +33,7 @@ const deepAutoRunEl = document.getElementById("deep-auto-run");
 const disableSiteEl = document.getElementById("disable-site");
 const siteNameEl = document.getElementById("site-name");
 const settingsStatusEl = document.getElementById("settings-status");
+const proofreadLanguageEl = document.getElementById("proofread-language");
 const dictionaryWordEl = document.getElementById("dictionary-word");
 const dictionaryAddButtonEl = document.getElementById("dictionary-add-button");
 const dictionaryListEl = document.getElementById("dictionary-list");
@@ -51,6 +52,7 @@ let currentTabId = null;
 let currentSite = "";
 let monitorState = "checking";
 let operationStatus = null;
+let aiStatusSettled = false;
 let settings = {
   paused: false,
   deepAutoRun: false,
@@ -124,8 +126,13 @@ function setOperationStatus(status, options = {}) {
 
 function renderLexStatus() {
   if (!lexStatusApi || !lexStatusEl || !statusIconEl) return;
+  // One checking phase until both probes settle. Showing "ready" before
+  // the engine and language arrive reads as finished while nothing is
+  // usable yet, so stay checking instead.
   const baseStatus = lexStatusApi.resolveLexStatus({
-    checking: monitorState === "checking",
+    checking:
+      monitorState === "checking" ||
+      (monitorState === "connected" && !aiStatusSettled),
     offline: monitorState === "offline",
     disabled: settings.paused || settings.siteDisabled,
     matches: null,
@@ -234,10 +241,18 @@ async function selectField(fieldId) {
 }
 
 function renderSettings() {
+  // Toggles stay inert until the backend answers and the AI probe
+  // settles. Early clicks fail and snap back, so block them instead.
+  // Settled means answered, not necessarily configured: pause and
+  // site toggles work without a model.
+  const controlsReady =
+    monitorState === "connected" && aiStatusSettled;
   pauseProofreadingEl.checked = Boolean(settings.paused);
+  pauseProofreadingEl.disabled = !controlsReady;
   deepAutoRunEl.checked = Boolean(settings.deepAutoRun);
+  deepAutoRunEl.disabled = !controlsReady;
   disableSiteEl.checked = Boolean(settings.siteDisabled);
-  disableSiteEl.disabled = !currentSite;
+  disableSiteEl.disabled = !controlsReady || !currentSite;
   siteNameEl.textContent = currentSite || "this site";
   rewriteToolEl.disabled = Boolean(settings.siteDisabled);
   fieldSelectEl.disabled = Boolean(settings.siteDisabled);
@@ -251,6 +266,15 @@ function renderSettings() {
     settingsStatusEl.textContent = "This page cannot be disabled from the extension.";
   } else {
     settingsStatusEl.textContent = "";
+  }
+  settingsStatusEl.hidden = !settingsStatusEl.textContent;
+  // Read-only readout of the variant the extension checks in. The app
+  // owns the choice; this line only proves which one arrived.
+  if (proofreadLanguageEl) {
+    proofreadLanguageEl.textContent = settings.proofreadLanguage
+      ? `Proofreading in ${settings.proofreadLanguage} (from the Lexicon app).`
+      : "";
+    proofreadLanguageEl.hidden = !proofreadLanguageEl.textContent;
   }
   renderLexStatus();
   refreshActions();
@@ -497,6 +521,7 @@ async function updateSiteDisabled(event) {
 function renderStatus(state) {
   monitorState = state;
   renderLexStatus();
+  renderSettings();
   if (state === "connected") syncDictionaryFromPopup();
   if (state === "connected") loadAiStatus();
   refreshField();
@@ -524,9 +549,11 @@ async function loadAiStatus() {
     settings.engine = typeof response?.engine === "string" ? response.engine : "";
     settings.proofreadLanguage =
       typeof response?.language === "string" ? response.language : "";
-    renderSettings();
   } catch {
     // The connection indicator remains authoritative if the AI probe fails.
+  } finally {
+    aiStatusSettled = true;
+    renderSettings();
   }
 }
 

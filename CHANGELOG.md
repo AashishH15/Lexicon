@@ -36,6 +36,7 @@ Lexicon v0.11.0 is a major milestone that transforms Lexicon from a standalone d
 - **Popup Engine Readout**: the popup header names the active engine (for example Standard · GPU, Ollama, or LM Studio) and hides itself when the backend is unreachable or unconfigured.
 - **Draggable Suggestion Panel**: the badge panel header carries a Phosphor grip handle. Drag the panel anywhere; it keeps its offset, follows the field on scroll, survives re-renders, and clamps so the header stays reachable.
 - **Scroll-True Squiggles**: textarea underlines now compensate page and field scroll, so they track the text while scrolling and stay visible on scrolled pages instead of drifting off-screen.
+- **Extension Follows the App Language**: the extension checks the proofreading language saved in the desktop app (German in the app means German in the extension) for keystroke checks, Tone rewrites, and Deep Proofread, falling back to American English against older backends.
 
 #### 🧠 3-Tier Local LLM Architecture & Hybrid Deep Proofread:
 - **New Quality Tier + Light/Standard Model Upgrades**: v0.11.0 introduces a third **Quality** download tier and replaces the previous Light and Standard GGUF pins with stronger curated models. Legacy Light/Standard files can be verified and cleaned up after a safe migration.
@@ -124,6 +125,11 @@ Lexicon v0.11.0 is a major milestone that transforms Lexicon from a standalone d
 - **Instant Status on Reopen**: Lex's Engine reopens with the last known answer painted immediately and re-checks quietly in the background. Behind it, AI status responses are cached for a minute with concurrent requests shared and automatic invalidation on any model change, so the "Checking AI Status" spinner is gone in the common case.
 - **Engine at a Glance**: The top bar now names the active engine (for example Standard · GPU, Ollama, or LM Studio) next to the language button. Selecting it jumps straight to Lex's Engine.
 - **Set Up AI Goes Direct**: The Set up AI button and locked AI tools now open Settings on Lex's Engine instead of restarting the 5-step first-run wizard (which still appears on its own for brand-new installs).
+
+#### Language Consistency:
+- **AI Keeps the Draft Language**: Tone rewrites, Rewrite, Concise, summaries, and custom tools now name the selected language outright ("Keep the text in Spanish. Do not translate it into English or any other language.") so small models stop translating non-English drafts. English prompts are unchanged.
+- **Switching Language Refreshes Results**: changing the proofreading language re-runs whichever analysis is displayed (Proofread or Deep Proofread) and clears stale cards otherwise, so suggestions always match the selected variant. Failures name the language.
+- **Shared Language Preference**: the selected variant persists in the backend alongside the AI preference, so the desktop app and the browser extension check the same language. Switching never unloads the model.
 
 ---
 

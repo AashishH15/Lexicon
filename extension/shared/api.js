@@ -150,3 +150,10 @@ export async function getAiStatus() {
   if (!baseUrl) throw new Error("backend_unreachable");
   return jsonRequest(AI_STATUS_PATH, { cache: "no-store" });
 }
+
+// Fast subset of the AI status for hot paths. Older backends answer
+// 404, which callers treat as a cue to use the full status instead.
+export async function getAiStatusLite() {
+  if (!baseUrl) throw new Error("backend_unreachable");
+  return jsonRequest(`${AI_STATUS_PATH}/lite`, { cache: "no-store" });
+}

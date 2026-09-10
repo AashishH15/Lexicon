@@ -829,6 +829,85 @@ test("get-ai-status reports the proofreading language", async () => {
   assert.equal(result.language, "de");
 });
 
+function liteStatusPayload(language) {
+  return {
+    preference: {
+      backend: "bundled",
+      model_key: "2b",
+      device: "gpu",
+      proofreading_language: language,
+    },
+    models_ready: { "2b": true },
+    model_key: "2b",
+    ollama_available: false,
+    lmstudio_available: false,
+    active_backend: "bundled",
+  };
+}
+
+async function getAiStatusWithLite({ lite, full, liteFails = false }) {
+  const previousFetch = globalThis.fetch;
+  storedSettings = {};
+  let fullCalls = 0;
+  const response = (body, ok = true) => ({
+    ok,
+    async json() {
+      return body;
+    },
+  });
+  globalThis.fetch = async (url) => {
+    const path = new URL(url).pathname;
+    if (path === "/extension/ping") {
+      return response({ ok: true, app: "lexicon" });
+    }
+    if (path === "/ai/status/lite") {
+      if (liteFails) {
+        return response({ detail: "Not Found" }, false);
+      }
+      return response(lite);
+    }
+    if (path === "/ai/status") {
+      fullCalls += 1;
+      return response(full);
+    }
+    throw new Error(`unexpected request: ${url}`);
+  };
+  try {
+    await resetLanguageCache();
+    const result = await messageHandler({ type: "lexicon:get-ai-status" }, {});
+    return { result, fullCalls };
+  } finally {
+    globalThis.fetch = previousFetch;
+    await resetLanguageCache();
+    await messageHandler({ type: "lexicon:get-ai-status" }, {});
+  }
+}
+
+test("get-ai-status prefers the lite endpoint", async () => {
+  const { result, fullCalls } = await getAiStatusWithLite({
+    lite: liteStatusPayload("es"),
+    full: languageStatusPayload("de"),
+  });
+  assert.equal(result.ok, true);
+  assert.equal(result.configured, true);
+  assert.equal(result.express, "run");
+  assert.equal(result.engine, "Standard · GPU");
+  assert.equal(result.language, "es");
+  assert.equal(fullCalls, 0);
+});
+
+test("get-ai-status falls back to full status without lite", async () => {
+  const { result, fullCalls } = await getAiStatusWithLite({
+    lite: null,
+    full: languageStatusPayload("de"),
+    liteFails: true,
+  });
+  assert.equal(result.ok, true);
+  assert.equal(result.configured, true);
+  assert.equal(result.language, "de");
+  assert.equal(fullCalls, 1);
+});
+
 test("transform prompts keep the draft language", async () => {
   await resetLanguageCache();
   const previousFetch = globalThis.fetch;
