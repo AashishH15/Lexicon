@@ -622,6 +622,20 @@
   function applyHighlight(state, matches) {
     if (!state.visible || !fieldIsAttached(state.field)) return 0;
     const cleaned = filterDismissed(validMatches(matches), state);
+    // Original text feeds the panel diff rows. Deep matches already
+    // carry it; grammar matches slice it from the field text.
+    for (const match of cleaned) {
+      if (
+        match.original == null &&
+        Number.isInteger(match.offset) &&
+        Number.isInteger(match.length)
+      ) {
+        match.original = String(state.text || "").slice(
+          match.offset,
+          match.offset + match.length,
+        );
+      }
+    }
     state.matches = cleaned;
     state.checking = false;
     state.offline = false;

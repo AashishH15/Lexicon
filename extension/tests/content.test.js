@@ -543,3 +543,13 @@ test("a missing model points at engine setup", async () => {
 
   assert.ok(String(harness.renderedOptions.deepError).includes("No AI model is ready"));
 });
+
+test("grammar matches carry their original text for diff rows", async () => {
+  const harness = createHarness();
+  await new Promise((resolve) => setImmediate(resolve));
+
+  await harness.messageHandler({ type: "lexicon:highlight", matches: [typoMatch()] });
+
+  assert.equal(harness.renderedMatches.length, 1);
+  assert.equal(harness.renderedMatches[0].original, "teh");
+});

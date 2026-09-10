@@ -145,7 +145,7 @@
     "@keyframes lex-status-pulse{0%,100%{opacity:.78;transform:scale(.96)}50%{opacity:1;transform:scale(1)}}" +
     "@media (prefers-reduced-motion:reduce){.badge.checking .status-icon{animation:none}}" +
     `.panel{position:fixed;width:${PANEL_WIDTH}px;max-height:${PANEL_MAX_HEIGHT}px;` +
-    "display:flex;flex-direction:column;background:#f7f6f3;border:1px solid #d8d7d3;border-radius:8px;box-shadow:0 6px 24px rgba(0,0,0,0.18);" +
+    "display:flex;flex-direction:column;background:#ffffff;border:1px solid #e0ded9;border-radius:8px;box-shadow:0 12px 32px rgba(0,0,0,0.22);" +
     "font:13px/1.45 -apple-system,BlinkMacSystemFont,\"Segoe UI\",Helvetica,Arial,sans-serif;color:#111111;overflow:hidden;z-index:3}" +
     `.panel[hidden]{display:none}` +
     ".panel .head{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-bottom:1px solid #eaeaea;font-weight:600}" +
@@ -161,24 +161,28 @@
     ".panel .close-icon svg{display:block;width:14px;height:14px;fill:currentColor}" +
     ".panel .list{overflow-y:auto;padding:6px}" +
     ".panel .empty{margin:0;padding:10px 9px;color:#5f5e5b}" +
-    ".panel .row{display:flex;align-items:flex-start;gap:8px;padding:7px 9px;margin-bottom:6px;border-left:3px solid #956400;border-radius:0 6px 6px 0;background:#fbf3db;cursor:pointer}" +
-    ".panel .row:hover{background:#f7edcf}" +
+    ".panel .row{display:flex;align-items:flex-start;gap:8px;padding:9px 10px;margin-bottom:6px;border:1px solid #dbb961;border-radius:8px;background:#ffffff;cursor:pointer}" +
+    ".panel .row:hover{background:#f7f6f3}" +
     ".panel .row.active{outline:1px solid #1f6c9f;outline-offset:-1px}" +
     ".panel .row.lexicon-row-flash{animation:lexicon-row-flash 1200ms ease-in-out}" +
-    "@keyframes lexicon-row-flash{0%,100%{box-shadow:0 0 0 0 rgba(229,72,77,0);background:#fbf3db}25%,75%{box-shadow:0 0 0 3px rgba(229,72,77,.2);background:#f8dfd7}50%{box-shadow:0 0 0 4px rgba(229,72,77,.32);background:#f2c7c3}}" +
+    "@keyframes lexicon-row-flash{0%,100%{box-shadow:0 0 0 0 rgba(229,72,77,0);background:#ffffff}25%,75%{box-shadow:0 0 0 3px rgba(229,72,77,.2);background:#f8dfd7}50%{box-shadow:0 0 0 4px rgba(229,72,77,.32);background:#f2c7c3}}" +
     "@media (prefers-reduced-motion:reduce){.panel .row.lexicon-row-flash{animation:none;box-shadow:0 0 0 3px rgba(229,72,77,.24)}}" +
     ".panel .row .text{flex:1;min-width:0}" +
     ".panel .row .message{margin:0 0 2px}" +
     ".panel .row .suggestion{margin:0;color:#5f5e5b;font-size:12px}" +
-    ".panel .row.deep{border-left-color:#1f6c9f;background:#eef4fa}" +
+    ".panel .suggestion-box{margin:6px 0 0;padding:6px 8px;border-radius:6px;background:#f7f6f3;font-size:12px}" +
+    ".panel .strike{color:#9f2f2d;text-decoration:line-through}" +
+    ".panel .arrow{color:#5f5e5b;margin:0 4px}" +
+    ".panel .fix{color:#346538;font-weight:600}" +
+    ".panel .row.deep{border-color:#8fb8dd;background:#eef4fa}" +
     ".panel .row.deep:hover{background:#e2edf7}" +
     ".panel .deep-invite{margin:4px 3px 2px;padding:8px 9px;border:1px dashed #b9b7b0;border-radius:6px;background:#ffffff}" +
     ".panel .deep-invite p{margin:0 0 6px;font-size:12px;color:#5f5e5b}" +
     ".panel .deep-run{border:1px solid #1f6c9f;border-radius:6px;background:#1f6c9f;color:#ffffff;font:inherit;font-weight:600;padding:5px 10px;cursor:pointer}" +
     ".panel .deep-run:hover{filter:brightness(1.08)}" +
     ".panel .actions{flex:none;display:flex;flex-direction:column;gap:4px}" +
-    ".panel .apply{border:1px solid #1f6c9f;border-radius:6px;background:#1f6c9f;color:#ffffff;font:inherit;font-weight:600;padding:4px 10px;cursor:pointer}" +
-    ".panel .apply:hover{filter:brightness(1.08)}" +
+    ".panel .apply{border:1px solid #111111;border-radius:6px;background:#111111;color:#ffffff;font:inherit;font-weight:600;padding:4px 10px;cursor:pointer}" +
+    ".panel .apply:hover{background:#2e2e2b}" +
     ".panel .dismiss{border:1px solid #d8d7d3;border-radius:6px;background:transparent;color:#111111;font:inherit;font-weight:500;padding:4px 10px;cursor:pointer}" +
     ".panel .dismiss:hover{background:#ebeae6}" +
     ".panel .dictionary{border:1px solid #d8d7d3;border-radius:6px;background:transparent;color:#5f5e5b;font:inherit;font-weight:500;padding:4px 10px;cursor:pointer;white-space:nowrap}" +
@@ -1240,13 +1244,15 @@
         const message = document.createElement("p");
         message.className = "message";
         message.textContent = match.message;
-        const suggestion = document.createElement("p");
-        suggestion.className = "suggestion";
-        suggestion.textContent = match.replacements[0]
-          ? `Suggestion: ${match.replacements[0]}`
-          : "No automatic fix — you can dismiss this.";
         text.appendChild(message);
-        text.appendChild(suggestion);
+        if (match.replacements[0]) {
+          text.appendChild(suggestionBox(match));
+        } else {
+          const suggestion = document.createElement("p");
+          suggestion.className = "suggestion";
+          suggestion.textContent = "No automatic fix — you can dismiss this.";
+          text.appendChild(suggestion);
+        }
         row.appendChild(text);
 
         const actions = document.createElement("div");
@@ -1295,6 +1301,30 @@
       "close-icon",
       "M208.49,191.51a12,12,0,0,1-17,17L128,145,64.49,208.49a12,12,0,0,1-17-17L111,128,47.51,64.49a12,12,0,0,1,17-17L128,111l63.51-63.52a12,12,0,0,1,17,17L145,128Z",
     );
+  }
+
+  // Diff-style suggestion box: struck original, arrow, green fix.
+  // Falls back to the fix alone when the original text is unknown.
+  function suggestionBox(match) {
+    const box = document.createElement("div");
+    box.className = "suggestion-box";
+    const original = match && match.original != null ? String(match.original) : "";
+    const fix = match && match.replacements[0] != null ? String(match.replacements[0]) : "";
+    if (original && original !== fix) {
+      const strike = document.createElement("span");
+      strike.className = "strike";
+      strike.textContent = original;
+      box.appendChild(strike);
+      const arrow = document.createElement("span");
+      arrow.className = "arrow";
+      arrow.textContent = "→";
+      box.appendChild(arrow);
+    }
+    const fixEl = document.createElement("span");
+    fixEl.className = "fix";
+    fixEl.textContent = fix;
+    box.appendChild(fixEl);
+    return box;
   }
 
   function magicWandIcon() {

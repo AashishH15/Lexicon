@@ -1208,3 +1208,72 @@ test("badge stays corner-flush on fixed fields", () => {
   assert.equal(pos.top, 180 - 26);
 });
 
+function panelFirstRow(api, field) {
+  return api.fieldState(field).panelEl.children[1].children[0];
+}
+
+test("grammar rows render a suggestion diff box", () => {
+  const { api, field } = loadPanelHarness();
+  api.showField(
+    field,
+    [
+      {
+        offset: 0,
+        length: 3,
+        message: "Possible typo",
+        replacements: ["The"],
+        original: "teh",
+      },
+    ],
+    {},
+  );
+  const row = panelFirstRow(api, field);
+  assert.ok(String(row.className || "").includes("row"));
+  const box = row.children[0].children.find((child) =>
+    String(child.className || "").includes("suggestion-box"),
+  );
+  assert.ok(box);
+  const strike = box.children.find((child) =>
+    String(child.className || "").includes("strike"),
+  );
+  const fix = box.children.find((child) =>
+    String(child.className || "").includes("fix"),
+  );
+  assert.equal(strike.textContent, "teh");
+  assert.equal(fix.textContent, "The");
+});
+
+test("rows without an original show the fix alone", () => {
+  const { api, field } = loadPanelHarness();
+  api.showField(
+    field,
+    [{ offset: 0, length: 3, message: "Possible typo", replacements: ["The"] }],
+    {},
+  );
+  const row = panelFirstRow(api, field);
+  const box = row.children[0].children.find((child) =>
+    String(child.className || "").includes("suggestion-box"),
+  );
+  assert.ok(box);
+  assert.ok(
+    !box.children.some((child) =>
+      String(child.className || "").includes("strike"),
+    ),
+  );
+  const fix = box.children.find((child) =>
+    String(child.className || "").includes("fix"),
+  );
+  assert.equal(fix.textContent, "The");
+});
+
+test("panel rows use a uniform amber ring, not a side rail", () => {
+  const source = readFileSync(
+    join(dirname(fileURLToPath(import.meta.url)), "..", "shared", "suggestions.js"),
+    "utf-8",
+  );
+  assert.ok(!source.includes("fbf3db"));
+  assert.ok(!source.includes("border-left:3px"));
+  assert.ok(source.includes("dbb961"));
+  assert.ok(source.includes(".suggestion-box"));
+});
+
