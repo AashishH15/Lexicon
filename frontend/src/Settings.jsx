@@ -13,6 +13,7 @@ import {
   BookBookmark,
   ClockCounterClockwise,
   Trash,
+  TrashSimple,
   MagnifyingGlass,
   Plus,
   Copy,
@@ -1385,13 +1386,21 @@ export default function Settings({
 
               {/* ── Your Dictionary ── */}
               {activeTab === "dictionary" && (
-                <div
-                  data-setting-key="dictionary-section"
-                  className={`space-y-5 ${getHighlightClass("dictionary-section")}`}
-                >
-                  <h2 className="font-serif text-xl font-bold text-ink">
-                    Your Dictionary
-                  </h2>
+                  <div
+                    data-setting-key="dictionary-section"
+                    className={`space-y-5 ${getHighlightClass("dictionary-section")}`}
+                  >
+                    <div className="flex items-baseline justify-between gap-3">
+                      <h2 className="font-serif text-xl font-bold text-ink">
+                        Your Dictionary
+                      </h2>
+                      {userDictionary.length > 0 && (
+                        <span className="font-sans text-xs text-muted">
+                          {userDictionary.length} word
+                          {userDictionary.length === 1 ? "" : "s"}
+                        </span>
+                      )}
+                    </div>
 
                   <div>
                     <p className="font-sans text-xs text-muted">
@@ -1484,7 +1493,7 @@ export default function Settings({
                                   aria-label={`Remove ${word} from dictionary`}
                                   className="shrink-0 rounded p-1 text-muted transition-colors hover:text-red-600"
                                 >
-                                  <Trash size={15} weight="bold" />
+                                  <TrashSimple size={15} weight="bold" />
                                 </button>
                               </li>
                             ))}
@@ -1625,7 +1634,7 @@ export default function Settings({
                         className="flex items-center gap-1 rounded px-2 py-1.5 font-sans text-xs text-muted transition-colors hover:text-red-600"
                         aria-label="Clear history"
                       >
-                        <Trash size={13} weight="bold" />
+                        <TrashSimple size={13} weight="bold" />
                         Clear
                       </button>
                     )}

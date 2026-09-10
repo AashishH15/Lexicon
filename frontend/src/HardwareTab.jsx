@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ArrowCounterClockwise, CircleNotch } from "@phosphor-icons/react";
+import { ArrowCounterClockwise, Check, CircleNotch, X } from "@phosphor-icons/react";
 import Toggle from "./Toggle.jsx";
 import { getHardwareProfile, setHardwareSettings } from "./api.js";
 
@@ -121,9 +121,15 @@ export default function HardwareTab() {
           <p className="font-mono text-[10px] uppercase tracking-widest text-muted">
             CPU
           </p>
-          {cpu.compatible && (
-            <span className="font-sans text-[11px] font-semibold text-pale-green-text">
-              ✓ Compatible
+          {cpu.compatible ? (
+            <span className="inline-flex items-center gap-1 font-sans text-[11px] font-semibold text-pale-green-text">
+              <Check size={12} weight="bold" />
+              Compatible
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1 font-sans text-[11px] font-semibold text-pale-red-text">
+              <X size={12} weight="bold" />
+              Not Compatible
             </span>
           )}
         </div>

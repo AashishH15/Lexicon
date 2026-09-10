@@ -255,6 +255,17 @@ h1 {
   font-size: 11px;
 }
 
+.dictionary-list .dictionary-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+}
+
+.dictionary-list .dictionary-remove svg {
+  display: block;
+}
+
 .dictionary-list button:hover:not(:disabled) {
   background: #ebeae6;
   color: #9f2f2d;

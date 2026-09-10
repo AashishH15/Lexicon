@@ -42,6 +42,15 @@ const dictionaryCountEl = document.getElementById("dictionary-count");
 const dictionaryStatusEl = document.getElementById("dictionary-status");
 const fieldSelectEl = document.getElementById("field-select");
 
+// Phosphor TrashSimple, regular weight, matching the desktop app icons.
+const TRASH_SIMPLE_SVG =
+  `<svg viewBox="0 0 256 256" width="14" height="14" fill="none" ` +
+  `stroke="currentColor" stroke-width="16" stroke-linecap="round" ` +
+  `stroke-linejoin="round" aria-hidden="true" focusable="false">` +
+  `<path d="M216,48H40a8,8,0,0,0,0,16h8V208a16,16,0,0,0,16,16H192a16,16,0,0,0,` +
+  `16-16V64h8a8,8,0,0,0,0-16ZM192,208H64V64H192ZM80,24a8,8,0,0,1,8-8h80a8,8,0,` +
+  `0,1,0,16H88A8,8,0,0,1,80,24Z"/></svg>`;
+
 let fieldText = "";
 let selectedText = "";
 let selection = null;
@@ -297,8 +306,10 @@ function renderDictionary() {
     item.appendChild(label);
     const remove = document.createElement("button");
     remove.type = "button";
-    remove.textContent = "Remove";
+    remove.className = "dictionary-remove";
+    remove.title = "Remove";
     remove.setAttribute("aria-label", `Remove ${word} from dictionary`);
+    remove.innerHTML = TRASH_SIMPLE_SVG;
     remove.addEventListener("click", () => removeDictionaryWordFromPopup(word, remove));
     item.appendChild(remove);
     dictionaryListEl.appendChild(item);

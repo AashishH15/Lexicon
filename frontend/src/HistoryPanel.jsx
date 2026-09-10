@@ -9,7 +9,7 @@ import {
   LockSimple,
   LockSimpleOpen,
   MagnifyingGlass,
-  Trash,
+  TrashSimple,
   FileText,
   Info,
   Robot,
@@ -278,7 +278,7 @@ export default function HistoryPanel({
               }
               aria-label="Clear history"
             >
-              <Trash size={13} weight="bold" />
+              <TrashSimple size={13} weight="bold" />
               {confirmClear ? "Confirm?" : "Clear"}
             </button>
           )}

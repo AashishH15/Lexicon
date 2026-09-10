@@ -109,4 +109,27 @@ describe("desktop dictionary manager", () => {
     });
     container.remove();
   });
+
+  it("shows the word count by the heading", async () => {
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    const root = createRoot(container);
+
+    await act(async () => {
+      root.render(<Settings {...makeProps()} />);
+    });
+    const dictionaryTab = Array.from(container.querySelectorAll("button")).find(
+      (button) => button.textContent.includes("Your Dictionary"),
+    );
+    await act(async () => {
+      dictionaryTab.click();
+    });
+
+    expect(container.textContent).toContain("1 word");
+
+    await act(async () => {
+      root.unmount();
+    });
+    container.remove();
+  });
 });

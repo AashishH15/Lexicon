@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { X, Plus, Trash, BookBookmark, MagnifyingGlass } from "@phosphor-icons/react";
+import { X, Plus, TrashSimple, BookBookmark, MagnifyingGlass } from "@phosphor-icons/react";
 
 export default function DictionaryPanel({
   open,
@@ -171,7 +171,7 @@ export default function DictionaryPanel({
                         aria-label={`Remove ${word} from dictionary`}
                         className="shrink-0 rounded p-1 text-muted transition-colors hover:text-red-600"
                       >
-                        <Trash size={15} weight="bold" />
+                        <TrashSimple size={15} weight="bold" />
                       </button>
                     </li>
                   ))

@@ -68,7 +68,12 @@ describe("HardwareTab Component", () => {
     });
 
     expect(container.textContent).toContain("AMD Ryzen 7 9700X 8-Core Processor");
-    expect(container.textContent).toContain("✓ Compatible");
+    const badge = [...container.querySelectorAll("span")].find(
+      (el) => el.textContent === "Compatible",
+    );
+    expect(badge).not.toBe(null);
+    expect(badge.querySelector("svg")).not.toBe(null);
+    expect(container.textContent).not.toContain("✓");
     expect(container.textContent).toContain("AVX2");
     expect(container.textContent).toContain("31.11 GB");
     expect(container.textContent).toContain("11.99 GB");
@@ -161,5 +166,23 @@ describe("HardwareTab Component", () => {
     expect(container.querySelector('[data-testid="tier-recommendation-card"]')).toBeNull();
     expect(container.textContent).not.toContain("Recommended Tier For Your Hardware");
     expect(container.textContent).toContain("Limit Model Offload");
+  });
+
+  it("shows a red X badge when the CPU is not compatible", async () => {
+    api.getHardwareProfile.mockResolvedValue({
+      ...mockHardwareData,
+      cpu: { ...mockHardwareData.cpu, compatible: false },
+    });
+
+    await act(async () => {
+      root.render(<HardwareTab />);
+    });
+
+    const badge = [...container.querySelectorAll("span")].find(
+      (el) => el.textContent === "Not Compatible",
+    );
+    expect(badge).not.toBe(null);
+    expect(badge.querySelector("svg")).not.toBe(null);
+    expect(container.textContent).not.toContain("✓");
   });
 });
