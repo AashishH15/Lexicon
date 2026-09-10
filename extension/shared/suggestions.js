@@ -1187,8 +1187,19 @@
     } else if (state.error) {
       const empty = document.createElement("p");
       empty.className = "empty";
-      empty.textContent = "Something went wrong. Try proofreading again.";
+      empty.textContent = state.deepError || "Something went wrong. Try proofreading again.";
       list.appendChild(empty);
+      if (state.deepError && typeof state.onDeepProofread === "function") {
+        const retry = document.createElement("div");
+        retry.className = "deep-invite";
+        const run = document.createElement("button");
+        run.className = "deep-run";
+        run.type = "button";
+        run.textContent = "Try again";
+        run.addEventListener("click", () => state.onDeepProofread());
+        retry.appendChild(run);
+        list.appendChild(retry);
+      }
     } else if (state.matches.length === 0) {
       const empty = document.createElement("p");
       empty.className = "empty";
@@ -1748,6 +1759,7 @@
         aiResult: null,
         error: String(opts.error || ""),
         aiError: String(opts.aiError || ""),
+        deepError: String(opts.deepError || ""),
         host: fieldHost,
         panelOpen: false,
         aiPanelOpen: false,
@@ -1814,6 +1826,16 @@
         state.error = String(opts.error || "");
       } else if (opts.checking || opts.offline || opts.disabled) {
         state.error = "";
+      }
+      if (opts.deepError !== undefined) {
+        state.deepError = String(opts.deepError || "");
+      } else if (
+        opts.error !== undefined ||
+        opts.checking ||
+        opts.offline ||
+        opts.disabled
+      ) {
+        state.deepError = "";
       }
       if (opts.aiBusy !== undefined) state.aiBusy = Boolean(opts.aiBusy);
       if (opts.aiError !== undefined) {

@@ -1034,6 +1034,46 @@ test("names a deep run that found nothing more", () => {
   );
 });
 
+test("deep failure names its cause with a Try again action", () => {
+  const { api, field } = loadPanelHarness();
+  let retries = 0;
+  api.showField(field, [], {
+    error: "backend_unreachable",
+    deepError: "Lexicon engine stopped responding. Restart it, then try again.",
+    onDeepProofread: () => {
+      retries += 1;
+    },
+  });
+  const list = api.fieldState(field).panelEl.children[1];
+  assert.ok(
+    list.children[0].textContent.includes("stopped responding"),
+  );
+  const retry = list.children.find(
+    (child) =>
+      String(child.className || "").includes("deep-invite") &&
+      child.children.some((button) => button.textContent === "Try again"),
+  );
+  assert.ok(retry);
+  const button = retry.children.find((child) => child.textContent === "Try again");
+  button.listeners.click();
+  assert.equal(retries, 1);
+});
+
+test("plain errors show no Try again action", () => {
+  const { api, field } = loadPanelHarness();
+  api.showField(field, [], { error: "check_failed" });
+  const list = api.fieldState(field).panelEl.children[1];
+  assert.equal(
+    list.children[0].textContent,
+    "Something went wrong. Try proofreading again.",
+  );
+  assert.ok(
+    !list.children.some((child) =>
+      (child.children || []).some((button) => button.textContent === "Try again"),
+    ),
+  );
+});
+
 const dragMatch = {
   offset: 0,
   length: 3,

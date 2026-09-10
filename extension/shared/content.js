@@ -528,7 +528,7 @@
     ) {
       return;
     }
-    showError(state, (response && response.error) || "check_failed");
+    showDeepError(state, (response && response.error) || null);
   }
 
   function showChecking(state) {
@@ -559,6 +559,39 @@
       ...suggestionHandlers(state),
       offline: true,
       error: "",
+    });
+  }
+
+  // Name a failed deep run so Try again has a clear cause. The retry
+  // re-probes the backend, so restarting the engine then retrying works.
+  function deepErrorCopy(code) {
+    if (code === "backend_unreachable" || code == null) {
+      return "Lexicon engine stopped responding. Restart it, then try again.";
+    }
+    if (code === "ai-status-unavailable") {
+      return "Could not reach the Lexicon engine. Restart it, then try again.";
+    }
+    if (code === "ai-not-configured") {
+      return "No AI model is ready. Set up the Lexicon engine, then try again.";
+    }
+    if (code === "deep-proofread-unusable") {
+      return "The model returned no usable clarity edits. Try again.";
+    }
+    return "Deep proofread failed. Try again.";
+  }
+
+  function showDeepError(state, code) {
+    if (!state.visible || !fieldIsAttached(state.field)) return;
+    state.checking = false;
+    state.offline = false;
+    state.error = String(code || "check_failed");
+    state.matches = [];
+    state.checkedText = state.text;
+    squiggle.clearFieldSquiggles(state.field);
+    suggestions.showField(state.field, [], {
+      ...suggestionHandlers(state),
+      error: state.error,
+      deepError: deepErrorCopy(code),
     });
   }
 

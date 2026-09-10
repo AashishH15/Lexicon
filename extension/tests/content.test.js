@@ -507,3 +507,39 @@ test("a deep run that finds nothing leaves a visible note", async () => {
   assert.equal(harness.renderedOptions.deepEmptyNote, true);
   assert.equal(harness.renderedOptions.deepOffer, "none");
 });
+
+test("a stopped backend names itself with a working retry", async () => {
+  const harness = createHarness({
+    settings: { deepAutoRun: true },
+    deepResult: { ok: false, error: "backend_unreachable" },
+  });
+  await new Promise((resolve) => setImmediate(resolve));
+
+  await harness.messageHandler({ type: "lexicon:highlight", matches: [typoMatch()] });
+  harness.renderedOptions.onApply(0);
+  await harness.messageHandler({ type: "lexicon:highlight", matches: [] });
+  await flushDeep();
+
+  assert.equal(harness.deepRequestCount, 1);
+  assert.ok(String(harness.renderedOptions.deepError).includes("stopped responding"));
+  assert.equal(typeof harness.renderedOptions.onDeepProofread, "function");
+
+  harness.renderedOptions.onDeepProofread();
+  await flushDeep();
+  assert.equal(harness.deepRequestCount, 2);
+});
+
+test("a missing model points at engine setup", async () => {
+  const harness = createHarness({
+    settings: { deepAutoRun: true },
+    deepResult: { ok: false, error: "ai-not-configured" },
+  });
+  await new Promise((resolve) => setImmediate(resolve));
+
+  await harness.messageHandler({ type: "lexicon:highlight", matches: [typoMatch()] });
+  harness.renderedOptions.onApply(0);
+  await harness.messageHandler({ type: "lexicon:highlight", matches: [] });
+  await flushDeep();
+
+  assert.ok(String(harness.renderedOptions.deepError).includes("No AI model is ready"));
+});
