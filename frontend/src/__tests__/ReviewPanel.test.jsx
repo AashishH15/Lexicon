@@ -59,6 +59,7 @@ function panelProps(overrides = {}) {
     transformError: "",
     onApplyTransform: noop,
     onDismissTransform: noop,
+    onReviewTransform: noop,
     deepMatches: [],
     deepRunning: false,
     deepProgress: null,
@@ -173,34 +174,42 @@ describe("ReviewPanel auto re-check toggle", () => {
   });
 });
 
-describe("ReviewPanel Expand diff", () => {
-  it("highlights added sentences in Expand results", async () => {
+describe("ReviewPanel rewrite button-card", () => {
+  const expandCard = {
+    tool: "Expand",
+    text: "The road was dusty. Birds sang.",
+    sourceText: "The road was dusty.",
+    from: 0,
+    to: 20,
+    part: 1,
+    total: 1,
+  };
+
+  it("opens the diff popover instead of the full text", async () => {
+    const onReview = vi.fn();
     await renderPanel({
       activeTool: "Expand",
-      transformResults: [
-        {
-          tool: "Expand",
-          text: "The road was dusty. Birds sang.",
-          sourceText: "The road was dusty.",
-          from: 0,
-          to: 20,
-          part: 1,
-          total: 1,
-        },
-      ],
+      transformResults: [expandCard],
+      onReviewTransform: onReview,
     });
-    const added = container.querySelector(".expand-added");
-    expect(added).not.toBe(null);
-    expect(added.textContent).toContain("Birds sang.");
+    const review = container.querySelector(
+      "button[aria-label='Review suggestion']",
+    );
+    expect(review).not.toBe(null);
+    await act(async () => {
+      review.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    expect(onReview).toHaveBeenCalledWith(expandCard);
+    expect(container.querySelector(".expand-added")).toBe(null);
   });
 
-  it("renders other tools without diff marks", async () => {
+  it("previews rewrite-class results while summary tools stay whole", async () => {
     await renderPanel({
       activeTool: "Rewrite",
       transformResults: [
         {
           tool: "Rewrite",
-          text: "The road was dusty.",
+          text: "The road was dusty and quiet.",
           sourceText: "The road was dusty.",
           from: 0,
           to: 20,
@@ -209,7 +218,60 @@ describe("ReviewPanel Expand diff", () => {
         },
       ],
     });
-    expect(container.querySelector(".expand-added")).toBe(null);
-    expect(container.textContent).toContain("The road was dusty.");
+    expect(
+      container.querySelector("button[aria-label='Review suggestion']"),
+    ).not.toBe(null);
+    await renderPanel({
+      activeTool: "Summary",
+      transformResults: [
+        {
+          tool: "Summary",
+          text: "Dusty road.",
+          from: 0,
+          to: 20,
+          part: 1,
+          total: 1,
+        },
+      ],
+    });
+    expect(
+      container.querySelector("button[aria-label='Review suggestion']"),
+    ).toBe(null);
+    expect(container.textContent).toContain("Dusty road.");
+  });
+
+  it("dismisses only the dismissed card", async () => {
+    const onDismissTransform = vi.fn();
+    await renderPanel({
+      activeTool: "Rewrite",
+      transformResults: [
+        {
+          tool: "Rewrite",
+          text: "First.",
+          from: 0,
+          to: 5,
+          part: 1,
+          total: 2,
+        },
+        {
+          tool: "Rewrite",
+          text: "Second.",
+          from: 6,
+          to: 12,
+          part: 2,
+          total: 2,
+        },
+      ],
+      onDismissTransform,
+    });
+    const dismissals = container.querySelectorAll(
+      "button[aria-label='Dismiss transform result']",
+    );
+    expect(dismissals.length).toBe(2);
+    await act(async () => {
+      dismissals[0].dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    expect(onDismissTransform).toHaveBeenCalledTimes(1);
+    expect(onDismissTransform.mock.calls[0][0].part).toBe(1);
   });
 });

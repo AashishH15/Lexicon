@@ -120,6 +120,16 @@ export const AI_TOOL_NAMES = [
   "Table",
 ];
 
+// Tools whose output revises the source in place. Results render in
+// the side-by-side diff popover. Summary-class tools generate new
+// text instead and keep their result cards.
+export const REWRITE_CLASS_TOOLS = [
+  "Rewrite",
+  "Concise",
+  ...Object.keys(TONE_DESCRIPTORS),
+  EXPAND_TOOL_NAME,
+];
+
 const OVERRIDES_STORAGE_KEY = "lexicon:prompt_overrides";
 const CUSTOM_TOOLS_STORAGE_KEY = "lexicon:custom_tools";
 export const MAX_CUSTOM_TOOLS = 5;

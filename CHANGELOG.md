@@ -139,11 +139,14 @@ Lexicon v0.11.0 is a major milestone that transforms Lexicon from a standalone d
 - **Opt-In Auto Continue (off by default)**: Suggests onward text by itself after a pause in typing. Delay slider runs 5–60s in 5s steps (default 10s); each edit reschedules, manual runs and dismissals cancel the wait.
 - **Expand — Elaborate the Selection**: Expands highlighted text with more detail plus one concrete example or reason while preserving meaning, facts, names, and voice. Bare-cursor invocation falls back to the current paragraph so the shortcut always has something to work with.
 - **Expand Entry Points**: Selection bubble Expand button, Refinement card flow (`Expand` tool), and customizable shortcut `Mod+Alt+E`.
-- **Added-Sentence Diff (`expandDiff.js`)**: Expand result cards highlight genuinely new sentences in pale green via token-overlap diffing (0.5 similarity keep threshold), so additions read apart from paraphrased source sentences.
 - **New Settings → Continue Tab**: Segmented Suggestion Length control (Auto / Sentence / Paragraph), Auto Continue toggle, Auto Continue Delay slider, and editable Base Prompts for Continue and Expand with plot/setting/story tailoring hints. Choices persist in `localStorage` and participate in Reset to Defaults.
 - **Reusable Built-In Prompt Editor**: `BuiltinPromptEditor` in Custom Actions stays in sync with the Continue tab via `lexicon:tools-changed`; Continue/Expand are hidden from the generic Built-in list to avoid duplication.
 - **New Shortcuts**: Customizable app-scoped `Continue writing` (`Mod+Alt+N`), `Expand selection` (`Mod+Alt+E`), and `Express in English` (`Mod+Alt+X`), all searchable in Settings → Shortcuts with keyword aliases.
 - **Transform Plumbing**: `useTransform` now passes through `temperature` / `maxTokens`, and Expand cards carry `sourceText` through chunked runs for accurate diffing.
+
+#### 🔍 Suggestion Diff Popover & Multi-Part Fixes:
+- **Diff Popover for Rewrite-Class Tools** (`DiffPopover.jsx` + `wordDiff.js`): Rewrite, all nine tones, Concise, and Expand results open in a centered modal with Original | Suggestion columns (stacked on narrow screens), inline red-strike/green word diffs via token-LCS alignment, and Apply / Dismiss / Esc / backdrop-close. The panel shows a compact button-card (tool badge, preview, Review + Dismiss) that opens it; clearing results retires an open popover. Summary-class tools keep their result cards.
+- **Multi-Part Apply & Dismiss** (`transformCards.js`): dismissing one chunk removes only that card, and each apply measures the real document delta so later chunks shift into place — sequential applies in any order land correctly instead of writing into stale ranges.
 
 ---
 

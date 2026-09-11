@@ -3,6 +3,7 @@ import {
   AI_TOOL_NAMES,
   CONTINUE_TOOL_NAME,
   EXPAND_TOOL_NAME,
+  REWRITE_CLASS_TOOLS,
   promptForTool,
 } from "../prompts.js";
 
@@ -65,5 +66,23 @@ describe("Continue and Expand prompts", () => {
     const emDash = String.fromCharCode(8212);
     expect(promptForTool("Continue", "en-US")).not.toContain(emDash);
     expect(promptForTool("Expand", "en-US")).not.toContain(emDash);
+  });
+});
+
+describe("REWRITE_CLASS_TOOLS", () => {
+  it("covers Rewrite, Concise, all tones, and Expand", () => {
+    for (const name of ["Rewrite", "Concise", "Expand"]) {
+      expect(REWRITE_CLASS_TOOLS).toContain(name);
+    }
+    for (const tone of ["Friendly", "Professional", "Humorous"]) {
+      expect(REWRITE_CLASS_TOOLS).toContain(tone);
+    }
+    expect(REWRITE_CLASS_TOOLS).toHaveLength(12);
+  });
+
+  it("excludes summary-class and special tools", () => {
+    for (const name of ["Summary", "Key Points", "List", "Table", "Continue"]) {
+      expect(REWRITE_CLASS_TOOLS).not.toContain(name);
+    }
   });
 });

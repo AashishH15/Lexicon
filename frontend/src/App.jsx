@@ -35,6 +35,7 @@ import Editor, { replaceExpressRange as replaceExpressRangeInEditor } from "./Ed
 import ImportExportMenu from "./ImportExportMenu.jsx";
 import ReviewPanel from "./ReviewPanel.jsx";
 import GrammarTooltip from "./GrammarTooltip.jsx";
+import DiffPopover from "./DiffPopover.jsx";
 import ConfirmModal from "./ConfirmModal.jsx";
 import TemplateGalleryModal from "./TemplateGalleryModal.jsx";
 import { SETTINGS_DEFAULTS } from "./Settings.jsx";
@@ -158,6 +159,10 @@ import {
 } from "./deepProofread.js";
 import { DecorationSet } from "@tiptap/pm/view";
 import { globalGrammarCache } from "./grammarCache.js";
+import {
+  removeTransformCard,
+  shiftTransformCards,
+} from "./transformCards.js";
 import {
   createLatestWinsCoordinator,
   scanGrammarWindows,
@@ -550,6 +555,15 @@ export default function App() {
     isWarming,
   } = useTransform();
   const [transformResults, setTransformResults] = useState([]); // [{ tool, text, from, to, part, total }]
+  const [diffCard, setDiffCard] = useState(null); // transform result open in the diff popover
+
+  // A cleared result list retires the popover with it, as does the
+  // dismissal of its own card from anywhere else.
+  useEffect(() => {
+    if (transformResults.length === 0 || !transformResults.includes(diffCard)) {
+      setDiffCard(null);
+    }
+  }, [transformResults, diffCard]);
   const [transformProgress, setTransformProgress] = useState(null); // { current, total } | null
   const [transformRunning, setTransformRunning] = useState(false);
   const express = useExpress();
@@ -3315,10 +3329,13 @@ export default function App() {
     if (/<table/i.test(html)) {
       html = normalizeTableCells(html);
     }
+    // Later cards hold pre-edit ranges. Measure the real doc delta so
+    // the next apply lands instead of writing into shifted text.
+    const before = editor.state.doc.content.size;
     editor.chain().focus().insertContentAt({ from, to }, html).run();
-    // Remove just this card so remaining parts stay available.
+    const delta = editor.state.doc.content.size - before;
     setTransformResults((prev) => {
-      const next = prev.filter((c) => c !== card);
+      const next = shiftTransformCards(prev, card, delta);
       if (next.length === 0) {
         setActiveTool("");
       }
@@ -3326,10 +3343,15 @@ export default function App() {
     });
   }
 
-  function dismissTransformResult() {
-    setTransformResults([]);
+  function dismissTransformResult(card = null) {
+    setTransformResults((prev) => {
+      const next = card ? removeTransformCard(prev, card) : [];
+      if (next.length === 0) {
+        setActiveTool("");
+      }
+      return next;
+    });
     setTransformProgress(null);
-    setActiveTool("");
   }
 
   function triggerProofread() {
@@ -3927,6 +3949,7 @@ export default function App() {
               transformError={transformError}
               onApplyTransform={applyTransformResult}
               onDismissTransform={dismissTransformResult}
+              onReviewTransform={setDiffCard}
               deepMatches={deepMatches}
               deepRunning={deepRunning}
               deepProgress={deepProgress}
@@ -3996,6 +4019,23 @@ export default function App() {
           rect={hoveredError.rect}
           onApply={handleApplySuggestion}
           onDismiss={() => setHoveredError(null)}
+        />
+      )}
+
+      {diffCard && (
+        <DiffPopover
+          tool={diffCard.tool}
+          sourceText={diffCard.sourceText || ""}
+          resultText={diffCard.text}
+          onApply={() => {
+            applyTransformResult(diffCard);
+            setDiffCard(null);
+          }}
+          onDismiss={() => {
+            dismissTransformResult(diffCard);
+            setDiffCard(null);
+          }}
+          onClose={() => setDiffCard(null)}
         />
       )}
 

@@ -3,7 +3,7 @@ import DocStats from "./DocStats.jsx";
 import Toggle from "./Toggle.jsx";
 import ExpressCard from "./ExpressCard.jsx";
 import { EXPRESS_TOOL_NAME } from "./useExpress.js";
-import { markAddedSentences } from "./expandDiff.js";
+import { REWRITE_CLASS_TOOLS } from "./prompts.js";
 import { useEffect, useRef, useState } from "react";
 import { ArrowLineRight, Info, Lightbulb, CircleNotch } from "@phosphor-icons/react";
 
@@ -122,6 +122,7 @@ export default function ReviewPanel({
   transformError,
   onApplyTransform,
   onDismissTransform,
+  onReviewTransform = null,
   deepMatches = [],
   deepRunning = false,
   deepProgress = null,
@@ -598,6 +599,7 @@ export default function ReviewPanel({
             lexStatusLabel={lexStatusLabel}
             onApply={onApplyTransform}
             onDismiss={onDismissTransform}
+            onReview={onReviewTransform}
           />
         )}
       </div>
@@ -632,6 +634,7 @@ function TransformView({
   lexStatusLabel,
   onApply,
   onDismiss,
+  onReview,
 }) {
   if (running) {
     const showProgress = progress && progress.total > 1;
@@ -642,14 +645,23 @@ function TransformView({
       <>
         {results && results.length > 0 && (
           <ul className="flex flex-col gap-3">
-            {results.map((card, i) => (
-              <TransformCard key={`${card.part}-${i}`} card={card} index={i} onApply={onApply} onDismiss={onDismiss} />
-            ))}
+            {results.map((card, i) =>
+              REWRITE_CLASS_TOOLS.includes(card.tool) ? (
+                <DiffButtonCard
+                  key={`${card.part}-${i}`}
+                  card={card}
+                  index={i}
+                  onReview={onReview}
+                  onDismiss={onDismiss}
+                />
+              ) : (
+                <TransformCard key={`${card.part}-${i}`} card={card} index={i} onApply={onApply} onDismiss={onDismiss} />
+              ),
+            )}
           </ul>
         )}
         <div className="lex-paper-surface mt-3 rounded-xl border border-hairline p-6 pb-4 lex-card-enter">
-          <div className="h-3 w-full rounded lex-shimmer" />
-          <div className="mt-3 h-3 w-[90%] rounded lex-shimmer" />
+          <div className="h-3 w-full rounded lex-shimmer" />          <div className="mt-3 h-3 w-[90%] rounded lex-shimmer" />
           <div className="mt-3 h-3 w-[75%] rounded lex-shimmer" />
           <div className="mt-3 h-3 w-[40%] rounded lex-shimmer" />
           <div className="mt-4 flex items-center gap-3">
@@ -750,9 +762,19 @@ function TransformView({
           </div>
         </div>
         <ul className="flex flex-col gap-3">
-          {results.map((card, i) => (
-            <TransformCard key={`${card.part}-${i}`} card={card} index={i} onApply={onApply} onDismiss={onDismiss} />
-          ))}
+          {results.map((card, i) =>
+            REWRITE_CLASS_TOOLS.includes(card.tool) ? (
+              <DiffButtonCard
+                key={`${card.part}-${i}`}
+                card={card}
+                index={i}
+                onReview={onReview}
+                onDismiss={onDismiss}
+              />
+            ) : (
+              <TransformCard key={`${card.part}-${i}`} card={card} index={i} onApply={onApply} onDismiss={onDismiss} />
+            ),
+          )}
         </ul>
       </>
     );
@@ -766,8 +788,8 @@ function TransformView({
   );
 }
 
-function TransformCard({ card, index, onApply, onDismiss }) {
-  const showDiff = card.tool === "Expand" && card.sourceText;
+function DiffButtonCard({ card, index, onReview, onDismiss }) {
+  const preview = String(card.text ?? "").trim().slice(0, 140);
   return (
     <li
       className="lex-paper-surface rounded-xl border border-hairline p-6 pb-4 lex-card-enter"
@@ -777,24 +799,45 @@ function TransformCard({ card, index, onApply, onDismiss }) {
         {card.tool}
         {card.total > 1 ? ` - Part ${card.part} of ${card.total}` : " Result"}
       </span>
-      {showDiff ? (
-        <div className="mt-3 font-sans text-sm leading-loose text-ink">
-          {markAddedSentences(card.sourceText, card.text).map((part, j) => (
-            <span
-              key={j}
-              className={
-                part.added ? "expand-added rounded bg-pale-green px-0.5" : undefined
-              }
-            >
-              {part.text}{" "}
-            </span>
-          ))}
-        </div>
-      ) : (
-        <div className="mt-3 whitespace-pre-wrap font-sans text-sm leading-loose text-ink">
-          {card.text}
-        </div>
-      )}
+      <p className="mt-3 font-sans text-sm leading-relaxed text-muted">
+        {preview}
+        {String(card.text ?? "").trim().length > preview.length ? "…" : ""}
+      </p>
+      <div className="mt-4 flex items-center gap-3">
+        <button
+          type="button"
+          aria-label="Review suggestion"
+          onClick={() => onReview && onReview(card)}
+          className="flex-1 rounded bg-ink py-2 font-sans text-sm font-medium text-white transition-transform duration-150 focus-visible:ring-1 focus-visible:ring-ink active:scale-[0.98]"
+        >
+          Review
+        </button>
+        <button
+          type="button"
+          aria-label="Dismiss transform result"
+          onClick={() => onDismiss(card)}
+          className="flex-1 rounded border border-hairline bg-transparent py-2 font-sans text-sm font-medium text-ink transition-transform duration-150 focus-visible:ring-1 focus-visible:ring-ink active:scale-[0.98]"
+        >
+          Dismiss
+        </button>
+      </div>
+    </li>
+  );
+}
+
+function TransformCard({ card, index, onApply, onDismiss }) {
+  return (
+    <li
+      className="lex-paper-surface rounded-xl border border-hairline p-6 pb-4 lex-card-enter"
+      style={{ animationDelay: `${index * 80}ms` }}
+    >
+      <span className="inline-block rounded bg-pale-blue px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.08em] text-pale-blue-text">
+        {card.tool}
+        {card.total > 1 ? ` - Part ${card.part} of ${card.total}` : " Result"}
+      </span>
+      <div className="mt-3 whitespace-pre-wrap font-sans text-sm leading-loose text-ink">
+        {card.text}
+      </div>
       <div className="mt-4 flex items-center gap-3">
         <button
           type="button"
@@ -807,7 +850,7 @@ function TransformCard({ card, index, onApply, onDismiss }) {
         <button
           type="button"
           aria-label="Dismiss transform result"
-          onClick={onDismiss}
+          onClick={() => onDismiss(card)}
           className="flex-1 rounded border border-hairline bg-transparent py-2 font-sans text-sm font-medium text-ink transition-transform duration-150 focus-visible:ring-1 focus-visible:ring-ink active:scale-[0.98]"
         >
           Dismiss

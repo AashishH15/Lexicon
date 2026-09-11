@@ -677,6 +677,35 @@
     display: block;
   }
 
+  /* Diff popover columns. Stacked on narrow screens, side by side
+     once the dialog fits two readable columns. */
+  .lex-diff-cols {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  @media (min-width: 720px) {
+    .lex-diff-cols {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
+  .lex-diff-removed {
+    color: #9f2f2d;
+    text-decoration: line-through;
+    background: rgba(229, 72, 77, 0.08);
+    border-radius: 3px;
+    padding: 0 2px;
+  }
+
+  .lex-diff-added {
+    color: #346538;
+    background: #edf3ec;
+    border-radius: 3px;
+    padding: 0 2px;
+  }
+
   .lex-status-working {
     animation: lex-status-pulse 1.25s ease-in-out infinite;
     transform-origin: center;
