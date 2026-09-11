@@ -82,9 +82,26 @@ const STRUCTURE_BASE = {
     "after the table.",
 };
 
+export const CONTINUE_TOOL_NAME = "Continue";
+export const EXPAND_TOOL_NAME = "Expand";
+
+const CONTINUE_EXPAND_BASE = {
+  Continue:
+    "Continue the draft below with the next 1 to 3 sentences in the same " +
+    "voice and style. Begin with words that do not appear at the end of the " +
+    "draft. Do not repeat any of the input text. Output only the " +
+    "new sentences and nothing else. No preamble, no explanation, no quotation marks.",
+  Expand:
+    "Expand the text below with more detail and one concrete example or " +
+    "reason. Preserve its meaning, facts, and names. Keep the same voice. " +
+    "Output only the expanded text and nothing else. No preamble, no explanation, " +
+    "no quotation marks.",
+};
+
 export const DEFAULT_INSTRUCTIONS = {
   ...SINGLE_SHOT_BASE,
   ...STRUCTURE_BASE,
+  ...CONTINUE_EXPAND_BASE,
 };
 
 for (const [tone, descriptor] of Object.entries(TONE_DESCRIPTORS)) {
@@ -92,6 +109,8 @@ for (const [tone, descriptor] of Object.entries(TONE_DESCRIPTORS)) {
 }
 
 export const AI_TOOL_NAMES = [
+  CONTINUE_TOOL_NAME,
+  EXPAND_TOOL_NAME,
   "Rewrite",
   "Concise",
   ...Object.keys(TONE_DESCRIPTORS),

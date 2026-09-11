@@ -3,6 +3,7 @@ import DocStats from "./DocStats.jsx";
 import Toggle from "./Toggle.jsx";
 import ExpressCard from "./ExpressCard.jsx";
 import { EXPRESS_TOOL_NAME } from "./useExpress.js";
+import { markAddedSentences } from "./expandDiff.js";
 import { useEffect, useRef, useState } from "react";
 import { ArrowLineRight, Info, Lightbulb, CircleNotch } from "@phosphor-icons/react";
 
@@ -766,6 +767,7 @@ function TransformView({
 }
 
 function TransformCard({ card, index, onApply, onDismiss }) {
+  const showDiff = card.tool === "Expand" && card.sourceText;
   return (
     <li
       className="lex-paper-surface rounded-xl border border-hairline p-6 pb-4 lex-card-enter"
@@ -773,11 +775,26 @@ function TransformCard({ card, index, onApply, onDismiss }) {
     >
       <span className="inline-block rounded bg-pale-blue px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.08em] text-pale-blue-text">
         {card.tool}
-        {card.total > 1 ? ` — Part ${card.part} of ${card.total}` : " Result"}
+        {card.total > 1 ? ` - Part ${card.part} of ${card.total}` : " Result"}
       </span>
-      <div className="mt-3 whitespace-pre-wrap font-sans text-sm leading-loose text-ink">
-        {card.text}
-      </div>
+      {showDiff ? (
+        <div className="mt-3 font-sans text-sm leading-loose text-ink">
+          {markAddedSentences(card.sourceText, card.text).map((part, j) => (
+            <span
+              key={j}
+              className={
+                part.added ? "expand-added rounded bg-pale-green px-0.5" : undefined
+              }
+            >
+              {part.text}{" "}
+            </span>
+          ))}
+        </div>
+      ) : (
+        <div className="mt-3 whitespace-pre-wrap font-sans text-sm leading-loose text-ink">
+          {card.text}
+        </div>
+      )}
       <div className="mt-4 flex items-center gap-3">
         <button
           type="button"

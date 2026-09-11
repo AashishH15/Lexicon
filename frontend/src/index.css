@@ -656,6 +656,27 @@
     color: transparent;
   }
 
+  /* Ghost continuation: faint, non-interactive, never serialized. */
+  .lex-continue-ghost {
+    color: #8a8880;
+    opacity: 0.75;
+    pointer-events: none;
+  }
+
+  .lex-continue-hint {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: 8px;
+    font-size: 0.85em;
+    opacity: 0.55;
+    white-space: nowrap;
+  }
+
+  .lex-continue-hint svg {
+    display: block;
+  }
+
   .lex-status-working {
     animation: lex-status-pulse 1.25s ease-in-out infinite;
     transform-origin: center;

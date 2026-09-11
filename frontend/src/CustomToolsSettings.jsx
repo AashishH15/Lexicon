@@ -46,6 +46,106 @@ export const AVAILABLE_ICON_NAMES = Object.keys(CUSTOM_ICON_MAP);
 
 const LAST_SUBTAB_KEY = "lexicon_custom_actions_subtab";
 
+// Self-contained built-in prompt row. Lives in Custom Actions and the
+// Continue tab; both stay in sync through the tools-changed event.
+export function BuiltinPromptEditor({ name }) {
+  const [overrides, setOverrides] = useState(getPromptOverrides);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState("");
+
+  useEffect(() => {
+    function refresh() {
+      setOverrides(getPromptOverrides());
+    }
+    window.addEventListener("lexicon:tools-changed", refresh);
+    return () => window.removeEventListener("lexicon:tools-changed", refresh);
+  }, []);
+
+  const isModified = Boolean(overrides[name]);
+  const currentInstruction = editing
+    ? draft
+    : overrides[name] || DEFAULT_INSTRUCTIONS[name] || "";
+
+  return (
+    <div className="rounded border border-hairline bg-canvas p-2.5 transition-colors">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            aria-label={`Edit prompt for ${name}`}
+            onClick={() => {
+              if (editing) {
+                setEditing(false);
+              } else {
+                setEditing(true);
+                setDraft(overrides[name] || DEFAULT_INSTRUCTIONS[name] || "");
+              }
+            }}
+            className="flex items-center gap-1.5 text-left font-sans text-xs font-semibold text-ink hover:text-muted transition-colors"
+          >
+            {editing ? <CaretDown size={12} weight="bold" /> : <CaretRight size={12} weight="bold" />}
+            <span>{name}</span>
+          </button>
+          {isModified && (
+            <span className="rounded bg-pale-blue px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider text-ink font-medium">
+              Modified
+            </span>
+          )}
+        </div>
+        {isModified && (
+          <button
+            type="button"
+            onClick={() => {
+              resetPromptOverride(name);
+              setDraft(DEFAULT_INSTRUCTIONS[name] || "");
+            }}
+            className="flex items-center gap-1 font-mono text-[10px] uppercase text-muted hover:text-ink transition-colors"
+            title="Reset prompt to default"
+          >
+            <ArrowCounterClockwise size={12} weight="bold" />
+            Reset
+          </button>
+        )}
+      </div>
+
+      {editing ? (
+        <div className="mt-2.5 space-y-2">
+          <textarea
+            rows={3}
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            aria-label={`Edit prompt for ${name}`}
+            className="w-full rounded border border-hairline bg-white p-2 font-sans text-xs text-ink focus:border-ink focus:outline-none"
+          />
+          <div className="flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setEditing(false)}
+              className="rounded px-2.5 py-1 font-mono text-[10px] uppercase tracking-wider text-muted hover:text-ink"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                savePromptOverride(name, draft);
+                setEditing(false);
+              }}
+              className="rounded bg-ink px-2.5 py-1 font-mono text-[10px] uppercase tracking-wider text-white hover:bg-black"
+            >
+              Save Prompt
+            </button>
+          </div>
+        </div>
+      ) : (
+        <p className="mt-1 font-sans text-[11px] text-muted line-clamp-2 pl-4">
+          {currentInstruction}
+        </p>
+      )}
+    </div>
+  );
+}
+
 export default function CustomToolsSettings() {
   const [activeTab, setActiveTabState] = useState(() => {
     try {
@@ -62,10 +162,7 @@ export default function CustomToolsSettings() {
     } catch {}
   };
 
-  const [overrides, setOverrides] = useState(getPromptOverrides);
   const [customTools, setCustomTools] = useState(getCustomTools);
-  const [editingBuiltin, setEditingBuiltin] = useState(null); // tool name string
-  const [builtinDraft, setBuiltinDraft] = useState("");
   
   // Custom tool form state
   const [isToolModalOpen, setIsToolModalOpen] = useState(false);
@@ -77,22 +174,11 @@ export default function CustomToolsSettings() {
 
   useEffect(() => {
     function refresh() {
-      setOverrides(getPromptOverrides());
       setCustomTools(getCustomTools());
     }
     window.addEventListener("lexicon:tools-changed", refresh);
     return () => window.removeEventListener("lexicon:tools-changed", refresh);
   }, []);
-
-  function handleSaveBuiltin(name) {
-    savePromptOverride(name, builtinDraft);
-    setEditingBuiltin(null);
-  }
-
-  function handleResetBuiltin(name) {
-    resetPromptOverride(name);
-    setBuiltinDraft(DEFAULT_INSTRUCTIONS[name] || "");
-  }
 
   function openNewToolModal() {
     if (customTools.length >= MAX_CUSTOM_TOOLS) return;
@@ -255,88 +341,11 @@ export default function CustomToolsSettings() {
       {/* Tab 2: Built-in Prompts */}
       {activeTab === "builtin" && (
         <div className="mt-4 space-y-2">
-          {AI_TOOL_NAMES.map((name) => {
-            const isModified = Boolean(overrides[name]);
-            const isEditing = editingBuiltin === name;
-            const currentInstruction = isEditing
-              ? builtinDraft
-              : overrides[name] || DEFAULT_INSTRUCTIONS[name] || "";
-
-            return (
-              <div
-                key={name}
-                className="rounded border border-hairline bg-canvas p-2.5 transition-colors"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (isEditing) {
-                          setEditingBuiltin(null);
-                        } else {
-                          setEditingBuiltin(name);
-                          setBuiltinDraft(overrides[name] || DEFAULT_INSTRUCTIONS[name] || "");
-                        }
-                      }}
-                      className="flex items-center gap-1.5 text-left font-sans text-xs font-semibold text-ink hover:text-muted transition-colors"
-                    >
-                      {isEditing ? <CaretDown size={12} weight="bold" /> : <CaretRight size={12} weight="bold" />}
-                      <span>{name}</span>
-                    </button>
-                    {isModified && (
-                      <span className="rounded bg-pale-blue px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider text-ink font-medium">
-                        Modified
-                      </span>
-                    )}
-                  </div>
-                  {isModified && (
-                    <button
-                      type="button"
-                      onClick={() => handleResetBuiltin(name)}
-                      className="flex items-center gap-1 font-mono text-[10px] uppercase text-muted hover:text-ink transition-colors"
-                      title="Reset prompt to default"
-                    >
-                      <ArrowCounterClockwise size={12} weight="bold" />
-                      Reset
-                    </button>
-                  )}
-                </div>
-
-                {isEditing ? (
-                  <div className="mt-2.5 space-y-2">
-                    <textarea
-                      rows={3}
-                      value={builtinDraft}
-                      onChange={(e) => setBuiltinDraft(e.target.value)}
-                      aria-label={`Edit prompt for ${name}`}
-                      className="w-full rounded border border-hairline bg-white p-2 font-sans text-xs text-ink focus:border-ink focus:outline-none"
-                    />
-                    <div className="flex justify-end gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setEditingBuiltin(null)}
-                        className="rounded px-2.5 py-1 font-mono text-[10px] uppercase tracking-wider text-muted hover:text-ink"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleSaveBuiltin(name)}
-                        className="rounded bg-ink px-2.5 py-1 font-mono text-[10px] uppercase tracking-wider text-white hover:bg-black"
-                      >
-                        Save Prompt
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <p className="mt-1 font-sans text-[11px] text-muted line-clamp-2 pl-4">
-                    {currentInstruction}
-                  </p>
-                )}
-              </div>
-            );
-          })}
+          {AI_TOOL_NAMES.filter(
+            (name) => name !== "Continue" && name !== "Expand",
+          ).map((name) => (
+            <BuiltinPromptEditor key={name} name={name} />
+          ))}
         </div>
       )}
 

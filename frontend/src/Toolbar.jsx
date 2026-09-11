@@ -22,9 +22,11 @@ import {
   Sparkle,
   Translate,
   ListMagnifyingGlass,
+  ArrowRight,
   Info,
 } from "@phosphor-icons/react";
 import { getCustomTools } from "./prompts.js";
+import { CONTINUE_TOOL_NAME } from "./prompts.js";
 import { EXPRESS_TOOL_NAME } from "./useExpress.js";
 import { DEEP_PROOFREAD_TOOL } from "./deepProofread.js";
 import { CUSTOM_ICON_MAP } from "./CustomToolsSettings.jsx";
@@ -44,6 +46,7 @@ const builtinGroups = [
       { name: "Rewrite", icon: PencilSimple },
       { name: "Concise", icon: TextT },
       { name: EXPRESS_TOOL_NAME, icon: Translate },
+      { name: CONTINUE_TOOL_NAME, icon: ArrowRight },
     ],
   },
   {
@@ -84,6 +87,7 @@ export default function Toolbar({
   transformRunning,
   deepRunning = false,
   deepWarming = false,
+  continueWorking = false,
 }) {
   const [customTools, setCustomTools] = useState(getCustomTools);
 
@@ -145,7 +149,8 @@ export default function Toolbar({
               const isDeep = name === DEEP_PROOFREAD_TOOL;
               const locked = aiLocked && !isProofread;
               const canOpenSetup = locked && isDeep;
-              const isWarmingThis = warmingTool === name || (isDeep && deepWarming);
+              const isContinue = name === CONTINUE_TOOL_NAME;
+              const isWarmingThis = warmingTool === name || (isDeep && deepWarming) || (isContinue && continueWorking);
               const isRunningThis = runningTool === name || (isDeep && deepRunning);
               return (
                 <li key={name}>

@@ -29,6 +29,9 @@ export const SHORTCUT_IDS = Object.freeze({
   REDO: "redo",
   INDENT_LIST_ITEM: "indent-list-item",
   OUTDENT_LIST_ITEM: "outdent-list-item",
+  CONTINUE_WRITING: "continue-writing",
+  EXPAND_SELECTION: "expand-selection",
+  EXPRESS_SELECTION: "express-selection",
 });
 
 export const SHORTCUT_DEFINITIONS = Object.freeze([
@@ -255,6 +258,30 @@ export const SHORTCUT_DEFINITIONS = Object.freeze([
     scope: "editor",
     allowedBareKeys: ["Tab"],
     keywords: ["list", "nest"],
+  },
+  {
+    id: SHORTCUT_IDS.CONTINUE_WRITING,
+    action: "Continue writing",
+    defaultShortcut: ["Mod", "Alt", "N"],
+    customizable: true,
+    scope: "app",
+    keywords: ["continue", "ghost", "suggest", "next"],
+  },
+  {
+    id: SHORTCUT_IDS.EXPAND_SELECTION,
+    action: "Expand selection",
+    defaultShortcut: ["Mod", "Alt", "E"],
+    customizable: true,
+    scope: "app",
+    keywords: ["expand", "elaborate", "detail"],
+  },
+  {
+    id: SHORTCUT_IDS.EXPRESS_SELECTION,
+    action: "Express in English",
+    defaultShortcut: ["Mod", "Alt", "X"],
+    customizable: true,
+    scope: "app",
+    keywords: ["express", "english", "tone", "translate"],
   },
 ]);
 

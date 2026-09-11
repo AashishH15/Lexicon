@@ -12,6 +12,7 @@ import {
 } from "../useExpress.js";
 import ReviewPanel from "../ReviewPanel.jsx";
 import { SelectionBubbleMenu } from "../Editor.jsx";
+import { EXPAND_TOOL_NAME } from "../prompts.js";
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -285,5 +286,63 @@ describe("SelectionBubbleMenu Express action", () => {
       button.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
     expect(onExpress).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("SelectionBubbleMenu Expand action", () => {
+  let container;
+  let root;
+  const editorRef = { current: null };
+  const onExpand = vi.fn();
+
+  function Harness() {
+    const editor = useEditor({
+      extensions: [StarterKit],
+      content: "<p>Hola mundo</p>",
+    });
+    editorRef.current = editor;
+    if (!editor) {
+      return null;
+    }
+    return (
+      <>
+        <EditorContent editor={editor} />
+        <SelectionBubbleMenu editor={editor} onExpand={onExpand} />
+      </>
+    );
+  }
+
+  beforeEach(() => {
+    container = document.createElement("div");
+    document.body.appendChild(container);
+    root = createRoot(container);
+    editorRef.current = null;
+    vi.clearAllMocks();
+  });
+
+  afterEach(async () => {
+    await act(async () => {
+      root.unmount();
+    });
+    container.remove();
+  });
+
+  it("offers one-click Expand on highlighted text", async () => {
+    await act(async () => {
+      root.render(<Harness />);
+    });
+    expect(editorRef.current).not.toBe(null);
+    await act(async () => {
+      editorRef.current.commands.setTextSelection({ from: 1, to: 5 });
+      await new Promise((resolve) => setTimeout(resolve, 400));
+    });
+    const button = container.querySelector(
+      `button[aria-label='${EXPAND_TOOL_NAME}']`,
+    );
+    expect(button).not.toBe(null);
+    await act(async () => {
+      button.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    expect(onExpand).toHaveBeenCalledTimes(1);
   });
 });

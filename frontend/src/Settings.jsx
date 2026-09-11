@@ -29,12 +29,20 @@ import {
   ArrowSquareOut,
   CircleNotch,
   HardDrives,
+  ArrowRight,
 } from "@phosphor-icons/react";
 import Toggle from "./Toggle.jsx";
 import LanguageDropdown from "./LanguageDropdown.jsx";
 import ModelManager from "./ModelManager.jsx";
 import HardwareTab from "./HardwareTab.jsx";
-import CustomToolsSettings from "./CustomToolsSettings.jsx";
+import CustomToolsSettings, {
+  BuiltinPromptEditor,
+} from "./CustomToolsSettings.jsx";
+import {
+  CONTINUE_IDLE_DEFAULT_SECONDS,
+  CONTINUE_IDLE_MAX_SECONDS,
+  CONTINUE_IDLE_MIN_SECONDS,
+} from "./useContinue.js";
 import { TYPOGRAPHY_PRESETS } from "./typographyPresets.js";
 import { PAPER_TEXTURES } from "./paperTextures.js";
 import { READING_MODES } from "./readingMode.js";
@@ -142,9 +150,16 @@ const TABS = [
   { id: "dictionary", label: "Your Dictionary", icon: BookBookmark },
   { id: "history", label: "History & Drafts", icon: ClockCounterClockwise },
   { id: "actions", label: "Custom Actions", icon: Lightning },
+  { id: "continue", label: "Continue", icon: ArrowRight },
   { id: "shortcuts", label: "Shortcuts", icon: Keyboard },
   { id: "about", label: "About & Feedback", icon: Info },
   { id: "hardware", label: "Hardware", icon: HardDrives },
+];
+
+const CONTINUE_LENGTH_OPTIONS = [
+  { value: "auto", label: "Auto" },
+  { value: "sentence", label: "Sentence" },
+  { value: "paragraph", label: "Paragraph" },
 ];
 
 const SEARCH_INDEX = [
@@ -231,6 +246,12 @@ const SEARCH_INDEX = [
     tab: "actions",
     settingKey: "custom-actions-section",
     keywords: ["custom", "action", "actions", "tool", "prompt", "rewrite"],
+  },
+  {
+    label: "Continue",
+    tab: "continue",
+    settingKey: "continue-section",
+    keywords: ["continue", "ghost", "writing", "length", "auto", "sentence", "paragraph"],
   },
   {
     label: "Beta Releases",
@@ -482,6 +503,12 @@ export default function Settings({
   onToggleTransformLock,
   onClearDrafts,
   onClearTransforms,
+  continueLength = "auto",
+  onContinueLengthChange,
+  continueAuto = false,
+  onContinueAutoChange,
+  continueIdleSeconds = CONTINUE_IDLE_DEFAULT_SECONDS,
+  onContinueIdleSecondsChange,
 }) {
   const [activeTab, setActiveTab] = useState("general");
   const [searchQuery, setSearchQuery] = useState("");
@@ -500,6 +527,9 @@ export default function Settings({
     focusMode === SETTINGS_DEFAULTS.focusMode &&
     lineSpacing === SETTINGS_DEFAULTS.lineSpacing &&
     proseScanEnabled === SETTINGS_DEFAULTS.proseScanEnabled &&
+    continueLength === "auto" &&
+    continueAuto === false &&
+    continueIdleSeconds === CONTINUE_IDLE_DEFAULT_SECONDS &&
     typographyPreset === SETTINGS_DEFAULTS.typographyPreset &&
     paperTexture === SETTINGS_DEFAULTS.paperTexture &&
     readingMode === SETTINGS_DEFAULTS.readingMode &&
@@ -1956,6 +1986,114 @@ export default function Settings({
                     Custom Actions
                   </h2>
                   <CustomToolsSettings />
+                </div>
+              )}
+
+              {/* ── Continue ── */}
+              {activeTab === "continue" && (
+                <div
+                  data-setting-key="continue-section"
+                  className={`space-y-5 ${getHighlightClass("continue-section")}`}
+                >
+                  <h2 className="font-serif text-xl font-bold text-ink">
+                    Continue
+                  </h2>
+                  <div>
+                    <p className="font-mono text-[10px] uppercase tracking-widest text-muted">
+                      Suggestion Length
+                    </p>
+                    <p className="mt-1 font-sans text-xs text-muted">
+                      How much text a Continue suggestion holds. Base prompts
+                      stay editable below.
+                    </p>
+                    <div className="relative isolate mt-3 flex overflow-hidden rounded border border-hairline bg-canvas">
+                      <span
+                        className="pointer-events-none absolute inset-y-0 left-0 bg-pale-blue transition-transform duration-200 ease-out"
+                        style={{
+                          width: `${100 / CONTINUE_LENGTH_OPTIONS.length}%`,
+                          transform: `translateX(${Math.max(0, CONTINUE_LENGTH_OPTIONS.findIndex((option) => option.value === continueLength)) * 100}%)`,
+                        }}
+                      />
+                      {CONTINUE_LENGTH_OPTIONS.map((option) => (
+                        <button
+                          key={option.value}
+                          type="button"
+                          onClick={() => onContinueLengthChange(option.value)}
+                          className={
+                            "relative z-10 flex flex-1 items-center justify-center py-2 font-mono text-xs uppercase leading-none tracking-widest transition-colors " +
+                            (continueLength === option.value
+                              ? "text-ink"
+                              : "bg-transparent text-muted hover:text-ink")
+                          }
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="font-mono text-[10px] uppercase tracking-widest text-muted">
+                        Auto Continue
+                      </p>
+                      <p className="mt-1 font-sans text-xs text-muted">
+                        Suggest onward text by itself after a pause in typing.
+                        Off by default.
+                      </p>
+                    </div>
+                    <div className="pt-0.5">
+                      <Toggle
+                        checked={continueAuto}
+                        onChange={onContinueAutoChange}
+                        label="Toggle automatic Continue suggestions"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <p className="font-mono text-[10px] uppercase tracking-widest text-muted">
+                      Auto Continue Delay
+                    </p>
+                    <p className="mt-1 font-sans text-xs text-muted">
+                      Pause after typing before a suggestion appears on its
+                      own. Snaps to 5 seconds. Only matters while Auto
+                      Continue is on.
+                    </p>
+                    <div className="mt-3 flex items-center gap-3">
+                      <input
+                        type="range"
+                        min={CONTINUE_IDLE_MIN_SECONDS}
+                        max={CONTINUE_IDLE_MAX_SECONDS}
+                        step={1}
+                        value={continueIdleSeconds}
+                        onChange={(event) =>
+                          onContinueIdleSecondsChange(
+                            Number(event.target.value),
+                          )
+                        }
+                        aria-label="Auto Continue delay in seconds"
+                        className="flex-1"
+                        style={{ accentColor: "#1f6c9f" }}
+                      />
+                      <span className="w-10 text-right font-mono text-xs text-ink">
+                        {continueIdleSeconds}s
+                      </span>
+                    </div>
+                  </div>
+                  <div>
+                    <p className="font-mono text-[10px] uppercase tracking-widest text-muted">
+                      Base Prompts
+                    </p>
+                    <p className="mt-1 font-sans text-xs text-muted">
+                      The instructions behind each mode. Length and auto
+                      options above combine with these. Tailor them to your
+                      needs, for example with the plot, setting, or story
+                      elements you are writing about.
+                    </p>
+                    <div className="mt-3 space-y-2">
+                      <BuiltinPromptEditor name="Continue" />
+                      <BuiltinPromptEditor name="Expand" />
+                    </div>
+                  </div>
                 </div>
               )}
 

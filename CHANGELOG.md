@@ -9,9 +9,9 @@ This changelog tracks what is **live** in each release and what is still
 **stubbed** (shown in the interface but not yet functional). Stubbed features
 are listed so the release reads honestly about what works today.
 
-## v0.11.0 — Browser Extension, 3-Tier Local AI, GPU Acceleration & Deep Proofread
+## v0.11.0 — Browser Extension, 3-Tier Local AI, GPU Acceleration, Deep Proofread & Continue/Expand
 
-Lexicon v0.11.0 is a major milestone that transforms Lexicon from a standalone desktop text editor into a comprehensive writing assistant ecosystem. This release introduces companion browser extensions for Chrome and Firefox, a new Quality local model tier plus upgraded Light and Standard GGUF pins, hybrid Deep Proofread, native GPU acceleration with real-time VRAM telemetry, customizable keyboard shortcuts, direct LanguageTool integration without GPL wrappers, selectable PDF export improvements, and an empirical 1,050-sentence benchmark suite with Free-tier cloud comparisons.
+Lexicon v0.11.0 is a major milestone that transforms Lexicon from a standalone desktop text editor into a comprehensive writing assistant ecosystem. This release introduces companion browser extensions for Chrome and Firefox, a new Quality local model tier plus upgraded Light and Standard GGUF pins, hybrid Deep Proofread, native GPU acceleration with real-time VRAM telemetry, ghost Continue suggestions and Expand elaboration with added-sentence diffing, customizable keyboard shortcuts, direct LanguageTool integration without GPL wrappers, selectable PDF export improvements, and an empirical 1,050-sentence benchmark suite with Free-tier cloud comparisons.
 
 ---
 
@@ -130,6 +130,20 @@ Lexicon v0.11.0 is a major milestone that transforms Lexicon from a standalone d
 - **AI Keeps the Draft Language**: Tone rewrites, Rewrite, Concise, summaries, and custom tools now name the selected language outright ("Keep the text in Spanish. Do not translate it into English or any other language.") so small models stop translating non-English drafts. English prompts are unchanged.
 - **Switching Language Refreshes Results**: changing the proofreading language re-runs whichever analysis is displayed (Proofread or Deep Proofread) and clears stale cards otherwise, so suggestions always match the selected variant. Failures name the language.
 - **Shared Language Preference**: the selected variant persists in the backend alongside the AI preference, so the desktop app and the browser extension check the same language. Switching never unloads the model.
+
+#### ➡️ Continue & Expand (AI Drafting Aids):
+- **Continue — Ghost Continuation at the Cursor**: Generates the next 1–3 sentences in the same voice and style without repeating input text. Sends the trailing 800 characters before the cursor with sampling (`temperature: 0.7`) for varied onward text.
+- **Suggestion Length Presets**: Auto (~3 sentences, 120 tokens), Sentence (finishes only the current unfinished sentence, 40 tokens), and Paragraph (about 3 sentences, 300 tokens; starts a fresh follow-on paragraph when the current block already holds ~5+ sentences). Prompts ask, client-side sentence truncation enforces — small-model overshoot is capped, with a 10-sentence backstop for custom prompts.
+- **Ghost UI (`continueGhost.js`)**: Faint, non-interactive inline widget with a `Tab to accept` hint that is never serialized. `Tab` accepts in one undo step (winning over list indent), `Esc` dismisses, and any edit or cursor move retires the ghost. Echoed draft-tail repeats (2+ shared words) are stripped so the ghost holds only new words.
+- **Many Ways to Continue**: Toolbar Continue button (`ArrowRight` icon with working state), slash `/continue`, and customizable shortcut `Mod+Alt+N`. Manual runs route to Lex's Engine setup when AI is unconfigured; idle auto-runs stay silent.
+- **Opt-In Auto Continue (off by default)**: Suggests onward text by itself after a pause in typing. Delay slider runs 5–60s in 5s steps (default 10s); each edit reschedules, manual runs and dismissals cancel the wait.
+- **Expand — Elaborate the Selection**: Expands highlighted text with more detail plus one concrete example or reason while preserving meaning, facts, names, and voice. Bare-cursor invocation falls back to the current paragraph so the shortcut always has something to work with.
+- **Expand Entry Points**: Selection bubble Expand button, Refinement card flow (`Expand` tool), and customizable shortcut `Mod+Alt+E`.
+- **Added-Sentence Diff (`expandDiff.js`)**: Expand result cards highlight genuinely new sentences in pale green via token-overlap diffing (0.5 similarity keep threshold), so additions read apart from paraphrased source sentences.
+- **New Settings → Continue Tab**: Segmented Suggestion Length control (Auto / Sentence / Paragraph), Auto Continue toggle, Auto Continue Delay slider, and editable Base Prompts for Continue and Expand with plot/setting/story tailoring hints. Choices persist in `localStorage` and participate in Reset to Defaults.
+- **Reusable Built-In Prompt Editor**: `BuiltinPromptEditor` in Custom Actions stays in sync with the Continue tab via `lexicon:tools-changed`; Continue/Expand are hidden from the generic Built-in list to avoid duplication.
+- **New Shortcuts**: Customizable app-scoped `Continue writing` (`Mod+Alt+N`), `Expand selection` (`Mod+Alt+E`), and `Express in English` (`Mod+Alt+X`), all searchable in Settings → Shortcuts with keyword aliases.
+- **Transform Plumbing**: `useTransform` now passes through `temperature` / `maxTokens`, and Expand cards carry `sourceText` through chunked runs for accurate diffing.
 
 ---
 

@@ -27,7 +27,7 @@ export default function useTransform() {
   }, []);
 
   const run = useCallback(
-    async ({ prompt, text, modelKey, backend }) => {
+    async ({ prompt, text, modelKey, backend, temperature, maxTokens }) => {
       cancelActiveRequest();
       const runId = ++runIdRef.current;
       const requestId = newRequestId();
@@ -45,6 +45,8 @@ export default function useTransform() {
           modelKey,
           backend,
           requestId,
+          temperature,
+          maxTokens,
           signal: ctrl.signal,
         });
         if (runIdRef.current !== runId) return null;

@@ -5,6 +5,7 @@ import { createRoot } from "react-dom/client";
 import { act } from "react";
 import Toolbar from "../Toolbar.jsx";
 import { EXPRESS_TOOL_NAME } from "../useExpress.js";
+import { CONTINUE_TOOL_NAME } from "../prompts.js";
 import {
   getDefaultShortcutBindings,
   SHORTCUT_IDS,
@@ -108,5 +109,41 @@ describe("Toolbar Analysis info", () => {
     const card = info.closest("p").querySelector("[data-testid='analysis-tip']");
     expect(card).not.toBe(null);
     expect(card.classList.contains("max-w-full")).toBe(true);
+  });
+});
+
+describe("Toolbar Continue entry", () => {
+  function continueButton() {
+    return Array.from(container.querySelectorAll("button")).find(
+      (button) => button.textContent.trim() === CONTINUE_TOOL_NAME,
+    );
+  }
+
+  it("lists Continue under Refinement", async () => {
+    await renderToolbar(baseProps());
+    expect(continueButton()).not.toBe(null);
+  });
+
+  it("fires onToolClick with Continue", async () => {
+    const props = baseProps();
+    await renderToolbar(props);
+    continueButton().dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(props.onToolClick).toHaveBeenCalledWith(CONTINUE_TOOL_NAME);
+  });
+
+  it("locks Continue when AI is not configured", async () => {
+    const props = baseProps({ aiConfigured: false });
+    await renderToolbar(props);
+    const button = continueButton();
+    expect(button.disabled).toBe(true);
+    expect(button.title).toContain("Set up");
+  });
+
+  it("spins while Continue works", async () => {
+    await renderToolbar(baseProps({ continueWorking: true }));
+    const spinner = continueButton()
+      .closest("li")
+      .querySelector(".animate-spin");
+    expect(spinner).not.toBe(null);
   });
 });

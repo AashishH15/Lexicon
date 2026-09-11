@@ -172,3 +172,44 @@ describe("ReviewPanel auto re-check toggle", () => {
     expect(onRetry).toHaveBeenCalledTimes(1);
   });
 });
+
+describe("ReviewPanel Expand diff", () => {
+  it("highlights added sentences in Expand results", async () => {
+    await renderPanel({
+      activeTool: "Expand",
+      transformResults: [
+        {
+          tool: "Expand",
+          text: "The road was dusty. Birds sang.",
+          sourceText: "The road was dusty.",
+          from: 0,
+          to: 20,
+          part: 1,
+          total: 1,
+        },
+      ],
+    });
+    const added = container.querySelector(".expand-added");
+    expect(added).not.toBe(null);
+    expect(added.textContent).toContain("Birds sang.");
+  });
+
+  it("renders other tools without diff marks", async () => {
+    await renderPanel({
+      activeTool: "Rewrite",
+      transformResults: [
+        {
+          tool: "Rewrite",
+          text: "The road was dusty.",
+          sourceText: "The road was dusty.",
+          from: 0,
+          to: 20,
+          part: 1,
+          total: 1,
+        },
+      ],
+    });
+    expect(container.querySelector(".expand-added")).toBe(null);
+    expect(container.textContent).toContain("The road was dusty.");
+  });
+});

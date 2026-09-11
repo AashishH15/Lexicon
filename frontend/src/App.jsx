@@ -50,9 +50,26 @@ import useExpress, {
 import {
   isAiTool,
   promptForTool,
+  CONTINUE_TOOL_NAME,
+  EXPAND_TOOL_NAME,
   ACTIVE_VOICE_PROMPT,
   PROSE_CLARITY_PROMPT,
 } from "./prompts.js";
+import useContinue, {
+  CONTINUE_AUTO_KEY,
+  CONTINUE_IDLE_KEY,
+  CONTINUE_LENGTH_KEY,
+  loadContinueAuto,
+  loadContinueIdleSeconds,
+  loadContinueLength,
+  snapContinueIdleSeconds,
+} from "./useContinue.js";
+import {
+  ContinueGhost,
+  acceptContinueSuggestion,
+  continueGhostKey,
+  shouldAcceptGhostTab,
+} from "./continueGhost.js";
 import { marked } from "marked";
 import {
   Gear,
@@ -538,6 +555,17 @@ export default function App() {
   const express = useExpress();
   const [expressRange, setExpressRange] = useState(null); // { from, to } | null
   const [expressOverLimit, setExpressOverLimit] = useState(false);
+  // Ghost continuation at the cursor. Position lives in a ref because
+  // global key handlers must reach it from a stable closure.
+  const continuer = useContinue();
+  const continuerRef = useRef(null);
+  const continueDocPosRef = useRef(0);
+  const requestContinueRef = useRef(() => {});
+  const continueAutoRef = useRef(false);
+  const continueIdleRef = useRef(null);
+  const aiConfiguredRef = useRef(false);
+  continuerRef.current = continuer;
+  aiConfiguredRef.current = aiConfigured;
   // Selection text waiting for a tone pick before the first Express run.
   const [expressPendingText, setExpressPendingText] = useState(null);
   const [aiModelKey, setAiModelKey] = useState("2b");
@@ -562,6 +590,12 @@ export default function App() {
     () => localStorage.getItem("lexicon:proofreadAutoRecheck") === "true",
   );
   const proofreadAutoRecheckRef = useRef(proofreadAutoRecheck);
+  // Continue suggestion length and idle auto-fire. Both off by default.
+  const [continueLength, setContinueLength] = useState(loadContinueLength);
+  const [continueAuto, setContinueAuto] = useState(loadContinueAuto);
+  const [continueIdleSeconds, setContinueIdleSeconds] =
+    useState(loadContinueIdleSeconds);
+  continueAutoRef.current = continueAuto;
   const deepMatchesRef = useRef([]);
   const deepRunningRef = useRef(false);
   const deepRunIdRef = useRef(0);
@@ -625,6 +659,24 @@ export default function App() {
     window.addEventListener("lexicon:ai-configured", onCfg);
     return () => window.removeEventListener("lexicon:ai-configured", onCfg);
   }, [refreshAiConfigured]);
+
+  // Slash "/continue" lands here because slash items run editor chains.
+  useEffect(() => {
+    const onContinueRequest = () => requestContinueRef.current();
+    window.addEventListener("lexicon:continue-request", onContinueRequest);
+    return () =>
+      window.removeEventListener("lexicon:continue-request", onContinueRequest);
+  }, []);
+
+  useEffect(
+    () => () => {
+      if (continueIdleRef.current) {
+        clearTimeout(continueIdleRef.current);
+        continueIdleRef.current = null;
+      }
+    },
+    [],
+  );
   const [leftPanelOpen, setLeftPanelOpen] = useState(() =>
     loadPanelOpen(leftPanelKey)
   );
@@ -725,6 +777,9 @@ export default function App() {
 
   const editor = useEditor({
     extensions: [
+      // ContinueGhost first so its Tab accept wins over list indent
+      // while a suggestion is shown.
+      ContinueGhost,
       // StarterKit bundles the base `codeBlock` node; disable it so the
       // Lowlight-powered one below can own the `codeBlock` schema type
       // without a node-type collision.
@@ -966,7 +1021,7 @@ export default function App() {
       },
     },
     content: loadContent(),
-    onUpdate: ({ editor }) => {
+    onUpdate: ({ editor, transaction }) => {
       const text = editor.getText();
       const html = editor.getHTML();
       try {
@@ -979,6 +1034,21 @@ export default function App() {
       }
       setDocText(text);
       setToneResult(detectTone(text));
+      // A pending ghost never survives an edit. Cancel the flight and
+      // retire the widget; the accept step already cleared itself.
+      // Ghost-internal transactions are exempt so showing never undoes.
+      const ghostMeta = transaction?.getMeta?.(continueGhostKey);
+      if (
+        !ghostMeta &&
+        continuerRef.current &&
+        (continuerRef.current.suggestion ||
+          continuerRef.current.status === "working" ||
+          continuerRef.current.status === "warming")
+      ) {
+        continuerRef.current.cancel();
+        editor.commands.clearContinueSuggestion();
+      }
+      scheduleContinueIdle(editor);
       // A deep run is snapshot-bound, so any edit cancels it. Finished
       // deep results clear on edit too, unless the edit is our own apply.
       if (deepRunningRef.current) {
@@ -2315,6 +2385,11 @@ export default function App() {
 
   function handleEditorShortcut(event) {
     if (!editor || !editor.isEditable) return false;
+    // A visible ghost wins bare Tab over indent and list handling.
+    if (shouldAcceptGhostTab(editor.view, event)) {
+      event.preventDefault();
+      return acceptContinueSuggestion(editor.view);
+    }
     const definition = SHORTCUT_DEFINITIONS.find(
       (candidate) =>
         candidate.scope === "editor" &&
@@ -2458,6 +2533,16 @@ export default function App() {
   function handleResetDefaults() {
     setLanguage(SETTINGS_DEFAULTS.language);
     setProofreadingLanguage(SETTINGS_DEFAULTS.language).catch(() => {});
+    setContinueLength("auto");
+    setContinueAuto(false);
+    setContinueIdleSeconds(loadContinueIdleSeconds());
+    try {
+      localStorage.setItem(CONTINUE_LENGTH_KEY, "auto");
+      localStorage.setItem(CONTINUE_AUTO_KEY, "false");
+      localStorage.setItem(CONTINUE_IDLE_KEY, "10");
+    } catch {
+      // Storage full. Session values already reset above.
+    }
     setFontSize(SETTINGS_DEFAULTS.fontSize);
     setFocusMode(SETTINGS_DEFAULTS.focusMode);
     setLineSpacing(SETTINGS_DEFAULTS.lineSpacing);
@@ -2571,6 +2656,24 @@ export default function App() {
         return;
       }
 
+      if (shortcutMatchesEvent(shortcuts[SHORTCUT_IDS.CONTINUE_WRITING], event)) {
+        event.preventDefault();
+        requestContinueRef.current();
+        return;
+      }
+
+      if (shortcutMatchesEvent(shortcuts[SHORTCUT_IDS.EXPAND_SELECTION], event)) {
+        event.preventDefault();
+        expandSelection();
+        return;
+      }
+
+      if (shortcutMatchesEvent(shortcuts[SHORTCUT_IDS.EXPRESS_SELECTION], event)) {
+        event.preventDefault();
+        openExpress();
+        return;
+      }
+
       // Accept / dismiss the suggestion under the caret when one is active,
       // otherwise fall back to the first card in the stream. Values are read
       // through refs so this handler never acts on a stale closure.
@@ -2593,6 +2696,7 @@ export default function App() {
       if (shortcutMatchesEvent(shortcuts[SHORTCUT_IDS.DISMISS_SUGGESTION], event)) {
         event.preventDefault();
         handleDismiss(suggestionTarget);
+        return;
       }
     };
 
@@ -2753,7 +2857,47 @@ export default function App() {
     }
   }
 
+  function handleContinueLengthChange(next) {
+    const value =
+      next === "sentence" || next === "paragraph" ? next : "auto";
+    setContinueLength(value);
+    try {
+      localStorage.setItem(CONTINUE_LENGTH_KEY, String(value));
+    } catch {
+      // Storage full. Keep the choice for this session.
+    }
+  }
+
+  function handleContinueAutoChange(next) {
+    const value = Boolean(next);
+    setContinueAuto(value);
+    try {
+      localStorage.setItem(CONTINUE_AUTO_KEY, String(value));
+    } catch {
+      // Storage full. Keep the toggle for this session.
+    }
+    if (!value && continueIdleRef.current) {
+      clearTimeout(continueIdleRef.current);
+      continueIdleRef.current = null;
+    }
+  }
+
+  function handleContinueIdleSecondsChange(next) {
+    const value = snapContinueIdleSeconds(next);
+    setContinueIdleSeconds(value);
+    try {
+      localStorage.setItem(CONTINUE_IDLE_KEY, String(value));
+    } catch {
+      // Storage full. Keep the choice for this session.
+    }
+  }
+
   function handleToolClick(name) {
+    // Continue is fire-and-forget ghost text, not a panel tool.
+    if (name === CONTINUE_TOOL_NAME) {
+      requestContinue();
+      return;
+    }
     const nextTool = activeTool === name ? "" : name;
     setActiveTool(nextTool);
     const leavingProofread = activeTool === "Proofread" && nextTool !== "Proofread";
@@ -2902,6 +3046,107 @@ export default function App() {
     return chunks;
   }
 
+  // Continue: ghost suggestion at the cursor. Fire and forget; the
+  // suggestion renders once the model answers and the doc is unchanged.
+  // A ghost never survives an edit because onUpdate retires it below.
+  // Auto invocations stay silent when AI is missing; manual ones route
+  // to setup like other AI tools.
+  async function requestContinue({ auto = false } = {}) {
+    if (!editor) {
+      return;
+    }
+    if (continueIdleRef.current) {
+      clearTimeout(continueIdleRef.current);
+      continueIdleRef.current = null;
+    }
+    if (!aiConfiguredRef.current) {
+      if (!auto) {
+        openEngineSettings();
+      }
+      return;
+    }
+    const { to } = editor.state.selection;
+    continueDocPosRef.current = to;
+    const fullText = editor.getText();
+    const out = await continuerRef.current.request({
+      fullText,
+      pos: to,
+      language,
+      length: continueLength,
+    });
+    if (!out || !editor) {
+      return;
+    }
+    if (editor.getText() !== out.snapshotText) {
+      return;
+    }
+    editor.commands.setContinueSuggestion({
+      pos: continueDocPosRef.current,
+      text: out.text,
+    });
+  }
+  requestContinueRef.current = requestContinue;
+
+  // Idle auto continue: after a pause in typing, suggest onward text.
+  // Each edit reschedules; manual runs and dismissals cancel the wait.
+  function scheduleContinueIdle(targetEditor) {
+    if (continueIdleRef.current) {
+      clearTimeout(continueIdleRef.current);
+      continueIdleRef.current = null;
+    }
+    if (!continueAutoRef.current || !aiConfiguredRef.current) {
+      return;
+    }
+    const liveEditor = targetEditor || editor;
+    if (!liveEditor || liveEditor.isDestroyed) {
+      return;
+    }
+    continueIdleRef.current = setTimeout(() => {
+      continueIdleRef.current = null;
+      const active = continuerRef.current;
+      if (
+        !active ||
+        active.suggestion ||
+        active.status === "working" ||
+        active.status === "warming"
+      ) {
+        return;
+      }
+      if (!editor || editor.isDestroyed || !editor.getText().trim()) {
+        return;
+      }
+      requestContinueRef.current({ auto: true });
+    }, loadContinueIdleSeconds() * 1000);
+  }
+
+  // Expand: selection-scoped elaboration through the card flow.
+  // Bare cursor falls back to the current paragraph so the shortcut
+  // and slash entry always have something to work with.
+  function expandSelection() {
+    if (!editor) {
+      return;
+    }
+    if (!aiConfigured) {
+      openEngineSettings();
+      return;
+    }
+    const { from, to } = editor.state.selection;
+    if (from === to) {
+      const $from = editor.state.selection.$from;
+      const parent = $from.parent;
+      if (!parent.isTextblock || !parent.textContent.trim()) {
+        return;
+      }
+      editor
+        .chain()
+        .focus()
+        .setTextSelection({ from: $from.start(), to: $from.end() })
+        .run();
+    }
+    setActiveTool(EXPAND_TOOL_NAME);
+    runAiTool(EXPAND_TOOL_NAME);
+  }
+
   async function runAiTool(name) {
     if (!editor) {
       return;
@@ -2932,7 +3177,7 @@ export default function App() {
         return;
       }
       setTransformResults([
-        { tool: name, text: result, from, to, part: 1, total: 1 },
+        { tool: name, text: result, sourceText, from, to, part: 1, total: 1 },
       ]);
       transformRunningRef.current = false;
       setTransformRunning(false);
@@ -2993,6 +3238,7 @@ export default function App() {
       const card = {
         tool: name,
         text: result,
+        sourceText: chunk.text,
         from: chunk.from,
         to: chunk.to,
         part: i + 1,
@@ -3498,6 +3744,10 @@ export default function App() {
                 }
                 deepRunning={deepRunning}
                 deepWarming={deepWarming}
+                continueWorking={
+                  continuer.status === "working" ||
+                  continuer.status === "warming"
+                }
               />
               {!aiConfigured && (
                 <div className="mt-2 rounded-lg border border-dashed border-hairline bg-canvas px-3 py-2.5">
@@ -3574,6 +3824,7 @@ export default function App() {
             proofreadActive={activeTool === "Proofread"}
             toneResult={toneResult}
             onExpress={openExpress}
+            onExpand={expandSelection}
           />
           {transformRunning && (
             <div className="pointer-events-none absolute right-12 top-3 z-10">
@@ -3799,6 +4050,12 @@ export default function App() {
           onToggleTransformLock={handleToggleTransformLock}
           onClearDrafts={handleClearDrafts}
           onClearTransforms={handleClearTransforms}
+          continueLength={continueLength}
+          onContinueLengthChange={handleContinueLengthChange}
+          continueAuto={continueAuto}
+          onContinueAutoChange={handleContinueAutoChange}
+          continueIdleSeconds={continueIdleSeconds}
+          onContinueIdleSecondsChange={handleContinueIdleSecondsChange}
         />
       </Suspense>
 

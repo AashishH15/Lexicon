@@ -19,6 +19,7 @@ import {
   Quotes,
   Trash,
   Translate,
+  ArrowsOut,
 } from "@phosphor-icons/react";
 import FormatToolbar from "./FormatToolbar.jsx";
 import ToneChart from "./ToneChart.jsx";
@@ -98,7 +99,7 @@ export function replaceExpressRange(editor, range, text) {
 
 // Selection bubble over highlighted text. Keep format toggles first.
 // The Express button opens the right panel drawer. Same drawer as toolbar.
-export function SelectionBubbleMenu({ editor, onExpress }) {
+export function SelectionBubbleMenu({ editor, onExpress, onExpand }) {
   if (!editor) {
     return null;
   }
@@ -141,6 +142,15 @@ export function SelectionBubbleMenu({ editor, onExpress }) {
         >
           <Translate size={16} weight="bold" className="transition-transform duration-200 group-hover:scale-125" />
         </button>
+        <button
+          type="button"
+          title="Expand"
+          aria-label="Expand"
+          onClick={() => onExpand && onExpand()}
+          className="group flex h-8 w-8 items-center justify-center rounded border border-transparent text-ink transition-colors hover:bg-hairline/60"
+        >
+          <ArrowsOut size={16} weight="bold" className="transition-transform duration-200 group-hover:scale-125" />
+        </button>
       </div>
     </BubbleMenu>
   );
@@ -161,6 +171,7 @@ export default function Editor({
   proofreadActive,
   toneResult,
   onExpress,
+  onExpand,
 }) {
   const hasMetrics = proofreadActive && !emptyDoc;
   // Defensive lookups: an unknown id (corrupt storage, older build) falls
@@ -687,7 +698,7 @@ export default function Editor({
 
       <FormatToolbar editor={editor} onRequestLink={requestLink} onRequestMath={requestMath} />
 
-      <SelectionBubbleMenu editor={editor} onExpress={onExpress} />
+      <SelectionBubbleMenu editor={editor} onExpress={onExpress} onExpand={onExpand} />
 
       <div
         ref={surroundRef}

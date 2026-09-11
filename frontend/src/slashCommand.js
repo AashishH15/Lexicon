@@ -30,6 +30,7 @@ import {
   MathOperations,
   Function,
   Table as TableIcon,
+  ArrowRight,
 } from "@phosphor-icons/react";
 import CommandList from "./CommandList.jsx";
 
@@ -332,6 +333,15 @@ const COMMANDS = [
     isActive: (e) => e.isActive("table"),
     set: (e) => e.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run(),
     unset: (e) => e.chain().focus().deleteTable().run(),
+  },
+  {
+    id: "continue",
+    label: "Continue",
+    icon: ArrowRight,
+    keywords: ["continue", "ghost", "write", "next", "suggest"],
+    isActive: () => false,
+    set: () => window.dispatchEvent(new CustomEvent("lexicon:continue-request")),
+    unset: () => {},
   },
 ];
 

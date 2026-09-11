@@ -85,6 +85,9 @@ describe("custom keyboard shortcuts", () => {
 
     expect(defaults[SHORTCUT_IDS.BOLD]).toEqual(["Mod", "B"]);
     expect(defaults[SHORTCUT_IDS.CLOSE_SETTINGS]).toEqual(["Esc"]);
+    expect(defaults[SHORTCUT_IDS.CONTINUE_WRITING]).toEqual(["Mod", "Alt", "N"]);
+    expect(defaults[SHORTCUT_IDS.EXPAND_SELECTION]).toEqual(["Mod", "Alt", "E"]);
+    expect(defaults[SHORTCUT_IDS.EXPRESS_SELECTION]).toEqual(["Mod", "Alt", "X"]);
     expect(
       definitions.get(SHORTCUT_IDS.OPEN_COMMAND_MENU).customizable,
     ).toBe(false);
