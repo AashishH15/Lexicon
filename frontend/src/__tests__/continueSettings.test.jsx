@@ -61,8 +61,10 @@ function makeProps(overrides = {}) {
     onContinueLengthChange: noop,
     continueAuto: false,
     onContinueAutoChange: noop,
-    continueIdleSeconds: 8,
+    continueIdleSeconds: 10,
     onContinueIdleSecondsChange: noop,
+    continueTemperature: "balanced",
+    onContinueTemperatureChange: noop,
     ...overrides,
   };
 }
@@ -141,6 +143,48 @@ describe("Settings Continue tab", () => {
       slider.dispatchEvent(new Event("input", { bubbles: true }));
     });
     expect(props.onContinueIdleSecondsChange).toHaveBeenCalledWith(17);
+
+    await act(async () => {
+      root.unmount();
+    });
+    container.remove();
+  });
+
+  it("changes suggestion tone through its callback", async () => {
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    const props = makeProps({
+      onContinueTemperatureChange: vi.fn(),
+    });
+
+    await act(async () => {
+      root.render(<Settings {...props} />);
+    });
+    const tab = Array.from(container.querySelectorAll("button")).find(
+      (button) => button.textContent.trim() === "Continue",
+    );
+    await act(async () => {
+      tab.click();
+    });
+
+    const bold = container.querySelector(
+      'button[aria-label="Set Continue tone to bold"]',
+    );
+    expect(bold).not.toBe(null);
+    await act(async () => {
+      bold.click();
+    });
+    expect(props.onContinueTemperatureChange).toHaveBeenCalledWith("bold");
+
+    const precise = container.querySelector(
+      'button[aria-label="Set Continue tone to precise"]',
+    );
+    expect(precise).not.toBe(null);
+    await act(async () => {
+      precise.click();
+    });
+    expect(props.onContinueTemperatureChange).toHaveBeenCalledWith("precise");
 
     await act(async () => {
       root.unmount();

@@ -5,11 +5,13 @@ import { act } from "react";
 import useContinue, {
   CONTINUE_CONTEXT_CHARS,
   CONTINUE_MAX_TOKENS,
-  CONTINUE_TEMPERATURE,
+  CONTINUE_TEMPERATURES,
+  CONTINUE_TEMPERATURE_DEFAULT,
   continueContext,
   continueLengthPrompt,
   continueMaxTokens,
   loadContinueIdleSeconds,
+  loadContinueTemperature,
   paragraphBudget,
   stripEchoedPrefix,
   truncateSentences,
@@ -90,7 +92,7 @@ describe("useContinue request", () => {
     expect(args.prompt).toContain("Do not repeat");
     expect(args.prompt).toContain("Spanish");
     expect(args.text).toBe("Once upon a time");
-    expect(args.temperature).toBe(CONTINUE_TEMPERATURE);
+    expect(args.temperature).toBe(0.4);
     expect(args.maxTokens).toBe(CONTINUE_MAX_TOKENS);
     expect(mounted.ref.current.suggestion).toBe(" And then more.");
   });
@@ -119,6 +121,58 @@ describe("useContinue request", () => {
       mounted.ref.current.dismiss();
     });
     expect(mounted.ref.current.suggestion).toBe("");
+  });
+});
+
+describe("continue temperature presets", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("maps presets to spaced values with a balanced default", () => {
+    expect(CONTINUE_TEMPERATURES).toEqual({
+      precise: 0.2,
+      balanced: 0.4,
+      bold: 0.6,
+    });
+    expect(CONTINUE_TEMPERATURE_DEFAULT).toBe("balanced");
+    expect(loadContinueTemperature()).toBe("balanced");
+  });
+
+  it("falls back to balanced for unknown stored values", () => {
+    localStorage.setItem("lexicon:continueTemperature", "wild");
+    expect(loadContinueTemperature()).toBe("balanced");
+    localStorage.removeItem("lexicon:continueTemperature");
+  });
+
+  it("requests the bold temperature end to end", async () => {
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    const root = createRoot(container);
+    const ref = { current: null };
+    function Harness() {
+      ref.current = useContinue();
+      return null;
+    }
+    await act(async () => {
+      root.render(<Harness />);
+    });
+    runMock.mockResolvedValue(" Bold words.");
+    let out;
+    await act(async () => {
+      out = await ref.current.request({
+        fullText: "Start here",
+        pos: 10,
+        language: "en-US",
+        temperature: "bold",
+      });
+    });
+    expect(out.text).toBe(" Bold words.");
+    expect(runMock.mock.calls[0][0].temperature).toBe(0.6);
+    await act(async () => {
+      root.unmount();
+    });
+    container.remove();
   });
 });
 

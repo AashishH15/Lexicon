@@ -60,9 +60,14 @@ import useContinue, {
   CONTINUE_AUTO_KEY,
   CONTINUE_IDLE_KEY,
   CONTINUE_LENGTH_KEY,
+  CONTINUE_TEMPERATURE_DEFAULT,
+  CONTINUE_TEMPERATURE_KEY,
+  CONTINUE_TEMPERATURE_PRESETS,
+  continueTemperatureValue,
   loadContinueAuto,
   loadContinueIdleSeconds,
   loadContinueLength,
+  loadContinueTemperature,
   snapContinueIdleSeconds,
 } from "./useContinue.js";
 import {
@@ -609,6 +614,9 @@ export default function App() {
   const [continueAuto, setContinueAuto] = useState(loadContinueAuto);
   const [continueIdleSeconds, setContinueIdleSeconds] =
     useState(loadContinueIdleSeconds);
+  const [continueTemperature, setContinueTemperature] = useState(
+    loadContinueTemperature,
+  );
   continueAutoRef.current = continueAuto;
   const deepMatchesRef = useRef([]);
   const deepRunningRef = useRef(false);
@@ -2549,10 +2557,12 @@ export default function App() {
     setProofreadingLanguage(SETTINGS_DEFAULTS.language).catch(() => {});
     setContinueLength("auto");
     setContinueAuto(false);
+    setContinueTemperature(CONTINUE_TEMPERATURE_DEFAULT);
     setContinueIdleSeconds(loadContinueIdleSeconds());
     try {
       localStorage.setItem(CONTINUE_LENGTH_KEY, "auto");
       localStorage.setItem(CONTINUE_AUTO_KEY, "false");
+      localStorage.setItem(CONTINUE_TEMPERATURE_KEY, CONTINUE_TEMPERATURE_DEFAULT);
       localStorage.setItem(CONTINUE_IDLE_KEY, "10");
     } catch {
       // Storage full. Session values already reset above.
@@ -2906,6 +2916,18 @@ export default function App() {
     }
   }
 
+  function handleContinueTemperatureChange(next) {
+    const value = CONTINUE_TEMPERATURE_PRESETS.includes(next)
+      ? next
+      : CONTINUE_TEMPERATURE_DEFAULT;
+    setContinueTemperature(value);
+    try {
+      localStorage.setItem(CONTINUE_TEMPERATURE_KEY, String(value));
+    } catch {
+      // Storage full. Keep the choice for this session.
+    }
+  }
+
   function handleToolClick(name) {
     // Continue is fire-and-forget ghost text, not a panel tool.
     if (name === CONTINUE_TOOL_NAME) {
@@ -3087,6 +3109,7 @@ export default function App() {
       pos: to,
       language,
       length: continueLength,
+      temperature: continueTemperature,
     });
     if (!out || !editor) {
       return;
@@ -3184,7 +3207,15 @@ export default function App() {
       setTransformRunning(true);
       setTransformResults([]);
       setTransformProgress(null);
-      const result = await runTransform({ prompt, text: sourceText });
+      const temperature =
+        name === EXPAND_TOOL_NAME
+          ? continueTemperatureValue(continueTemperature)
+          : undefined;
+      const result = await runTransform({
+        prompt,
+        text: sourceText,
+        temperature,
+      });
       if (result == null) {
         transformRunningRef.current = false;
         setTransformRunning(false);
@@ -3239,7 +3270,15 @@ export default function App() {
       }
       setTransformProgress({ current: i + 1, total });
       const chunk = chunks[i];
-      const result = await runTransform({ prompt, text: chunk.text });
+      const temperature =
+        name === EXPAND_TOOL_NAME
+          ? continueTemperatureValue(continueTemperature)
+          : undefined;
+      const result = await runTransform({
+        prompt,
+        text: chunk.text,
+        temperature,
+      });
       if (runIdRef.current !== runId) {
         aborted = true;
         break;
@@ -4094,6 +4133,8 @@ export default function App() {
           onContinueLengthChange={handleContinueLengthChange}
           continueAuto={continueAuto}
           onContinueAutoChange={handleContinueAutoChange}
+          continueTemperature={continueTemperature}
+          onContinueTemperatureChange={handleContinueTemperatureChange}
           continueIdleSeconds={continueIdleSeconds}
           onContinueIdleSecondsChange={handleContinueIdleSecondsChange}
         />

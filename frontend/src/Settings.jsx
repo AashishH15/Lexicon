@@ -42,6 +42,9 @@ import {
   CONTINUE_IDLE_DEFAULT_SECONDS,
   CONTINUE_IDLE_MAX_SECONDS,
   CONTINUE_IDLE_MIN_SECONDS,
+  CONTINUE_TEMPERATURE_DEFAULT,
+  CONTINUE_TEMPERATURE_PRESETS,
+  CONTINUE_TEMPERATURES,
 } from "./useContinue.js";
 import { TYPOGRAPHY_PRESETS } from "./typographyPresets.js";
 import { PAPER_TEXTURES } from "./paperTextures.js";
@@ -251,7 +254,21 @@ const SEARCH_INDEX = [
     label: "Continue",
     tab: "continue",
     settingKey: "continue-section",
-    keywords: ["continue", "ghost", "writing", "length", "auto", "sentence", "paragraph"],
+    keywords: [
+      "continue",
+      "ghost",
+      "writing",
+      "length",
+      "auto",
+      "sentence",
+      "paragraph",
+      "tone",
+      "temperature",
+      "precise",
+      "balanced",
+      "bold",
+      "creativity",
+    ],
   },
   {
     label: "Beta Releases",
@@ -509,6 +526,8 @@ export default function Settings({
   onContinueAutoChange,
   continueIdleSeconds = CONTINUE_IDLE_DEFAULT_SECONDS,
   onContinueIdleSecondsChange,
+  continueTemperature = CONTINUE_TEMPERATURE_DEFAULT,
+  onContinueTemperatureChange,
 }) {
   const [activeTab, setActiveTab] = useState("general");
   const [searchQuery, setSearchQuery] = useState("");
@@ -530,6 +549,7 @@ export default function Settings({
     continueLength === "auto" &&
     continueAuto === false &&
     continueIdleSeconds === CONTINUE_IDLE_DEFAULT_SECONDS &&
+    continueTemperature === CONTINUE_TEMPERATURE_DEFAULT &&
     typographyPreset === SETTINGS_DEFAULTS.typographyPreset &&
     paperTexture === SETTINGS_DEFAULTS.paperTexture &&
     readingMode === SETTINGS_DEFAULTS.readingMode &&
@@ -1416,21 +1436,21 @@ export default function Settings({
 
               {/* ── Your Dictionary ── */}
               {activeTab === "dictionary" && (
-                  <div
-                    data-setting-key="dictionary-section"
-                    className={`space-y-5 ${getHighlightClass("dictionary-section")}`}
-                  >
-                    <div className="flex items-baseline justify-between gap-3">
-                      <h2 className="font-serif text-xl font-bold text-ink">
-                        Your Dictionary
-                      </h2>
-                      {userDictionary.length > 0 && (
-                        <span className="font-sans text-xs text-muted">
-                          {userDictionary.length} word
-                          {userDictionary.length === 1 ? "" : "s"}
-                        </span>
-                      )}
-                    </div>
+                <div
+                  data-setting-key="dictionary-section"
+                  className={`space-y-5 ${getHighlightClass("dictionary-section")}`}
+                >
+                  <div className="flex items-baseline justify-between gap-3">
+                    <h2 className="font-serif text-xl font-bold text-ink">
+                      Your Dictionary
+                    </h2>
+                    {userDictionary.length > 0 && (
+                      <span className="font-sans text-xs text-muted">
+                        {userDictionary.length} word
+                        {userDictionary.length === 1 ? "" : "s"}
+                      </span>
+                    )}
+                  </div>
 
                   <div>
                     <p className="font-sans text-xs text-muted">
@@ -2003,8 +2023,8 @@ export default function Settings({
                       Suggestion Length
                     </p>
                     <p className="mt-1 font-sans text-xs text-muted">
-                      How much text a Continue suggestion holds. Base prompts
-                      stay editable below.
+                      Target length for inline suggestions. Auto adapts to your
+                      surrounding prose.
                     </p>
                     <div className="relative isolate mt-3 flex overflow-hidden rounded border border-hairline bg-canvas">
                       <span
@@ -2031,14 +2051,48 @@ export default function Settings({
                       ))}
                     </div>
                   </div>
+                  <div>
+                    <p className="font-mono text-[10px] uppercase tracking-widest text-muted">
+                      Suggestion Tone
+                    </p>
+                    <p className="mt-1 font-sans text-xs text-muted">
+                      Creativity level for Continue and Expand.
+                      <br />
+                      Precise stays close to the draft, Bold takes bigger swings.
+                    </p>
+                    <div className="relative isolate mt-3 flex overflow-hidden rounded border border-hairline bg-canvas">
+                      <span
+                        className="pointer-events-none absolute inset-y-0 left-0 bg-pale-blue transition-transform duration-200 ease-out"
+                        style={{
+                          width: `${100 / CONTINUE_TEMPERATURE_PRESETS.length}%`,
+                          transform: `translateX(${Math.max(0, CONTINUE_TEMPERATURE_PRESETS.indexOf(continueTemperature)) * 100}%)`,
+                        }}
+                      />
+                      {CONTINUE_TEMPERATURE_PRESETS.map((preset) => (
+                        <button
+                          key={preset}
+                          type="button"
+                          onClick={() => onContinueTemperatureChange(preset)}
+                          aria-label={`Set Continue tone to ${preset}`}
+                          className={
+                            "relative z-10 flex flex-1 items-center justify-center py-2 font-mono text-xs uppercase leading-none tracking-widest transition-colors " +
+                            (continueTemperature === preset
+                              ? "text-ink"
+                              : "bg-transparent text-muted hover:text-ink")
+                          }
+                        >
+                          {preset}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                   <div className="flex items-start justify-between gap-4">
                     <div>
                       <p className="font-mono text-[10px] uppercase tracking-widest text-muted">
                         Auto Continue
                       </p>
                       <p className="mt-1 font-sans text-xs text-muted">
-                        Suggest onward text by itself after a pause in typing.
-                        Off by default.
+                        Automatically offer suggestions after a pause in typing.
                       </p>
                     </div>
                     <div className="pt-0.5">
@@ -2054,9 +2108,7 @@ export default function Settings({
                       Auto Continue Delay
                     </p>
                     <p className="mt-1 font-sans text-xs text-muted">
-                      Pause after typing before a suggestion appears on its
-                      own. Snaps to 5 seconds. Only matters while Auto
-                      Continue is on.
+                      How long to pause before generating an automatic suggestion.
                     </p>
                     <div className="mt-3 flex items-center gap-3">
                       <input
@@ -2084,10 +2136,8 @@ export default function Settings({
                       Base Prompts
                     </p>
                     <p className="mt-1 font-sans text-xs text-muted">
-                      The instructions behind each mode. Length and auto
-                      options above combine with these. Tailor them to your
-                      needs, for example with the plot, setting, or story
-                      elements you are writing about.
+                      These instructions control how the AI writes text. You can
+                      edit them to add your personalized rules for character voice, genre, or setting.
                     </p>
                     <div className="mt-3 space-y-2">
                       <BuiltinPromptEditor name="Continue" />

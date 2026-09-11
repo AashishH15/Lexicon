@@ -5,7 +5,17 @@ import { CONTINUE_TOOL_NAME, promptForTool } from "./prompts.js";
 // Trailing draft slice sent as continuation context.
 export const CONTINUE_CONTEXT_CHARS = 800;
 // Sampling favors varied continuations over deterministic rewrites.
-export const CONTINUE_TEMPERATURE = 0.7;
+// Presets stay wide apart so each step reads differently. Ghost text
+// errs precise: a wrong-but-boring suggestion dismisses quietly,
+// while a wild one reads as broken.
+export const CONTINUE_TEMPERATURES = Object.freeze({
+  precise: 0.2,
+  balanced: 0.4,
+  bold: 0.6,
+});
+export const CONTINUE_TEMPERATURE_PRESETS = ["precise", "balanced", "bold"];
+export const CONTINUE_TEMPERATURE_DEFAULT = "balanced";
+export const CONTINUE_TEMPERATURE_KEY = "lexicon:continueTemperature";
 export const CONTINUE_MAX_TOKENS = 120;
 // Length presets for the suggestion. Auto keeps current behavior.
 export const CONTINUE_LENGTHS = ["auto", "sentence", "paragraph"];
@@ -34,6 +44,21 @@ export function loadContinueAuto() {
   } catch {
     return false;
   }
+}
+
+export function loadContinueTemperature() {
+  try {
+    const saved = localStorage.getItem(CONTINUE_TEMPERATURE_KEY);
+    return CONTINUE_TEMPERATURE_PRESETS.includes(saved)
+      ? saved
+      : CONTINUE_TEMPERATURE_DEFAULT;
+  } catch {
+    return CONTINUE_TEMPERATURE_DEFAULT;
+  }
+}
+
+export function continueTemperatureValue(preset) {
+  return CONTINUE_TEMPERATURES[preset] ?? CONTINUE_TEMPERATURES[CONTINUE_TEMPERATURE_DEFAULT];
 }
 
 export function loadContinueIdleSeconds() {
@@ -218,7 +243,7 @@ export default function useContinue() {
   }, [transform]);
 
   const request = useCallback(
-    async ({ fullText, pos, language, length }) => {
+    async ({ fullText, pos, language, length, temperature }) => {
       const snapshotText = String(fullText ?? "");
       const context = continueContext(snapshotText, pos);
       if (!context) {
@@ -235,13 +260,17 @@ export default function useContinue() {
           ? paragraphBudget(snapshotText, at)
           : null;
       const fresh = Boolean(budget && budget.full);
+      const variant = { fresh };
+      const resolvedTemperature = CONTINUE_TEMPERATURE_PRESETS.includes(temperature)
+        ? temperature
+        : loadContinueTemperature();
       const text = await transform.run({
         prompt:
           promptForTool(CONTINUE_TOOL_NAME, language) +
-          continueLengthPrompt(resolvedLength, { fresh }),
+          continueLengthPrompt(resolvedLength, variant),
         text: context,
-        temperature: CONTINUE_TEMPERATURE,
-        maxTokens: continueMaxTokens(resolvedLength, { fresh }),
+        temperature: continueTemperatureValue(resolvedTemperature),
+        maxTokens: continueMaxTokens(resolvedLength, variant),
       });
       const echoed =
         typeof text === "string" ? stripEchoedPrefix(context, text) : "";
