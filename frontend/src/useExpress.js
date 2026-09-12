@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
 import useTransform from "./useTransform.js";
-import { getExpressPrompt } from "./prompts.js";
+import { getExpressPrompt, EXPRESS_TONE_TEMPERATURES } from "./prompts.js";
 import { EXPRESS_TONES, parseExpressJson } from "./expressParser.js";
 
 // Default tone. Auto translates with no picked tone.
@@ -63,7 +63,7 @@ export default function useExpress() {
   // Run one express request. Return the parsed result or null.
   const runExpress = useCallback(
     async (text, options = {}) => {
-      const { modelKey, backend } = options || {};
+      const { modelKey, backend, tone } = options || {};
       if (!isExpressModelAllowed(modelKey)) {
         setResult(null);
         setNotice(EXPRESS_NEEDS_MODEL_MESSAGE);
@@ -75,11 +75,17 @@ export default function useExpress() {
         return null;
       }
       setResult(null);
+      const selectedTone = tone || activeTone || EXPRESS_DEFAULT_TONE;
+      // The picked tone sets temperature to balance format safety and style.
+      const temperature =
+        EXPRESS_TONE_TEMPERATURES[selectedTone] ??
+        EXPRESS_TONE_TEMPERATURES[EXPRESS_DEFAULT_TONE];
       const raw = await transform.run({
         prompt: getExpressPrompt(text),
         text,
         modelKey,
         backend,
+        temperature,
       });
       if (raw == null) {
         return null;
@@ -88,7 +94,7 @@ export default function useExpress() {
       setResult(parsed);
       return parsed;
     },
-    [transform.run],
+    [transform.run, activeTone],
   );
 
   const activeText =

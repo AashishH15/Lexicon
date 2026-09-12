@@ -3,7 +3,10 @@ import {
   AI_TOOL_NAMES,
   CONTINUE_TOOL_NAME,
   EXPAND_TOOL_NAME,
+  EXPRESS_TONE_TEMPERATURES,
   REWRITE_CLASS_TOOLS,
+  TOOL_TEMPERATURES,
+  getToolTemperature,
   promptForTool,
 } from "../prompts.js";
 
@@ -84,5 +87,51 @@ describe("REWRITE_CLASS_TOOLS", () => {
     for (const name of ["Summary", "Key Points", "List", "Table", "Continue"]) {
       expect(REWRITE_CLASS_TOOLS).not.toContain(name);
     }
+  });
+});
+
+describe("temperature calibrations", () => {
+  it("calibrates exact temperatures for all built-in tools and tones", () => {
+    expect(TOOL_TEMPERATURES).toEqual({
+      Table: 0.0,
+      Concise: 0.2,
+      Summary: 0.2,
+      "Key Points": 0.2,
+      List: 0.2,
+      Professional: 0.3,
+      Academic: 0.3,
+      Formal: 0.3,
+      Rewrite: 0.5,
+      Casual: 0.6,
+      Friendly: 0.6,
+      Playful: 0.6,
+      Empathetic: 0.6,
+      Persuasive: 0.6,
+      Humorous: 0.6,
+    });
+  });
+
+  it("calibrates exact temperatures for Express in English tones", () => {
+    expect(EXPRESS_TONE_TEMPERATURES).toEqual({
+      auto: 0.3,
+      concise: 0.2,
+      professional: 0.3,
+      formal: 0.3,
+      casual: 0.6,
+      friendly: 0.6,
+    });
+  });
+
+  it("resolves temperature via getToolTemperature", () => {
+    expect(getToolTemperature("Table")).toBe(0.0);
+    expect(getToolTemperature("Concise")).toBe(0.2);
+    expect(getToolTemperature("Summary")).toBe(0.2);
+    expect(getToolTemperature("Professional")).toBe(0.3);
+    expect(getToolTemperature("Rewrite")).toBe(0.5);
+    expect(getToolTemperature("Casual")).toBe(0.6);
+    expect(getToolTemperature("Playful")).toBe(0.6);
+    // Custom tool or unknown tool defaults to balanced 0.4
+    expect(getToolTemperature("CustomSummary")).toBe(0.4);
+    expect(getToolTemperature("")).toBe(0.4);
   });
 });

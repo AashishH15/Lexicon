@@ -141,6 +141,31 @@ describe("useExpress run with Standard", () => {
     expect(mounted.ref.current.activeText).toBe("Concise text.");
   });
 
+  it("passes tone-calibrated temperature to transformText", async () => {
+    await act(async () => {
+      await mounted.ref.current.runExpress("Hola.", { modelKey: "2b", tone: "casual" });
+    });
+    expect(api.transformText.mock.calls[0][0].temperature).toBe(0.6);
+
+    api.transformText.mockClear();
+    await act(async () => {
+      await mounted.ref.current.runExpress("Hola.", { modelKey: "2b", tone: "concise" });
+    });
+    expect(api.transformText.mock.calls[0][0].temperature).toBe(0.2);
+
+    api.transformText.mockClear();
+    await act(async () => {
+      await mounted.ref.current.runExpress("Hola.", { modelKey: "2b", tone: "auto" });
+    });
+    expect(api.transformText.mock.calls[0][0].temperature).toBe(0.3);
+
+    api.transformText.mockClear();
+    await act(async () => {
+      await mounted.ref.current.runExpress("Hola.", { modelKey: "2b" });
+    });
+    expect(api.transformText.mock.calls[0][0].temperature).toBe(0.3);
+  });
+
   it("ignores an unknown tone name", async () => {
     await act(async () => {
       await mounted.ref.current.runExpress("Hola.", { modelKey: "2b" });

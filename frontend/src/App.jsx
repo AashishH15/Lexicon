@@ -51,6 +51,7 @@ import useExpress, {
 import {
   isAiTool,
   promptForTool,
+  getToolTemperature,
   CONTINUE_TOOL_NAME,
   EXPAND_TOOL_NAME,
   ACTIVE_VOICE_PROMPT,
@@ -2132,6 +2133,7 @@ export default function App() {
         text: sentence,
         modelKey: null,
         backend: null,
+        temperature: 0.3,
       });
       return (res && res.text) || null;
     } catch {
@@ -2826,7 +2828,7 @@ export default function App() {
     ) {
       return;
     }
-    express.runExpress(expressPendingText, expressRunOptions);
+    express.runExpress(expressPendingText, { ...expressRunOptions, tone });
   }
 
   // Replace the express snapshot range in one step. Undo restores it.
@@ -3210,7 +3212,7 @@ export default function App() {
       const temperature =
         name === EXPAND_TOOL_NAME
           ? continueTemperatureValue(continueTemperature)
-          : undefined;
+          : getToolTemperature(name);
       const result = await runTransform({
         prompt,
         text: sourceText,
@@ -3273,7 +3275,7 @@ export default function App() {
       const temperature =
         name === EXPAND_TOOL_NAME
           ? continueTemperatureValue(continueTemperature)
-          : undefined;
+          : getToolTemperature(name);
       const result = await runTransform({
         prompt,
         text: chunk.text,
@@ -4009,7 +4011,7 @@ export default function App() {
               expressIsModelAllowed={isExpressAllowed}
               onExpressToneChange={handleExpressToneChange}
               onExpressReplace={replaceExpressRange}
-              onExpressRun={(pastedText) => {
+              onExpressRun={(pastedText, tone) => {
                 const text = typeof pastedText === "string" ? pastedText.trim() : "";
                 if (!text) {
                   return;
@@ -4020,7 +4022,10 @@ export default function App() {
                 }
                 setExpressOverLimit(false);
                 setExpressPendingText(null);
-                express.runExpress(text, expressRunOptions);
+                express.runExpress(text, {
+                  ...expressRunOptions,
+                  tone: tone || express.activeTone,
+                });
               }}
               onExpressDismiss={dismissExpress}
             />

@@ -130,6 +130,45 @@ export const REWRITE_CLASS_TOOLS = [
   EXPAND_TOOL_NAME,
 ];
 
+// Greedy decoding stops broken syntax in tables.
+// Low temperatures protect facts in summaries and formal tones.
+// Higher temperatures give freedom for creative tones.
+export const TOOL_TEMPERATURES = Object.freeze({
+  Table: 0.0,
+  Concise: 0.2,
+  Summary: 0.2,
+  "Key Points": 0.2,
+  List: 0.2,
+  Professional: 0.3,
+  Academic: 0.3,
+  Formal: 0.3,
+  Rewrite: 0.5,
+  Casual: 0.6,
+  Friendly: 0.6,
+  Playful: 0.6,
+  Empathetic: 0.6,
+  Persuasive: 0.6,
+  Humorous: 0.6,
+});
+
+export const EXPRESS_TONE_TEMPERATURES = Object.freeze({
+  auto: 0.3,
+  concise: 0.2,
+  professional: 0.3,
+  formal: 0.3,
+  casual: 0.6,
+  friendly: 0.6,
+});
+
+export const DEFAULT_TOOL_TEMPERATURE = 0.4;
+
+export function getToolTemperature(name, options = {}) {
+  if (options && typeof options.customTemperature === "number") {
+    return options.customTemperature;
+  }
+  return TOOL_TEMPERATURES[name] ?? DEFAULT_TOOL_TEMPERATURE;
+}
+
 const OVERRIDES_STORAGE_KEY = "lexicon:prompt_overrides";
 const CUSTOM_TOOLS_STORAGE_KEY = "lexicon:custom_tools";
 export const MAX_CUSTOM_TOOLS = 5;

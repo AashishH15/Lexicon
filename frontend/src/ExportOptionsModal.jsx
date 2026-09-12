@@ -122,11 +122,13 @@ export default function ExportOptionsModal({ editor, mode, onClose }) {
       const systemInstruction =
         "You are Lex, a document styling engine. Generate ONLY clean, valid CSS rules for rich text documents inside a .ProseMirror container based on the user's styling request. Target selectors such as .ProseMirror, .ProseMirror h1, .ProseMirror h2, .ProseMirror h3, .ProseMirror p, .ProseMirror blockquote, .ProseMirror table, .ProseMirror pre. Output ONLY raw CSS lines. Do NOT include markdown code blocks, explanation text, or triple backticks.";
 
+      // Near-greedy decoding prevents syntax errors in generated CSS rules.
       const res = await transformText({
         prompt: systemInstruction,
         text: targetPrompt.trim(),
         requestId,
         signal: controller.signal,
+        temperature: 0.1,
       });
 
       let generated = (res?.text || "").trim();

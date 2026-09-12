@@ -131,7 +131,7 @@ export default function ExpressCard({
       return;
     }
     if (typeof onRun === "function") {
-      onRun(input.trim());
+      onRun(input.trim(), displayTone);
     }
   }
 

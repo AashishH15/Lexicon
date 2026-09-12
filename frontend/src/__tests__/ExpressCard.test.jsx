@@ -220,7 +220,7 @@ describe("ExpressCard empty and gated modes", () => {
         .querySelector("button[aria-label='Run Express']")
         .dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
-    expect(handlers.onRun).toHaveBeenCalledWith("Estoy contento.");
+    expect(handlers.onRun).toHaveBeenCalledWith("Estoy contento.", "professional");
   });
 
   it("shows Copy without Replace when results come from paste mode", async () => {
