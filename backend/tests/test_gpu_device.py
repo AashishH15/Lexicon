@@ -36,11 +36,75 @@ def test_get_hardware_diagnostics():
     assert "cpu" in diag
     assert "memory" in diag
     assert "gpu" in diag
+    assert "accelerators" in diag
+    assert "dedicated" in diag["accelerators"]
+    assert "integrated" in diag["accelerators"]
+    assert "npu" in diag["accelerators"]
+    assert isinstance(diag["accelerators"]["dedicated"], list)
+    assert isinstance(diag["accelerators"]["integrated"], list)
+    assert isinstance(diag["accelerators"]["npu"], list)
     assert "recommended_tier" in diag
     assert isinstance(diag["cpu"]["compatible"], bool)
     assert isinstance(diag["cpu"]["features"], list)
     assert diag["cpu"]["arch"]
     assert diag["memory"]["ram_gb"] > 0
+
+
+def test_detect_all_accelerators_windows_mock():
+    mock_gpus_json = """[
+        {"Name": "Parsec Virtual Display Adapter", "AdapterRAM": null, "PNPDeviceID": "ROOT\\\\DISPLAY\\\\0000"},
+        {"Name": "NVIDIA GeForce RTX 4070 SUPER", "AdapterRAM": 4293918720, "PNPDeviceID": "PCI\\\\VEN_10DE&DEV_2783"},
+        {"Name": "AMD Radeon(TM) Graphics", "AdapterRAM": 536870912, "PNPDeviceID": "PCI\\\\VEN_1002&DEV_13C0"},
+        {"Name": "Intel(R) Arc(TM) A770 Graphics", "AdapterRAM": 4293918720, "PNPDeviceID": "PCI\\\\VEN_8086&DEV_5690"}
+    ]"""
+
+    mock_npus_json = """[
+        {"Name": "Intel(R) AI Boost", "PNPClass": "ComputeAccelerator", "DeviceID": "PCI\\\\VEN_8086&DEV_7D1D", "Manufacturer": "Intel Corporation"},
+        {"Name": "USB Input Device", "PNPClass": "HIDClass", "DeviceID": "USB\\\\VID_048D", "Manufacturer": "Generic"}
+    ]"""
+
+    def mock_subprocess_run(cmd, *args, **kwargs):
+        cmd_str = " ".join(cmd) if isinstance(cmd, list) else str(cmd)
+        result = MagicMock()
+        result.returncode = 0
+        if "Win32_VideoController" in cmd_str:
+            result.stdout = mock_gpus_json
+        elif "Win32_PnPEntity" in cmd_str:
+            result.stdout = mock_npus_json
+        else:
+            result.stdout = ""
+        return result
+
+    with patch("sys.platform", "win32"):
+        with patch("subprocess.run", side_effect=mock_subprocess_run):
+            with patch.object(
+                inference,
+                "_query_nvidia_gpu",
+                return_value={
+                    "count": 1,
+                    "name": "NVIDIA GeForce RTX 4070 SUPER",
+                    "vram_gb": 12.0,
+                    "backend": "CUDA",
+                    "cuda_available": True,
+                },
+            ):
+                res = inference.detect_all_accelerators()
+                assert len(res["dedicated"]) == 2  # NVIDIA and Intel Arc dGPU
+                assert len(res["integrated"]) == 1  # AMD Radeon(TM) Graphics
+                assert len(res["npu"]) == 1  # Intel(R) AI Boost (USB Input filtered out)
+
+                nvidia = next(d for d in res["dedicated"] if d["vendor"] == "NVIDIA")
+                assert nvidia["name"] == "NVIDIA GeForce RTX 4070 SUPER"
+                assert nvidia["vram_gb"] == 12.0  # High-precision VRAM from nvidia-smi
+                assert nvidia["supported"] is True
+
+                amd = res["integrated"][0]
+                assert amd["name"] == "AMD Radeon(TM) Graphics"
+                assert amd["vendor"] == "AMD"
+
+                npu = res["npu"][0]
+                assert npu["name"] == "Intel(R) AI Boost"
+                assert npu["vendor"] == "Intel"
 
 
 def test_ai_prefs_device_default_and_validation(tmp_path):

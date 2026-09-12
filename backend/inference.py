@@ -305,6 +305,210 @@ def _query_nvidia_gpu() -> dict:
     return info
 
 
+def _detect_windows_accelerators(results: dict, nv_info: dict) -> None:
+    ps_gpu = (
+        "Get-CimInstance Win32_VideoController | "
+        "Select-Object Name, AdapterRAM, PNPDeviceID, DriverVersion | "
+        "ConvertTo-Json -Compress"
+    )
+    try:
+        proc = subprocess.run(
+            ["powershell", "-NoProfile", "-NonInteractive", "-Command", ps_gpu],
+            capture_output=True,
+            text=True,
+            timeout=4,
+        )
+        if proc.returncode == 0 and proc.stdout.strip():
+            raw = json.loads(proc.stdout)
+            if isinstance(raw, dict):
+                raw = [raw]
+            for item in raw:
+                name = (item.get("Name") or "").strip()
+                if not name:
+                    continue
+                lower = name.lower()
+                # Software and remote display adapters do not give hardware acceleration.
+                if any(v in lower for v in ("virtual", "basic display", "remote", "citrix", "rdp", "vnc")):
+                    continue
+                pnp_id = item.get("PNPDeviceID") or ""
+                vendor = "Unknown"
+                if "VEN_10DE" in pnp_id or "nvidia" in lower:
+                    vendor = "NVIDIA"
+                elif "VEN_1002" in pnp_id or "amd" in lower or "radeon" in lower:
+                    vendor = "AMD"
+                elif "VEN_8086" in pnp_id or "intel" in lower:
+                    vendor = "Intel"
+
+                is_integrated = False
+                if vendor == "NVIDIA":
+                    is_integrated = False
+                elif vendor == "AMD":
+                    if any(k in lower for k in ("radeon rx", "radeon pro", "firepro")):
+                        is_integrated = False
+                    else:
+                        is_integrated = True
+                elif vendor == "Intel":
+                    if re.search(r"arc.*[ab]\d{3}", lower) or "arc pro" in lower:
+                        is_integrated = False
+                    else:
+                        is_integrated = True
+
+                # WMI AdapterRAM is limited to 4GB. Use nvidia-smi memory values when available.
+                vram_gb = None
+                if vendor == "NVIDIA" and nv_info.get("cuda_available") and nv_info.get("vram_gb"):
+                    vram_gb = nv_info["vram_gb"]
+                else:
+                    ram_bytes = item.get("AdapterRAM")
+                    if ram_bytes and float(ram_bytes) > 0:
+                        vram_gb = round(float(ram_bytes) / (1024**3), 2)
+
+                supported = bool(vendor == "NVIDIA" and nv_info.get("cuda_available"))
+                entry = {
+                    "name": name,
+                    "vendor": vendor,
+                    "type": "integrated" if is_integrated else "dedicated",
+                    "vram_gb": vram_gb,
+                    "supported": supported,
+                }
+                target = results["integrated"] if is_integrated else results["dedicated"]
+                if not any(d["name"] == name for d in target):
+                    target.append(entry)
+    except Exception:
+        pass
+
+    ps_npu = (
+        "Get-CimInstance Win32_PnPEntity | "
+        "Where-Object { "
+        "$_.PNPClass -eq 'ComputeAccelerator' -or "
+        "$_.Name -match '(?i)\\b(AI Boost|NPU|IPU|Neural Processor|Hexagon)\\b' "
+        "} | "
+        "Select-Object Name, PNPClass, DeviceID, Manufacturer | "
+        "ConvertTo-Json -Compress"
+    )
+    try:
+        proc = subprocess.run(
+            ["powershell", "-NoProfile", "-NonInteractive", "-Command", ps_npu],
+            capture_output=True,
+            text=True,
+            timeout=4,
+        )
+        if proc.returncode == 0 and proc.stdout.strip():
+            raw = json.loads(proc.stdout)
+            if isinstance(raw, dict):
+                raw = [raw]
+            for item in raw:
+                name = (item.get("Name") or "").strip()
+                if not name:
+                    continue
+                lower = name.lower()
+                # Word boundaries stop false matches such as USB Input Device.
+                if not re.search(r"\b(ai boost|npu|ipu|neural processor|hexagon)\b", lower):
+                    if item.get("PNPClass") != "ComputeAccelerator":
+                        continue
+                vendor = "Unknown"
+                mfg = (item.get("Manufacturer") or "").lower()
+                if "intel" in lower or "intel" in mfg:
+                    vendor = "Intel"
+                elif "amd" in lower or "amd" in mfg:
+                    vendor = "AMD"
+                elif "qualcomm" in lower or "hexagon" in lower or "snapdragon" in lower:
+                    vendor = "Qualcomm"
+
+                entry = {
+                    "name": name,
+                    "vendor": vendor,
+                    "type": "npu",
+                    "device_id": item.get("DeviceID"),
+                    "supported": False,
+                }
+                if not any(n["name"] == name for n in results["npu"]):
+                    results["npu"].append(entry)
+    except Exception:
+        pass
+
+
+def _detect_macos_accelerators(results: dict, nv_info: dict) -> None:
+    if platform.machine() in ("arm64", "aarch64"):
+        # Apple Silicon SoC combines GPU and Neural Engine.
+        results["integrated"].append({
+            "name": "Apple M-Series GPU",
+            "vendor": "Apple",
+            "type": "integrated",
+            "supported": True,
+        })
+        results["npu"].append({
+            "name": "Apple Neural Engine (ANE)",
+            "vendor": "Apple",
+            "type": "npu",
+            "supported": False,
+        })
+
+
+def _detect_linux_accelerators(results: dict, nv_info: dict) -> None:
+    if not shutil.which("lspci"):
+        return
+    try:
+        proc = subprocess.run(["lspci"], capture_output=True, text=True, timeout=3)
+        if proc.returncode == 0:
+            for line in proc.stdout.splitlines():
+                lower = line.lower()
+                if any(k in lower for k in ("vga compatible controller", "3d controller", "display controller")):
+                    vendor = "Unknown"
+                    if "nvidia" in lower:
+                        vendor = "NVIDIA"
+                    elif "amd" in lower or "ati" in lower or "radeon" in lower:
+                        vendor = "AMD"
+                    elif "intel" in lower:
+                        vendor = "Intel"
+                    is_int = "integrated" in lower or (vendor == "Intel" and "arc" not in lower)
+                    name = line.split(":", 2)[-1].strip() if ":" in line else line.strip()
+                    target = results["integrated"] if is_int else results["dedicated"]
+                    target.append({
+                        "name": name,
+                        "vendor": vendor,
+                        "type": "integrated" if is_int else "dedicated",
+                        "supported": vendor == "NVIDIA" and nv_info.get("cuda_available", False),
+                    })
+    except Exception:
+        pass
+
+
+def detect_all_accelerators() -> dict:
+    """Find dedicated GPUs, integrated GPUs, and NPUs across platforms."""
+    results = {
+        "dedicated": [],
+        "integrated": [],
+        "npu": [],
+    }
+
+    nv_info = _query_nvidia_gpu()
+
+    if sys.platform == "win32":
+        _detect_windows_accelerators(results, nv_info)
+    elif sys.platform == "darwin":
+        _detect_macos_accelerators(results, nv_info)
+    else:
+        _detect_linux_accelerators(results, nv_info)
+
+    # nvidia-smi gives verified CUDA state when platform query data is incomplete.
+    if nv_info.get("cuda_available") and nv_info.get("name"):
+        existing = any(
+            d.get("vendor") == "NVIDIA" and d.get("name") == nv_info["name"]
+            for d in results["dedicated"]
+        )
+        if not existing:
+            results["dedicated"].append({
+                "name": nv_info["name"],
+                "vendor": "NVIDIA",
+                "type": "dedicated",
+                "vram_gb": nv_info["vram_gb"],
+                "supported": True,
+                "active": True,
+            })
+
+    return results
+
+
 def resolve_n_gpu_layers(
     model_key: str,
     device: str,
@@ -417,6 +621,7 @@ def get_hardware_diagnostics() -> dict:
         gpu_info["count"],
         device_pref,
     )
+    accelerators = detect_all_accelerators()
     return {
         "cpu": {
             "name": _cpu_name(),
@@ -429,6 +634,7 @@ def get_hardware_diagnostics() -> dict:
             "vram_gb": gpu_info["vram_gb"],
         },
         "gpu": gpu_info,
+        "accelerators": accelerators,
         "device": device_pref,
         "limit_vram_offload": limit_vram,
         "recommended_tier": recommended,
@@ -446,6 +652,7 @@ def detect_gpu_hardware() -> dict:
         "gpu_offload_supported": gpu["cuda_available"],
         "device": diag["device"],
         "recommended_tier": diag["recommended_tier"],
+        "accelerators": diag.get("accelerators"),
     }
 
 

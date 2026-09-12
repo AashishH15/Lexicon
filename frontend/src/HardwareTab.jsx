@@ -101,12 +101,24 @@ export default function HardwareTab() {
   const featureBadges =
     cpu.features && cpu.features.length > 0 ? cpu.features : [cpu.arch || "unknown"];
 
+  const accelerators = hardware?.accelerators || { dedicated: [], integrated: [], npu: [] };
+  const dedicatedGpus = accelerators.dedicated || [];
+  const integratedGpus = accelerators.integrated || [];
+  const npus = accelerators.npu || [];
+
+  // Exclude primary compute GPU from additional dedicated listings to prevent duplicated UI items.
+  const additionalDedicatedGpus = dedicatedGpus.filter(
+    (dg) => !gpu.name || dg.name.toLowerCase() !== gpu.name.toLowerCase()
+  );
+
   return (
     <div className="space-y-4" data-testid="hardware-tab-container">
       <div>
         <h2 className="font-serif text-xl font-bold text-ink">Hardware</h2>
         <p className="mt-1 font-sans text-xs text-muted">
-          CPU, memory, and NVIDIA GPU settings for local models.
+          {npus.length > 0
+            ? "CPU, memory, graphics, and neural processor diagnostics for local models."
+            : "CPU, memory, and graphics settings for local models."}
         </p>
       </div>
 
@@ -236,6 +248,24 @@ export default function HardwareTab() {
           </div>
         </div>
 
+        {additionalDedicatedGpus.map((dg, idx) => (
+          <div
+            key={dg.name + idx}
+            className="mt-3 flex flex-col gap-2 rounded-md border border-hairline bg-surface/60 px-3 py-3 sm:flex-row sm:items-center sm:justify-between"
+          >
+            <div>
+              <p className="font-sans text-sm font-medium text-ink">{dg.name}</p>
+              <p className="mt-0.5 font-sans text-xs text-muted">
+                {dg.vram_gb ? `${dg.vram_gb} GB VRAM · ` : ""}
+                Dedicated graphics
+              </p>
+            </div>
+            <span className="inline-flex items-center self-start rounded border border-hairline bg-surface px-2 py-0.5 font-mono text-[10px] font-medium text-ink sm:self-center">
+              Dedicated GPU
+            </span>
+          </div>
+        ))}
+
         <div className="mt-3 flex items-start justify-between gap-4 border-t border-hairline pt-3">
           <div className="min-w-0">
             <p className="font-sans text-sm font-medium text-ink">
@@ -256,6 +286,74 @@ export default function HardwareTab() {
           </div>
         </div>
       </div>
+
+      {integratedGpus.length > 0 && (
+        <div className="rounded-lg border border-hairline bg-canvas px-4 py-3.5">
+          <div className="flex items-center justify-between gap-3">
+            <p className="font-mono text-[10px] uppercase tracking-widest text-muted">
+              Integrated GPU
+            </p>
+            <span className="rounded border border-hairline bg-surface px-2 py-0.5 font-mono text-[10px] text-muted">
+              Processor Graphics
+            </span>
+          </div>
+          <div className="mt-3 space-y-2">
+            {integratedGpus.map((igpu, idx) => (
+              <div
+                key={igpu.name + idx}
+                className="flex flex-col gap-2 rounded-md border border-hairline bg-surface/60 px-3 py-3 sm:flex-row sm:items-center sm:justify-between"
+              >
+                <div>
+                  <p className="font-sans text-sm font-medium text-ink">
+                    {igpu.name}
+                  </p>
+                  <p className="mt-0.5 font-sans text-xs text-muted">
+                    {igpu.vram_gb ? `${igpu.vram_gb} GB VRAM · ` : ""}
+                    Processor graphics · Shared system memory
+                  </p>
+                </div>
+                <span className="inline-flex items-center self-start rounded border border-hairline bg-surface px-2 py-0.5 font-mono text-[10px] font-medium text-ink sm:self-center">
+                  Integrated GPU
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {npus.length > 0 && (
+        <div className="rounded-lg border border-hairline bg-canvas px-4 py-3.5">
+          <div className="flex items-center justify-between gap-3">
+            <p className="font-mono text-[10px] uppercase tracking-widest text-muted">
+              Neural Processing Unit (NPU)
+            </p>
+            <span className="inline-flex items-center gap-1 font-sans text-[11px] font-semibold text-pale-blue-text">
+              <Check size={12} weight="bold" />
+              Detected
+            </span>
+          </div>
+          <div className="mt-3 space-y-2">
+            {npus.map((npuItem, idx) => (
+              <div
+                key={npuItem.name + idx}
+                className="flex flex-col gap-2 rounded-md border border-hairline bg-surface/60 px-3 py-3 sm:flex-row sm:items-center sm:justify-between"
+              >
+                <div>
+                  <p className="font-sans text-sm font-medium text-ink">
+                    {npuItem.name}
+                  </p>
+                  <p className="mt-0.5 font-sans text-xs text-muted">
+                    Dedicated low-power AI processor · Neural Processing Unit
+                  </p>
+                </div>
+                <span className="inline-flex items-center self-start rounded border border-pale-blue-text/30 bg-pale-blue-text/10 px-2 py-0.5 font-mono text-[10px] font-semibold text-pale-blue-text sm:self-center">
+                  NPU
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

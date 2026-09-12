@@ -185,4 +185,82 @@ describe("HardwareTab Component", () => {
     expect(badge.querySelector("svg")).not.toBe(null);
     expect(container.textContent).not.toContain("✓");
   });
+
+  it("renders all detected accelerators (dedicated, integrated, and NPU)", async () => {
+    api.getHardwareProfile.mockResolvedValue({
+      ...mockHardwareData,
+      accelerators: {
+        dedicated: [
+          {
+            name: "NVIDIA GeForce RTX 4070 SUPER",
+            vendor: "NVIDIA",
+            type: "dedicated",
+            vram_gb: 11.99,
+            supported: true,
+            active: true,
+          },
+        ],
+        integrated: [
+          {
+            name: "AMD Radeon(TM) Graphics",
+            vendor: "AMD",
+            type: "integrated",
+            vram_gb: 0.5,
+          },
+        ],
+        npu: [
+          {
+            name: "Intel(R) AI Boost",
+            vendor: "Intel",
+            type: "npu",
+          },
+        ],
+      },
+    });
+
+    await act(async () => {
+      root.render(<HardwareTab />);
+    });
+
+    expect(container.textContent).toContain("AMD Radeon(TM) Graphics");
+    expect(container.textContent).toContain("Integrated GPU");
+    expect(container.textContent).toContain("Intel(R) AI Boost");
+    expect(container.textContent).toContain("Neural Processing Unit");
+  });
+
+  it("does not render NPU section when no NPU is detected", async () => {
+    api.getHardwareProfile.mockResolvedValue({
+      ...mockHardwareData,
+      accelerators: {
+        dedicated: [
+          {
+            name: "NVIDIA GeForce RTX 4070 SUPER",
+            vendor: "NVIDIA",
+            type: "dedicated",
+            vram_gb: 11.99,
+            supported: true,
+            active: true,
+          },
+        ],
+        integrated: [
+          {
+            name: "AMD Radeon(TM) Graphics",
+            vendor: "AMD",
+            type: "integrated",
+            vram_gb: 0.5,
+          },
+        ],
+        npu: [],
+      },
+    });
+
+    await act(async () => {
+      root.render(<HardwareTab />);
+    });
+
+    expect(container.textContent).not.toContain("Neural Processing Unit");
+    expect(container.textContent).not.toContain("No NPU detected");
+    expect(container.textContent).toContain("AMD Radeon(TM) Graphics");
+    expect(container.textContent).toContain("Integrated GPU");
+  });
 });
