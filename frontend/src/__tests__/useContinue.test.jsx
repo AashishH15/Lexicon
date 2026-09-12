@@ -375,13 +375,15 @@ describe("truncateSentences", () => {
 });
 
 describe("continue idle delay", () => {
-  it("snaps stored values to 5s steps within 5 to 60", () => {
+  it("snaps stored values to 1s steps within 1 to 60", () => {
     localStorage.setItem("lexicon:continueIdleSeconds", "7");
-    expect(loadContinueIdleSeconds()).toBe(5);
+    expect(loadContinueIdleSeconds()).toBe(7);
     localStorage.setItem("lexicon:continueIdleSeconds", "100");
     expect(loadContinueIdleSeconds()).toBe(60);
-    localStorage.setItem("lexicon:continueIdleSeconds", "3");
-    expect(loadContinueIdleSeconds()).toBe(5);
+    localStorage.setItem("lexicon:continueIdleSeconds", "0");
+    expect(loadContinueIdleSeconds()).toBe(1);
+    localStorage.setItem("lexicon:continueIdleSeconds", "1");
+    expect(loadContinueIdleSeconds()).toBe(1);
     localStorage.removeItem("lexicon:continueIdleSeconds");
   });
 

@@ -132,7 +132,7 @@ describe("Settings Continue tab", () => {
       'input[aria-label="Auto Continue delay in seconds"]',
     );
     expect(slider).not.toBe(null);
-    expect(slider.getAttribute("min")).toBe("5");
+    expect(slider.getAttribute("min")).toBe("1");
     expect(slider.getAttribute("max")).toBe("60");
     const setValue = Object.getOwnPropertyDescriptor(
       HTMLInputElement.prototype,

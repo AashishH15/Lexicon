@@ -24,9 +24,9 @@ export const CONTINUE_IDLE_MS = 8000;
 export const CONTINUE_LENGTH_KEY = "lexicon:continueLength";
 export const CONTINUE_AUTO_KEY = "lexicon:continueAuto";
 export const CONTINUE_IDLE_KEY = "lexicon:continueIdleSeconds";
-export const CONTINUE_IDLE_MIN_SECONDS = 5;
+export const CONTINUE_IDLE_MIN_SECONDS = 1;
 export const CONTINUE_IDLE_MAX_SECONDS = 60;
-export const CONTINUE_IDLE_STEP_SECONDS = 5;
+export const CONTINUE_IDLE_STEP_SECONDS = 1;
 export const CONTINUE_IDLE_DEFAULT_SECONDS = 10;
 
 export function loadContinueLength() {
@@ -73,7 +73,7 @@ export function loadContinueIdleSeconds() {
   }
 }
 
-// Idle delays snap to 5s steps inside 5 to 60 seconds.
+// Idle delays snap to 1s steps inside 1 to 60 seconds.
 export function snapContinueIdleSeconds(value) {
   const stepped =
     Math.round(Number(value) / CONTINUE_IDLE_STEP_SECONDS) *
