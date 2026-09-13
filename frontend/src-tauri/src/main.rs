@@ -4,8 +4,6 @@
 
 use serde::Serialize;
 use std::env;
-#[cfg(not(debug_assertions))]
-use std::fs;
 use std::io::{Read, Write};
 use std::net::{SocketAddr, TcpStream};
 use std::path::PathBuf;
@@ -26,7 +24,6 @@ use tauri::webview::PageLoadEvent;
 use tauri::{Manager, RunEvent, WindowEvent};
 #[cfg(target_os = "windows")]
 use tauri::{WebviewUrl, WebviewWindowBuilder};
-#[cfg(not(debug_assertions))]
 use tauri_plugin_autostart::ManagerExt;
 use tauri_plugin_dialog::DialogExt;
 use tauri_plugin_updater::{Update, UpdaterExt};
@@ -51,8 +48,6 @@ const AUTOSTART_ARG: &str = "--autostart";
 const NATIVE_PDF_WINDOW_LABEL: &str = "lexicon-pdf-preview";
 #[cfg(target_os = "windows")]
 const NATIVE_PDF_TIMEOUT: Duration = Duration::from_secs(900);
-#[cfg(not(debug_assertions))]
-const AUTOSTART_INITIALIZED_FILE: &str = "autostart-initialized";
 
 #[cfg(target_os = "windows")]
 const CREATE_NO_WINDOW: u32 = 0x08000000;
@@ -89,26 +84,32 @@ fn launched_from_autostart() -> bool {
     env::args().any(|argument| argument == AUTOSTART_ARG)
 }
 
-#[cfg(not(debug_assertions))]
-fn autostart_was_initialized(app: &tauri::AppHandle) -> bool {
-    app.path()
-        .app_config_dir()
-        .map(|path| path.join(AUTOSTART_INITIALIZED_FILE).is_file())
-        .unwrap_or(false)
+#[cfg(target_os = "windows")]
+fn user_disabled_in_task_manager() -> bool {
+    use std::os::windows::process::CommandExt;
+    let mut cmd = Command::new("reg");
+    cmd.args([
+        "query",
+        r"HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run",
+        "/v",
+        "Lexicon",
+    ]);
+    cmd.creation_flags(CREATE_NO_WINDOW);
+    if let Ok(output) = cmd.output() {
+        if output.status.success() {
+            let text = String::from_utf8_lossy(&output.stdout).to_uppercase();
+            // Windows records byte 0x03 when a user disables a startup entry in Task Manager.
+            if text.contains("03000000") || text.contains("REG_BINARY    03") {
+                return true;
+            }
+        }
+    }
+    false
 }
 
-#[cfg(not(debug_assertions))]
-fn mark_autostart_initialized(app: &tauri::AppHandle) {
-    let Ok(config_dir) = app.path().app_config_dir() else {
-        return;
-    };
-    if let Err(error) = fs::create_dir_all(&config_dir) {
-        eprintln!("Warning: failed to create Lexicon config directory: {error}");
-        return;
-    }
-    if let Err(error) = fs::write(config_dir.join(AUTOSTART_INITIALIZED_FILE), b"1") {
-        eprintln!("Warning: failed to save Lexicon startup preference: {error}");
-    }
+#[cfg(not(target_os = "windows"))]
+fn user_disabled_in_task_manager() -> bool {
+    false
 }
 
 fn request_backend_shutdown() -> bool {
@@ -479,6 +480,8 @@ fn prepare_for_update(app_handle: tauri::AppHandle) -> Result<(), String> {
     kill_backend_processes();
     Ok(())
 }
+
+
 
 fn report_native_pdf_result(app_handle: &tauri::AppHandle, result: Result<(), String>) {
     let sender = app_handle.try_state::<NativePdfState>().and_then(|state| {
@@ -968,26 +971,13 @@ fn main() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(move |app| {
-            #[cfg(not(debug_assertions))]
-            {
-                if !autostart_was_initialized(app.handle()) {
-                    let autolaunch = app.autolaunch();
-                    let initialized = match autolaunch.is_enabled() {
-                        Ok(false) => match autolaunch.enable() {
-                            Ok(()) => true,
-                            Err(error) => {
-                                eprintln!("Warning: failed to enable Lexicon startup: {error}");
-                                false
-                            }
-                        },
-                        Ok(true) => true,
-                        Err(error) => {
-                            eprintln!("Warning: failed to inspect Lexicon startup: {error}");
-                            false
-                        }
-                    };
-                    if initialized {
-                        mark_autostart_initialized(app.handle());
+            // Restore startup registration on launch or update,
+            // unless the user disabled Lexicon in their OS startup manager.
+            if !user_disabled_in_task_manager() {
+                let autolaunch = app.autolaunch();
+                if let Ok(false) = autolaunch.is_enabled() {
+                    if let Err(error) = autolaunch.enable() {
+                        eprintln!("Warning: failed to restore Lexicon startup: {error}");
                     }
                 }
             }
@@ -1117,4 +1107,15 @@ fn main() {
             }
             _ => {}
         });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_user_disabled_in_task_manager_execution() {
+        // Must execute cleanly without panic.
+        let _ = user_disabled_in_task_manager();
+    }
 }

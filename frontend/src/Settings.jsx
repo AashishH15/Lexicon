@@ -540,6 +540,7 @@ export default function Settings({
   const searchRef = useRef(null);
   const resetMenuRef = useRef(null);
 
+
   const isDefault =
     language === SETTINGS_DEFAULTS.language &&
     fontSize === SETTINGS_DEFAULTS.fontSize &&
@@ -1266,6 +1267,8 @@ export default function Settings({
                       className="mt-3 w-full rounded border border-hairline bg-canvas px-3 py-2 font-sans text-sm text-ink outline-none transition-colors placeholder:text-muted focus:border-muted"
                     />
                   </div>
+
+
                 </div>
               )}
 
