@@ -509,6 +509,94 @@ def detect_all_accelerators() -> dict:
     return results
 
 
+def resolve_active_compute_gpu(
+    accelerators: dict,
+    nv_info: dict,
+    platform_name: str | None = None,
+    machine: str | None = None,
+    ram_gb: float | None = None,
+) -> dict:
+    """Resolve the primary GPU accelerator across Metal, CUDA, and Vulkan."""
+    if platform_name is None:
+        platform_name = sys.platform
+    if machine is None:
+        machine = platform.machine().lower()
+
+    # macOS Apple Silicon uses unified memory with Metal.
+    if platform_name == "darwin" and machine in ("arm64", "aarch64"):
+        return {
+            "count": 1,
+            "name": "Apple M-Series GPU",
+            "vendor": "Apple",
+            "vram_gb": float(ram_gb or 16.0),
+            "backend": "Metal",
+            "device_id": 0,
+            "offload_supported": True,
+        }
+
+    # NVIDIA hardware uses verified CUDA drivers directly.
+    if nv_info.get("cuda_available") and nv_info.get("name"):
+        return {
+            "count": nv_info.get("count", 1),
+            "name": nv_info["name"],
+            "vendor": "NVIDIA",
+            "vram_gb": float(nv_info.get("vram_gb") or 0.0),
+            "backend": "CUDA",
+            "device_id": nv_info.get("device_id", 0),
+            "offload_supported": True,
+        }
+
+    # Dedicated adapters give higher memory bandwidth than processor graphics.
+    dedicated = accelerators.get("dedicated", [])
+    for d in sorted(dedicated, key=lambda x: float(x.get("vram_gb") or 0.0), reverse=True):
+        if d.get("vendor") in ("AMD", "Intel") or "vulkan" in (d.get("backend") or "").lower():
+            return {
+                "count": 1,
+                "name": d["name"],
+                "vendor": d.get("vendor", "Unknown"),
+                "vram_gb": float(d.get("vram_gb") or 0.0),
+                "backend": "Vulkan",
+                "device_id": 0,
+                "offload_supported": True,
+            }
+
+    integrated = accelerators.get("integrated", [])
+    for ig in sorted(integrated, key=lambda x: float(x.get("vram_gb") or 0.0), reverse=True):
+        if ig.get("vendor") in ("AMD", "Intel"):
+            return {
+                "count": 1,
+                "name": ig["name"],
+                "vendor": ig.get("vendor", "Unknown"),
+                "vram_gb": float(ig.get("vram_gb") or 0.0),
+                "backend": "Vulkan",
+                "device_id": 0,
+                "offload_supported": True,
+            }
+
+    return {
+        "count": 0,
+        "name": None,
+        "vendor": "None",
+        "vram_gb": 0.0,
+        "backend": "None",
+        "device_id": 0,
+        "offload_supported": False,
+    }
+
+
+def get_active_compute_gpu() -> dict:
+    """Return active GPU compute information for runtime inference."""
+    nv_info = _query_nvidia_gpu()
+    accelerators = detect_all_accelerators()
+    try:
+        import psutil
+
+        ram_gb = round(psutil.virtual_memory().total / (1024**3), 2)
+    except Exception:
+        ram_gb = 16.0
+    return resolve_active_compute_gpu(accelerators, nv_info, ram_gb=ram_gb)
+
+
 def resolve_n_gpu_layers(
     model_key: str,
     device: str,
@@ -520,7 +608,7 @@ def resolve_n_gpu_layers(
     if device != "gpu":
         return 0
     if vram_gb is None:
-        vram_gb = float(_query_nvidia_gpu().get("vram_gb") or 0.0)
+        vram_gb = float(get_active_compute_gpu().get("vram_gb") or 0.0)
     if vram_gb <= 0.0:
         return 0
     if not limit_vram_offload:
@@ -590,18 +678,12 @@ def _recommended_tier(vram_gb: float, ram_gb: float, gpu_count: int, device_pref
 
 
 def get_hardware_diagnostics() -> dict:
-    """Return CPU, RAM, and NVIDIA GPU info for the Hardware tab."""
+    """Return CPU, RAM, and GPU info for the Hardware tab."""
     arch = _normalize_arch()
     simd, probed = detect_cpu_instruction_features()
     features = [arch, *simd]
-    gpu_info = _query_nvidia_gpu()
-    if not gpu_info["cuda_available"]:
-        try:
-            import llama_cpp
-
-            gpu_info["cuda_available"] = bool(llama_cpp.llama_supports_gpu_offload())
-        except Exception:
-            pass
+    accelerators = detect_all_accelerators()
+    nv_info = _query_nvidia_gpu()
 
     try:
         import psutil
@@ -610,18 +692,32 @@ def get_hardware_diagnostics() -> dict:
     except Exception:
         ram_gb = 16.0
 
+    active_gpu = resolve_active_compute_gpu(accelerators, nv_info, ram_gb=ram_gb)
+
+    gpu_info = {
+        "count": active_gpu["count"],
+        "name": active_gpu["name"],
+        "vendor": active_gpu["vendor"],
+        "vram_gb": active_gpu["vram_gb"],
+        "backend": active_gpu["backend"],
+        "device_id": active_gpu["device_id"],
+        "cuda_available": bool(
+            active_gpu["backend"] == "CUDA" and active_gpu["offload_supported"]
+        ),
+        "offload_supported": active_gpu["offload_supported"],
+    }
+
     prefs = load_prefs()
     device_pref = prefs.get("device", "gpu")
-    if not gpu_info.get("cuda_available"):
+    if not active_gpu.get("offload_supported"):
         device_pref = "cpu"
     limit_vram = bool(prefs.get("limit_vram_offload", True))
     recommended = _recommended_tier(
-        gpu_info["vram_gb"] or 0.0,
+        active_gpu["vram_gb"] or 0.0,
         ram_gb,
-        gpu_info["count"],
+        active_gpu["count"],
         device_pref,
     )
-    accelerators = detect_all_accelerators()
     return {
         "cpu": {
             "name": _cpu_name(),
@@ -631,7 +727,7 @@ def get_hardware_diagnostics() -> dict:
         },
         "memory": {
             "ram_gb": ram_gb,
-            "vram_gb": gpu_info["vram_gb"],
+            "vram_gb": active_gpu["vram_gb"],
         },
         "gpu": gpu_info,
         "accelerators": accelerators,
@@ -649,7 +745,7 @@ def detect_gpu_hardware() -> dict:
         "has_gpu": gpu["count"] > 0,
         "gpu_name": gpu["name"],
         "vram_gb": gpu["vram_gb"],
-        "gpu_offload_supported": gpu["cuda_available"],
+        "gpu_offload_supported": gpu["offload_supported"],
         "device": diag["device"],
         "recommended_tier": diag["recommended_tier"],
         "accelerators": diag.get("accelerators"),

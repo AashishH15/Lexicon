@@ -263,4 +263,111 @@ describe("HardwareTab Component", () => {
     expect(container.textContent).toContain("AMD Radeon(TM) Graphics");
     expect(container.textContent).toContain("Integrated GPU");
   });
+
+  it("renders AMD GPU with Vulkan backend in the primary compute card", async () => {
+    api.getHardwareProfile.mockResolvedValue({
+      ...mockHardwareData,
+      gpu: {
+        count: 1,
+        name: "AMD Radeon RX 7800 XT",
+        vendor: "AMD",
+        vram_gb: 16.0,
+        backend: "Vulkan",
+        offload_supported: true,
+      },
+      accelerators: {
+        dedicated: [
+          {
+            name: "AMD Radeon RX 7800 XT",
+            vendor: "AMD",
+            type: "dedicated",
+            vram_gb: 16.0,
+            supported: true,
+          },
+        ],
+        integrated: [],
+        npu: [],
+      },
+    });
+
+    await act(async () => {
+      root.render(<HardwareTab />);
+    });
+
+    expect(container.textContent).toContain("1 AMD GPU · Vulkan");
+    expect(container.textContent).toContain("AMD Radeon RX 7800 XT");
+    expect(container.textContent).toContain("16 GB VRAM · Vulkan");
+    expect(container.querySelector('[data-testid="gpu-toggle-off"]')).not.toBeNull();
+    expect(container.querySelector('[data-testid="gpu-toggle-on"]')).not.toBeNull();
+  });
+
+  it("renders Intel Arc GPU with Vulkan backend in the primary compute card", async () => {
+    api.getHardwareProfile.mockResolvedValue({
+      ...mockHardwareData,
+      gpu: {
+        count: 1,
+        name: "Intel(R) Arc(TM) A770 Graphics",
+        vendor: "Intel",
+        vram_gb: 16.0,
+        backend: "Vulkan",
+        offload_supported: true,
+      },
+      accelerators: {
+        dedicated: [
+          {
+            name: "Intel(R) Arc(TM) A770 Graphics",
+            vendor: "Intel",
+            type: "dedicated",
+            vram_gb: 16.0,
+            supported: true,
+          },
+        ],
+        integrated: [],
+        npu: [],
+      },
+    });
+
+    await act(async () => {
+      root.render(<HardwareTab />);
+    });
+
+    expect(container.textContent).toContain("1 Intel GPU · Vulkan");
+    expect(container.textContent).toContain("Intel(R) Arc(TM) A770 Graphics");
+    expect(container.textContent).toContain("16 GB VRAM · Vulkan");
+  });
+
+  it("renders Apple Silicon GPU with Metal backend in the primary compute card", async () => {
+    api.getHardwareProfile.mockResolvedValue({
+      ...mockHardwareData,
+      gpu: {
+        count: 1,
+        name: "Apple M-Series GPU",
+        vendor: "Apple",
+        vram_gb: 32.0,
+        backend: "Metal",
+        offload_supported: true,
+      },
+      accelerators: {
+        dedicated: [],
+        integrated: [
+          {
+            name: "Apple M-Series GPU",
+            vendor: "Apple",
+            type: "integrated",
+            vram_gb: 32.0,
+            supported: true,
+          },
+        ],
+        npu: [],
+      },
+    });
+
+    await act(async () => {
+      root.render(<HardwareTab />);
+    });
+
+    expect(container.textContent).toContain("Apple Silicon · Metal");
+    expect(container.textContent).toContain("Apple M-Series GPU");
+    expect(container.textContent).toContain("32 GB VRAM · Metal");
+  });
 });

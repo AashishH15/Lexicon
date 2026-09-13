@@ -71,7 +71,9 @@ export default function HardwareTab() {
     try {
       setSaving(true);
       const defaultDevice =
-        hardware.gpu?.cuda_available && hardware.gpu?.name ? "gpu" : "cpu";
+        (hardware.gpu?.cuda_available || hardware.gpu?.offload_supported) && hardware.gpu?.name
+          ? "gpu"
+          : "cpu";
       const updated = await setHardwareSettings({
         device: defaultDevice,
         limitVramOffload: true,
@@ -93,7 +95,9 @@ export default function HardwareTab() {
     );
   }
 
-  const hasGpu = Boolean(hardware?.gpu?.cuda_available && hardware?.gpu?.name);
+  const hasGpu = Boolean(
+    (hardware?.gpu?.cuda_available || hardware?.gpu?.offload_supported) && hardware?.gpu?.name
+  );
   const isGpuActive = hasGpu && (hardware?.device || "gpu") === "gpu";
   const cpu = hardware?.cpu || {};
   const memory = hardware?.memory || {};
@@ -109,6 +113,9 @@ export default function HardwareTab() {
   // Exclude primary compute GPU from additional dedicated listings to prevent duplicated UI items.
   const additionalDedicatedGpus = dedicatedGpus.filter(
     (dg) => !gpu.name || dg.name.toLowerCase() !== gpu.name.toLowerCase()
+  );
+  const additionalIntegratedGpus = integratedGpus.filter(
+    (ig) => !gpu.name || ig.name.toLowerCase() !== gpu.name.toLowerCase()
   );
 
   return (
@@ -199,18 +206,20 @@ export default function HardwareTab() {
 
         <p className="mt-2 font-sans text-xs text-muted">
           {hasGpu
-            ? `${gpu.count || 1} NVIDIA GPU · ${gpu.backend || "CUDA"}`
-            : "No NVIDIA GPU detected"}
+            ? gpu.backend === "Metal"
+              ? "Apple Silicon · Metal"
+              : `${gpu.count || 1} ${gpu.vendor || "NVIDIA"} GPU · ${gpu.backend || "CUDA"}`
+            : "No GPU detected"}
         </p>
 
         <div className="mt-3 flex flex-col gap-3 rounded-md border border-hairline bg-surface/60 px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="font-sans text-sm font-medium text-ink">
-              {gpu.name || "No NVIDIA GPU"}
+              {gpu.name || "No GPU"}
             </p>
             <p className="mt-0.5 font-sans text-xs text-muted">
               {gpu.vram_gb ? `${gpu.vram_gb} GB VRAM` : "VRAM unavailable"}
-              {gpu.backend ? ` · ${gpu.backend}` : ""}
+              {gpu.backend && gpu.backend !== "None" ? ` · ${gpu.backend}` : ""}
             </p>
           </div>
           <div
@@ -272,7 +281,7 @@ export default function HardwareTab() {
               Limit Model Offload
             </p>
             <p className="mt-1 font-sans text-xs leading-relaxed text-muted">
-              Keep layers in dedicated NVIDIA VRAM. Anything that does not fit
+              Keep layers in dedicated VRAM. Anything that does not fit
               stays on the CPU instead of spilling into shared GPU memory.
             </p>
           </div>
@@ -287,7 +296,7 @@ export default function HardwareTab() {
         </div>
       </div>
 
-      {integratedGpus.length > 0 && (
+      {additionalIntegratedGpus.length > 0 && (
         <div className="rounded-lg border border-hairline bg-canvas px-4 py-3.5">
           <div className="flex items-center justify-between gap-3">
             <p className="font-mono text-[10px] uppercase tracking-widest text-muted">
@@ -298,7 +307,7 @@ export default function HardwareTab() {
             </span>
           </div>
           <div className="mt-3 space-y-2">
-            {integratedGpus.map((igpu, idx) => (
+            {additionalIntegratedGpus.map((igpu, idx) => (
               <div
                 key={igpu.name + idx}
                 className="flex flex-col gap-2 rounded-md border border-hairline bg-surface/60 px-3 py-3 sm:flex-row sm:items-center sm:justify-between"

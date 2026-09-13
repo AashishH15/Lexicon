@@ -59,14 +59,19 @@ Lexicon v0.11.0 is a major milestone that transforms Lexicon from a standalone d
 - **Analysis Heading Info**: hovering the info mark by the Analysis heading explains when to use fast Proofread while writing versus the slower Deep Proofread clarity pass for finished drafts.
 
 #### ⚡ Hardware Acceleration, Diagnostics & Accelerator Inventory:
-- **Dedicated Hardware Tab (`HardwareTab.jsx`)**: Hardware diagnostics and settings panel displaying CPU compatibility with instruction set badges (x86_64, AVX, AVX2, AVX512), system RAM and VRAM utilization, and accelerator inventory.
+- **Universal Triple GPU Compute Support (CUDA + Metal + Vulkan)**: Vendor-agnostic GPU acceleration architecture enabling hardware offload across NVIDIA (CUDA), Apple Silicon (Metal), AMD (Radeon RX discrete and 700M/800M processor graphics via Vulkan), and Intel (Arc discrete and Iris Xe / Core Ultra integrated via Vulkan).
+- **Strict Compute Priority Hierarchy**:
+  - *Apple Silicon (Metal)*: Discovers M-series GPUs with unified memory offloading on macOS arm64.
+  - *NVIDIA (CUDA)*: Prioritizes verified CUDA drivers, preserving real-time `nvidia-smi` telemetry and dedicated tensor core offload.
+  - *AMD & Intel (Vulkan)*: Discovers discrete graphics cards (Radeon RX, Arc dGPUs) and integrated processor graphics, prioritizing dedicated high-bandwidth VRAM adapters for optimal inference throughput.
+- **Dedicated Hardware Tab (`HardwareTab.jsx`)**: Hardware diagnostics and settings panel displaying CPU compatibility with instruction set badges (x86_64, AVX, AVX2, AVX512), system RAM and VRAM utilization, active compute backend badges, and accelerator inventory.
 - **Comprehensive Hardware & NPU Detection (`inference.py`)**: Native discovery of dedicated GPUs, integrated GPUs (iGPUs), and Neural Processing Units (NPUs) across Windows, macOS, and Linux without third-party dependencies:
   - *Dedicated GPUs*: Discovers discrete graphics cards (NVIDIA GeForce/RTX, AMD Radeon RX/Pro, Intel Arc dGPUs). Merges authoritative `nvidia-smi` telemetry to bypass Windows WMI 4GB 32-bit integer limits and report true physical VRAM.
   - *Integrated GPUs (iGPUs)*: Classifies processor graphics (such as AMD Radeon Graphics and Intel Iris Xe / Arc iGPUs) with dedicated VRAM allocation and shared system memory notices.
   - *Neural Processing Units (NPUs)*: Detects on-die AI compute accelerators including Intel AI Boost, AMD NPU / IPU, Qualcomm Hexagon, and Apple Neural Engine via PnP `ComputeAccelerator` queries.
   - *Clean, Distraction-Free Presentation*: Systems without an NPU cleanly omit the NPU card and subtitle reference, keeping the interface uncluttered for non-technical users.
 - **Compute Offload Controls**: Per-device toggle (OFF / ON) and a **Limit Model Offload** toggle that locks layers to dedicated VRAM, preventing overflow into slower shared system memory and keeping remaining model layers on CPU.
-- **Dynamic VRAM Layer Offloading**: Automatically calculates optimal `n_gpu_layers` based on model context size and free VRAM headroom, preventing out-of-memory crashes while maximizing generation speed.
+- **Dynamic VRAM Layer Offloading**: Automatically calculates optimal `n_gpu_layers` based on model context size and free VRAM headroom across CUDA, Metal, and Vulkan backends, preventing out-of-memory crashes while maximizing generation speed.
 
 #### ⌨️ Customizable Keyboard Shortcuts System:
 - **Dedicated Shortcuts Manager (`shortcuts.js`)**: Complete keyboard shortcut customization panel under Settings with modifier parsing (`Ctrl`, `Cmd`, `Alt`, `Shift`) and conflict detection.

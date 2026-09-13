@@ -25,10 +25,15 @@ def test_detect_gpu_hardware_with_nvidia_smi():
 
 def test_detect_gpu_hardware_without_gpu():
     with patch("shutil.which", return_value=None):
-        info = inference.detect_gpu_hardware()
-        assert info["has_gpu"] is False
-        assert info["gpu_name"] is None
-        assert info["vram_gb"] in (None, 0.0)
+        with patch.object(
+            inference,
+            "detect_all_accelerators",
+            return_value={"dedicated": [], "integrated": [], "npu": []},
+        ):
+            info = inference.detect_gpu_hardware()
+            assert info["has_gpu"] is False
+            assert info["gpu_name"] is None
+            assert info["vram_gb"] in (None, 0.0)
 
 
 def test_get_hardware_diagnostics():
@@ -189,3 +194,112 @@ def test_bundled_backend_loads_with_device_layers(tmp_path):
                 backend._ensure_loaded()
                 assert captured_kwargs.get("n_gpu_layers") == 40
                 resolve.assert_called_once()
+
+
+def test_resolve_active_compute_gpu_nvidia_precedence():
+    nv_info = {
+        "count": 1,
+        "name": "NVIDIA GeForce RTX 4070 SUPER",
+        "vram_gb": 12.0,
+        "backend": "CUDA",
+        "device_id": 0,
+        "cuda_available": True,
+    }
+    accelerators = {
+        "dedicated": [
+            {"name": "NVIDIA GeForce RTX 4070 SUPER", "vendor": "NVIDIA", "type": "dedicated", "vram_gb": 12.0, "supported": True}
+        ],
+        "integrated": [
+            {"name": "AMD Radeon(TM) Graphics", "vendor": "AMD", "type": "integrated", "vram_gb": 0.5, "supported": False}
+        ],
+        "npu": [],
+    }
+    active = inference.resolve_active_compute_gpu(accelerators, nv_info, platform_name="win32", machine="AMD64")
+    assert active["vendor"] == "NVIDIA"
+    assert active["backend"] == "CUDA"
+    assert active["offload_supported"] is True
+    assert active["vram_gb"] == 12.0
+
+
+def test_resolve_active_compute_gpu_amd_discrete_vulkan():
+    nv_info = {"count": 0, "name": None, "vram_gb": 0.0, "backend": "None", "device_id": 0, "cuda_available": False}
+    accelerators = {
+        "dedicated": [
+            {"name": "AMD Radeon RX 7800 XT", "vendor": "AMD", "type": "dedicated", "vram_gb": 16.0, "supported": False}
+        ],
+        "integrated": [
+            {"name": "AMD Radeon(TM) Graphics", "vendor": "AMD", "type": "integrated", "vram_gb": 0.5, "supported": False}
+        ],
+        "npu": [],
+    }
+    active = inference.resolve_active_compute_gpu(accelerators, nv_info, platform_name="win32", machine="AMD64")
+    assert active["vendor"] == "AMD"
+    assert active["name"] == "AMD Radeon RX 7800 XT"
+    assert active["backend"] == "Vulkan"
+    assert active["offload_supported"] is True
+    assert active["vram_gb"] == 16.0
+
+
+def test_resolve_active_compute_gpu_amd_integrated_vulkan():
+    nv_info = {"count": 0, "name": None, "vram_gb": 0.0, "backend": "None", "device_id": 0, "cuda_available": False}
+    accelerators = {
+        "dedicated": [],
+        "integrated": [
+            {"name": "AMD Radeon 780M", "vendor": "AMD", "type": "integrated", "vram_gb": 2.0, "supported": False}
+        ],
+        "npu": [],
+    }
+    active = inference.resolve_active_compute_gpu(accelerators, nv_info, platform_name="win32", machine="AMD64")
+    assert active["vendor"] == "AMD"
+    assert active["name"] == "AMD Radeon 780M"
+    assert active["backend"] == "Vulkan"
+    assert active["offload_supported"] is True
+    assert active["vram_gb"] == 2.0
+
+
+def test_resolve_active_compute_gpu_intel_arc_vulkan():
+    nv_info = {"count": 0, "name": None, "vram_gb": 0.0, "backend": "None", "device_id": 0, "cuda_available": False}
+    accelerators = {
+        "dedicated": [
+            {"name": "Intel(R) Arc(TM) A770 Graphics", "vendor": "Intel", "type": "dedicated", "vram_gb": 16.0, "supported": False}
+        ],
+        "integrated": [],
+        "npu": [],
+    }
+    active = inference.resolve_active_compute_gpu(accelerators, nv_info, platform_name="win32", machine="AMD64")
+    assert active["vendor"] == "Intel"
+    assert active["name"] == "Intel(R) Arc(TM) A770 Graphics"
+    assert active["backend"] == "Vulkan"
+    assert active["offload_supported"] is True
+    assert active["vram_gb"] == 16.0
+
+
+def test_resolve_active_compute_gpu_macos_metal():
+    nv_info = {"count": 0, "name": None, "vram_gb": 0.0, "backend": "None", "device_id": 0, "cuda_available": False}
+    accelerators = {
+        "dedicated": [],
+        "integrated": [
+            {"name": "Apple M-Series GPU", "vendor": "Apple", "type": "integrated", "supported": True}
+        ],
+        "npu": [{"name": "Apple Neural Engine (ANE)", "vendor": "Apple", "type": "npu", "supported": False}],
+    }
+    active = inference.resolve_active_compute_gpu(accelerators, nv_info, platform_name="darwin", machine="arm64", ram_gb=32.0)
+    assert active["vendor"] == "Apple"
+    assert active["backend"] == "Metal"
+    assert active["offload_supported"] is True
+    assert active["vram_gb"] == 32.0
+
+
+def test_resolve_n_gpu_layers_with_vulkan_active_gpu():
+    vulkan_active = {
+        "count": 1,
+        "name": "AMD Radeon RX 7800 XT",
+        "vendor": "AMD",
+        "vram_gb": 16.0,
+        "backend": "Vulkan",
+        "offload_supported": True,
+    }
+    with patch("inference.get_active_compute_gpu", return_value=vulkan_active):
+        # When vram_gb is None, resolve_n_gpu_layers queries active compute GPU VRAM
+        layers = inference.resolve_n_gpu_layers("quality", "gpu", limit_vram_offload=True)
+        assert layers > 0
