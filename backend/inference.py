@@ -328,7 +328,8 @@ def _detect_windows_accelerators(results: dict, nv_info: dict) -> None:
                     continue
                 lower = name.lower()
                 # Software and remote display adapters do not give hardware acceleration.
-                if any(v in lower for v in ("virtual", "basic display", "remote", "citrix", "rdp", "vnc")):
+                ignored_adapters = ("virtual", "basic display", "remote", "citrix", "rdp", "vnc")
+                if any(v in lower for v in ignored_adapters):
                     continue
                 pnp_id = item.get("PNPDeviceID") or ""
                 vendor = "Unknown"
@@ -452,7 +453,12 @@ def _detect_linux_accelerators(results: dict, nv_info: dict) -> None:
         if proc.returncode == 0:
             for line in proc.stdout.splitlines():
                 lower = line.lower()
-                if any(k in lower for k in ("vga compatible controller", "3d controller", "display controller")):
+                controller_types = (
+                    "vga compatible controller",
+                    "3d controller",
+                    "display controller",
+                )
+                if any(k in lower for k in controller_types):
                     vendor = "Unknown"
                     if "nvidia" in lower:
                         vendor = "NVIDIA"
