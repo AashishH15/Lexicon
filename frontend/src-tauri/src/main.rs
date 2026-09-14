@@ -423,7 +423,10 @@ fn wait_for_backend(child: &mut Child, port: u16) -> Result<(), String> {
 }
 
 #[tauri::command]
-fn ensure_backend(app_handle: tauri::AppHandle) -> Result<(), String> {
+fn ensure_backend(
+    app_handle: tauri::AppHandle,
+    touch_activity: Option<bool>,
+) -> Result<(), String> {
     let state = app_handle.state::<BackendState>();
     let _lifecycle = state
         .lifecycle
@@ -447,19 +450,25 @@ fn ensure_backend(app_handle: tauri::AppHandle) -> Result<(), String> {
             terminate_backend_tree(&mut old_process);
         }
         *child = Some(start_backend(&app_handle)?);
+
+        if let Ok(mut t1) = state.tier1_offloaded.lock() {
+            *t1 = false;
+        }
+        if let Ok(mut t2) = state.tier2_offloaded.lock() {
+            *t2 = false;
+        }
+
+        *state
+            .last_activity
+            .lock()
+            .map_err(|_| "backend activity lock is unavailable".to_string())? = Instant::now();
+    } else if touch_activity.unwrap_or(true) {
+        *state
+            .last_activity
+            .lock()
+            .map_err(|_| "backend activity lock is unavailable".to_string())? = Instant::now();
     }
 
-    if let Ok(mut t1) = state.tier1_offloaded.lock() {
-        *t1 = false;
-    }
-    if let Ok(mut t2) = state.tier2_offloaded.lock() {
-        *t2 = false;
-    }
-
-    *state
-        .last_activity
-        .lock()
-        .map_err(|_| "backend activity lock is unavailable".to_string())? = Instant::now();
     Ok(())
 }
 

@@ -412,6 +412,61 @@ def test_resolve_n_gpu_layers_with_vulkan_active_gpu():
         "offload_supported": True,
     }
     with patch("inference.get_active_compute_gpu", return_value=vulkan_active):
-        # When vram_gb is None, resolve_n_gpu_layers queries active compute GPU VRAM
-        layers = inference.resolve_n_gpu_layers("quality", "gpu", limit_vram_offload=True)
-        assert layers > 0
+        with patch("inference.is_engine_gpu_supported", return_value=True):
+            layers = inference.resolve_n_gpu_layers("quality", "gpu", limit_vram_offload=True)
+            assert layers > 0
+
+
+def test_resolve_n_gpu_layers_falls_back_when_engine_unsupported():
+    vulkan_active = {
+        "count": 1,
+        "name": "AMD Radeon RX 7800 XT",
+        "vendor": "AMD",
+        "vram_gb": 16.0,
+        "backend": "Vulkan",
+        "offload_supported": True,
+    }
+    with patch("inference.get_active_compute_gpu", return_value=vulkan_active):
+        with patch("inference.is_engine_gpu_supported", return_value=False):
+            # When engine does not have GPU offload compiled, layers must be 0
+            layers = inference.resolve_n_gpu_layers("quality", "gpu", limit_vram_offload=True)
+            assert layers == 0
+
+
+def test_get_hardware_diagnostics_unsupported_engine_demands_package():
+    mock_nv = {
+        "count": 1,
+        "name": "NVIDIA GeForce RTX 4070 SUPER",
+        "vram_gb": 12.0,
+        "backend": "CUDA",
+        "cuda_available": True,
+    }
+    with patch.object(inference, "_query_nvidia_gpu", return_value=mock_nv):
+        with patch("inference.is_engine_gpu_supported", return_value=False):
+            diag = inference.get_hardware_diagnostics()
+            gpu = diag["gpu"]
+            assert gpu["name"] == "NVIDIA GeForce RTX 4070 SUPER"
+            assert gpu["engine_supported"] is False
+            assert gpu["offload_supported"] is False
+            assert gpu["cuda_available"] is False
+            assert gpu["package_required"] == "cuda"
+
+
+def test_get_hardware_diagnostics_supported_engine_activates_offload():
+    mock_nv = {
+        "count": 1,
+        "name": "NVIDIA GeForce RTX 4070 SUPER",
+        "vram_gb": 12.0,
+        "backend": "CUDA",
+        "cuda_available": True,
+    }
+    with patch.object(inference, "_query_nvidia_gpu", return_value=mock_nv):
+        with patch("inference.is_engine_gpu_supported", return_value=True):
+            diag = inference.get_hardware_diagnostics()
+            gpu = diag["gpu"]
+            assert gpu["name"] == "NVIDIA GeForce RTX 4070 SUPER"
+            assert gpu["engine_supported"] is True
+            assert gpu["offload_supported"] is True
+            assert gpu["cuda_available"] is True
+            assert gpu["package_required"] is None
+

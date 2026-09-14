@@ -15,6 +15,8 @@ vi.mock("../api.js", () => ({
   deleteModel: vi.fn(),
   cleanupLegacyModel: vi.fn(),
   setAiPreference: vi.fn(),
+  loadAiModel: vi.fn(),
+  unloadAiModel: vi.fn(),
 }));
 
 import * as api from "../api.js";
@@ -731,5 +733,120 @@ describe("ModelManager seeded status", () => {
       );
     });
     expect(container.textContent).toContain("Using local model · Standard");
+  });
+});
+
+describe("ModelManager Memory Residency and Eager Switching", () => {
+  let container;
+  let root;
+
+  beforeEach(() => {
+    localStorage.clear();
+    vi.clearAllMocks();
+    container = document.createElement("div");
+    document.body.appendChild(container);
+    root = createRoot(container);
+  });
+
+  afterEach(() => {
+    act(() => {
+      root.unmount();
+    });
+    container.remove();
+  });
+
+  function memoryStatus({ isLoaded = false, loadedKey = null, prefKey = "2b" } = {}) {
+    return {
+      ollama_available: false,
+      lmstudio_available: false,
+      models_ready: { "2b": true, quality: true, "0.8b": true },
+      model_key: prefKey,
+      is_model_loaded: isLoaded,
+      loaded_model_key: loadedKey,
+      preference: { backend: "bundled", model_key: prefKey, device: "gpu" },
+    };
+  }
+
+  it("displays Active badge when model is resident in RAM/VRAM", async () => {
+    api.getAiStatus.mockResolvedValue(
+      memoryStatus({ isLoaded: true, loadedKey: "2b", prefKey: "2b" })
+    );
+
+    await act(async () => {
+      root.render(<ModelManager mode="settings" onPreferenceChange={vi.fn()} />);
+    });
+
+    const standardStatus = container.querySelector('[data-testid="tier-status-2b"]');
+    expect(standardStatus?.textContent).toContain("Active");
+    expect(container.textContent).toContain("Active in memory");
+    expect(container.querySelector('[data-testid="unload-model-button"]')).not.toBeNull();
+  });
+
+  it("displays Installed badge and Load button when model is idle", async () => {
+    api.getAiStatus.mockResolvedValue(
+      memoryStatus({ isLoaded: false, loadedKey: null, prefKey: "2b" })
+    );
+
+    await act(async () => {
+      root.render(<ModelManager mode="settings" onPreferenceChange={vi.fn()} />);
+    });
+
+    const standardStatus = container.querySelector('[data-testid="tier-status-2b"]');
+    expect(standardStatus?.textContent).toContain("Installed");
+    expect(standardStatus?.textContent).not.toContain("Loaded in memory");
+    expect(container.textContent).toContain("Idle");
+    expect(container.querySelector('[data-testid="load-model-button"]')).not.toBeNull();
+  });
+
+  it("clicking Unload from memory calls unloadAiModel and refreshes", async () => {
+    api.getAiStatus
+      .mockResolvedValueOnce(memoryStatus({ isLoaded: true, loadedKey: "2b", prefKey: "2b" }))
+      .mockResolvedValueOnce(memoryStatus({ isLoaded: false, loadedKey: null, prefKey: "2b" }));
+    api.unloadAiModel.mockResolvedValue({ unloaded: "llm" });
+
+    await act(async () => {
+      root.render(<ModelManager mode="settings" onPreferenceChange={vi.fn()} />);
+    });
+
+    const unloadBtn = container.querySelector('[data-testid="unload-model-button"]');
+    expect(unloadBtn).not.toBeNull();
+
+    await act(async () => {
+      unloadBtn.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+
+    expect(api.unloadAiModel).toHaveBeenCalledTimes(1);
+    expect(api.getAiStatus).toHaveBeenCalledTimes(2);
+  });
+
+  it("clicking an installed tier eagerly saves preference and calls loadAiModel", async () => {
+    api.getAiStatus
+      .mockResolvedValueOnce(memoryStatus({ isLoaded: true, loadedKey: "2b", prefKey: "2b" }))
+      .mockResolvedValueOnce(memoryStatus({ isLoaded: true, loadedKey: "quality", prefKey: "quality" }));
+    api.loadAiModel.mockResolvedValue({ loaded: true, model_key: "quality" });
+    const onPref = vi.fn().mockResolvedValue({});
+
+    await act(async () => {
+      root.render(<ModelManager mode="settings" onPreferenceChange={onPref} />);
+    });
+
+    // Find the Quality card
+    const qualityHeading = Array.from(container.querySelectorAll("span")).find(
+      (el) => el.textContent === "Quality"
+    );
+    const qualityCard = qualityHeading?.closest('[role="button"]');
+    expect(qualityCard).not.toBeNull();
+
+    await act(async () => {
+      qualityCard.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+
+    expect(onPref).toHaveBeenCalledWith(
+      expect.objectContaining({
+        backend: "bundled",
+        model_key: "quality",
+      })
+    );
+    expect(api.loadAiModel).toHaveBeenCalledWith("quality");
   });
 });

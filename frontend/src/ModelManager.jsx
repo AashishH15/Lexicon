@@ -9,6 +9,8 @@ import {
   deleteModel,
   cleanupLegacyModel,
   setAiPreference,
+  loadAiModel,
+  unloadAiModel,
 } from "./api.js";
 
 const MODEL_TIERS = [
@@ -104,7 +106,9 @@ function describeActive(status) {
     const label = MODEL_TIERS.find((t) => t.key === pref.model_key)?.label;
     const deviceTag = pref.device ? ` · ${pref.device.toUpperCase()}` : "";
     if (label && status.models_ready?.[pref.model_key]) {
-      return { tone: "bundled", text: `Using local model · ${label}${deviceTag}` };
+      const isLoaded = status.is_model_loaded && status.loaded_model_key === pref.model_key;
+      const memStatus = isLoaded ? " · Active" : " · Idle";
+      return { tone: "bundled", text: `Using local model · ${label}${deviceTag}${memStatus}` };
     }
     return {
       tone: "none",
@@ -121,7 +125,9 @@ function describeActive(status) {
   const autoLabel = MODEL_TIERS.find((t) => t.key === autoKey)?.label;
   const deviceTag = pref.device ? ` · ${pref.device.toUpperCase()}` : "";
   if (autoLabel && status.models_ready?.[autoKey]) {
-    return { tone: "bundled", text: `Using local model · ${autoLabel}${deviceTag}` };
+    const isLoaded = status.is_model_loaded && status.loaded_model_key === autoKey;
+    const memStatus = isLoaded ? " · Active" : " · Idle";
+    return { tone: "bundled", text: `Using local model · ${autoLabel}${deviceTag}${memStatus}` };
   }
   return {
     tone: "none",
@@ -129,20 +135,52 @@ function describeActive(status) {
   };
 }
 
-function ActiveStatus({ status }) {
+function ActiveStatus({ status, onUnload, onLoad, unloading, loading }) {
   const { tone, text } = describeActive(status);
+  const isLoaded = Boolean(status.is_model_loaded);
   const dot =
     tone === "ollama"
       ? "bg-pale-blue-text"
       : tone === "lmstudio"
         ? "bg-pale-yellow-text"
         : tone === "bundled"
-          ? "bg-pale-green-text"
+          ? (isLoaded ? "bg-pale-green-text" : "bg-muted")
           : "bg-muted";
+  const showMemoryControls = tone === "bundled" && status.models_ready?.[status.preference?.model_key || status.model_key];
+
   return (
-    <div className="mt-4 flex items-center gap-2 rounded-lg border border-hairline bg-canvas px-3 py-2">
-      <span className={`h-2 w-2 shrink-0 rounded-full ${dot}`} />
-      <span className="font-sans text-xs text-ink">{text}</span>
+    <div className="mt-4 flex items-center justify-between gap-2 rounded-lg border border-hairline bg-canvas px-3 py-2">
+      <div className="flex items-center gap-2 min-w-0">
+        <span className={`h-2 w-2 shrink-0 rounded-full ${dot}`} />
+        <span className="font-sans text-xs text-ink truncate">{text}</span>
+      </div>
+      {showMemoryControls && (
+        <div className="flex items-center gap-2 shrink-0">
+          {isLoaded ? (
+            <button
+              type="button"
+              onClick={onUnload}
+              disabled={unloading}
+              title="Unload model weights to free GPU VRAM and RAM"
+              data-testid="unload-model-button"
+              className="cursor-pointer rounded border border-hairline px-2 py-0.5 font-sans text-[11px] text-muted transition-colors hover:border-pale-red-text hover:text-pale-red-text hover:bg-pale-red/10"
+            >
+              {unloading ? "Unloading…" : "Unload from memory"}
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={onLoad}
+              disabled={loading}
+              title="Pre-load model weights into memory"
+              data-testid="load-model-button"
+              className="cursor-pointer rounded border border-hairline px-2 py-0.5 font-sans text-[11px] text-muted transition-colors hover:border-pale-blue-text hover:text-pale-blue-text hover:bg-pale-blue/10"
+            >
+              {loading ? "Loading…" : "Load into memory"}
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -210,6 +248,7 @@ export default function ModelManager({
   const [error, setError] = useState("");
   // Tier switch in flight. Show it until the save and refresh land.
   const [switchingKey, setSwitchingKey] = useState(null);
+  const [memoryOperation, setMemoryOperation] = useState(null); // "loading" | "unloading" | null
   const switchRequestRef = useRef(null);
   const pollRef = useRef(null);
   const userPickedRef = useRef(false);
@@ -377,7 +416,7 @@ export default function ModelManager({
 
   useEffect(() => {
     let cancelled = false;
-    getAiStatus()
+    getAiStatus({ force: true })
       .then((s) => {
         if (cancelled) return;
         setStatus(s);
@@ -464,6 +503,16 @@ export default function ModelManager({
     };
   }, []);
 
+  // When a model is loaded in memory, poll status periodically so that
+  // when the 5-minute auto-unload triggers, the UI immediately flips to idle.
+  useEffect(() => {
+    if (!status?.is_model_loaded) return undefined;
+    const interval = setInterval(() => {
+      refreshStatus();
+    }, 8000);
+    return () => clearInterval(interval);
+  }, [status?.is_model_loaded]);
+
   useEffect(() => {
     if (!activeUpgradeTier) {
       return undefined;
@@ -527,7 +576,7 @@ export default function ModelManager({
 
   async function refreshStatus() {
     try {
-      const s = await getAiStatus();
+      const s = await getAiStatus({ force: true });
       setStatus(s);
       if (s.ollama_models) setOllamaModels(s.ollama_models);
       if (s.lmstudio_models) setLmStudioModels(s.lmstudio_models);
@@ -553,8 +602,8 @@ export default function ModelManager({
     }
   }
 
-  // Pick an installed tier in Settings. Save first, then refresh.
-  // Await the save so the refresh cannot read a stale preference.
+  // Pick an installed tier in Settings. Save first, then load the model and refresh.
+  // Await the save and load so the refresh cannot read a stale preference.
   // Keep a switching flag until both land. Ignore an older pick.
   async function selectInstalledTier(key) {
     userPickedRef.current = true;
@@ -571,12 +620,52 @@ export default function ModelManager({
           device: status.preference?.device || "gpu",
         });
       }
+      try {
+        await loadAiModel(key);
+      } catch {
+        // Best effort: if loading fails (e.g. out of memory), status refresh still resyncs.
+      }
     } catch {
       // Save failed. Refresh below still resyncs with the server.
     }
     await refreshStatus();
     if (switchRequestRef.current === key) {
       setSwitchingKey(null);
+    }
+  }
+
+  async function handleUnloadModel() {
+    setMemoryOperation("unloading");
+    setStatus((prev) => ({
+      ...prev,
+      is_model_loaded: false,
+      loaded_model_key: null,
+    }));
+    try {
+      await unloadAiModel();
+    } catch {
+      /* best-effort */
+    } finally {
+      await refreshStatus();
+      setMemoryOperation(null);
+    }
+  }
+
+  async function handleLoadModel() {
+    const targetKey = status.preference?.model_key || modelKey || "2b";
+    setMemoryOperation("loading");
+    try {
+      const res = await loadAiModel(targetKey);
+      setStatus((prev) => ({
+        ...prev,
+        is_model_loaded: true,
+        loaded_model_key: res.model_key || targetKey,
+      }));
+    } catch (err) {
+      setError(err.message || "Failed to load model into memory.");
+    } finally {
+      await refreshStatus();
+      setMemoryOperation(null);
     }
   }
 
@@ -924,7 +1013,13 @@ export default function ModelManager({
           </span>
         </div>
       ) : (
-        <ActiveStatus status={status} />
+        <ActiveStatus
+          status={status}
+          onUnload={handleUnloadModel}
+          onLoad={handleLoadModel}
+          unloading={memoryOperation === "unloading"}
+          loading={memoryOperation === "loading"}
+        />
       )}
 
       {(wantBundle || mode === "settings") && (
@@ -937,6 +1032,9 @@ export default function ModelManager({
                 status.gpu_info?.recommended_tier?.key ||
                 "2b") === tier.key;
             const downloading = phase === "downloading";
+            const isLoadedInMem = Boolean(
+              status.is_model_loaded && status.loaded_model_key === tier.key
+            );
             return (
               <div
                 key={tier.key}
@@ -977,9 +1075,20 @@ export default function ModelManager({
                     {tier.label}
                   </span>
                   {ready && (
-                    <span className="inline-flex shrink-0 items-center gap-1 font-sans text-[10px] font-medium text-pale-green-text">
-                      <span className="h-1.5 w-1.5 rounded-full bg-pale-green-text" />
-                      installed
+                    <span
+                      data-testid={`tier-status-${tier.key}`}
+                      className={
+                        "inline-flex shrink-0 items-center gap-1 font-sans text-[10px] font-medium " +
+                        (isLoadedInMem ? "text-pale-green-text" : "text-muted")
+                      }
+                    >
+                      <span
+                        className={
+                          "h-1.5 w-1.5 rounded-full " +
+                          (isLoadedInMem ? "bg-pale-green-text animate-pulse" : "bg-muted")
+                        }
+                      />
+                      {isLoadedInMem ? "Active" : "Installed"}
                     </span>
                   )}
                 </div>
@@ -1051,21 +1160,32 @@ export default function ModelManager({
           footer button, but Settings has no footer, so surface the download
           trigger here. */}
       {mode === "settings" && phase !== "downloading" && (
-        <div className="mt-3 flex items-center justify-between gap-3">
-          <p className="font-sans text-[11px] text-muted">
-            {status.models_ready?.[savedTierKey]
-              ? `${MODEL_TIERS.find((t) => t.key === savedTierKey)?.label} is installed and active.`
-              : "No model downloaded yet. AI tools won't run until you download one!"}
-          </p>
-          {!status.models_ready?.[modelKey] && (
-            <button
-              type="button"
-              onClick={handleDownload}
-              className="flex shrink-0 items-center gap-1.5 rounded bg-pale-blue-text px-3 py-2 font-sans text-sm font-medium text-white transition-colors hover:bg-pale-blue-text/90"
-            >
-              <DownloadSimple size={16} weight="bold" />
-              Download &amp; enable
-            </button>
+        <div className="mt-3 flex flex-col gap-1.5">
+          <div className="flex items-center justify-between gap-3">
+            <p className="font-sans text-[11px] text-muted">
+              {status.models_ready?.[savedTierKey]
+                ? `${MODEL_TIERS.find((t) => t.key === savedTierKey)?.label} is installed and active.${
+                    status.is_model_loaded && status.loaded_model_key === savedTierKey
+                      ? " (Active in memory)"
+                      : " (Idle · loads on demand)"
+                  }`
+                : "No model downloaded yet. AI tools won't run until you download one!"}
+            </p>
+            {!status.models_ready?.[modelKey] && (
+              <button
+                type="button"
+                onClick={handleDownload}
+                className="flex shrink-0 items-center gap-1.5 rounded bg-pale-blue-text px-3 py-2 font-sans text-sm font-medium text-white transition-colors hover:bg-pale-blue-text/90"
+              >
+                <DownloadSimple size={16} weight="bold" />
+                Download &amp; enable
+              </button>
+            )}
+          </div>
+          {status.models_ready?.[savedTierKey] && (
+            <p className="font-sans text-[10px] text-muted/80">
+              Active models automatically unload after 5 minutes of inactivity to free GPU and system RAM. You can also unload anytime.
+            </p>
           )}
         </div>
       )}

@@ -10,6 +10,11 @@ globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 vi.mock("../api.js", () => ({
   getHardwareProfile: vi.fn(),
   setHardwareSettings: vi.fn(),
+  getGpuPackages: vi.fn(),
+  installGpuPackage: vi.fn(),
+  cancelGpuPackageInstall: vi.fn(),
+  uninstallGpuPackage: vi.fn(),
+  activateGpuPackage: vi.fn(),
 }));
 
 describe("HardwareTab Component", () => {
@@ -51,6 +56,12 @@ describe("HardwareTab Component", () => {
     document.body.appendChild(container);
     root = createRoot(container);
     vi.clearAllMocks();
+    api.getGpuPackages.mockResolvedValue({
+      packages: [],
+      engine_supported: true,
+      offload_supported: true,
+      active_backend: "CUDA",
+    });
   });
 
   afterEach(() => {
@@ -369,5 +380,262 @@ describe("HardwareTab Component", () => {
     expect(container.textContent).toContain("Apple Silicon · Metal");
     expect(container.textContent).toContain("Apple M-Series GPU");
     expect(container.textContent).toContain("32 GB VRAM · Metal");
+  });
+
+  it("renders modular CUDA download card when NVIDIA GPU is detected but offload is unsupported", async () => {
+    api.getHardwareProfile.mockResolvedValue({
+      ...mockHardwareData,
+      gpu: {
+        count: 1,
+        name: "NVIDIA GeForce RTX 4070 SUPER",
+        vendor: "NVIDIA",
+        vram_gb: 12.0,
+        backend: "CUDA",
+        offload_supported: false,
+        engine_supported: false,
+        package_required: "cuda",
+        cuda_available: false,
+      },
+    });
+    api.getGpuPackages.mockResolvedValue({
+      packages: [
+        {
+          id: "cuda",
+          name: "NVIDIA CUDA 12.4 Acceleration Pack",
+          vendor: "NVIDIA",
+          download_size_bytes: 536551897,
+          installed: false,
+          recommended: true,
+          status: { state: "idle", progress_pct: 0 },
+        },
+      ],
+      engine_supported: false,
+      offload_supported: false,
+      active_backend: "CUDA",
+    });
+
+    await act(async () => {
+      root.render(<HardwareTab />);
+    });
+
+    expect(container.textContent).toContain("Pack Required");
+    expect(container.textContent).toContain("NVIDIA CUDA 12.4 Acceleration Pack");
+    expect(container.querySelector('[data-testid="install-gpu-pack-btn"]')).not.toBeNull();
+  });
+
+  it("triggers installGpuPackage when download button is clicked", async () => {
+    api.getHardwareProfile.mockResolvedValue({
+      ...mockHardwareData,
+      gpu: {
+        count: 1,
+        name: "NVIDIA GeForce RTX 4070 SUPER",
+        vendor: "NVIDIA",
+        vram_gb: 12.0,
+        backend: "CUDA",
+        offload_supported: false,
+        engine_supported: false,
+        package_required: "cuda",
+        cuda_available: false,
+      },
+    });
+    api.getGpuPackages.mockResolvedValue({
+      packages: [
+        {
+          id: "cuda",
+          name: "NVIDIA CUDA 12.4 Acceleration Pack",
+          vendor: "NVIDIA",
+          download_size_bytes: 536551897,
+          installed: false,
+          recommended: true,
+          status: { state: "idle", progress_pct: 0 },
+        },
+      ],
+      engine_supported: false,
+      offload_supported: false,
+      active_backend: "CUDA",
+    });
+    api.installGpuPackage.mockResolvedValue({ package: "cuda", state: "downloading" });
+
+    await act(async () => {
+      root.render(<HardwareTab />);
+    });
+
+    const installBtn = container.querySelector('[data-testid="install-gpu-pack-btn"]');
+    await act(async () => {
+      installBtn.click();
+    });
+
+    expect(api.installGpuPackage).toHaveBeenCalledWith("cuda");
+  });
+
+  it("renders progress indicator when acceleration pack is downloading", async () => {
+    api.getHardwareProfile.mockResolvedValue({
+      ...mockHardwareData,
+      gpu: {
+        count: 1,
+        name: "NVIDIA GeForce RTX 4070 SUPER",
+        vendor: "NVIDIA",
+        vram_gb: 12.0,
+        backend: "CUDA",
+        offload_supported: false,
+        engine_supported: false,
+        package_required: "cuda",
+        cuda_available: false,
+      },
+    });
+    api.getGpuPackages.mockResolvedValue({
+      packages: [
+        {
+          id: "cuda",
+          name: "NVIDIA CUDA 12.4 Acceleration Pack",
+          vendor: "NVIDIA",
+          download_size_bytes: 536551897,
+          installed: false,
+          recommended: true,
+          status: { state: "downloading", progress_pct: 45.5, bytes_done: 244131113, bytes_total: 536551897, speed_mbps: 32.4 },
+        },
+      ],
+      engine_supported: false,
+      offload_supported: false,
+      active_backend: "CUDA",
+    });
+    api.cancelGpuPackageInstall.mockResolvedValue({ package: "cuda", state: "cancelled" });
+
+    await act(async () => {
+      root.render(<HardwareTab />);
+    });
+
+    expect(container.textContent).toContain("Downloading");
+    expect(container.textContent).toContain("45.5%");
+    const cancelBtn = container.querySelector('[data-testid="cancel-gpu-pack-btn"]');
+    expect(cancelBtn).not.toBeNull();
+
+    await act(async () => {
+      cancelBtn.click();
+    });
+
+    expect(api.cancelGpuPackageInstall).toHaveBeenCalledWith("cuda");
+  });
+
+  it("renders permanent Compute Acceleration section when GPU is active with Reinstall and Switch actions", async () => {
+    api.getHardwareProfile.mockResolvedValue({
+      ...mockHardwareData,
+      gpu: {
+        count: 1,
+        name: "NVIDIA GeForce RTX 4070 SUPER",
+        vendor: "NVIDIA",
+        vram_gb: 12.0,
+        backend: "CUDA",
+        offload_supported: true,
+        engine_supported: true,
+        cuda_available: true,
+      },
+    });
+    api.getGpuPackages.mockResolvedValue({
+      packages: [
+        {
+          id: "cuda",
+          name: "NVIDIA CUDA 12.4 Acceleration Pack",
+          backend: "CUDA",
+          vendor: "NVIDIA",
+          download_size_bytes: 536551897,
+          installed: true,
+          recommended: true,
+          status: { state: "ready", progress_pct: 100 },
+        },
+        {
+          id: "vulkan",
+          name: "Vulkan GPU Acceleration Pack",
+          backend: "Vulkan",
+          vendor: "AMD/Intel",
+          download_size_bytes: 42323234,
+          installed: true,
+          recommended: false,
+          status: { state: "ready", progress_pct: 100 },
+        },
+      ],
+      engine_supported: true,
+      offload_supported: true,
+      active_backend: "CUDA",
+    });
+    api.activateGpuPackage.mockResolvedValue({ success: true, active_package: "vulkan" });
+
+    await act(async () => {
+      root.render(<HardwareTab />);
+    });
+
+    expect(container.textContent).toContain("Compute Acceleration & Runtimes");
+    expect(container.textContent).toContain("llama.cpp v0.3.34");
+    expect(container.textContent).toContain("Downloaded");
+    expect(container.textContent).toContain("Switch to Vulkan");
+
+    const switchBtn = Array.from(container.querySelectorAll("button")).find(
+      (b) => b.textContent.includes("Switch to Vulkan")
+    );
+    expect(switchBtn).toBeDefined();
+
+    // Verify in-flight switching indicator
+    let resolveActivate;
+    const activatePromise = new Promise((res) => { resolveActivate = res; });
+    api.activateGpuPackage.mockReturnValueOnce(activatePromise);
+
+    await act(async () => {
+      switchBtn.click();
+    });
+
+    expect(container.textContent).toContain("Switching to Vulkan");
+    expect(api.activateGpuPackage).toHaveBeenCalledWith("vulkan");
+
+    await act(async () => {
+      resolveActivate({ success: true, active_package: "vulkan" });
+    });
+
+    expect(container.textContent).toContain("Switched compute runtime to Vulkan");
+
+    // Verify DotsThreeVertical menu contains Reinstall and Delete actions
+    const menuBtn = container.querySelector('[data-testid="gpu-pack-menu-btn-cuda"]');
+    expect(menuBtn).not.toBeNull();
+
+    await act(async () => {
+      menuBtn.click();
+    });
+
+    const reinstallBtn = container.querySelector('[data-testid="reinstall-gpu-pack-btn"]');
+    expect(reinstallBtn).not.toBeNull();
+    const uninstallBtn = container.querySelector('[data-testid="uninstall-gpu-pack-btn"]');
+    expect(uninstallBtn).not.toBeNull();
+
+    api.installGpuPackage.mockResolvedValue({ package: "cuda", state: "downloading" });
+    await act(async () => {
+      reinstallBtn.click();
+    });
+    expect(api.installGpuPackage).toHaveBeenCalledWith("cuda");
+
+    // Test Delete (uninstall) with in-flight deleting indicator
+    const vulkanMenuBtn = container.querySelector('[data-testid="gpu-pack-menu-btn-vulkan"]');
+    expect(vulkanMenuBtn).not.toBeNull();
+
+    await act(async () => {
+      vulkanMenuBtn.click();
+    });
+    const deleteBtn = container.querySelector('[data-testid="uninstall-gpu-pack-btn"]');
+    expect(deleteBtn).not.toBeNull();
+
+    let resolveUninstall;
+    const uninstallPromise = new Promise((res) => { resolveUninstall = res; });
+    api.uninstallGpuPackage.mockReturnValueOnce(uninstallPromise);
+
+    await act(async () => {
+      deleteBtn.click();
+    });
+
+    expect(container.textContent).toContain("Deleting…");
+    expect(api.uninstallGpuPackage).toHaveBeenCalledWith("vulkan");
+
+    await act(async () => {
+      resolveUninstall({ success: true });
+    });
+
+    expect(container.textContent).toContain("Vulkan runtime files removed");
   });
 });

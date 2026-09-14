@@ -670,3 +670,108 @@ def test_bundled_complete_streaming_empty_and_null_chunk_tolerance():
     backend._ensure_loaded = lambda: None
     result = backend.complete("prompt", "text")
     assert result == "valid result"
+
+
+def test_get_loaded_bundled_model_info(monkeypatch):
+    """Verify get_loaded_bundled_model_info returns residency status."""
+    inference.unload_active_backend()
+    info = inference.get_loaded_bundled_model_info()
+    assert info["loaded"] is False
+    assert info["model_key"] is None
+
+    # Simulate loaded cache
+    monkeypatch.setitem(inference._CACHED_BUNDLED_LLM, "llm", object())
+    monkeypatch.setitem(inference._CACHED_BUNDLED_LLM, "key", "quality")
+    monkeypatch.setitem(inference._CACHED_BUNDLED_LLM, "device", "gpu")
+
+    loaded_info = inference.get_loaded_bundled_model_info()
+    assert loaded_info["loaded"] is True
+    assert loaded_info["model_key"] == "quality"
+    assert loaded_info["device"] == "gpu"
+    inference.unload_active_backend()
+
+
+def test_ai_preference_set_unloads_on_model_change(monkeypatch, tmp_path):
+    """Changing model_key in preference must immediately trigger backend unload."""
+    from main import app, ai_preference_set, AiPreferenceRequest
+    from fastapi.testclient import TestClient
+
+    unloaded = False
+
+    def fake_unload():
+        nonlocal unloaded
+        unloaded = True
+
+    monkeypatch.setattr("main.unload_active_backend", fake_unload)
+    monkeypatch.setattr("main.load_prefs", lambda: {"backend": "bundled", "model_key": "quality", "device": "gpu"})
+    monkeypatch.setattr("main.save_prefs", lambda *a, **kw: {"backend": "bundled", "model_key": "2b", "device": "gpu"})
+    monkeypatch.setattr("main.get_backend", lambda force_refresh=True: None)
+
+    req = AiPreferenceRequest(backend="bundled", model_key="2b")
+    ai_preference_set(req)
+    assert unloaded is True
+
+
+def test_ai_load_and_unload_endpoints(monkeypatch):
+    """Verify /ai/load and /ai/unload endpoints report loaded residency."""
+    from main import app
+    from fastapi.testclient import TestClient
+
+    client = TestClient(app)
+
+    with monkeypatch.context() as m:
+        m.setattr(
+            "main.load_bundled_model",
+            lambda key=None: {"loaded": True, "model_key": key or "2b", "device": "gpu", "limit_vram": True},
+        )
+        resp = client.post("/ai/load", json={"model_key": "2b"})
+        assert resp.status_code == 200
+        assert resp.json()["loaded"] is True
+        assert resp.json()["model_key"] == "2b"
+
+    with monkeypatch.context() as m:
+        unloaded_called = False
+        def mock_unload():
+            nonlocal unloaded_called
+            unloaded_called = True
+        m.setattr("main.unload_active_backend", mock_unload)
+        resp = client.post("/ai/unload")
+        assert resp.status_code == 200
+        assert resp.json()["unloaded"] == "llm"
+        assert unloaded_called is True
+
+
+def test_idle_timeout_unloads_active_bundled_model(monkeypatch):
+    """Verify that idle check unloads model only after timeout expires."""
+    import inference
+    import time
+
+    unloaded = False
+
+    def fake_unload():
+        nonlocal unloaded
+        unloaded = True
+
+    monkeypatch.setattr(inference, "unload_active_backend", fake_unload)
+
+    # When no model is loaded, idle check does not unload.
+    inference._CACHED_BUNDLED_LLM["llm"] = None
+    inference._LAST_AI_ACTIVITY_TIME = time.time() - 400.0
+    assert inference.check_and_unload_idle_backend(idle_threshold=300.0) is False
+    assert unloaded is False
+
+    # When model is loaded and activity is recent, idle check does not unload.
+    inference._CACHED_BUNDLED_LLM["llm"] = object()
+    inference._LAST_AI_ACTIVITY_TIME = time.time() - 50.0
+    assert inference.check_and_unload_idle_backend(idle_threshold=300.0) is False
+    assert unloaded is False
+
+    # When model is loaded and timeout has expired, idle check unloads model.
+    inference._LAST_AI_ACTIVITY_TIME = time.time() - 350.0
+    assert inference.check_and_unload_idle_backend(idle_threshold=300.0) is True
+    assert unloaded is True
+
+    # Cleanup state
+    inference._CACHED_BUNDLED_LLM["llm"] = None
+    inference._LAST_AI_ACTIVITY_TIME = 0.0
+

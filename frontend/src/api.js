@@ -16,14 +16,23 @@ function getApiUrl() {
   );
 }
 
-export async function ensureBackend() {
+export async function ensureBackend(touchActivity = true) {
   if (isTauriRuntime()) {
-    await invoke("ensure_backend");
+    await invoke("ensure_backend", {
+      touch_activity: touchActivity,
+      touchActivity,
+    });
   }
 }
 
-async function request(path, options) {
-  await ensureBackend();
+async function request(path, options, { touchActivity } = {}) {
+  const isPassivePoll =
+    path === "/dictionary" ||
+    path === "/ai/status" ||
+    path.startsWith("/model/status");
+  const shouldTouch =
+    touchActivity !== undefined ? touchActivity : !isPassivePoll;
+  await ensureBackend(shouldTouch);
   const apiUrl = getApiUrl();
   try {
     return await fetch(`${apiUrl}${path}`, options);
@@ -33,7 +42,7 @@ async function request(path, options) {
     }
     // The idle monitor may have stopped the sidecar between the first
     // lifecycle check and the HTTP request. Start it once and retry.
-    await ensureBackend();
+    await ensureBackend(shouldTouch);
     return fetch(`${apiUrl}${path}`, options);
   }
 }
@@ -105,6 +114,7 @@ let aiStatusInflight = null; // shared request | null
 // Drop the cached AI status. Call it after a change that moves status.
 export function invalidateAiStatus() {
   aiStatusCache = null;
+  aiStatusInflight = null;
 }
 
 // Probe which AI backend is active and what's available.
@@ -205,6 +215,72 @@ export async function getHardwareProfile() {
   return response.json();
 }
 
+// Fetch available and installed modular GPU acceleration packages.
+export async function getGpuPackages() {
+  const response = await request("/ai/gpu/packages");
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.error || `Get GPU packages failed: ${response.status}`);
+  }
+  return response.json();
+}
+
+// Start asynchronous download and installation of an accelerator package.
+export async function installGpuPackage(packageName) {
+  const response = await request("/ai/gpu/packages/install", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ package: packageName }),
+  });
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.error || `Install GPU package failed: ${response.status}`);
+  }
+  return response.json();
+}
+
+// Cancel in-flight download of an accelerator package.
+export async function cancelGpuPackageInstall(packageName) {
+  const response = await request("/ai/gpu/packages/cancel", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ package: packageName }),
+  });
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.error || `Cancel GPU package download failed: ${response.status}`);
+  }
+  return response.json();
+}
+
+// Uninstall a modular accelerator package.
+export async function uninstallGpuPackage(packageName) {
+  const response = await request("/ai/gpu/packages/uninstall", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ package: packageName }),
+  });
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.error || `Uninstall GPU package failed: ${response.status}`);
+  }
+  return response.json();
+}
+
+// Switch active accelerator package runtime.
+export async function activateGpuPackage(packageName) {
+  const response = await request("/ai/gpu/packages/activate", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ package: packageName }),
+  });
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.error || `Activate GPU package failed: ${response.status}`);
+  }
+  return response.json();
+}
+
 // Persist GPU/CPU compute device and memory offload settings.
 export async function setHardwareSettings({ device, limitVramOffload }) {
   const response = await request("/ai/hardware/settings", {
@@ -280,6 +356,37 @@ export async function deleteModel(modelKey = "2b") {
   const deleted = await response.json();
   invalidateAiStatus();
   return deleted;
+}
+
+// Eagerly load the active or specified local model into memory.
+export async function loadAiModel(modelKey) {
+  const response = await request("/ai/load", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(modelKey ? { model_key: modelKey } : {}),
+  });
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.detail || data.error || `Model load failed: ${response.status}`);
+  }
+  const loaded = await response.json();
+  invalidateAiStatus();
+  return loaded;
+}
+
+// Unload active model weights from memory to free VRAM and RAM.
+export async function unloadAiModel() {
+  const response = await request("/ai/unload", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+  });
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.detail || data.error || `Model unload failed: ${response.status}`);
+  }
+  const unloaded = await response.json();
+  invalidateAiStatus();
+  return unloaded;
 }
 
 // Remove an obsolete previous-generation model file to reclaim disk space.

@@ -45,8 +45,12 @@ from inference import (
     detect_gpu_hardware,
     get_backend,
     get_hardware_diagnostics,
+    get_loaded_bundled_model_info,
+    load_bundled_model,
+    reload_bundled_engine,
     unload_active_backend,
 )
+import gpu_manager
 from languagetool import check_text, close_tool
 from model_manager import (
     cancel_download,
@@ -267,11 +271,27 @@ def shutdown():
     return {"shutting_down": server is not None}
 
 
+class ModelLoadRequest(BaseModel):
+    model_key: str | None = None
+
+
+@app.post("/ai/load")
+@app.post("/model/load")
+def ai_load(request: ModelLoadRequest | None = None):
+    """Load LLM model weights into RAM or GPU memory."""
+    try:
+        info = load_bundled_model(request.model_key if request else None)
+        return {"loaded": True, **info}
+    except Exception as exc:
+        return JSONResponse(status_code=500, content={"error": str(exc), "detail": str(exc)})
+
+
 @app.post("/ai/unload")
+@app.post("/model/unload")
 def ai_unload():
     """Tier 1 offload: free LLM model weights from RAM."""
     unload_active_backend()
-    return {"unloaded": "llm"}
+    return {"unloaded": "llm", "loaded": False, "model_key": None}
 
 
 @app.post("/languagetool/unload")
@@ -341,6 +361,7 @@ def ai_status():
         }
     )
     pref_model_key = prefs.get("model_key") or "2b"
+    loaded_info = get_loaded_bundled_model_info()
     tier_upgrades = {
         key: get_upgrade_info(key)
         for key in ("2b", "0.8b", "quality")
@@ -363,6 +384,9 @@ def ai_status():
         "lmstudio_auth_required": lmstudio.authentication_required(),
         "models_ready": models_ready(),
         "model_key": prefs["model_key"],
+        "loaded_model_key": loaded_info.get("model_key"),
+        "is_model_loaded": loaded_info.get("loaded", False),
+        "loaded_device": loaded_info.get("device"),
         "preference": public_prefs(prefs),
         "active_backend": active.name,
         "active_model_key": getattr(active, "model_key", None),
@@ -382,6 +406,71 @@ def ai_status():
 def ai_hardware_get():
     """Detailed hardware diagnostics for CPU, Memory, GPU, and recommendations."""
     return get_hardware_diagnostics()
+
+
+class GpuPackageActionRequest(BaseModel):
+    package: str  # e.g. "cuda" or "vulkan"
+
+
+@app.get("/ai/gpu/packages")
+def ai_gpu_packages_get():
+    """Available and installed modular acceleration packages for system hardware."""
+    diag = get_hardware_diagnostics()
+    accelerators = diag.get("accelerators", {})
+    gpu = diag.get("gpu", {})
+    nv_info = {
+        "name": gpu.get("name"),
+        "cuda_available": gpu.get("backend") == "CUDA" and gpu.get("count", 0) > 0,
+    }
+    packages = gpu_manager.get_available_packages(accelerators, nv_info)
+    return {
+        "packages": packages,
+        "engine_supported": gpu.get("engine_supported", False),
+        "offload_supported": gpu.get("offload_supported", False),
+        "active_backend": gpu.get("backend", "None"),
+    }
+
+
+@app.post("/ai/gpu/packages/install")
+def ai_gpu_packages_install(request: GpuPackageActionRequest):
+    """Start asynchronous streaming download and installation of an accelerator pack."""
+    status = gpu_manager.start_package_download_async(request.package)
+    return status
+
+
+@app.post("/ai/gpu/packages/cancel")
+def ai_gpu_packages_cancel(request: GpuPackageActionRequest):
+    """Cancel in-flight download of an accelerator pack."""
+    return gpu_manager.cancel_package_download(request.package)
+
+
+@app.post("/ai/gpu/packages/uninstall")
+def ai_gpu_packages_uninstall(request: GpuPackageActionRequest):
+    """Remove installed accelerator pack and reload default engine."""
+    success = gpu_manager.uninstall_package(request.package)
+    reload_bundled_engine()
+    return {"success": success, "package": request.package}
+
+
+@app.post("/ai/gpu/packages/activate")
+def ai_gpu_packages_activate(request: GpuPackageActionRequest):
+    """Switch active runtime preference and reload bundled engine."""
+    gpu_manager.set_preferred_backend(request.package)
+    gpu_manager.configure_engine_library_path()
+    current = load_prefs()
+    save_prefs(
+        current.get("backend", "auto"),
+        current.get("model_key", "2b"),
+        current.get("ollama_model", ""),
+        current.get("lmstudio_model", ""),
+        current.get("lmstudio_url", ""),
+        current.get("lmstudio_api_key"),
+        device="gpu",
+        limit_vram_offload=current.get("limit_vram_offload", True),
+        proofreading_language=current.get("proofreading_language", "en-US"),
+    )
+    reload_bundled_engine()
+    return {"success": True, "active_package": request.package}
 
 
 class HardwareSettingsRequest(BaseModel):
@@ -440,6 +529,8 @@ def ai_preference_set(request: AiPreferenceRequest):
     """Persist the user's backend choice so it survives restarts and drives
     get_backend(). The editor's AI tools read this via get_backend()."""
     current = load_prefs()
+    backend_changed = request.backend is not None and request.backend != current.get("backend")
+    model_changed = request.model_key is not None and request.model_key != current.get("model_key")
     device_changed = request.device is not None and request.device != current.get("device")
     offload_changed = (
         request.limit_vram_offload is not None
@@ -456,7 +547,7 @@ def ai_preference_set(request: AiPreferenceRequest):
         limit_vram_offload=request.limit_vram_offload,
         proofreading_language=request.proofreading_language,
     )
-    if device_changed or offload_changed:
+    if backend_changed or model_changed or device_changed or offload_changed:
         unload_active_backend()
     # Force the cached backend to re-resolve against the new preference.
     get_backend(force_refresh=True)
@@ -508,10 +599,14 @@ def ai_status_lite():
     active = get_backend(
         probe_results={"ollama": ollama_models, "lmstudio": lmstudio_models}
     )
+    loaded_info = get_loaded_bundled_model_info()
     return {
         "preference": public_prefs(prefs),
         "models_ready": models_ready(),
         "model_key": prefs.get("model_key") or "2b",
+        "loaded_model_key": loaded_info.get("model_key"),
+        "is_model_loaded": loaded_info.get("loaded", False),
+        "loaded_device": loaded_info.get("device"),
         "ollama_available": bool(ollama_models),
         "lmstudio_available": bool(lmstudio_models),
         "active_backend": active.name,

@@ -18,17 +18,26 @@ import re
 import shutil
 import subprocess
 import sys
+import threading
+import time
 from collections.abc import Callable
+from typing import Any
 from threading import Event, Lock
 
 import requests
 
-from ai_prefs import load_prefs
+from ai_prefs import load_prefs, save_prefs
+import gpu_manager
 from model_manager import MODELS, is_model_file_available, model_path
 
 
 def _init_cuda_dll_directory():
-    """Ensure NVIDIA CUDA runtime and cuBLAS DLLs are discoverable on Windows."""
+    """Ensure modular packages and NVIDIA CUDA runtime DLLs are discoverable on Windows."""
+    try:
+        nv_info = _query_nvidia_gpu()
+        gpu_manager.configure_engine_library_path(has_nvidia=bool(nv_info.get("cuda_available")))
+    except Exception:
+        pass
     if sys.platform != "win32":
         return
     import site
@@ -47,6 +56,46 @@ def _init_cuda_dll_directory():
                         os.add_dll_directory(bin_dir)
                     except (OSError, AttributeError):
                         pass
+
+
+def is_engine_gpu_supported() -> bool:
+    """Check if the active llama_cpp runtime supports GPU offload.
+
+    Apple Silicon uses system Metal natively.
+    On Windows and Linux, we check llama_supports_gpu_offload() to verify
+    that GPU acceleration libraries (CUDA or Vulkan) are present.
+    """
+    if sys.platform == "darwin" and platform.machine().lower() in ("arm64", "aarch64"):
+        return True
+    try:
+        import llama_cpp
+
+        if hasattr(llama_cpp, "llama_supports_gpu_offload"):
+            return bool(llama_cpp.llama_supports_gpu_offload())
+    except Exception:
+        pass
+    return False
+
+
+def reload_bundled_engine() -> bool:
+    """Reload llama_cpp module and clear cached model instances."""
+    global _CACHED_BUNDLED_LLM
+    unload_active_backend()
+    _CACHED_BUNDLED_LLM = {
+        "key": None,
+        "path": None,
+        "device": None,
+        "limit_vram": None,
+        "llm": None,
+    }
+    for mod in list(sys.modules.keys()):
+        if mod == "llama_cpp" or mod.startswith("llama_cpp."):
+            del sys.modules[mod]
+
+    import gc
+
+    gc.collect()
+    return is_engine_gpu_supported()
 
 
 _init_cuda_dll_directory()
@@ -79,6 +128,60 @@ _CACHED_BUNDLED_LLM: dict[str, object] = {
     "limit_vram": None,
     "llm": None,
 }
+
+_LAST_AI_ACTIVITY_TIME: float = 0.0
+AI_IDLE_TIMEOUT_SECONDS: float = 300.0  # 5 minutes idle offload
+_IDLE_MONITOR_STARTED: bool = False
+_IDLE_MONITOR_LOCK = Lock()
+
+
+def touch_ai_activity():
+    """Update last AI activity timestamp to prevent premature idle unload."""
+    global _LAST_AI_ACTIVITY_TIME
+    _LAST_AI_ACTIVITY_TIME = time.time()
+
+
+def get_last_ai_activity() -> float:
+    """Return timestamp of last AI activity."""
+    return _LAST_AI_ACTIVITY_TIME
+
+
+def check_and_unload_idle_backend(idle_threshold: float = AI_IDLE_TIMEOUT_SECONDS) -> bool:
+    """Check if the active model has been idle past threshold and unload if so."""
+    global _LAST_AI_ACTIVITY_TIME
+    if _LAST_AI_ACTIVITY_TIME <= 0.0:
+        return False
+    if _CACHED_BUNDLED_LLM.get("llm") is None:
+        return False
+    elapsed = time.time() - _LAST_AI_ACTIVITY_TIME
+    if elapsed >= idle_threshold:
+        unload_active_backend()
+        return True
+    return False
+
+
+def _idle_monitor_loop():
+    while True:
+        time.sleep(15)
+        try:
+            check_and_unload_idle_backend()
+        except Exception:
+            pass
+
+
+def start_idle_monitor():
+    """Start the background idle monitor thread if not already running."""
+    global _IDLE_MONITOR_STARTED
+    with _IDLE_MONITOR_LOCK:
+        if not _IDLE_MONITOR_STARTED:
+            _IDLE_MONITOR_STARTED = True
+            t = threading.Thread(
+                target=_idle_monitor_loop,
+                daemon=True,
+                name="lexicon-idle-monitor",
+            )
+            t.start()
+
 
 SYSTEM_PROMPT = (
     "You are a writing assistant. Follow the user's "
@@ -540,7 +643,47 @@ def resolve_active_compute_gpu(
             "offload_supported": True,
         }
 
-    # NVIDIA hardware uses verified CUDA drivers directly.
+    import gpu_manager
+
+    pref = gpu_manager.get_preferred_backend()
+
+    # User explicitly opted for CPU
+    if pref == "cpu":
+        return {
+            "count": 0,
+            "name": None,
+            "vendor": "None",
+            "vram_gb": 0.0,
+            "backend": "None",
+            "device_id": 0,
+            "offload_supported": False,
+        }
+
+    # Vulkan chosen explicitly
+    if pref == "vulkan":
+        vulkan_gpu = None
+        for group in ("dedicated", "integrated"):
+            for d in accelerators.get(group, []):
+                if d.get("vendor") in ("NVIDIA", "AMD", "Intel") or nv_info.get("name"):
+                    vulkan_gpu = d
+                    break
+            if vulkan_gpu:
+                break
+        gpu_name = (vulkan_gpu.get("name") if vulkan_gpu else None) or nv_info.get("name") or "Vulkan GPU"
+        gpu_vendor = (vulkan_gpu.get("vendor") if vulkan_gpu else None) or nv_info.get("vendor") or "Generic"
+        gpu_vram = float((vulkan_gpu.get("vram_gb") if vulkan_gpu else None) or nv_info.get("vram_gb") or 0.0)
+
+        return {
+            "count": 1,
+            "name": gpu_name,
+            "vendor": gpu_vendor,
+            "vram_gb": gpu_vram,
+            "backend": "Vulkan",
+            "device_id": 0,
+            "offload_supported": True,
+        }
+
+    # NVIDIA hardware uses verified CUDA drivers directly
     if nv_info.get("cuda_available") and nv_info.get("name"):
         return {
             "count": nv_info.get("count", 1),
@@ -612,6 +755,8 @@ def resolve_n_gpu_layers(
 ) -> int:
     """Pick llama.cpp GPU layers. Limited mode stays in dedicated VRAM."""
     if device != "gpu":
+        return 0
+    if not is_engine_gpu_supported():
         return 0
     if vram_gb is None:
         vram_gb = float(get_active_compute_gpu().get("vram_gb") or 0.0)
@@ -700,6 +845,17 @@ def get_hardware_diagnostics() -> dict:
 
     active_gpu = resolve_active_compute_gpu(accelerators, nv_info, ram_gb=ram_gb)
 
+    engine_supported = is_engine_gpu_supported()
+    hardware_offload_capable = bool(active_gpu.get("offload_supported"))
+    actual_offload_supported = bool(hardware_offload_capable and engine_supported)
+
+    pkg_required = None
+    if hardware_offload_capable and not engine_supported:
+        if active_gpu.get("backend") == "CUDA":
+            pkg_required = "cuda"
+        elif active_gpu.get("backend") == "Vulkan":
+            pkg_required = "vulkan"
+
     gpu_info = {
         "count": active_gpu["count"],
         "name": active_gpu["name"],
@@ -708,14 +864,17 @@ def get_hardware_diagnostics() -> dict:
         "backend": active_gpu["backend"],
         "device_id": active_gpu["device_id"],
         "cuda_available": bool(
-            active_gpu["backend"] == "CUDA" and active_gpu["offload_supported"]
+            active_gpu["backend"] == "CUDA" and actual_offload_supported
         ),
-        "offload_supported": active_gpu["offload_supported"],
+        "offload_supported": actual_offload_supported,
+        "engine_supported": engine_supported,
+        "package_required": pkg_required,
+        "available_packages": gpu_manager.get_available_packages(accelerators, nv_info),
     }
 
     prefs = load_prefs()
     device_pref = prefs.get("device", "gpu")
-    if not active_gpu.get("offload_supported"):
+    if not actual_offload_supported:
         device_pref = "cpu"
     limit_vram = bool(prefs.get("limit_vram_offload", True))
     recommended = _recommended_tier(
@@ -1266,6 +1425,8 @@ class BundledBackend(InferenceBackend):
         _CACHED_BUNDLED_LLM["device"] = device
         _CACHED_BUNDLED_LLM["limit_vram"] = limit_vram
         _CACHED_BUNDLED_LLM["llm"] = self._llm
+        touch_ai_activity()
+        start_idle_monitor()
 
     def unload(self):
         """Free GGUF model memory and force garbage collection."""
@@ -1282,6 +1443,7 @@ class BundledBackend(InferenceBackend):
             gc.collect()
 
     def complete(self, prompt: str, text: str, **opts) -> str:
+        touch_ai_activity()
         cancel_event, _ = _take_cancellation_opts(opts)
         _raise_if_cancelled(cancel_event)
         with _BUNDLED_GENERATION_LOCK:
@@ -1503,8 +1665,9 @@ def get_backend(
 
 def unload_active_backend():
     """Unload cached backend model weights from memory."""
-    global _backend, _CACHED_BUNDLED_LLM
+    global _backend, _CACHED_BUNDLED_LLM, _LAST_AI_ACTIVITY_TIME
     with _BUNDLED_GENERATION_LOCK:
+        _LAST_AI_ACTIVITY_TIME = 0.0
         _CACHED_BUNDLED_LLM["key"] = None
         _CACHED_BUNDLED_LLM["path"] = None
         _CACHED_BUNDLED_LLM["device"] = None
@@ -1517,6 +1680,49 @@ def unload_active_backend():
         import gc
 
         gc.collect()
+
+
+def get_loaded_bundled_model_info() -> dict[str, Any]:
+    """Return memory residency state for the bundled model."""
+    with _BUNDLED_GENERATION_LOCK:
+        llm = _CACHED_BUNDLED_LLM.get("llm")
+        is_loaded = llm is not None
+        return {
+            "loaded": is_loaded,
+            "model_key": _CACHED_BUNDLED_LLM.get("key") if is_loaded else None,
+            "device": _CACHED_BUNDLED_LLM.get("device") if is_loaded else None,
+            "limit_vram": _CACHED_BUNDLED_LLM.get("limit_vram") if is_loaded else None,
+        }
+
+
+def load_bundled_model(model_key: str | None = None) -> dict[str, Any]:
+    """Eagerly load the bundled model into memory."""
+    global _backend
+    with _BUNDLED_GENERATION_LOCK:
+        if model_key is not None:
+            prefs = load_prefs()
+            if prefs.get("model_key") != model_key:
+                save_prefs(
+                    prefs.get("backend", "auto"),
+                    model_key,
+                    prefs.get("ollama_model", ""),
+                    prefs.get("lmstudio_model", ""),
+                    prefs.get("lmstudio_url", ""),
+                    prefs.get("lmstudio_api_key"),
+                    device=prefs.get("device"),
+                    limit_vram_offload=prefs.get("limit_vram_offload"),
+                    proofreading_language=prefs.get("proofreading_language"),
+                )
+        backend = get_backend(force_refresh=True)
+        if isinstance(backend, BundledBackend):
+            backend._ensure_loaded()
+            _backend = backend
+        touch_ai_activity()
+        start_idle_monitor()
+    return get_loaded_bundled_model_info()
+
+
+start_idle_monitor()
 
 
 if __name__ == "__main__":
