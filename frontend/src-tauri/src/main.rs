@@ -85,6 +85,7 @@ fn launched_from_autostart() -> bool {
 }
 
 #[cfg(target_os = "windows")]
+#[cfg_attr(debug_assertions, allow(dead_code))]
 fn user_disabled_in_task_manager() -> bool {
     use std::os::windows::process::CommandExt;
     let mut cmd = Command::new("reg");
@@ -108,6 +109,7 @@ fn user_disabled_in_task_manager() -> bool {
 }
 
 #[cfg(not(target_os = "windows"))]
+#[cfg_attr(debug_assertions, allow(dead_code))]
 fn user_disabled_in_task_manager() -> bool {
     false
 }
@@ -980,14 +982,26 @@ fn main() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(move |app| {
-            // Restore startup registration on launch or update,
-            // unless the user disabled Lexicon in their OS startup manager.
-            if !user_disabled_in_task_manager() {
-                let autolaunch = app.autolaunch();
-                if let Ok(false) = autolaunch.is_enabled() {
-                    if let Err(error) = autolaunch.enable() {
-                        eprintln!("Warning: failed to restore Lexicon startup: {error}");
+            #[cfg(not(debug_assertions))]
+            {
+                // Restore startup registration on launch or update,
+                // unless the user disabled Lexicon in their OS startup manager.
+                if !user_disabled_in_task_manager() {
+                    let autolaunch = app.autolaunch();
+                    if let Ok(false) = autolaunch.is_enabled() {
+                        if let Err(error) = autolaunch.enable() {
+                            eprintln!("Warning: failed to restore Lexicon startup: {error}");
+                        }
                     }
+                }
+            }
+
+            #[cfg(debug_assertions)]
+            {
+                // In development mode, ensure development binaries are not in startup.
+                let autolaunch = app.autolaunch();
+                if let Ok(true) = autolaunch.is_enabled() {
+                    let _ = autolaunch.disable();
                 }
             }
 
