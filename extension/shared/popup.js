@@ -60,6 +60,7 @@ let selectedFrameId = null;
 let currentTabId = null;
 let currentSite = "";
 let monitorState = "checking";
+let settingsLoaded = false;
 let operationStatus = null;
 let aiStatusSettled = false;
 let settings = {
@@ -250,12 +251,10 @@ async function selectField(fieldId) {
 }
 
 function renderSettings() {
-  // Toggles stay inert until the backend answers and the AI probe
-  // settles. Early clicks fail and snap back, so block them instead.
-  // Settled means answered, not necessarily configured: pause and
-  // site toggles work without a model.
-  const controlsReady =
-    monitorState === "connected" && aiStatusSettled;
+  // Settings controls are ready as soon as local extension settings load.
+  // They do not depend on the desktop backend, so users can pause
+  // proofreading or disable on a site even when offline.
+  const controlsReady = settingsLoaded;
   pauseProofreadingEl.checked = Boolean(settings.paused);
   pauseProofreadingEl.disabled = !controlsReady;
   deepAutoRunEl.checked = Boolean(settings.deepAutoRun);
@@ -435,6 +434,7 @@ async function loadSettings() {
       userDictionary: [],
     };
   }
+  settingsLoaded = true;
   renderSettings();
   renderDictionary();
   if (settings.siteDisabled) {

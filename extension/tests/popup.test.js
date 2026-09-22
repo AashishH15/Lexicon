@@ -21,3 +21,8 @@ test("dictionary remove uses the Phosphor trash icon", () => {
 test("dictionary remove keeps its accessible name", () => {
   assert.ok(source.includes("from dictionary"));
 });
+
+test("settings controls are not blocked by backend connection state", () => {
+  assert.ok(!source.includes('monitorState === "connected" && aiStatusSettled'));
+  assert.ok(source.includes("const controlsReady = settingsLoaded;"));
+});
