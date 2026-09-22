@@ -53,9 +53,37 @@
     return Boolean(el && el.getClientRects && el.getClientRects().length > 0);
   }
 
+  function isHelperTextarea(el) {
+    if (!el || el.tagName !== "TEXTAREA") return false;
+    if (el.getAttribute?.("aria-hidden") === "true") return true;
+    if (
+      el.hasAttribute?.("data-cangjie-input") ||
+      el.hasAttribute?.("data-cangjie-dockey")
+    ) {
+      return true;
+    }
+    const className = String(el.className || "");
+    if (
+      /\b(inputarea|ace_text-input|monaco-mouse-cursor-text)\b/i.test(className)
+    ) {
+      return true;
+    }
+    if (typeof el.getBoundingClientRect === "function") {
+      const rect = el.getBoundingClientRect();
+      const width = rect.width ?? (rect.right - rect.left);
+      const height = rect.height ?? (rect.bottom - rect.top);
+      if (rect && width > 0 && height > 0 && width <= 2 && height <= 2) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   function isEditableElement(el) {
     if (!el || el.nodeType !== 1) return false;
-    if (el.tagName === "TEXTAREA") return true;
+    if (el.getAttribute?.("aria-hidden") === "true") return false;
+    if (el.disabled || el.readOnly) return false;
+    if (el.tagName === "TEXTAREA") return !isHelperTextarea(el);
     const attribute = el.getAttribute("contenteditable");
     if (attribute !== null && attribute.toLowerCase() !== "false") return true;
     // Use the editable root, not a focused child.
@@ -95,12 +123,13 @@
     while (stack.length) {
       const el = stack.pop();
       if (!el || el.nodeType !== 1) continue;
-      if (el.tagName === "TEXTAREA" && isVisible(el)) return el;
       if (isEditableElement(el) && isVisible(el)) return el;
-      if (el.shadowRoot) {
+      if (el.shadowRoot && el.shadowRoot.children) {
         for (const child of el.shadowRoot.children) stack.push(child);
       }
-      for (const child of el.children) stack.push(child);
+      if (el.children) {
+        for (const child of el.children) stack.push(child);
+      }
     }
     return null;
   }
@@ -671,6 +700,7 @@
     siteForHost,
     selectorsForHost,
     isVisible,
+    isHelperTextarea,
     isEditableElement,
     deepActiveElement,
     editableFromNode,

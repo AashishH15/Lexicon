@@ -37,6 +37,8 @@ const {
   detectEditableFields,
   isNotionEditor,
   isYoutubeEditor,
+  isHelperTextarea,
+  isEditableElement,
 } = sandbox.__lexiconEditable;
 
 // JSON round-trip avoids cross-realm prototype mismatches.
@@ -442,3 +444,123 @@ test("replaceRangeDirect and replaceContentDirect are exported", () => {
   assert.equal(typeof sandbox.__lexiconEditable.replaceContentDirect, "function");
   assert.equal(typeof sandbox.__lexiconEditable.isFrameworkEditor, "function");
 });
+
+test("isHelperTextarea detects virtual editor input sinks", () => {
+  const standardTextarea = {
+    tagName: "TEXTAREA",
+    className: "form-control",
+    getAttribute: () => null,
+    hasAttribute: () => false,
+  };
+  const cangjieInput = {
+    tagName: "TEXTAREA",
+    className: "",
+    getAttribute: () => null,
+    hasAttribute: (attr) => attr === "data-cangjie-input",
+  };
+  const cangjieDocKey = {
+    tagName: "TEXTAREA",
+    className: "",
+    getAttribute: () => null,
+    hasAttribute: (attr) => attr === "data-cangjie-dockey",
+  };
+  const ariaHiddenTextarea = {
+    tagName: "TEXTAREA",
+    className: "",
+    getAttribute: (attr) => (attr === "aria-hidden" ? "true" : null),
+    hasAttribute: () => false,
+  };
+  const monacoInput = {
+    tagName: "TEXTAREA",
+    className: "inputarea monaco-mouse-cursor-text",
+    getAttribute: () => null,
+    hasAttribute: () => false,
+  };
+  const aceInput = {
+    tagName: "TEXTAREA",
+    className: "ace_text-input",
+    getAttribute: () => null,
+    hasAttribute: () => false,
+  };
+  const tinyTrap = {
+    tagName: "TEXTAREA",
+    className: "",
+    getAttribute: () => null,
+    hasAttribute: () => false,
+    getBoundingClientRect: () => ({ top: 0, bottom: 1, left: 0, right: 1, width: 1, height: 1 }),
+  };
+
+  assert.equal(isHelperTextarea(standardTextarea), false);
+  assert.equal(isHelperTextarea(cangjieInput), true);
+  assert.equal(isHelperTextarea(cangjieDocKey), true);
+  assert.equal(isHelperTextarea(ariaHiddenTextarea), true);
+  assert.equal(isHelperTextarea(monacoInput), true);
+  assert.equal(isHelperTextarea(aceInput), true);
+  assert.equal(isHelperTextarea(tinyTrap), true);
+});
+
+test("isEditableElement accepts real textareas and rejects helper textareas", () => {
+  const realTextarea = {
+    nodeType: 1,
+    tagName: "TEXTAREA",
+    className: "",
+    getAttribute: () => null,
+    hasAttribute: () => false,
+  };
+  const helperTextarea = {
+    nodeType: 1,
+    tagName: "TEXTAREA",
+    className: "",
+    getAttribute: () => null,
+    hasAttribute: (attr) => attr === "data-cangjie-input",
+  };
+  const disabledTextarea = {
+    nodeType: 1,
+    tagName: "TEXTAREA",
+    disabled: true,
+    getAttribute: () => null,
+    hasAttribute: () => false,
+  };
+  const readOnlyTextarea = {
+    nodeType: 1,
+    tagName: "TEXTAREA",
+    readOnly: true,
+    getAttribute: () => null,
+    hasAttribute: () => false,
+  };
+
+  assert.equal(isEditableElement(realTextarea), true);
+  assert.equal(isEditableElement(helperTextarea), false);
+  assert.equal(isEditableElement(disabledTextarea), false);
+  assert.equal(isEditableElement(readOnlyTextarea), false);
+});
+
+test("detectEditableFields ignores helper textareas even when active", () => {
+  const realBox = {
+    nodeType: 1,
+    tagName: "TEXTAREA",
+    className: "",
+    getAttribute: () => null,
+    hasAttribute: () => false,
+    getClientRects: () => [{}],
+  };
+  const helperBox = {
+    nodeType: 1,
+    tagName: "TEXTAREA",
+    className: "inputarea",
+    getAttribute: () => null,
+    hasAttribute: (attr) => attr === "data-cangjie-input",
+    getClientRects: () => [{}],
+  };
+  const doc = {
+    activeElement: helperBox,
+    body: {},
+    location: { hostname: "example.com" },
+    querySelectorAll: (selector) => (selector === "textarea" ? [helperBox, realBox] : []),
+  };
+
+  const fields = detectEditableFields(doc);
+  assert.equal(fields.length, 1);
+  assert.equal(fields[0], realBox);
+});
+
