@@ -6,8 +6,10 @@ import {
   transformText,
 } from "./api.js";
 import {
+  CONTINUE_TOOL,
   EXPRESS_TOOL,
   getExpressPrompt,
+  getTransformOptions,
   getTransformPrompt,
   TRANSFORM_TOOLS,
 } from "./prompts.js";
@@ -654,6 +656,7 @@ function showRewrite(
   targetFrameId,
   sourceText,
   selectedRange,
+  tool = "Rewrite",
 ) {
   const box = document.createElement("div");
   box.className = "rewrite";
@@ -665,6 +668,7 @@ function showRewrite(
     targetFrameId,
     sourceText,
     selectedRange,
+    tool,
   );
 }
 
@@ -674,10 +678,12 @@ function attachReplaceButton(
   targetFrameId,
   sourceText,
   selectedRange,
+  tool = "Rewrite",
 ) {
   const replaceBtn = document.createElement("button");
   replaceBtn.type = "button";
-  replaceBtn.textContent = "Replace selection";
+  replaceBtn.textContent =
+    tool === CONTINUE_TOOL ? "Insert continuation" : "Replace selection";
   replaceBtn.addEventListener("click", async () => {
     replaceBtn.disabled = true;
     try {
@@ -688,6 +694,7 @@ function attachReplaceButton(
         selectedText: selectedRange?.text || sourceText,
         selection: selectedRange,
         fieldId: targetFieldId,
+        tool,
       }, targetFrameId);
       if (!response?.ok) {
         if (response?.error === "site-disabled") {
@@ -865,9 +872,11 @@ async function onRewrite() {
   });
   clearResults();
   try {
+    const tool = rewriteToolEl.value;
     const rewritten = await transformText(
-      getTransformPrompt(rewriteToolEl.value),
+      getTransformPrompt(tool),
       transformTextValue,
+      getTransformOptions(tool),
     );
     showRewrite(
       rewritten,
@@ -875,6 +884,7 @@ async function onRewrite() {
       targetFrameId,
       fieldText,
       selection,
+      tool,
     );
     setOperationStatus("idle", { message: "I’m ready to review this." });
   } catch (error) {

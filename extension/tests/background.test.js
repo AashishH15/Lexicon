@@ -947,3 +947,41 @@ test("transform prompts keep the draft language", async () => {
     await messageHandler({ type: "lexicon:get-ai-status" }, {});
   }
 });
+
+test("Structure tools transform with correct low temperatures", async () => {
+  const previousFetch = globalThis.fetch;
+  const response = (body) => ({
+    ok: true,
+    async json() {
+      return body;
+    },
+  });
+  const sentBodies = {};
+  globalThis.fetch = async (url, options = {}) => {
+    const path = new URL(url).pathname;
+    if (path === "/extension/ping") {
+      return response({ ok: true, app: "lexicon" });
+    }
+    if (path.startsWith("/ai/status")) {
+      return response({ ok: true, language: "en-US" });
+    }
+    if (path === "/transform") {
+      const parsed = JSON.parse(options.body);
+      sentBodies[parsed.prompt.slice(0, 10)] = parsed;
+      return response({ text: "Structured output" });
+    }
+    throw new Error(`unexpected request: ${url}`);
+  };
+  try {
+    for (const tool of ["Summary", "Key Points", "List"]) {
+      const result = await messageHandler(
+        { type: "lexicon:transform-text", tool, text: "Some raw content to structure." },
+        {},
+      );
+      assert.equal(result.ok, true);
+      assert.equal(result.text, "Structured output");
+    }
+  } finally {
+    globalThis.fetch = previousFetch;
+  }
+});

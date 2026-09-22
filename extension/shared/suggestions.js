@@ -56,6 +56,11 @@
   const TOOLTIP_HIDE_DELAY_MS = 200;
   const TONE_TOOLS = [
     "Express in English",
+    "Rewrite",
+    "Concise",
+    "Summary",
+    "Key Points",
+    "List",
     "Friendly",
     "Professional",
     "Academic",
@@ -1450,6 +1455,7 @@
           }
           state.aiResult = {
             text,
+            tool,
             sourceText: result.sourceText || "",
             selectedText: result.selectedText || "",
             selection: result.selection || null,
@@ -1540,6 +1546,7 @@
               pending.sourceText,
               pending.selection,
               pending.selectedText,
+              pending.tool,
             ),
           )
           .then((response) => {

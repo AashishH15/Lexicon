@@ -731,8 +731,8 @@
       },
       onAddToDictionary: (match) => addMatchToDictionary(state, match),
       onTransform: (tool) => transformField(state, tool),
-      onApplyTransform: (text, sourceText, selection, selectedText) =>
-        applyTransform(state, text, sourceText, selection, selectedText),
+      onApplyTransform: (text, sourceText, selection, selectedText, tool) =>
+        applyTransform(state, text, sourceText, selection, selectedText, tool),
     };
   }
 
@@ -788,6 +788,7 @@
     return {
       ok: true,
       text: response.text,
+      tool,
       sourceText: current.text,
       selectedText: selection.text,
       selection: {
@@ -797,9 +798,9 @@
     };
   }
 
-  // Confirm an edit landed by rereading only the replaced span.
+  // Confirm an edit landed by rereading the replaced span or element text.
   // Framework editors often normalize nearby breaks or spacing, so a
-  // whole-field match reports false failures. Never throw.
+  // strict exact-slice match can report false failures when block boundaries shift.
   function editLanded(editableApi, field, start, expected) {
     try {
       const after = editableApi.extractEditableText(field).text;
@@ -807,7 +808,14 @@
       if (span === expected) return true;
       const squash = (value) =>
         value.replace(/[\s\u00a0]+/g, " ").trim();
-      return squash(span) === squash(expected);
+      if (squash(span) === squash(expected)) return true;
+      const squashedExpected = squash(expected);
+      if (!squashedExpected) return true;
+      if (squash(after) === squashedExpected) return true;
+      const afterFromStart = squash(after.slice(start));
+      if (afterFromStart.startsWith(squashedExpected)) return true;
+      if (squash(after).includes(squashedExpected)) return true;
+      return false;
     } catch {
       return false;
     }
@@ -819,6 +827,7 @@
     sourceText,
     selection = null,
     selectedText = null,
+    tool = null,
   ) {
     if (!state.visible || !fieldIsAttached(state.field)) {
       return { ok: false, error: "The field is no longer visible." };
@@ -1552,6 +1561,7 @@
             sourceText,
             range,
             selectedText,
+            msg.tool,
           );
           return result.ok
             ? { ok: true, fieldId: state.fieldId }

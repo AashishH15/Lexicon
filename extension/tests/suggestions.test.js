@@ -659,6 +659,56 @@ test("Tone uses a dedicated badge popover and keeps the proofread panel clear", 
   });
 });
 
+test("Structure tools in AI panel display in dropdown and use Replace selection label", async () => {
+  const api = makePanelHarness();
+  const field = {
+    value: "Initial draft.",
+    getBoundingClientRect: () => ({
+      top: 100,
+      left: 100,
+      right: 300,
+      bottom: 180,
+      width: 200,
+      height: 80,
+    }),
+    addEventListener() {},
+    removeEventListener() {},
+  };
+  api.showField(field, [], {
+    onTransform: async (tool) => {
+      return { ok: true, text: "- Point one\n- Point two", sourceText: "Initial draft.", tool };
+    },
+    onApplyTransform: async () => ({ ok: true }),
+  });
+
+  const state = api.fieldState(field);
+  state.aiTriggerEl.listeners.click({
+    preventDefault() {},
+    stopPropagation() {},
+  });
+  const ai = state.aiPanelEl.children.find((child) => child.className === "ai");
+  const controls = ai.children[0];
+  const select = controls.children[0];
+  const options = select.children.map((opt) => opt.value);
+  assert.ok(options.includes("Summary"));
+  assert.ok(options.includes("Key Points"));
+  assert.ok(options.includes("List"));
+  assert.ok(!options.includes("Continue"));
+  assert.ok(!options.includes("Table"));
+
+  select.value = "Key Points";
+  const run = controls.children[1];
+  run.listeners.click();
+  await new Promise((resolve) => setTimeout(resolve, 10));
+
+  const resultAi = state.aiPanelEl.children.find(
+    (child) => child.className === "ai",
+  );
+  assert.equal(resultAi.children[1].textContent, "- Point one\n- Point two");
+  const replace = resultAi.children[2];
+  assert.equal(replace.textContent, "Replace selection");
+});
+
 function makePanelHarness() {
   let rootEl = null;
   const makeElement = (tag) => ({

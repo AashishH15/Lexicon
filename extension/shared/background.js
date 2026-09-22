@@ -15,6 +15,7 @@ import {
 import {
   EXPRESS_TOOL,
   getExpressPrompt,
+  getTransformOptions,
   getTransformPrompt,
   TRANSFORM_TOOLS,
 } from "./prompts.js";
@@ -724,8 +725,9 @@ browser.runtime.onMessage.addListener((msg, sender) => {
         const text = await transformText(
           getTransformPrompt(msg.tool, await extensionLanguage()),
           msg.text,
+          getTransformOptions(msg.tool),
         );
-        return { ok: true, text };
+        return { ok: true, text, tool: msg.tool };
       } catch (error) {
         return {
           ok: false,

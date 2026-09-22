@@ -35,8 +35,15 @@ export function buildDictionaryWordRequest(word) {
   return { word };
 }
 
-export function buildTransformRequest(prompt, text) {
-  return { prompt, text };
+export function buildTransformRequest(prompt, text, options = {}) {
+  const req = { prompt, text };
+  if (options && typeof options.temperature === "number") {
+    req.temperature = options.temperature;
+  }
+  if (options && Number.isInteger(options.maxTokens)) {
+    req.max_tokens = options.maxTokens;
+  }
+  return req;
 }
 
 export function formatMatches(matches) {
@@ -136,12 +143,12 @@ export async function removeDictionaryWord(word) {
   });
 }
 
-export async function transformText(prompt, text) {
+export async function transformText(prompt, text, options = {}) {
   if (!baseUrl) throw new Error("backend_unreachable");
   const data = await jsonRequest(TRANSFORM_PATH, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(buildTransformRequest(prompt, text)),
+    body: JSON.stringify(buildTransformRequest(prompt, text, options)),
   });
   return data.text;
 }

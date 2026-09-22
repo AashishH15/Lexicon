@@ -11,10 +11,16 @@ import { fileURLToPath } from "node:url";
 import {
   EXPRESS_TOOL,
   REWRITE_PROMPT,
+  STRUCTURE_TOOLS,
   getExpressPrompt,
+  getTransformOptions,
   getTransformPrompt,
   TRANSFORM_TOOLS,
 } from "../shared/prompts.js";
+import {
+  DEFAULT_INSTRUCTIONS,
+  TOOL_TEMPERATURES as DESKTOP_TOOL_TEMPERATURES,
+} from "../../frontend/src/prompts.js";
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const DESKTOP_PROMPTS = readFileSync(
@@ -95,7 +101,11 @@ test("tone prompts follow the desktop tone instruction template", () => {
     "original meaning, facts, and any names. Keep the same language and " +
     "the same paragraph breaks.";
   const toneNames = TRANSFORM_TOOLS.filter(
-    (t) => t !== "Rewrite" && t !== "Concise" && t !== EXPRESS_TOOL,
+    (t) =>
+      t !== "Rewrite" &&
+      t !== "Concise" &&
+      !STRUCTURE_TOOLS.includes(t) &&
+      t !== EXPRESS_TOOL,
   );
   for (const tone of toneNames) {
     const block = extSource.match(
@@ -110,6 +120,58 @@ test("tone prompts follow the desktop tone instruction template", () => {
     );
     assert.equal(base, normalize(template(descriptor)), `${tone} template drifted`);
   }
+});
+
+test("Structure tools match the desktop prompts verbatim", () => {
+  const normalize = (s) => s.replace(/\s+/g, " ").trim();
+  assert.ok(STRUCTURE_TOOLS.includes("Summary"));
+  assert.ok(STRUCTURE_TOOLS.includes("Key Points"));
+  assert.ok(STRUCTURE_TOOLS.includes("List"));
+  assert.ok(!STRUCTURE_TOOLS.includes("Table"));
+  assert.ok(!TRANSFORM_TOOLS.includes("Continue"));
+  assert.ok(!TRANSFORM_TOOLS.includes("Table"));
+
+  for (const tool of STRUCTURE_TOOLS) {
+    const base = normalize(
+      getTransformPrompt(tool).slice(0, -OUTPUT_RULES.length),
+    );
+    assert.equal(
+      base,
+      normalize(DEFAULT_INSTRUCTIONS[tool]),
+      `Structure tool ${tool} drifted from desktop prompt`,
+    );
+  }
+});
+
+test("Tool temperatures match desktop defaults", () => {
+  for (const tool of STRUCTURE_TOOLS) {
+    assert.equal(
+      getTransformOptions(tool).temperature,
+      DESKTOP_TOOL_TEMPERATURES[tool],
+      `Temperature for ${tool} drifted`,
+    );
+  }
+  for (const tone of [
+    "Rewrite",
+    "Concise",
+    "Friendly",
+    "Professional",
+    "Academic",
+    "Formal",
+    "Casual",
+    "Playful",
+    "Empathetic",
+    "Persuasive",
+    "Humorous",
+  ]) {
+    assert.equal(
+      getTransformOptions(tone).temperature,
+      DESKTOP_TOOL_TEMPERATURES[tone],
+      `Temperature for ${tone} drifted`,
+    );
+  }
+  assert.equal(getTransformOptions("Continue").temperature, undefined);
+  assert.equal(getTransformOptions("Table").temperature, undefined);
 });
 
 test("Express in English is a transform tool with its own prompt", () => {

@@ -553,3 +553,29 @@ test("grammar matches carry their original text for diff rows", async () => {
   assert.equal(harness.renderedMatches.length, 1);
   assert.equal(harness.renderedMatches[0].original, "teh");
 });
+
+test("Summary replaces selected text in field", async () => {
+  const harness = createHarness({
+    selection: { start: 0, end: 7, text: "teh teh" },
+    transformResult: "Brief summary.",
+  });
+  await new Promise((resolve) => setImmediate(resolve));
+
+  await harness.messageHandler({
+    type: "lexicon:highlight",
+    matches: [],
+  });
+
+  const result = await harness.renderedOptions.onTransform("Summary");
+  assert.equal(result.tool, "Summary");
+
+  const applied = await harness.renderedOptions.onApplyTransform(
+    result.text,
+    result.sourceText,
+    result.selection,
+    result.selectedText,
+    result.tool,
+  );
+  assert.deepEqual(plain(applied), { ok: true });
+  assert.equal(harness.field.value, "Brief summary.");
+});

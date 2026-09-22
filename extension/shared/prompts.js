@@ -11,11 +11,18 @@ export const REWRITE_PROMPT =
   "not the content. Keep the same language and the same paragraph breaks." +
   OUTPUT_RULES;
 
+export const STRUCTURE_TOOLS = [
+  "Summary",
+  "Key Points",
+  "List",
+];
+
 export const EXPRESS_TOOL = "Express in English";
 
 export const TRANSFORM_TOOLS = [
   "Rewrite",
   "Concise",
+  ...STRUCTURE_TOOLS,
   "Friendly",
   "Professional",
   "Academic",
@@ -64,6 +71,50 @@ const CONCISE_PROMPT =
   "tone. Keep the same language and the same paragraph breaks." +
   OUTPUT_RULES;
 
+const STRUCTURE_PROMPTS = {
+  Summary:
+    "Summarize the text below in 2-4 sentences that capture its key message " +
+    "and most important points. Do not add opinions or information that " +
+    "isn't in the text." +
+    OUTPUT_RULES,
+  "Key Points":
+    "Extract the most important points from the text below as a Markdown " +
+    'bulleted list. One point per line, each line starting with "- ". Keep ' +
+    "each point short — a phrase or one sentence. Do not nest lists or add " +
+    "sub-bullets." +
+    OUTPUT_RULES,
+  List:
+    "Reformat the text below as a Markdown bulleted list, one natural item " +
+    'or step per line, each line starting with "- ". Keep the original ' +
+    "wording where possible — only restructure it into list form." +
+    OUTPUT_RULES,
+};
+
+export const TOOL_TEMPERATURES = Object.freeze({
+  Concise: 0.2,
+  Summary: 0.2,
+  "Key Points": 0.2,
+  List: 0.2,
+  Professional: 0.3,
+  Academic: 0.3,
+  Formal: 0.3,
+  Rewrite: 0.5,
+  Casual: 0.6,
+  Friendly: 0.6,
+  Playful: 0.6,
+  Empathetic: 0.6,
+  Persuasive: 0.6,
+  Humorous: 0.6,
+});
+
+export function getTransformOptions(tool) {
+  const options = {};
+  if (typeof TOOL_TEMPERATURES[tool] === "number") {
+    options.temperature = TOOL_TEMPERATURES[tool];
+  }
+  return options;
+}
+
 function tonePrompt(descriptor) {
   return (
     `Rewrite the text below so it reads ${descriptor}. Preserve the ` +
@@ -83,7 +134,7 @@ const EXPRESS_JSON_TEMPLATE =
   '    "friendly": "...",\n' +
   '    "formal": "...",\n' +
   '    "concise": "..."\n' +
-  "  }\n" +
+  '  }\n' +
   "}";
 
 export function getExpressPrompt() {
@@ -112,16 +163,20 @@ export function getExpressPrompt() {
 }
 
 export function getTransformPrompt(tool, language = "en-US") {
-  const base =
-    tool === EXPRESS_TOOL
-      ? getExpressPrompt()
-      : tool === "Rewrite"
-        ? REWRITE_PROMPT
-        : tool === "Concise"
-          ? CONCISE_PROMPT
-          : tonePrompt(TONE_DESCRIPTORS[tool]);
   if (tool === EXPRESS_TOOL) {
-    return base;
+    return getExpressPrompt();
+  }
+  let base;
+  if (tool === "Rewrite") {
+    base = REWRITE_PROMPT;
+  } else if (tool === "Concise") {
+    base = CONCISE_PROMPT;
+  } else if (STRUCTURE_PROMPTS[tool]) {
+    base = STRUCTURE_PROMPTS[tool];
+  } else if (TONE_DESCRIPTORS[tool]) {
+    base = tonePrompt(TONE_DESCRIPTORS[tool]);
+  } else {
+    base = REWRITE_PROMPT;
   }
   return base + keepLanguageAppendix(language);
 }
