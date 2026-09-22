@@ -4,15 +4,13 @@ import shutil
 import sys
 import zipfile
 from pathlib import Path
-from unittest.mock import MagicMock, patch
-
-import pytest
+from unittest.mock import patch
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
 if str(BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(BACKEND_DIR))
 
-import gpu_manager
+import gpu_manager  # noqa: E402
 
 
 def create_dummy_whl_bytes(files: dict[str, bytes]) -> bytes:

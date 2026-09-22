@@ -45,7 +45,10 @@ PACKAGE_REGISTRY = {
             "llama.dll" if sys.platform == "win32" else "libllama.so",
             "ggml-vulkan.dll" if sys.platform == "win32" else "libggml-vulkan.so",
         ],
-        "description": "Enables cross-vendor GPU acceleration (Vulkan 1.3+) on AMD Radeon, Intel Arc, and integrated GPUs.",
+        "description": (
+            "Enables cross-vendor GPU acceleration (Vulkan 1.3+) on AMD Radeon, "
+            "Intel Arc, and integrated GPUs."
+        ),
     },
 }
 

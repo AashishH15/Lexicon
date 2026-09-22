@@ -25,6 +25,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
+import gpu_manager
 from ai_prefs import load_prefs, public_prefs, save_prefs
 from dictionary import (
     add_word as add_dictionary_word,
@@ -50,7 +51,6 @@ from inference import (
     reload_bundled_engine,
     unload_active_backend,
 )
-import gpu_manager
 from languagetool import check_text, close_tool
 from model_manager import (
     cancel_download,

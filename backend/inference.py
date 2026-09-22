@@ -21,13 +21,13 @@ import sys
 import threading
 import time
 from collections.abc import Callable
-from typing import Any
 from threading import Event, Lock
+from typing import Any
 
 import requests
 
-from ai_prefs import load_prefs, save_prefs
 import gpu_manager
+from ai_prefs import load_prefs, save_prefs
 from model_manager import MODELS, is_model_file_available, model_path
 
 
@@ -669,9 +669,14 @@ def resolve_active_compute_gpu(
                     break
             if vulkan_gpu:
                 break
-        gpu_name = (vulkan_gpu.get("name") if vulkan_gpu else None) or nv_info.get("name") or "Vulkan GPU"
-        gpu_vendor = (vulkan_gpu.get("vendor") if vulkan_gpu else None) or nv_info.get("vendor") or "Generic"
-        gpu_vram = float((vulkan_gpu.get("vram_gb") if vulkan_gpu else None) or nv_info.get("vram_gb") or 0.0)
+
+        vg_name = vulkan_gpu.get("name") if vulkan_gpu else None
+        vg_vendor = vulkan_gpu.get("vendor") if vulkan_gpu else None
+        vg_vram = vulkan_gpu.get("vram_gb") if vulkan_gpu else None
+
+        gpu_name = vg_name or nv_info.get("name") or "Vulkan GPU"
+        gpu_vendor = vg_vendor or nv_info.get("vendor") or "Generic"
+        gpu_vram = float(vg_vram or nv_info.get("vram_gb") or 0.0)
 
         return {
             "count": 1,

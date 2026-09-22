@@ -693,8 +693,8 @@ def test_get_loaded_bundled_model_info(monkeypatch):
 
 def test_ai_preference_set_unloads_on_model_change(monkeypatch, tmp_path):
     """Changing model_key in preference must immediately trigger backend unload."""
-    from main import app, ai_preference_set, AiPreferenceRequest
-    from fastapi.testclient import TestClient
+
+    from main import AiPreferenceRequest, ai_preference_set
 
     unloaded = False
 
@@ -703,8 +703,14 @@ def test_ai_preference_set_unloads_on_model_change(monkeypatch, tmp_path):
         unloaded = True
 
     monkeypatch.setattr("main.unload_active_backend", fake_unload)
-    monkeypatch.setattr("main.load_prefs", lambda: {"backend": "bundled", "model_key": "quality", "device": "gpu"})
-    monkeypatch.setattr("main.save_prefs", lambda *a, **kw: {"backend": "bundled", "model_key": "2b", "device": "gpu"})
+    monkeypatch.setattr(
+        "main.load_prefs",
+        lambda: {"backend": "bundled", "model_key": "quality", "device": "gpu"},
+    )
+    monkeypatch.setattr(
+        "main.save_prefs",
+        lambda *a, **kw: {"backend": "bundled", "model_key": "2b", "device": "gpu"},
+    )
     monkeypatch.setattr("main.get_backend", lambda force_refresh=True: None)
 
     req = AiPreferenceRequest(backend="bundled", model_key="2b")
@@ -714,15 +720,21 @@ def test_ai_preference_set_unloads_on_model_change(monkeypatch, tmp_path):
 
 def test_ai_load_and_unload_endpoints(monkeypatch):
     """Verify /ai/load and /ai/unload endpoints report loaded residency."""
-    from main import app
     from fastapi.testclient import TestClient
+
+    from main import app
 
     client = TestClient(app)
 
     with monkeypatch.context() as m:
         m.setattr(
             "main.load_bundled_model",
-            lambda key=None: {"loaded": True, "model_key": key or "2b", "device": "gpu", "limit_vram": True},
+            lambda key=None: {
+                "loaded": True,
+                "model_key": key or "2b",
+                "device": "gpu",
+                "limit_vram": True,
+            },
         )
         resp = client.post("/ai/load", json={"model_key": "2b"})
         assert resp.status_code == 200
@@ -743,8 +755,9 @@ def test_ai_load_and_unload_endpoints(monkeypatch):
 
 def test_idle_timeout_unloads_active_bundled_model(monkeypatch):
     """Verify that idle check unloads model only after timeout expires."""
-    import inference
     import time
+
+    import inference
 
     unloaded = False
 
