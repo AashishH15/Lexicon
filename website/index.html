@@ -147,7 +147,7 @@
         "name": "Can Lexicon translate my writing into English?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Yes. Express in English takes a short thought in Spanish, German, French, Chinese, Hindi, or plain English and phrases it as natural English in six tones, starting with Auto, which keeps the source register. It runs on the Standard or Quality local model, or your Ollama or LM Studio server. Replace swaps it in with one undo."
+          "text": "Yes. Express in English takes a short thought in Chinese, French, German, Hindi, Spanish, or dozens of other languages (or plain English) and phrases it as natural English in six tones, starting with Auto, which keeps the source register. It runs on the Standard or Quality local model, or your Ollama or LM Studio server. Replace swaps it in with one undo."
         }
       },
       {
@@ -510,15 +510,17 @@
                   <span class="bento-meta">Desktop &amp; Browser Extension</span>
                 </div>
                 <p class="bento-desc" style="margin-top: 8px;">
-                  Write a thought in Spanish, German, French, Chinese, Hindi, or plain English. Lexicon translates and phrases it into natural English across six distinct voices. <strong>Auto</strong> preserves the exact register of your source text without forcing style shifts.
+                  Write a thought in Chinese, French, German, Hindi, Spanish, and dozens more, or refine plain English. Lexicon translates and phrases it into natural English across six distinct voices. <strong>Auto</strong> preserves the exact register of your source text without forcing style shifts.
                 </p>
 
                 <!-- Language Selector -->
                 <div class="express-lang-selector">
                   <span class="express-lang-label">Try an input:</span>
-                  <button type="button" class="express-lang-btn active" data-lang="spanish">Spanish</button>
+                  <button type="button" class="express-lang-btn active" data-lang="chinese">Chinese</button>
+                  <button type="button" class="express-lang-btn" data-lang="french">French</button>
                   <button type="button" class="express-lang-btn" data-lang="german">German</button>
                   <button type="button" class="express-lang-btn" data-lang="hindi">Hindi</button>
+                  <button type="button" class="express-lang-btn" data-lang="spanish">Spanish</button>
                 </div>
 
                 <!-- Tone Tabs (6 Tones, Auto First) -->
@@ -549,9 +551,9 @@
                 <div class="express-source-pane">
                   <div class="express-pane-header">
                     <span style="font-size: 0.76rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted);">Source Thought</span>
-                    <span class="badge-pill badge-blue" id="express-lang-badge">SPANISH -&gt; ENGLISH</span>
+                    <span class="badge-pill badge-blue" id="express-lang-badge">CHINESE -&gt; ENGLISH</span>
                   </div>
-                  <p class="express-source-text" id="express-source-text">"Estoy muy contento con los resultados de Maria en 2024."</p>
+                  <p class="express-source-text" id="express-source-text">"我对玛丽亚在2024年取得的成绩感到非常满意。"</p>
                 </div>
 
                 <div class="express-result-pane">
@@ -559,7 +561,7 @@
                     <span style="font-size: 0.76rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted);">Transcreated English</span>
                     <span class="express-tone-hint" id="express-tone-hint">Faithful to the original source register</span>
                   </div>
-                  <p class="express-output-box" id="express-output-box">I am very pleased with Maria's results in 2024.</p>
+                  <p class="express-output-box" id="express-output-box">I am very pleased with the results Maria achieved in 2024.</p>
                 </div>
               </div>
             </div>
@@ -1343,9 +1345,9 @@
             <div class="faq-answer">
               <div class="faq-answer-inner">
                 <p>
-                Yes. Express in English takes a short thought in Spanish, German, French, Chinese, Hindi, or plain
-                English and phrases it as natural English in six tones, starting with Auto, which keeps the source
-                register. It runs on the Standard or Quality local model, or your Ollama or LM Studio server.
+                Yes. Express in English takes a short thought in Chinese, French, German, Hindi, Spanish, or dozens of other
+                languages (or plain English) and phrases it as natural English in six tones, starting with Auto, which keeps
+                the source register. It runs on the Standard or Quality local model, or your Ollama or LM Studio server.
                 Replace swaps it in with one undo.
               </p>
               </div>

@@ -1715,6 +1715,126 @@
     if (!sourceTextEl || !badgeEl || !outputBoxEl || !toneHintEl) return;
 
     const data = {
+      chinese: {
+        badge: 'CHINESE -> ENGLISH',
+        source: '我对玛丽亚在2024年取得的成绩感到非常满意。',
+        tones: {
+          auto: {
+            text: 'I am very pleased with the results Maria achieved in 2024.',
+            hint: 'Faithful to the original source register'
+          },
+          professional: {
+            text: 'I am highly impressed with Maria\'s performance metrics and deliverables for 2024.',
+            hint: 'Polished, authoritative, and business-ready'
+          },
+          casual: {
+            text: 'So thrilled with Maria\'s results this year!',
+            hint: 'Relaxed, conversational, and direct'
+          },
+          friendly: {
+            text: 'Really happy to see Maria\'s wonderful achievements in 2024!',
+            hint: 'Warm, approachable, and encouraging'
+          },
+          formal: {
+            text: 'I express my highest satisfaction regarding the outcomes attained by Maria in 2024.',
+            hint: 'Dignified, precise, and reserved'
+          },
+          concise: {
+            text: 'Very pleased with Maria\'s 2024 results.',
+            hint: 'Direct, brief, and punchy'
+          }
+        }
+      },
+      french: {
+        badge: 'FRENCH -> ENGLISH',
+        source: 'Je suis très satisfait des résultats obtenus par Marie en 2024.',
+        tones: {
+          auto: {
+            text: 'I am very satisfied with the results Marie achieved in 2024.',
+            hint: 'Faithful to the original source register'
+          },
+          professional: {
+            text: 'I am highly pleased with Marie\'s performance and accomplishments throughout 2024.',
+            hint: 'Polished, authoritative, and business-ready'
+          },
+          casual: {
+            text: 'Super happy with Marie\'s results this year!',
+            hint: 'Relaxed, conversational, and direct'
+          },
+          friendly: {
+            text: 'Really thrilled with Marie\'s wonderful results in 2024!',
+            hint: 'Warm, approachable, and encouraging'
+          },
+          formal: {
+            text: 'I convey my utmost satisfaction regarding the results attained by Marie in 2024.',
+            hint: 'Dignified, precise, and reserved'
+          },
+          concise: {
+            text: 'Very pleased with Marie\'s 2024 results.',
+            hint: 'Direct, brief, and punchy'
+          }
+        }
+      },
+      german: {
+        badge: 'GERMAN -> ENGLISH',
+        source: 'Ich bin sehr zufrieden mit Marias Ergebnissen im Jahr 2024.',
+        tones: {
+          auto: {
+            text: 'I am very pleased with Maria\'s results in 2024.',
+            hint: 'Faithful to the original source register'
+          },
+          professional: {
+            text: 'I am highly pleased with Maria\'s performance metrics and achievements in 2024.',
+            hint: 'Polished, authoritative, and business-ready'
+          },
+          casual: {
+            text: 'Super happy with Maria\'s results this year!',
+            hint: 'Relaxed, conversational, and direct'
+          },
+          friendly: {
+            text: 'Really thrilled with Maria\'s wonderful results in 2024!',
+            hint: 'Warm, approachable, and encouraging'
+          },
+          formal: {
+            text: 'I convey my utmost satisfaction regarding the results attained by Maria in 2024.',
+            hint: 'Dignified, precise, and reserved'
+          },
+          concise: {
+            text: 'Very pleased with Maria\'s 2024 results.',
+            hint: 'Direct, brief, and punchy'
+          }
+        }
+      },
+      hindi: {
+        badge: 'HINDI -> ENGLISH',
+        source: 'मैं 2024 में मारिया के परिणामों से बहुत खुश हूँ।',
+        tones: {
+          auto: {
+            text: 'I am very happy with Maria\'s results in 2024.',
+            hint: 'Faithful to the original source register'
+          },
+          professional: {
+            text: 'I am extremely pleased with Maria\'s performance outcomes in 2024.',
+            hint: 'Polished, authoritative, and business-ready'
+          },
+          casual: {
+            text: 'So happy about Maria\'s 2024 results!',
+            hint: 'Relaxed, conversational, and direct'
+          },
+          friendly: {
+            text: 'Really thrilled with Maria\'s wonderful results in 2024!',
+            hint: 'Warm, approachable, and encouraging'
+          },
+          formal: {
+            text: 'I convey my complete satisfaction with the results achieved by Maria in 2024.',
+            hint: 'Dignified, precise, and reserved'
+          },
+          concise: {
+            text: 'Very pleased with Maria\'s 2024 results.',
+            hint: 'Direct, brief, and punchy'
+          }
+        }
+      },
       spanish: {
         badge: 'SPANISH -> ENGLISH',
         source: 'Estoy muy contento con los resultados de Maria en 2024.',
@@ -1744,77 +1864,17 @@
             hint: 'Direct, brief, and punchy'
           }
         }
-      },
-      german: {
-        badge: 'GERMAN -> ENGLISH',
-        source: 'Sehr geehrte Damen und Herren, ich schreibe Ihnen bezuglich des Treffens am Montag um 10 Uhr.',
-        tones: {
-          auto: {
-            text: 'Dear Sir or Madam, I am writing to confirm our meeting scheduled for Monday at 10 o\'clock.',
-            hint: 'Faithful to the original source register'
-          },
-          professional: {
-            text: 'Dear Sir or Madam, I am writing regarding our meeting scheduled for Monday at 10:00 AM.',
-            hint: 'Polished, authoritative, and business-ready'
-          },
-          casual: {
-            text: 'Hey there, just wanted to touch base about our meeting on Monday at 10.',
-            hint: 'Relaxed, conversational, and direct'
-          },
-          friendly: {
-            text: 'Hello everyone, hope you are well. Just following up on our Monday 10 AM meeting.',
-            hint: 'Warm, approachable, and encouraging'
-          },
-          formal: {
-            text: 'Dear Sir or Madam, I am writing to you regarding the meeting convened for Monday at 10:00 hours.',
-            hint: 'Dignified, precise, and reserved'
-          },
-          concise: {
-            text: 'Regarding our meeting Monday at 10 AM.',
-            hint: 'Direct, brief, and punchy'
-          }
-        }
-      },
-      hindi: {
-        badge: 'HINDI -> ENGLISH',
-        source: 'Main 2024 mein Maria ke results se bahut khush hoon.',
-        tones: {
-          auto: {
-            text: 'I am very happy with Maria\'s results in 2024.',
-            hint: 'Faithful to the original source register'
-          },
-          professional: {
-            text: 'I am extremely pleased with Maria\'s performance outcomes in 2024.',
-            hint: 'Polished, authoritative, and business-ready'
-          },
-          casual: {
-            text: 'So happy about Maria\'s 2024 results!',
-            hint: 'Relaxed, conversational, and direct'
-          },
-          friendly: {
-            text: 'Really thrilled with Maria\'s wonderful results in 2024!',
-            hint: 'Warm, approachable, and encouraging'
-          },
-          formal: {
-            text: 'I convey my complete satisfaction with the results achieved by Maria in 2024.',
-            hint: 'Dignified, precise, and reserved'
-          },
-          concise: {
-            text: 'Very pleased with Maria\'s 2024 results.',
-            hint: 'Direct, brief, and punchy'
-          }
-        }
       }
     };
 
-    let currentLang = 'spanish';
+    let currentLang = 'chinese';
     let currentTone = 'auto';
 
     // Auto-cycle: walk every tone of one language, then move to the next.
     // Orders derive from the data so new languages or tones join freely.
     // Manual picks and hover pause the cycle; reduced motion disables it.
     const LANG_ORDER = Object.keys(data);
-    const TONE_ORDER = Object.keys(data.spanish.tones);
+    const TONE_ORDER = Object.keys(data.chinese.tones);
     const CYCLE_MS = 2200;
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     let cycleTimer = null;
@@ -1845,7 +1905,7 @@
     }
 
     function render() {
-      const langData = data[currentLang] || data.spanish;
+      const langData = data[currentLang] || data.chinese;
       const toneData = langData.tones[currentTone] || langData.tones.auto;
 
       badgeEl.textContent = langData.badge;
