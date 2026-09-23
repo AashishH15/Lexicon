@@ -35,6 +35,7 @@ struct BackendState {
     tier1_offloaded: Mutex<bool>,
     tier2_offloaded: Mutex<bool>,
     lifecycle: Mutex<()>,
+    auth_token: Mutex<String>,
 }
 
 const BACKEND_PORT: u16 = 18000;
@@ -59,7 +60,43 @@ struct PendingNativePdf {
 
 struct NativePdfState(Mutex<Option<PendingNativePdf>>);
 
-fn post_backend_endpoint(endpoint: &str) -> bool {
+fn resolve_auth_token_path() -> Option<PathBuf> {
+    #[cfg(target_os = "windows")]
+    {
+        if let Ok(local_app_data) = env::var("LOCALAPPDATA") {
+            return Some(PathBuf::from(local_app_data).join("Lexicon").join("auth_token"));
+        }
+        if let Ok(app_data) = env::var("APPDATA") {
+            return Some(PathBuf::from(app_data).join("Lexicon").join("auth_token"));
+        }
+        if let Ok(home) = env::var("USERPROFILE") {
+            return Some(PathBuf::from(home).join(".lexicon").join("auth_token"));
+        }
+    }
+    #[cfg(target_os = "macos")]
+    {
+        if let Ok(home) = env::var("HOME") {
+            return Some(PathBuf::from(home).join("Library").join("Application Support").join("Lexicon").join("auth_token"));
+        }
+    }
+    #[cfg(all(unix, not(target_os = "macos")))]
+    {
+        if let Ok(runtime_dir) = env::var("XDG_RUNTIME_DIR") {
+            return Some(PathBuf::from(runtime_dir).join("lexicon").join("auth_token"));
+        }
+        if let Ok(home) = env::var("HOME") {
+            return Some(PathBuf::from(home).join(".local").join("share").join("lexicon").join("auth_token"));
+        }
+    }
+    None
+}
+
+fn read_auth_token_from_disk() -> Option<String> {
+    let path = resolve_auth_token_path()?;
+    std::fs::read_to_string(path).ok().map(|s| s.trim().to_string()).filter(|s| !s.is_empty())
+}
+
+fn post_backend_endpoint(endpoint: &str, token: Option<&str>) -> bool {
     let address: SocketAddr = match format!("127.0.0.1:{BACKEND_PORT}").parse() {
         Ok(address) => address,
         Err(_) => return false,
@@ -68,8 +105,12 @@ fn post_backend_endpoint(endpoint: &str) -> bool {
         Ok(stream) => stream,
         Err(_) => return false,
     };
+    let auth_header = match token {
+        Some(t) if !t.is_empty() => format!("Authorization: Bearer {t}\r\n"),
+        _ => String::new(),
+    };
     let request = format!(
-        "POST {endpoint} HTTP/1.1\r\nHost: 127.0.0.1:{BACKEND_PORT}\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
+        "POST {endpoint} HTTP/1.1\r\nHost: 127.0.0.1:{BACKEND_PORT}\r\n{auth_header}Content-Length: 0\r\nConnection: close\r\n\r\n"
     );
     if stream.write_all(request.as_bytes()).is_err() {
         return false;
@@ -114,8 +155,8 @@ fn user_disabled_in_task_manager() -> bool {
     false
 }
 
-fn request_backend_shutdown() -> bool {
-    post_backend_endpoint("/shutdown")
+fn request_backend_shutdown(token: Option<&str>) -> bool {
+    post_backend_endpoint("/shutdown", token)
 }
 
 struct BackendProcess {
@@ -389,7 +430,13 @@ fn stop_backend(app_handle: &tauri::AppHandle) {
         };
         if let Ok(mut child_lock) = state.child.lock() {
             if let Some(mut process) = child_lock.take() {
-                if request_backend_shutdown() {
+                let token = state
+                    .auth_token
+                    .lock()
+                    .ok()
+                    .map(|t| t.clone())
+                    .or_else(read_auth_token_from_disk);
+                if request_backend_shutdown(token.as_deref()) {
                     let _ = wait_for_child_exit(&mut process.child, BACKEND_SHUTDOWN_WAIT);
                 }
                 terminate_backend_tree(&mut process);
@@ -478,6 +525,30 @@ fn ensure_backend(
 fn restart_backend(app_handle: tauri::AppHandle) -> Result<(), String> {
     stop_backend(&app_handle);
     ensure_backend(app_handle, Some(true))
+}
+
+#[tauri::command]
+fn get_auth_token(app_handle: tauri::AppHandle) -> Result<String, String> {
+    let state = app_handle.state::<BackendState>();
+    let auth_lock = state
+        .auth_token
+        .lock()
+        .map_err(|_| "backend auth lock is unavailable".to_string())?;
+
+    if !auth_lock.is_empty() {
+        return Ok(auth_lock.clone());
+    }
+
+    drop(auth_lock);
+
+    if let Some(token) = read_auth_token_from_disk() {
+        if let Ok(mut auth_lock) = state.auth_token.lock() {
+            *auth_lock = token.clone();
+        }
+        return Ok(token);
+    }
+
+    Err("auth token is not available".to_string())
 }
 
 #[cfg(target_os = "windows")]
@@ -936,10 +1007,17 @@ fn start_idle_monitor(app_handle: tauri::AppHandle) {
         };
         let elapsed = last_activity.elapsed();
 
+        let token = state
+            .auth_token
+            .lock()
+            .ok()
+            .map(|t| t.clone())
+            .or_else(read_auth_token_from_disk);
+
         if elapsed >= Duration::from_secs(TIER2_LT_IDLE_SECS) {
             if let Ok(mut t2) = state.tier2_offloaded.lock() {
                 if !*t2 {
-                    if post_backend_endpoint("/languagetool/unload") {
+                    if post_backend_endpoint("/languagetool/unload", token.as_deref()) {
                         *t2 = true;
                     }
                 }
@@ -949,7 +1027,7 @@ fn start_idle_monitor(app_handle: tauri::AppHandle) {
         if elapsed >= Duration::from_secs(TIER1_LLM_IDLE_SECS) {
             if let Ok(mut t1) = state.tier1_offloaded.lock() {
                 if !*t1 {
-                    if post_backend_endpoint("/ai/unload") {
+                    if post_backend_endpoint("/ai/unload", token.as_deref()) {
                         *t1 = true;
                     }
                 }
@@ -1017,6 +1095,7 @@ fn main() {
                 tier1_offloaded: Mutex::new(false),
                 tier2_offloaded: Mutex::new(false),
                 lifecycle: Mutex::new(()),
+                auth_token: Mutex::new(String::new()),
             });
             app.manage(PendingUpdate(Mutex::new(None)));
             app.manage(NativePdfState(Mutex::new(None)));
@@ -1103,6 +1182,7 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             ensure_backend,
             restart_backend,
+            get_auth_token,
             prepare_for_update,
             fetch_update,
             install_update,

@@ -13,9 +13,18 @@ const PROBE_TIMEOUT_MS = 2000;
 const REQUEST_TIMEOUT_MS = 30000;
 
 let baseUrl = null;
+let authToken = null;
 
 export function getBackendBaseUrl() {
   return baseUrl;
+}
+
+export function getAuthToken() {
+  return authToken;
+}
+
+export function setAuthToken(token) {
+  authToken = token;
 }
 
 export function isValidPing(body) {
@@ -80,8 +89,45 @@ async function fetchWithTimeout(
   }
 }
 
-async function jsonRequest(path, options) {
-  const response = await fetchWithTimeout(`${baseUrl}${path}`, options);
+const HANDSHAKE_PATH = "/auth/handshake";
+
+async function performHandshake(targetBaseUrl) {
+  try {
+    const response = await fetchWithTimeout(
+      `${targetBaseUrl}${HANDSHAKE_PATH}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      },
+      PROBE_TIMEOUT_MS,
+    );
+    if (!response.ok) return null;
+    const body = await response.json();
+    if (body && body.ok && typeof body.token === "string") {
+      authToken = body.token;
+      return authToken;
+    }
+  } catch {
+    // Handshake failed or backend rejected origin.
+  }
+  return null;
+}
+
+async function jsonRequest(path, options = {}) {
+  const headers = Object.assign({}, options.headers);
+  if (authToken) {
+    headers["Authorization"] = `Bearer ${authToken}`;
+  }
+  let response = await fetchWithTimeout(`${baseUrl}${path}`, { ...options, headers });
+  if (response.status === 401 && baseUrl) {
+    const freshToken = await performHandshake(baseUrl);
+    if (freshToken) {
+      const retryHeaders = Object.assign({}, options.headers, {
+        Authorization: `Bearer ${freshToken}`,
+      });
+      response = await fetchWithTimeout(`${baseUrl}${path}`, { ...options, headers: retryHeaders });
+    }
+  }
   if (!response.ok) {
     const data = await response.json().catch(() => ({}));
     throw new Error(data.detail || data.error || `Request failed: ${response.status}`);
@@ -101,12 +147,14 @@ export async function discoverBackend() {
       const body = await response.json();
       if (!isValidPing(body)) continue;
       baseUrl = `http://127.0.0.1:${port}`;
+      await performHandshake(baseUrl);
       return baseUrl;
     } catch {
       // Port not available.
     }
   }
   baseUrl = null;
+  authToken = null;
   return null;
 }
 

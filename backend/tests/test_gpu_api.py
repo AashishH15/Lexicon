@@ -14,7 +14,9 @@ from main import app  # noqa: E402
 
 @pytest.fixture
 def client():
-    return TestClient(app)
+    c = TestClient(app)
+    c.headers["Authorization"] = f"Bearer {app.state.auth_token}"
+    return c
 
 
 def test_ai_gpu_packages_get(client):

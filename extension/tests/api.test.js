@@ -11,10 +11,12 @@ import {
   buildTransformRequest,
   discoverBackend,
   formatMatches,
+  getAuthToken,
   getBackendBaseUrl,
   getDictionary,
   isValidPing,
   removeDictionaryWord,
+  setAuthToken,
 } from "../shared/api.js";
 
 test("backend ports probe 18000 (packaged) before 8000 (dev launcher)", () => {
@@ -38,6 +40,7 @@ test("discoverBackend clears a stale connection after both probes fail", async (
   try {
     assert.equal(await discoverBackend(), null);
     assert.equal(getBackendBaseUrl(), null);
+    assert.equal(getAuthToken(), null);
   } finally {
     globalThis.fetch = previousFetch;
   }
@@ -75,6 +78,14 @@ test("dictionary client reads and mutates canonical snapshots", async () => {
         },
       };
     }
+    if (url.endsWith("/auth/handshake")) {
+      return {
+        ok: true,
+        async json() {
+          return { ok: true, token: "handshake-token-123" };
+        },
+      };
+    }
     return {
       ok: true,
       async json() {
@@ -84,6 +95,7 @@ test("dictionary client reads and mutates canonical snapshots", async () => {
   };
   try {
     await discoverBackend();
+    assert.equal(getAuthToken(), "handshake-token-123");
     assert.deepEqual(await getDictionary(), {
       ok: true,
       words: ["Lexicon"],
@@ -92,7 +104,7 @@ test("dictionary client reads and mutates canonical snapshots", async () => {
     await addDictionaryWord("New");
     await removeDictionaryWord("Old");
     assert.deepEqual(
-      calls.slice(1).map(({ url, options }) => ({
+      calls.slice(2).map(({ url, options }) => ({
         path: new URL(url).pathname,
         method: options.method || "GET",
         body: options.body ? JSON.parse(options.body) : null,
@@ -103,6 +115,66 @@ test("dictionary client reads and mutates canonical snapshots", async () => {
         { path: "/dictionary/remove", method: "POST", body: { word: "Old" } },
       ],
     );
+    for (const call of calls.slice(2)) {
+      assert.equal(call.options.headers?.Authorization, "Bearer handshake-token-123");
+    }
+  } finally {
+    globalThis.fetch = previousFetch;
+  }
+});
+
+test("jsonRequest re-handshakes and retries on 401 response", async () => {
+  const previousFetch = globalThis.fetch;
+  let handshakeCount = 0;
+  let dictionaryAttempts = 0;
+  globalThis.fetch = async (url, options = {}) => {
+    if (url.endsWith("/extension/ping")) {
+      return {
+        ok: true,
+        async json() {
+          return { ok: true, app: "lexicon" };
+        },
+      };
+    }
+    if (url.endsWith("/auth/handshake")) {
+      handshakeCount += 1;
+      return {
+        ok: true,
+        async json() {
+          return { ok: true, token: `token-v${handshakeCount}` };
+        },
+      };
+    }
+    if (url.endsWith("/dictionary")) {
+      dictionaryAttempts += 1;
+      if (dictionaryAttempts === 1) {
+        return {
+          status: 401,
+          ok: false,
+          async json() {
+            return { detail: "Missing or invalid bearer token" };
+          },
+        };
+      }
+      return {
+        status: 200,
+        ok: true,
+        async json() {
+          return { ok: true, words: ["Recovered"], revision: 1 };
+        },
+      };
+    }
+    throw new Error(`Unexpected url: ${url}`);
+  };
+
+  try {
+    await discoverBackend();
+    assert.equal(getAuthToken(), "token-v1");
+
+    const result = await getDictionary();
+    assert.deepEqual(result, { ok: true, words: ["Recovered"], revision: 1 });
+    assert.equal(dictionaryAttempts, 2);
+    assert.equal(getAuthToken(), "token-v2");
   } finally {
     globalThis.fetch = previousFetch;
   }

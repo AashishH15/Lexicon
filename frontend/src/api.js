@@ -25,7 +25,52 @@ export async function ensureBackend(touchActivity = true) {
   }
 }
 
+let cachedAuthToken =
+  typeof import.meta !== "undefined" && import.meta.env?.MODE === "test"
+    ? "test-token"
+    : null;
+
+export function setCachedAuthToken(token) {
+  cachedAuthToken = token;
+}
+
+export async function getAuthToken() {
+  if (cachedAuthToken) return cachedAuthToken;
+  if (isTauriRuntime()) {
+    try {
+      cachedAuthToken = await invoke("get_auth_token");
+      return cachedAuthToken;
+    } catch {
+      // Failed to retrieve via Tauri IPC
+    }
+  }
+  if (import.meta.env.VITE_LEXICON_AUTH_TOKEN) {
+    cachedAuthToken = import.meta.env.VITE_LEXICON_AUTH_TOKEN;
+    return cachedAuthToken;
+  }
+  try {
+    const res = await fetch(`${getApiUrl()}/auth/handshake`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data?.token) {
+        cachedAuthToken = data.token;
+        return cachedAuthToken;
+      }
+    }
+  } catch {
+    // Handshake failed
+  }
+  return cachedAuthToken;
+}
+
 export async function restartBackend() {
+  cachedAuthToken =
+    typeof import.meta !== "undefined" && import.meta.env?.MODE === "test"
+      ? "test-token"
+      : null;
   if (isTauriRuntime()) {
     try {
       await invoke("restart_backend");
@@ -34,14 +79,18 @@ export async function restartBackend() {
     }
   } else {
     try {
-      await fetch(`${getApiUrl()}/ai/restart`, { method: "POST" });
+      const token = await getAuthToken();
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      await fetch(`${getApiUrl()}/ai/restart`, { method: "POST", headers });
     } catch {
       // Ignored
     }
     const start = Date.now();
     while (Date.now() - start < 10000) {
       try {
-        const res = await fetch(`${getApiUrl()}/ai/status`);
+        const token = await getAuthToken();
+        const headers = token ? { Authorization: `Bearer ${token}` } : {};
+        const res = await fetch(`${getApiUrl()}/ai/status`, { headers });
         if (res.ok) break;
       } catch {
         // Waiting for backend server to restart
@@ -51,7 +100,7 @@ export async function restartBackend() {
   }
 }
 
-async function request(path, options, { touchActivity } = {}) {
+export async function request(path, options, { touchActivity } = {}) {
   const isPassivePoll =
     path === "/dictionary" ||
     path === "/ai/status" ||
@@ -60,8 +109,25 @@ async function request(path, options, { touchActivity } = {}) {
     touchActivity !== undefined ? touchActivity : !isPassivePoll;
   await ensureBackend(shouldTouch);
   const apiUrl = getApiUrl();
+  const token = await getAuthToken();
+
+  const headers = { ...(options?.headers || {}) };
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+  const opts = { ...options, headers };
+
   try {
-    return await fetch(`${apiUrl}${path}`, options);
+    const response = await fetch(`${apiUrl}${path}`, opts);
+    if (response.status === 401) {
+      cachedAuthToken = null;
+      const refreshed = await getAuthToken();
+      if (refreshed) {
+        const retryHeaders = { ...headers, Authorization: `Bearer ${refreshed}` };
+        return fetch(`${apiUrl}${path}`, { ...options, headers: retryHeaders });
+      }
+    }
+    return response;
   } catch (error) {
     if (error?.name === "AbortError") {
       throw error;
@@ -69,7 +135,11 @@ async function request(path, options, { touchActivity } = {}) {
     // The idle monitor may have stopped the sidecar between the first
     // lifecycle check and the HTTP request. Start it once and retry.
     await ensureBackend(shouldTouch);
-    return fetch(`${apiUrl}${path}`, options);
+    const retryToken = await getAuthToken();
+    if (retryToken) {
+      headers["Authorization"] = `Bearer ${retryToken}`;
+    }
+    return fetch(`${apiUrl}${path}`, { ...options, headers });
   }
 }
 

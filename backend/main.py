@@ -20,11 +20,12 @@ if os.name == "nt":
 
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
+import auth
 import gpu_manager
 from ai_prefs import load_prefs, public_prefs, save_prefs
 from dictionary import (
@@ -71,13 +72,16 @@ async def lifespan(app: FastAPI):
     # Inference backends also resolve lazily. Do not probe Ollama here: a
     # stopped local server can take several seconds to time out, and Tauri
     # waits for this sidecar before showing the first window.
+    app.state.auth_token = auth.get_or_create_token()
     try:
         yield
     finally:
         close_tool()
+        auth.cleanup_auth_token_file()
 
 
 app = FastAPI(lifespan=lifespan)
+app.state.auth_token = auth.get_or_create_token()
 
 # Pinned extension origins. The local API is not open to arbitrary
 # extensions.
@@ -132,6 +136,58 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def authenticate_request(request: Request, call_next):
+    """Verify that requests to protected endpoints include a valid bearer token.
+
+    Public probes (/health, /extension/ping) and handshake (/auth/handshake)
+    stay accessible without a token. OPTIONS preflight passes through.
+    """
+    if request.method == "OPTIONS":
+        return await call_next(request)
+
+    path = request.url.path
+    if path in ("/health", "/extension/ping", "/auth/handshake"):
+        return await call_next(request)
+
+    header = request.headers.get("authorization") or request.headers.get("Authorization") or ""
+    candidate = header[7:].strip() if header.startswith("Bearer ") else ""
+    expected = getattr(app.state, "auth_token", None) or auth.get_or_create_token()
+
+    if not auth.validate_token(candidate, expected):
+        return JSONResponse(
+            status_code=401,
+            content={"error": "unauthorized", "detail": "Missing or invalid bearer token"},
+        )
+
+    return await call_next(request)
+
+
+@app.post("/auth/handshake")
+def auth_handshake(request: Request):
+    """Return the active bearer token to verified extension or desktop origins.
+
+    The endpoint checks the Origin header against the CORS whitelist.
+    It returns 403 Forbidden for untrusted origins.
+    """
+    origin = request.headers.get("origin") or request.headers.get("Origin") or ""
+    allowed = _cors_origins()
+    is_valid = origin in allowed
+    if not is_valid and EXTENSION_ORIGIN_REGEX:
+        import re
+
+        is_valid = bool(re.fullmatch(EXTENSION_ORIGIN_REGEX, origin))
+
+    if not is_valid:
+        return JSONResponse(
+            status_code=403,
+            content={"error": "forbidden", "detail": "Disallowed handshake origin"},
+        )
+
+    token = getattr(app.state, "auth_token", None) or auth.get_or_create_token()
+    return {"ok": True, "token": token}
 
 
 class GrammarRequest(BaseModel):

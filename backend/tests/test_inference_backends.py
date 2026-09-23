@@ -725,6 +725,7 @@ def test_ai_load_and_unload_endpoints(monkeypatch):
     from main import app
 
     client = TestClient(app)
+    client.headers["Authorization"] = f"Bearer {app.state.auth_token}"
 
     with monkeypatch.context() as m:
         m.setattr(

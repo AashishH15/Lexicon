@@ -98,8 +98,12 @@ def test_ai_status_endpoint_exposes_upgrade_metadata(tmp_path):
     legacy_file = tmp_path / "Qwen_Qwen3.5-2B-Q4_K_M.gguf"
     create_sized_file(legacy_file, int(MODELS["legacy-2b"]["size"] * 0.95))
 
-    with patch("model_manager.models_dir", return_value=str(tmp_path)):
+    with patch("model_manager.models_dir", return_value=str(tmp_path)), \
+         patch("inference.OllamaBackend._chat_models", return_value=[]), \
+         patch("inference.LMStudioBackend._models", return_value=[]), \
+         patch("inference.LMStudioBackend.loaded_models", return_value=[]):
         client = TestClient(app)
+        client.headers["Authorization"] = f"Bearer {app.state.auth_token}"
         resp = client.get("/ai/status")
         assert resp.status_code == 200
         data = resp.json()
@@ -124,6 +128,7 @@ def test_ai_preference_endpoint_preserves_quality_tier():
     with patch("main.save_prefs", return_value=saved), \
          patch("main.get_backend"):
         client = TestClient(app)
+        client.headers["Authorization"] = f"Bearer {app.state.auth_token}"
         response = client.post(
             "/ai/preference",
             json={"backend": "bundled", "model_key": "quality"},
@@ -144,6 +149,7 @@ def test_model_cleanup_legacy_endpoint(tmp_path):
     with patch("model_manager.models_dir", return_value=str(tmp_path)), \
          patch("main.verify_model_runs", return_value=True):
         client = TestClient(app)
+        client.headers["Authorization"] = f"Bearer {app.state.auth_token}"
         resp = client.post("/model/cleanup-legacy", json={"model_key": "2b"})
         assert resp.status_code == 200
         data = resp.json()
@@ -274,6 +280,7 @@ def test_delete_model_surfaces_file_removal_failure(tmp_path):
 def test_model_delete_endpoint_surfaces_file_removal_failure():
     with patch("main.delete_model", side_effect=OSError("locked")):
         client = TestClient(app)
+        client.headers["Authorization"] = f"Bearer {app.state.auth_token}"
         response = client.post("/model/delete", json={"model_key": "2b"})
 
     assert response.status_code == 500
@@ -283,6 +290,7 @@ def test_model_delete_endpoint_surfaces_file_removal_failure():
 def test_model_verify_endpoint(tmp_path):
     with patch("main.verify_model_runs", return_value=True):
         client = TestClient(app)
+        client.headers["Authorization"] = f"Bearer {app.state.auth_token}"
         resp = client.post("/model/verify", json={"model_key": "2b"})
         assert resp.status_code == 200
         assert resp.json() == {"verified": True, "model_key": "2b"}
