@@ -25,6 +25,32 @@ export async function ensureBackend(touchActivity = true) {
   }
 }
 
+export async function restartBackend() {
+  if (isTauriRuntime()) {
+    try {
+      await invoke("restart_backend");
+    } catch {
+      await ensureBackend(true);
+    }
+  } else {
+    try {
+      await fetch(`${getApiUrl()}/ai/restart`, { method: "POST" });
+    } catch {
+      // Ignored
+    }
+    const start = Date.now();
+    while (Date.now() - start < 10000) {
+      try {
+        const res = await fetch(`${getApiUrl()}/ai/status`);
+        if (res.ok) break;
+      } catch {
+        // Waiting for backend server to restart
+      }
+      await new Promise((r) => setTimeout(r, 200));
+    }
+  }
+}
+
 async function request(path, options, { touchActivity } = {}) {
   const isPassivePoll =
     path === "/dictionary" ||

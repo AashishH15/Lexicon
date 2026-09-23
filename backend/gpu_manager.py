@@ -1,3 +1,4 @@
+import json
 import os
 import platform
 import shutil
@@ -98,24 +99,153 @@ def is_package_installed(package_id: str) -> bool:
 
 
 _PREFERRED_BACKEND: str | None = None
+CUDA_RUNTIME_ZIP_URL = (
+    "https://github.com/ggml-org/llama.cpp/releases/download/"
+    "b11117/cudart-llama-bin-win-cuda-12.4-x64.zip"
+)
+
+
+def _get_pref_file() -> Path:
+    return get_backends_dir() / "preferred_backend.json"
 
 
 def get_preferred_backend() -> str | None:
     """Return user-selected runtime override, if configured."""
+    global _PREFERRED_BACKEND
+    pref_file = _get_pref_file()
+    if pref_file.is_file():
+        try:
+            with open(pref_file, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                val = data.get("preferred_backend")
+                if val in ("cuda", "vulkan", "cpu"):
+                    return val
+        except Exception:
+            pass
+        return None
     return _PREFERRED_BACKEND
 
 
 def set_preferred_backend(backend: str | None) -> None:
-    """Set user-selected runtime override."""
+    """Set and persist user-selected runtime override."""
     global _PREFERRED_BACKEND
     if backend:
         backend = backend.lower()
         if backend not in ("cuda", "vulkan", "cpu"):
             raise ValueError(f"Invalid backend {backend!r}")
     _PREFERRED_BACKEND = backend
+    pref_file = _get_pref_file()
+    try:
+        if backend is None:
+            if pref_file.exists():
+                pref_file.unlink(missing_ok=True)
+        else:
+            pref_file.parent.mkdir(parents=True, exist_ok=True)
+            with open(pref_file, "w", encoding="utf-8") as f:
+                json.dump({"preferred_backend": backend}, f)
+    except Exception:
+        pass
 
 
-def resolve_best_backend_path(has_nvidia: bool = False) -> Path | None:
+def has_nvidia_gpu() -> bool:
+    """Quickly check if the machine has an accessible NVIDIA GPU."""
+    return bool(shutil.which("nvidia-smi"))
+
+
+def ensure_cuda_dependencies(pkg_dir: Path) -> bool:
+    """Ensure cublas64_12.dll, cublasLt64_12.dll, and cudart64_12.dll exist in pkg_dir."""
+    if sys.platform != "win32":
+        return True
+
+    required_cuda_dlls = ["cublas64_12.dll", "cublasLt64_12.dll", "cudart64_12.dll"]
+    missing = [name for name in required_cuda_dlls if not (pkg_dir / name).exists()]
+    if not missing:
+        return True
+
+    # 1. Search local machine directories for existing official CUDA 12.x binaries
+    search_dirs: list[Path] = []
+    for env_var in ("CUDA_PATH", "CUDA_PATH_V12_4", "CUDA_PATH_V12_5", "CUDA_PATH_V12_0"):
+        val = os.environ.get(env_var)
+        if val:
+            search_dirs.append(Path(val) / "bin")
+
+    local_app_data = os.environ.get("LOCALAPPDATA", "")
+    program_files = os.environ.get("ProgramFiles", "")
+
+    import glob
+
+    search_patterns = [
+        os.path.join(
+            local_app_data,
+            "Programs",
+            "Python",
+            "Python3*",
+            "Lib",
+            "site-packages",
+            "nvidia",
+            "*",
+            "bin",
+        ),
+        os.path.join(program_files, "Python3*", "Lib", "site-packages", "nvidia", "*", "bin"),
+        os.path.join(program_files, "NVIDIA GPU Computing Toolkit", "CUDA", "v12*", "bin"),
+        os.path.join(
+            os.path.expanduser("~"), "miniconda3", "Lib", "site-packages", "nvidia", "*", "bin"
+        ),
+        os.path.join(
+            os.path.expanduser("~"), "anaconda3", "Lib", "site-packages", "nvidia", "*", "bin"
+        ),
+        os.path.join(
+            os.path.expanduser("~"),
+            ".conda",
+            "envs",
+            "*",
+            "Lib",
+            "site-packages",
+            "nvidia",
+            "*",
+            "bin",
+        ),
+    ]
+    for pattern in search_patterns:
+        for match in glob.glob(pattern):
+            search_dirs.append(Path(match))
+
+    for name in list(missing):
+        for sdir in search_dirs:
+            candidate = sdir / name
+            if candidate.is_file():
+                try:
+                    shutil.copy2(candidate, pkg_dir / name)
+                    missing.remove(name)
+                    break
+                except Exception:
+                    pass
+
+    if not missing:
+        return True
+
+    # 2. Fall back to downloading the official companion zip from llama.cpp releases
+    try:
+        req = urllib.request.Request(
+            CUDA_RUNTIME_ZIP_URL,
+            headers={"User-Agent": "Lexicon/0.11.0"},
+        )
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            import io
+
+            content = resp.read()
+            with zipfile.ZipFile(io.BytesIO(content)) as zf:
+                for name in missing:
+                    if name in zf.namelist():
+                        with zf.open(name) as src, open(pkg_dir / name, "wb") as dst:
+                            shutil.copyfileobj(src, dst)
+    except Exception:
+        pass
+
+    return all((pkg_dir / name).exists() for name in required_cuda_dlls)
+
+
+def resolve_best_backend_path(has_nvidia: bool | None = None) -> Path | None:
     """Select the highest priority installed accelerator package.
 
     If the user explicitly selected a runtime, that choice takes priority.
@@ -125,10 +255,13 @@ def resolve_best_backend_path(has_nvidia: bool = False) -> Path | None:
     pref = get_preferred_backend()
     if pref == "cpu":
         return None
-    if pref == "cuda" and is_package_installed("cuda"):
+    if pref == "cuda" and is_package_installed("cuda") and has_nvidia is not False:
         return get_backends_dir() / "cuda"
     if pref == "vulkan" and is_package_installed("vulkan"):
         return get_backends_dir() / "vulkan"
+
+    if has_nvidia is None:
+        has_nvidia = has_nvidia_gpu()
 
     if has_nvidia and is_package_installed("cuda"):
         return get_backends_dir() / "cuda"
@@ -139,9 +272,11 @@ def resolve_best_backend_path(has_nvidia: bool = False) -> Path | None:
     return None
 
 
-def configure_engine_library_path(has_nvidia: bool = False) -> Path | None:
+def configure_engine_library_path(has_nvidia: bool | None = None) -> Path | None:
     """Point llama_cpp to the chosen modular backend folder before import."""
     best_path = resolve_best_backend_path(has_nvidia=has_nvidia)
+    if best_path and best_path.name == "cuda" and sys.platform == "win32":
+        ensure_cuda_dependencies(best_path)
     if best_path:
         os.environ["LLAMA_CPP_LIB_PATH"] = str(best_path)
         if sys.platform == "win32":
@@ -357,6 +492,9 @@ def download_and_install_package(package_id: str) -> dict:
             pkg_dir.mkdir(parents=True, exist_ok=True)
             _extract_whl_libraries(part_archive, pkg_dir)
             shutil.rmtree(temp_dir, ignore_errors=True)
+
+            if package_id == "cuda" and sys.platform == "win32":
+                ensure_cuda_dependencies(pkg_dir)
 
             set_preferred_backend(package_id)
 

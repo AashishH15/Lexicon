@@ -271,6 +271,16 @@ def shutdown():
     return {"shutting_down": server is not None}
 
 
+@app.post("/ai/restart")
+def ai_restart():
+    """Gracefully cycle the sidecar for clean accelerator runtime switching."""
+    close_tool()
+    server = getattr(app.state, "server", None)
+    if server is not None:
+        server.should_exit = True
+    return {"restarting": True}
+
+
 class ModelLoadRequest(BaseModel):
     model_key: str | None = None
 

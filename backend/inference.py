@@ -31,6 +31,51 @@ from ai_prefs import load_prefs, save_prefs
 from model_manager import MODELS, is_model_file_available, model_path
 
 
+def _query_nvidia_gpu() -> dict:
+    """Read NVIDIA GPU name and dedicated VRAM via nvidia-smi only."""
+    info = {
+        "count": 0,
+        "name": None,
+        "vram_gb": 0.0,
+        "backend": "None",
+        "device_id": 0,
+        "cuda_available": False,
+    }
+    if not shutil.which("nvidia-smi"):
+        return info
+    try:
+        res = subprocess.run(
+            [
+                "nvidia-smi",
+                "--query-gpu=name,memory.total,index",
+                "--format=csv,noheader,nounits",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=3,
+        )
+        if res.returncode != 0 or not res.stdout.strip():
+            return info
+        lines = [line for line in res.stdout.strip().splitlines() if line.strip()]
+        first = [cell.strip() for cell in lines[0].split(",")]
+        if len(first) < 2:
+            return info
+        info["count"] = len(lines)
+        info["name"] = first[0]
+        try:
+            info["vram_gb"] = round(float(first[1]) / 1024, 2)
+        except ValueError:
+            info["vram_gb"] = 0.0
+        info["backend"] = "CUDA"
+        info["device_id"] = (
+            int(first[2]) if len(first) > 2 and first[2].isdigit() else 0
+        )
+        info["cuda_available"] = True
+    except Exception:
+        return info
+    return info
+
+
 def _init_cuda_dll_directory():
     """Ensure modular packages and NVIDIA CUDA runtime DLLs are discoverable on Windows."""
     try:
@@ -40,12 +85,25 @@ def _init_cuda_dll_directory():
         pass
     if sys.platform != "win32":
         return
+    import glob
     import site
 
     try:
         sp_list = site.getsitepackages()
     except Exception:
         sp_list = []
+
+    local_app_data = os.environ.get("LOCALAPPDATA", "")
+    program_files = os.environ.get("ProgramFiles", "")
+    extra_patterns = [
+        os.path.join(local_app_data, "Programs", "Python", "Python3*", "Lib", "site-packages"),
+        os.path.join(program_files, "Python3*", "Lib", "site-packages"),
+    ]
+    for pattern in extra_patterns:
+        for match in glob.glob(pattern):
+            if match not in sp_list:
+                sp_list.append(match)
+
     for sp in sp_list:
         nvidia_dir = os.path.join(sp, "nvidia")
         if os.path.isdir(nvidia_dir):
@@ -361,51 +419,6 @@ def _cpu_name() -> str:
         except Exception:
             pass
     return name
-
-
-def _query_nvidia_gpu() -> dict:
-    """Read NVIDIA GPU name and dedicated VRAM via nvidia-smi only."""
-    info = {
-        "count": 0,
-        "name": None,
-        "vram_gb": 0.0,
-        "backend": "None",
-        "device_id": 0,
-        "cuda_available": False,
-    }
-    if not shutil.which("nvidia-smi"):
-        return info
-    try:
-        res = subprocess.run(
-            [
-                "nvidia-smi",
-                "--query-gpu=name,memory.total,index",
-                "--format=csv,noheader,nounits",
-            ],
-            capture_output=True,
-            text=True,
-            timeout=3,
-        )
-        if res.returncode != 0 or not res.stdout.strip():
-            return info
-        lines = [line for line in res.stdout.strip().splitlines() if line.strip()]
-        first = [cell.strip() for cell in lines[0].split(",")]
-        if len(first) < 2:
-            return info
-        info["count"] = len(lines)
-        info["name"] = first[0]
-        try:
-            info["vram_gb"] = round(float(first[1]) / 1024, 2)
-        except ValueError:
-            info["vram_gb"] = 0.0
-        info["backend"] = "CUDA"
-        info["device_id"] = (
-            int(first[2]) if len(first) > 2 and first[2].isdigit() else 0
-        )
-        info["cuda_available"] = True
-    except Exception:
-        return info
-    return info
 
 
 def _detect_windows_accelerators(results: dict, nv_info: dict) -> None:

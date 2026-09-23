@@ -16,6 +16,7 @@ import {
   cancelGpuPackageInstall,
   uninstallGpuPackage,
   activateGpuPackage,
+  restartBackend,
 } from "./api.js";
 
 export default function HardwareTab() {
@@ -96,6 +97,9 @@ export default function HardwareTab() {
         if (current.status?.state === "ready") {
           clearInterval(timer);
           setActivePackageId(null);
+          try {
+            await restartBackend();
+          } catch {}
           const updated = await getHardwareProfile();
           setHardware(updated);
           try {
@@ -168,12 +172,22 @@ export default function HardwareTab() {
       setPackActionLoading(true);
       setError(null);
       await activateGpuPackage(pkgId);
+      try {
+        await restartBackend();
+      } catch {}
+      const updatedHardware = await getHardwareProfile();
+      setHardware(updatedHardware);
       await loadPackages();
-      await loadHardware();
       const pkg = gpuPackages.find((p) => p.id === pkgId);
       const name = pkg?.backend || (pkgId === "vulkan" ? "Vulkan" : "CUDA");
-      setActionSuccessMsg(`Switched compute runtime to ${name}`);
-      setTimeout(() => setActionSuccessMsg(null), 3500);
+      const gpu = updatedHardware?.gpu || {};
+      const offloadReady = Boolean(gpu.offload_supported || gpu.cuda_available);
+      if (offloadReady) {
+        setActionSuccessMsg(`Switched compute runtime to ${name}`);
+        setTimeout(() => setActionSuccessMsg(null), 3500);
+      } else {
+        setError(`Switched preference to ${name}, but GPU offload could not be initialized.`);
+      }
     } catch (err) {
       setError(err.message || "Failed to switch compute runtime");
     } finally {
@@ -199,6 +213,9 @@ export default function HardwareTab() {
       if (result && result.success === false) {
         throw new Error(result.error || `Failed to uninstall ${pkgId} package`);
       }
+      try {
+        await restartBackend();
+      } catch {}
       await loadPackages();
       await loadHardware();
       setActionSuccessMsg(`${name} runtime files removed`);

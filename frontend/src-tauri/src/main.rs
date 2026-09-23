@@ -474,6 +474,12 @@ fn ensure_backend(
     Ok(())
 }
 
+#[tauri::command]
+fn restart_backend(app_handle: tauri::AppHandle) -> Result<(), String> {
+    stop_backend(&app_handle);
+    ensure_backend(app_handle, Some(true))
+}
+
 #[cfg(target_os = "windows")]
 fn kill_backend_processes() {
     // Ensure no lingering backend executable processes remain open on Windows
@@ -1096,6 +1102,7 @@ fn main() {
         })
         .invoke_handler(tauri::generate_handler![
             ensure_backend,
+            restart_backend,
             prepare_for_update,
             fetch_update,
             install_update,
