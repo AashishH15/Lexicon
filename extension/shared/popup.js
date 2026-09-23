@@ -6,7 +6,6 @@ import {
   transformText,
 } from "./api.js";
 import {
-  CONTINUE_TOOL,
   EXPRESS_TOOL,
   getExpressPrompt,
   getTransformOptions,
@@ -682,8 +681,7 @@ function attachReplaceButton(
 ) {
   const replaceBtn = document.createElement("button");
   replaceBtn.type = "button";
-  replaceBtn.textContent =
-    tool === CONTINUE_TOOL ? "Insert continuation" : "Replace selection";
+  replaceBtn.textContent = "Replace selection";
   replaceBtn.addEventListener("click", async () => {
     replaceBtn.disabled = true;
     try {
