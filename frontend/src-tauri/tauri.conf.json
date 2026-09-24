@@ -64,7 +64,8 @@
         "languages": [
           "English"
         ],
-        "installMode": "currentUser"
+        "installMode": "currentUser",
+        "installerHooks": "installer_hooks.nsh"
       }
     },
     "macOS": {
