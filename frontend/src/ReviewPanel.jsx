@@ -5,7 +5,7 @@ import ExpressCard from "./ExpressCard.jsx";
 import { EXPRESS_TOOL_NAME } from "./useExpress.js";
 import { REWRITE_CLASS_TOOLS } from "./prompts.js";
 import { useEffect, useRef, useState } from "react";
-import { ArrowLineRight, Info, Lightbulb, CircleNotch } from "@phosphor-icons/react";
+import { ArrowLineRight, Info, Lightbulb, CircleNotch, Copy, Check, ArrowUp, X } from "@phosphor-icons/react";
 
 import { openExternalUrl } from "./api.js";
 import LexStatus from "./LexStatus.jsx";
@@ -407,168 +407,168 @@ export default function ReviewPanel({
                 </RecheckRow>
               )}
               {count === 0 ? (
-            showBloom ? (
-              <div className="lex-bloom flex w-full items-center gap-2.5 rounded-xl bg-[#EDF3EC] px-4 py-3 text-[#346538] border border-[#D3E2D0]">
-                <ReviewStatusMark
-                  status={lexStatus}
-                  message={lexStatusLabel}
-                />
-                <span className="font-sans text-sm">{bloomMessageRef.current}</span>
-              </div>
-            ) : (
-              <>
-                <div className="flex items-center gap-2">
-                  <ReviewStatusMark
-                    status={lexStatus}
-                    message={lexStatusLabel}
-                  />
-                  <p className="text-sm leading-relaxed text-muted">
-                    {isDeepProofread
-                      ? "No deep issues found in this draft."
-                      : userResolvedAll
-                        ? "No issues remain in this draft."
-                        : "No issues found in this draft."}
-                  </p>
-                </div>
-                {isDeepProofread && onRetryDeep && (
-                  <button
-                    type="button"
-                    aria-label="Check draft again"
-                    onClick={onRetryDeep}
-                    className="mt-3 rounded-full bg-pale-green px-2.5 py-px font-mono text-[10px] uppercase tracking-widest text-pale-green-text transition-colors hover:bg-pale-green/70 focus-visible:ring-1 focus-visible:ring-ink"
-                  >
-                    Check again
-                  </button>
-                )}
-                {!isDeepProofread && onRetry && (
-                  <button
-                    type="button"
-                    aria-label="Check draft again"
-                    onClick={onRetry}
-                    className="mt-3 rounded-full bg-pale-green px-2.5 py-px font-mono text-[10px] uppercase tracking-widest text-pale-green-text transition-colors hover:bg-pale-green/70 focus-visible:ring-1 focus-visible:ring-ink"
-                  >
-                    Check again
-                  </button>
-                )}
-              </>
-            )
-              ) : (
-            <>
-              <div className="mb-3 flex items-center gap-2">
-                <ReviewStatusMark
-                  status={lexStatus}
-                  message={lexStatusLabel}
-                  issueCount={count}
-                />
-                <span className="font-sans text-xs text-muted">
-                  {lexStatusLabel}
-                </span>
-              </div>
-              <div className="mb-3 flex items-center justify-end gap-3">
-                <div ref={announceRef} aria-live="polite" aria-atomic="true" className="sr-only">
-                  {runningCheck ? "Proofreading in progress" : `${count} ${count === 1 ? "issue" : "issues"} found`}
-                </div>
-                {actionableCount > 0 && (
-                  <button
-                    type="button"
-                    aria-label={`Accept all ${actionableCount} suggestions`}
-                    onClick={() => {
-                      if (folding) return;
-                      setFolding(true);
-                      setTimeout(
-                        () => {
-                          setFolding(false);
-                          onAcceptAll();
-                        },
-                        actionableCount * 45 + 350,
-                      );
-                    }}
-                    className="rounded-full bg-pale-green px-2.5 py-px font-mono text-[10px] uppercase tracking-widest text-pale-green-text transition-colors hover:bg-pale-green/70 focus-visible:ring-1 focus-visible:ring-ink"
-                  >
-                    Accept all {actionableCount}{" "}
-                    {actionableCount === 1 ? "Suggestion" : "Suggestions"}
-                  </button>
-                )}
-                <button
-                  type="button"
-                  aria-label="Dismiss all suggestions"
-                  onClick={() => {
-                    if (folding) return;
-                    setFolding(true);
-                    setTimeout(() => { setFolding(false); onDismissAll(); }, count * 45 + 350);
-                  }}
-                  className="rounded-full px-2.5 py-px font-mono text-[10px] uppercase tracking-widest text-ink transition-colors hover:bg-pale-red hover:text-pale-red-text focus-visible:ring-1 focus-visible:ring-ink"
-                >
-                  Dismiss All
-                </button>
-                <button
-                  type="button"
-                  aria-label="Clear review"
-                  onClick={onClear}
-                  className="font-mono text-[10px] uppercase tracking-[0.08em] text-ink transition-colors hover:opacity-70 focus-visible:ring-1 focus-visible:ring-ink"
-                >
-                  Clear
-                </button>
-              </div>
-              <div className="relative group inline-block my-2">
-                <button
-                  type="button"
-                  aria-label="Toggle legend"
-                  className="flex items-center gap-1 font-mono text-[10px] uppercase tracking-[0.08em] text-muted transition-colors hover:text-ink focus-visible:ring-1 focus-visible:ring-ink"
-                >
-                  <Info size={12} weight="bold" />
-                  <span>Legend</span>
-                </button>
-                <div className="lex-paper-surface pointer-events-none absolute left-0 top-full mt-1.5 z-30 w-52 rounded-xl border border-hairline p-2.5 shadow-lg opacity-0 transition-opacity duration-150 group-hover:pointer-events-auto group-hover:opacity-100">
-                  <div className="flex flex-col gap-1.5 font-sans text-xs">
-                    <div className="flex items-center gap-2">
-                      <span className="h-2 w-2 rounded-full bg-[#9F2F2D]" />
-                      <span className="font-medium text-ink">Spelling</span>
-                      <span className="ml-auto text-[10px] text-muted font-mono uppercase tracking-[0.08em]">RED</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="h-2 w-2 rounded-full bg-[#956400]" />
-                      <span className="font-medium text-ink">Grammar & Punctuation</span>
-                      <span className="ml-auto text-[10px] text-muted font-mono uppercase tracking-[0.08em]">YELLOW</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="h-2 w-2 rounded-full bg-[#1F6C9F]" />
-                      <span className="font-medium text-ink">Style & AI Tone</span>
-                      <span className="ml-auto text-[10px] text-muted font-mono uppercase tracking-[0.08em]">BLUE</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="h-2 w-2 rounded-full bg-[#6B21A8]" />
-                      <span className="font-medium text-ink">Prose Style</span>
-                      <span className="ml-auto text-[10px] text-muted font-mono uppercase tracking-[0.08em]">LAVENDER</span>
-                    </div>
-                    {isDeepProofread && (
-                      <div className="flex items-center gap-2">
-                        <span className="h-2 w-2 rounded-full bg-[#6B21A8]" />
-                        <span className="font-medium text-ink">AI Clarity & Flow</span>
-                        <span className="ml-auto text-[10px] text-muted font-mono uppercase tracking-[0.08em]">PURPLE</span>
-                      </div>
-                    )}
+                showBloom ? (
+                  <div className="lex-bloom flex w-full items-center gap-2.5 rounded-xl bg-[#EDF3EC] px-4 py-3 text-[#346538] border border-[#D3E2D0]">
+                    <ReviewStatusMark
+                      status={lexStatus}
+                      message={lexStatusLabel}
+                    />
+                    <span className="font-sans text-sm">{bloomMessageRef.current}</span>
                   </div>
-                </div>
-              </div>
-              <ul className="flex flex-col gap-3">
-                {listMatches.map((match, i) => (
-                  <SuggestionCard
-                    key={match.id}
-                    match={match}
-                    index={i}
-                    active={activeErrorId === match.id}
-                    folding={folding}
-                    foldDelay={i * 45}
-                    onApply={onApply}
-                    onDismiss={onDismiss}
-                    onAddToDictionary={onAddToDictionary}
-                    onLocate={onLocate}
-                    onAiRewrite={onAiRewrite}
-                  />
-                ))}
-              </ul>
-            </>
+                ) : (
+                  <>
+                    <div className="flex items-center gap-2">
+                      <ReviewStatusMark
+                        status={lexStatus}
+                        message={lexStatusLabel}
+                      />
+                      <p className="text-sm leading-relaxed text-muted">
+                        {isDeepProofread
+                          ? "No deep issues found in this draft."
+                          : userResolvedAll
+                            ? "No issues remain in this draft."
+                            : "No issues found in this draft."}
+                      </p>
+                    </div>
+                    {isDeepProofread && onRetryDeep && (
+                      <button
+                        type="button"
+                        aria-label="Check draft again"
+                        onClick={onRetryDeep}
+                        className="mt-3 rounded-full bg-pale-green px-2.5 py-px font-mono text-[10px] uppercase tracking-widest text-pale-green-text transition-colors hover:bg-pale-green/70 focus-visible:ring-1 focus-visible:ring-ink"
+                      >
+                        Check again
+                      </button>
+                    )}
+                    {!isDeepProofread && onRetry && (
+                      <button
+                        type="button"
+                        aria-label="Check draft again"
+                        onClick={onRetry}
+                        className="mt-3 rounded-full bg-pale-green px-2.5 py-px font-mono text-[10px] uppercase tracking-widest text-pale-green-text transition-colors hover:bg-pale-green/70 focus-visible:ring-1 focus-visible:ring-ink"
+                      >
+                        Check again
+                      </button>
+                    )}
+                  </>
+                )
+              ) : (
+                <>
+                  <div className="mb-3 flex items-center gap-2">
+                    <ReviewStatusMark
+                      status={lexStatus}
+                      message={lexStatusLabel}
+                      issueCount={count}
+                    />
+                    <span className="font-sans text-xs text-muted">
+                      {lexStatusLabel}
+                    </span>
+                  </div>
+                  <div className="mb-3 flex items-center justify-end gap-3">
+                    <div ref={announceRef} aria-live="polite" aria-atomic="true" className="sr-only">
+                      {runningCheck ? "Proofreading in progress" : `${count} ${count === 1 ? "issue" : "issues"} found`}
+                    </div>
+                    {actionableCount > 0 && (
+                      <button
+                        type="button"
+                        aria-label={`Accept all ${actionableCount} suggestions`}
+                        onClick={() => {
+                          if (folding) return;
+                          setFolding(true);
+                          setTimeout(
+                            () => {
+                              setFolding(false);
+                              onAcceptAll();
+                            },
+                            actionableCount * 45 + 350,
+                          );
+                        }}
+                        className="rounded-full bg-pale-green px-2.5 py-px font-mono text-[10px] uppercase tracking-widest text-pale-green-text transition-colors hover:bg-pale-green/70 focus-visible:ring-1 focus-visible:ring-ink"
+                      >
+                        Accept all {actionableCount}{" "}
+                        {actionableCount === 1 ? "Suggestion" : "Suggestions"}
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      aria-label="Dismiss all suggestions"
+                      onClick={() => {
+                        if (folding) return;
+                        setFolding(true);
+                        setTimeout(() => { setFolding(false); onDismissAll(); }, count * 45 + 350);
+                      }}
+                      className="rounded-full px-2.5 py-px font-mono text-[10px] uppercase tracking-widest text-ink transition-colors hover:bg-pale-red hover:text-pale-red-text focus-visible:ring-1 focus-visible:ring-ink"
+                    >
+                      Dismiss All
+                    </button>
+                    <button
+                      type="button"
+                      aria-label="Clear review"
+                      onClick={onClear}
+                      className="font-mono text-[10px] uppercase tracking-[0.08em] text-ink transition-colors hover:opacity-70 focus-visible:ring-1 focus-visible:ring-ink"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                  <div className="relative group inline-block my-2">
+                    <button
+                      type="button"
+                      aria-label="Toggle legend"
+                      className="flex items-center gap-1 font-mono text-[10px] uppercase tracking-[0.08em] text-muted transition-colors hover:text-ink focus-visible:ring-1 focus-visible:ring-ink"
+                    >
+                      <Info size={12} weight="bold" />
+                      <span>Legend</span>
+                    </button>
+                    <div className="lex-paper-surface pointer-events-none absolute left-0 top-full mt-1.5 z-30 w-52 rounded-xl border border-hairline p-2.5 shadow-lg opacity-0 transition-opacity duration-150 group-hover:pointer-events-auto group-hover:opacity-100">
+                      <div className="flex flex-col gap-1.5 font-sans text-xs">
+                        <div className="flex items-center gap-2">
+                          <span className="h-2 w-2 rounded-full bg-[#9F2F2D]" />
+                          <span className="font-medium text-ink">Spelling</span>
+                          <span className="ml-auto text-[10px] text-muted font-mono uppercase tracking-[0.08em]">RED</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="h-2 w-2 rounded-full bg-[#956400]" />
+                          <span className="font-medium text-ink">Grammar & Punctuation</span>
+                          <span className="ml-auto text-[10px] text-muted font-mono uppercase tracking-[0.08em]">YELLOW</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="h-2 w-2 rounded-full bg-[#1F6C9F]" />
+                          <span className="font-medium text-ink">Style & AI Tone</span>
+                          <span className="ml-auto text-[10px] text-muted font-mono uppercase tracking-[0.08em]">BLUE</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="h-2 w-2 rounded-full bg-[#6B21A8]" />
+                          <span className="font-medium text-ink">Prose Style</span>
+                          <span className="ml-auto text-[10px] text-muted font-mono uppercase tracking-[0.08em]">LAVENDER</span>
+                        </div>
+                        {isDeepProofread && (
+                          <div className="flex items-center gap-2">
+                            <span className="h-2 w-2 rounded-full bg-[#6B21A8]" />
+                            <span className="font-medium text-ink">AI Clarity & Flow</span>
+                            <span className="ml-auto text-[10px] text-muted font-mono uppercase tracking-[0.08em]">PURPLE</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <ul className="flex flex-col gap-3">
+                    {listMatches.map((match, i) => (
+                      <SuggestionCard
+                        key={match.id}
+                        match={match}
+                        index={i}
+                        active={activeErrorId === match.id}
+                        folding={folding}
+                        foldDelay={i * 45}
+                        onApply={onApply}
+                        onDismiss={onDismiss}
+                        onAddToDictionary={onAddToDictionary}
+                        onLocate={onLocate}
+                        onAiRewrite={onAiRewrite}
+                      />
+                    ))}
+                  </ul>
+                </>
               )}
             </>
           )
@@ -826,35 +826,146 @@ function DiffButtonCard({ card, index, onReview, onDismiss }) {
 }
 
 function TransformCard({ card, index, onApply, onDismiss }) {
+  const [copied, setCopied] = useState(false);
+  const [confirmReplace, setConfirmReplace] = useState(false);
+
+  async function handleCopy() {
+    try {
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(card.text);
+      }
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Fallback
+    }
+  }
+
+  const isSelection = Boolean(card.isSelection);
+  const scopeLabel = isSelection ? "Selected text" : "Entire draft";
+
   return (
     <li
-      className="lex-paper-surface rounded-xl border border-hairline p-6 pb-4 lex-card-enter"
+      className="lex-paper-surface rounded-xl border border-hairline p-5 pb-4 lex-card-enter"
       style={{ animationDelay: `${index * 80}ms` }}
     >
-      <span className="inline-block rounded bg-pale-blue px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.08em] text-pale-blue-text">
-        {card.tool}
-        {card.total > 1 ? ` - Part ${card.part} of ${card.total}` : " Result"}
-      </span>
-      <div className="mt-3 whitespace-pre-wrap font-sans text-sm leading-loose text-ink">
+      <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-hairline">
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="inline-flex items-center h-5 rounded bg-pale-blue px-2 font-mono text-[10px] uppercase tracking-[0.08em] text-pale-blue-text font-medium whitespace-nowrap">
+            {card.tool}
+            {card.total > 1 ? ` · ${card.part}/${card.total}` : ""}
+          </span>
+          <span className="font-mono text-[10px] text-muted whitespace-nowrap">
+            {isSelection ? "Selected text" : "Entire draft"}
+          </span>
+        </div>
+        <div className="flex items-center gap-1 shrink-0">
+          <button
+            type="button"
+            onClick={handleCopy}
+            aria-label="Copy to clipboard"
+            className="inline-flex items-center justify-center h-5 w-5 rounded text-muted transition-colors hover:bg-hairline/60 hover:text-ink focus-visible:ring-1 focus-visible:ring-ink"
+            title={copied ? "Copied" : "Copy to clipboard"}
+          >
+            {copied ? (
+              <>
+                <Check size={12} weight="bold" className="text-emerald-600" />
+                <span className="sr-only">Copied</span>
+              </>
+            ) : (
+              <>
+                <Copy size={12} weight="bold" />
+                <span className="sr-only">Copy</span>
+              </>
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={() => onDismiss(card)}
+            aria-label="Dismiss transform result"
+            className="inline-flex items-center justify-center h-5 w-5 rounded text-muted transition-colors hover:bg-hairline/60 hover:text-ink focus-visible:ring-1 focus-visible:ring-ink"
+            title="Dismiss"
+          >
+            <X size={12} weight="bold" />
+          </button>
+        </div>
+      </div>
+
+      <div className="mt-3 whitespace-pre-wrap font-sans text-sm leading-relaxed text-ink max-h-80 overflow-y-auto pr-1">
         {card.text}
       </div>
-      <div className="mt-4 flex items-center gap-3">
-        <button
-          type="button"
-          aria-label="Apply transform result"
-          onClick={() => onApply(card)}
-          className="flex-1 rounded bg-ink py-2 font-sans text-sm font-medium text-white transition-transform duration-150 focus-visible:ring-1 focus-visible:ring-ink active:scale-[0.98]"
-        >
-          Apply
-        </button>
-        <button
-          type="button"
-          aria-label="Dismiss transform result"
-          onClick={() => onDismiss(card)}
-          className="flex-1 rounded border border-hairline bg-transparent py-2 font-sans text-sm font-medium text-ink transition-transform duration-150 focus-visible:ring-1 focus-visible:ring-ink active:scale-[0.98]"
-        >
-          Dismiss
-        </button>
+
+      <div className="mt-4 flex flex-col gap-2 pt-2 border-t border-hairline">
+        {isSelection ? (
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              aria-label="Replace selection"
+              onClick={() => onApply(card, "replace")}
+              className="flex-1 rounded bg-ink py-2 font-sans text-xs font-medium text-white transition-all duration-150 hover:opacity-90 active:scale-[0.98] focus-visible:ring-1 focus-visible:ring-ink"
+            >
+              Replace Selection
+            </button>
+            <button
+              type="button"
+              aria-label="Insert below selection"
+              onClick={() => onApply(card, "below")}
+              className="flex-1 rounded border border-hairline bg-transparent py-2 font-sans text-xs font-medium text-ink transition-all duration-150 hover:bg-hairline/60 active:scale-[0.98] focus-visible:ring-1 focus-visible:ring-ink"
+            >
+              Insert Below
+            </button>
+          </div>
+        ) : confirmReplace ? (
+          <div className="rounded-lg border border-hairline bg-canvas p-3.5 text-center lex-card-enter">
+            <p className="font-sans text-xs text-ink font-medium">
+              Overwrite entire draft?
+            </p>
+            <p className="mt-0.5 font-sans text-[11px] text-muted">
+              This replaces all document text with this {card.tool?.toLowerCase() || "result"}.
+            </p>
+            <div className="mt-3 flex items-center gap-2">
+              <button
+                type="button"
+                aria-label="Confirm replace entire draft"
+                onClick={() => {
+                  setConfirmReplace(false);
+                  onApply(card, "replace");
+                }}
+                className="flex-1 rounded bg-[#9F2F2D] py-1.5 font-sans text-xs font-medium text-white transition-opacity hover:opacity-90 active:scale-[0.98] focus-visible:ring-1 focus-visible:ring-ink"
+              >
+                Yes, replace all
+              </button>
+              <button
+                type="button"
+                aria-label="Cancel replacement"
+                onClick={() => setConfirmReplace(false)}
+                className="flex-1 rounded border border-hairline bg-transparent py-1.5 font-sans text-xs font-medium text-muted hover:text-ink hover:bg-hairline/40 transition-colors active:scale-[0.98]"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-1.5">
+            <button
+              type="button"
+              aria-label="Insert at top of draft"
+              onClick={() => onApply(card, "top")}
+              className="w-full rounded bg-ink py-2 font-sans text-xs font-medium text-white transition-all duration-150 hover:opacity-90 active:scale-[0.98] focus-visible:ring-1 focus-visible:ring-ink flex items-center justify-center gap-1.5"
+            >
+              <ArrowUp size={13} weight="bold" />
+              <span>Insert at Top of Draft</span>
+            </button>
+            <button
+              type="button"
+              aria-label="Replace entire draft"
+              onClick={() => setConfirmReplace(true)}
+              className="w-full py-1 text-center font-sans text-[11px] text-muted hover:text-ink transition-colors"
+            >
+              Replace entire draft…
+            </button>
+          </div>
+        )}
       </div>
     </li>
   );

@@ -51,4 +51,14 @@ describe("shiftTransformCards", () => {
       total: 3,
     });
   });
+
+  it("shifts all remaining cards when inserting at document top", () => {
+    const cards = [card(1, 0, 10), card(2, 15, 25), card(3, 30, 40)];
+    // When inserting at top (position 0), all later cards shift by the inserted length
+    const next = shiftTransformCards(cards, cards[0], 20, 0);
+    expect(next).toEqual([
+      { tool: "Rewrite", text: "part 2", from: 35, to: 45, part: 2, total: 3 },
+      { tool: "Rewrite", text: "part 3", from: 50, to: 60, part: 3, total: 3 },
+    ]);
+  });
 });

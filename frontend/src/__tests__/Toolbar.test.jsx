@@ -146,4 +146,12 @@ describe("Toolbar Continue entry", () => {
       .querySelector(".animate-spin");
     expect(spinner).not.toBe(null);
   });
+
+  it("renders an info tip explaining the Structure section", async () => {
+    await renderToolbar(baseProps());
+    const tip = container.querySelector('[data-testid="structure-tip"]');
+    expect(tip).not.toBe(null);
+    expect(tip.textContent).toContain("summaries, bulleted key points");
+  });
 });
+

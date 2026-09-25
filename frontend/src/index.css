@@ -1028,6 +1028,14 @@
       border-color: var(--lex-surround-color);
     }
 
+    /* Inside recessed surround wells (.bg-canvas), hairline borders need contrast
+       against var(--lex-surround-color) so button outlines remain visible. */
+    .lex-app-shell[data-paper-texture="warm-cream"] .bg-canvas .border-hairline,
+    .lex-app-shell[data-paper-texture="linen"] .bg-canvas .border-hairline,
+    .lex-app-shell[data-paper-texture="newsprint"] .bg-canvas .border-hairline {
+      border-color: rgba(0, 0, 0, 0.14);
+    }
+
     .lex-app-shell[data-paper-texture="warm-cream"] .hover\:bg-hairline:hover,
     .lex-app-shell[data-paper-texture="linen"] .hover\:bg-hairline:hover,
     .lex-app-shell[data-paper-texture="newsprint"] .hover\:bg-hairline:hover,
@@ -1047,6 +1055,12 @@
     .lex-app-shell[data-paper-texture="linen"] .hover\:bg-canvas:hover,
     .lex-app-shell[data-paper-texture="newsprint"] .hover\:bg-canvas:hover {
       background-color: var(--lex-surround-color);
+    }
+
+    .lex-app-shell[data-paper-texture="warm-cream"] .bg-canvas .hover\:bg-hairline\/40:hover,
+    .lex-app-shell[data-paper-texture="linen"] .bg-canvas .hover\:bg-hairline\/40:hover,
+    .lex-app-shell[data-paper-texture="newsprint"] .bg-canvas .hover\:bg-hairline\/40:hover {
+      background-color: rgba(0, 0, 0, 0.05);
     }
 
     /* Use paper colors for editor controls and loading placeholders.

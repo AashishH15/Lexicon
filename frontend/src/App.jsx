@@ -3205,6 +3205,10 @@ export default function App() {
       if (!sourceText.trim()) {
         return;
       }
+      // Collapse selection so this range is consumed for this run,
+      // preventing subsequent runs from silently reusing it when
+      // the user has nothing selected.
+      editor.commands.setTextSelection({ from: to, to });
       transformRunningRef.current = true;
       setTransformRunning(true);
       setTransformResults([]);
@@ -3224,7 +3228,16 @@ export default function App() {
         return;
       }
       setTransformResults([
-        { tool: name, text: result, sourceText, from, to, part: 1, total: 1 },
+        {
+          tool: name,
+          text: result,
+          sourceText,
+          from,
+          to,
+          part: 1,
+          total: 1,
+          isSelection: true,
+        },
       ]);
       transformRunningRef.current = false;
       setTransformRunning(false);
@@ -3298,6 +3311,7 @@ export default function App() {
         to: chunk.to,
         part: i + 1,
         total,
+        isSelection: false,
       };
       loopCards.push(card);
       setTransformResults((prev) => [...prev, card]);
@@ -3361,7 +3375,7 @@ export default function App() {
     return doc.body.innerHTML;
   }
 
-  function applyTransformResult(card) {
+  function applyTransformResult(card, mode = "replace") {
     if (!editor || !card) {
       return;
     }
@@ -3373,10 +3387,17 @@ export default function App() {
     // Later cards hold pre-edit ranges. Measure the real doc delta so
     // the next apply lands instead of writing into shifted text.
     const before = editor.state.doc.content.size;
-    editor.chain().focus().insertContentAt({ from, to }, html).run();
+    if (mode === "top") {
+      editor.chain().focus().insertContentAt(0, html + "<p></p>").run();
+    } else if (mode === "below") {
+      editor.chain().focus().insertContentAt(to, "<p></p>" + html).run();
+    } else {
+      editor.chain().focus().insertContentAt({ from, to }, html).run();
+    }
     const delta = editor.state.doc.content.size - before;
     setTransformResults((prev) => {
-      const next = shiftTransformCards(prev, card, delta);
+      const insertBoundary = mode === "top" ? 0 : to;
+      const next = shiftTransformCards(prev, card, delta, insertBoundary);
       if (next.length === 0) {
         setActiveTool("");
       }

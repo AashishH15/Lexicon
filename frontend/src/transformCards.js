@@ -10,12 +10,13 @@ export function removeTransformCard(cards, card) {
 // Drop the applied card and shift cards after its span by the length
 // delta. Earlier cards are untouched. Chunks never overlap, so a card
 // is either fully before the edit or fully shifted.
-export function shiftTransformCards(cards, applied, delta) {
+export function shiftTransformCards(cards, applied, delta, insertAt = null) {
   const list = Array.isArray(cards) ? cards : [];
   if (!applied) {
     return [...list];
   }
   const shift = Number(delta) || 0;
+  const boundary = insertAt !== null ? insertAt : applied.to;
   const next = [];
   for (const card of list) {
     if (card === applied) {
@@ -24,9 +25,7 @@ export function shiftTransformCards(cards, applied, delta) {
     if (
       Number.isInteger(card?.from) &&
       Number.isInteger(card?.to) &&
-      Number.isInteger(applied?.from) &&
-      Number.isInteger(applied?.to) &&
-      card.from >= applied.to
+      card.from >= boundary
     ) {
       next.push({ ...card, from: card.from + shift, to: card.to + shift });
     } else {

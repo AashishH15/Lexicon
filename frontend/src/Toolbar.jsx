@@ -142,6 +142,21 @@ export default function Toolbar({
                 </span>
               </span>
             )}
+            {group.label === "Structure" && (
+              <span className="inline-flex normal-case tracking-normal">
+                <Info size={12} weight="bold" aria-label="About Structure tools" role="img" />
+                <span
+                  data-testid="structure-tip"
+                  className="lex-paper-surface pointer-events-none absolute left-0 top-full z-30 mt-1 w-60 max-w-full rounded-md border border-hairline p-3 font-sans text-[11px] leading-relaxed text-muted opacity-0 shadow-sm transition-opacity duration-150 group-hover:pointer-events-auto group-hover:opacity-100"
+                >
+                  Reorganizes text into summaries, bulleted key points, lists, or tables.
+                  <br />
+                  • <b>Selected text</b>: restructures just that section.
+                  <br />
+                  • <b>No selection</b>: generates from your full draft (you can insert at top, copy, or replace).
+                </span>
+              </span>
+            )}
           </p>
           <ul className="flex flex-col">
             {group.tools.map(({ name, icon: Icon }) => {
