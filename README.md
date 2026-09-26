@@ -354,7 +354,7 @@ Lexicon is built with:
   [Uvicorn](https://www.uvicorn.org/)
 - [Hugging Face Hub](https://huggingface.co/) and [requests](https://requests.readthedocs.io/) for model downloads and inference
 
-Logo design by [Nic Kraneis](https://parzival-design.com/).
+Original Logo and Lex character design by [Nic Kraneis](https://parzival-design.com/).
 
 See [LICENSE](LICENSE) for licensing information.
 See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for third-party
