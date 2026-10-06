@@ -233,7 +233,7 @@ export default function ModelManager({
   const [showAdvanced, setShowAdvanced] = useState(
     () => localStorage.getItem("lexicon:advanced-open") === "true"
   );
-  const [wantBundle, setWantBundle] = useState(mode === "settings");
+  const [wantBundle, setWantBundle] = useState(true);
   const [ollamaModels, setOllamaModels] = useState([]);
   const [ollamaProbing, setOllamaProbing] = useState(true);
   const [selectedOllamaModel, setSelectedOllamaModel] = useState("");
@@ -1128,15 +1128,14 @@ export default function ModelManager({
             </div>
           </div>
 
-          {/* Opt-in toggle (OFF by default) */}
+          {/* Opt-in toggle (ON by default) */}
           <div className="mt-6 flex items-center justify-between gap-4 rounded-lg border border-hairline bg-canvas px-4 py-3">
             <div>
               <p className="font-sans text-sm font-medium text-ink">
                 Download the Lexicon model
               </p>
               <p className="mt-0.5 font-sans text-xs text-muted">
-                Enables Rewrite, Tone, and Structure tools. Off until you turn
-                it on.
+                Recommended. Enables Rewrite, Tone, and Structure tools.
               </p>
             </div>
             <Toggle

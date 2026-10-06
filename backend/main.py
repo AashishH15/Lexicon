@@ -465,6 +465,7 @@ def ai_status():
         "upgrade_info": upgrade_info,
         "tier_upgrades": tier_upgrades,
         "active_download": active_model_download(),
+        "active_gpu_download": gpu_manager.active_package_download(),
         "gpu_info": detect_gpu_hardware(),
         "hardware": get_hardware_diagnostics(),
     }

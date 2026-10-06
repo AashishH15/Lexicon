@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   X,
   ShieldCheck,
@@ -13,6 +13,8 @@ import {
   Flask,
   ChatTeardropText,
   Info,
+  Lightning,
+  CircleNotch,
 } from "@phosphor-icons/react";
 import ModelManager from "./ModelManager.jsx";
 import Toggle from "./Toggle.jsx";
@@ -30,6 +32,7 @@ import {
   readingModeKey,
 } from "./appearanceSettings.js";
 import { LANGUAGES } from "./languages.js";
+import { getGpuPackages, installGpuPackage } from "./api.js";
 
 export default function OnboardingModal({
   onClose,
@@ -75,6 +78,48 @@ export default function OnboardingModal({
   const [preset, setPreset] = useState(() => activePresetProp || loadTypographyPreset());
   const [texture, setTexture] = useState(() => activeTextureProp || loadPaperTexture());
   const [reading, setReading] = useState(() => activeReadingModeProp || loadReadingMode());
+
+  const [gpuPackages, setGpuPackages] = useState([]);
+  const [gpuDownloadingId, setGpuDownloadingId] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadGpu() {
+      try {
+        const data = await getGpuPackages();
+        if (!cancelled && data?.packages) {
+          setGpuPackages(data.packages);
+        }
+      } catch {
+        if (!cancelled) setGpuPackages([]);
+      }
+    }
+    loadGpu();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const uninstalledGpuPackage = gpuPackages.find((p) => !p.installed);
+  const recommendedGpuPackage =
+    gpuPackages.find((p) => p.recommended && !p.installed) || uninstalledGpuPackage;
+  const hasGpuStep = Boolean(recommendedGpuPackage);
+  const totalSteps = hasGpuStep ? 6 : 5;
+
+  async function handleInstallGpu(pkg) {
+    if (!pkg) return;
+    setGpuDownloadingId(pkg.id);
+    window.dispatchEvent(
+      new CustomEvent("lexicon:gpu-download-start", {
+        detail: { package: pkg },
+      })
+    );
+    try {
+      await installGpuPackage(pkg.id);
+    } catch {
+      // Best-effort background download
+    }
+  }
 
   function handlePresetChange(val) {
     setPreset(val);
@@ -163,7 +208,7 @@ export default function OnboardingModal({
           <div className="flex items-center gap-2">
             <span id="onboarding-title" className="font-serif text-lg font-medium text-ink">Lexicon Setup</span>
             <span className="rounded bg-hairline/80 px-2.5 py-0.5 font-mono text-[11px] font-medium text-ink">
-              Step {step} of 5
+              Step {step} of {totalSteps}
             </span>
           </div>
           <button
@@ -177,8 +222,12 @@ export default function OnboardingModal({
         </div>
 
         {/* Step Indicator Bar */}
-        <div className="grid grid-cols-5 gap-1.5 bg-hairline/30 px-6 py-1.5 border-b border-hairline/50">
-          {[1, 2, 3, 4, 5].map((i) => (
+        <div
+          className={`grid gap-1.5 bg-hairline/30 px-6 py-1.5 border-b border-hairline/50 ${
+            totalSteps === 6 ? "grid-cols-6" : "grid-cols-5"
+          }`}
+        >
+          {Array.from({ length: totalSteps }, (_, idx) => idx + 1).map((i) => (
             <div
               key={i}
               className={`h-1 rounded-full transition-all duration-300 ${
@@ -477,7 +526,97 @@ export default function OnboardingModal({
             </div>
           )}
 
-          {step === 5 && (
+          {hasGpuStep && step === 5 && recommendedGpuPackage && (
+            <div className="space-y-5">
+              <div className="space-y-1.5">
+                <h2 className="font-serif text-2xl font-medium tracking-tight text-ink">
+                  GPU Hardware Acceleration
+                </h2>
+                <p className="font-sans text-sm text-muted leading-relaxed">
+                  Lexicon detected a compatible graphics processor. You can accelerate
+                  neural network calculations and reduce CPU usage.
+                </p>
+              </div>
+
+              <div className="space-y-3 pt-1">
+                <div className="rounded-xl border border-hairline bg-canvas p-4 transition-colors">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-3">
+                      <div className="mt-0.5 rounded-lg bg-hairline/60 p-2 text-ink">
+                        <Lightning size={20} weight="bold" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-sans text-sm font-semibold text-ink">
+                            {recommendedGpuPackage.name}
+                          </h3>
+                          <span className="rounded bg-hairline/80 px-2 py-0.5 font-mono text-[10px] font-semibold text-ink uppercase">
+                            {recommendedGpuPackage.backend}
+                          </span>
+                        </div>
+                        <p className="mt-1 font-sans text-xs text-muted leading-relaxed">
+                          {recommendedGpuPackage.description}
+                        </p>
+                        <div className="mt-2.5 flex items-center gap-3 text-[11px] text-muted">
+                          <span>
+                            Download size: ~
+                            {Math.round(
+                              (recommendedGpuPackage.download_size_bytes || 0) /
+                                (1024 * 1024)
+                            )}{" "}
+                            MB
+                          </span>
+                          <span>•</span>
+                          <span>Vendor: {recommendedGpuPackage.vendor}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 pt-3 border-t border-hairline flex items-center justify-between">
+                    {gpuDownloadingId === recommendedGpuPackage.id ? (
+                      <div className="flex items-center gap-2 text-xs font-medium text-muted">
+                        <CircleNotch
+                          size={14}
+                          weight="bold"
+                          className="animate-spin text-accent"
+                        />
+                        <span>Downloading pack in background…</span>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => handleInstallGpu(recommendedGpuPackage)}
+                        className="flex items-center gap-1.5 rounded-lg bg-ink px-4 py-2 font-sans text-xs font-semibold text-white transition-colors hover:bg-ink/90 active:scale-[0.99]"
+                      >
+                        <Lightning size={14} weight="bold" />
+                        <span>Download &amp; Enable GPU Acceleration</span>
+                      </button>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={() => setStep(6)}
+                      className="font-sans text-xs text-muted hover:text-ink transition-colors"
+                    >
+                      Skip for now
+                    </button>
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-hairline/70 bg-hairline/20 p-3 text-[11px] text-muted leading-normal">
+                  <strong className="text-ink font-semibold">
+                    Local-First &amp; Optional:
+                  </strong>{" "}
+                  Lexicon operates completely on your CPU by default. You can also
+                  configure or change GPU acceleration at any time in Settings →
+                  Hardware.
+                </div>
+              </div>
+            </div>
+          )}
+
+          {step === totalSteps && (
             <div className="space-y-5 text-center py-1">
               <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-hairline/40 p-2">
                 <img src="/lexicon-logo.png" alt="Lexicon Logo" className="h-10 w-10 object-contain" />
@@ -560,7 +699,7 @@ export default function OnboardingModal({
               <div />
             )}
 
-            {step < 5 && (
+            {step < totalSteps && (
               <button
                 type="button"
                 onClick={() => setStep(step + 1)}
@@ -612,10 +751,10 @@ export default function OnboardingModal({
             phase === "downloading" ? (
               <button
                 type="button"
-                disabled
-                className="flex cursor-not-allowed items-center gap-1.5 rounded-lg bg-ink/50 px-4 py-2 font-sans text-sm font-medium text-white"
+                onClick={() => setStep(5)}
+                className="flex items-center gap-1.5 rounded-lg bg-ink px-4 py-2 font-sans text-sm font-medium text-white transition-colors hover:bg-ink/90"
               >
-                Downloading…
+                Continue in Background <ArrowRight size={16} weight="bold" />
               </button>
             ) : (
               <button

@@ -1593,6 +1593,65 @@
     .lex-editor-surround[data-paper-texture="dark-slate"] .ProseMirror .lex-error-ai.lex-error-active {
       background-color: rgba(140, 70, 200, 0.65);
     }
+
+    /* Active download dock: adaptive styling matching all paper textures */
+    .lex-download-dock {
+      background-color: var(--lex-page-color, #ffffff);
+      border-color: #eaeaea;
+      color: #111111;
+    }
+
+    .lex-app-shell[data-paper-texture="warm-cream"] .lex-download-dock,
+    body[data-paper-texture="warm-cream"] .lex-download-dock {
+      background-color: #fefbf0;
+      border-color: rgba(0, 0, 0, 0.12);
+      color: #111111;
+    }
+
+    .lex-app-shell[data-paper-texture="linen"] .lex-download-dock,
+    body[data-paper-texture="linen"] .lex-download-dock {
+      background-color: #f5efe0;
+      border-color: rgba(0, 0, 0, 0.14);
+      color: #111111;
+    }
+
+    .lex-app-shell[data-paper-texture="newsprint"] .lex-download-dock,
+    body[data-paper-texture="newsprint"] .lex-download-dock {
+      background-color: #f2f3f1;
+      border-color: rgba(0, 0, 0, 0.14);
+      color: #111111;
+    }
+
+    .lex-app-shell[data-paper-texture="dark-slate"] .lex-download-dock,
+    body[data-paper-texture="dark-slate"] .lex-download-dock {
+      background-color: #242424;
+      border-color: #3a3a3a;
+      color: #edece8;
+    }
+
+    .lex-app-shell[data-paper-texture="dark-slate"] .lex-download-dock .text-ink,
+    body[data-paper-texture="dark-slate"] .lex-download-dock .text-ink {
+      color: #edece8;
+    }
+
+    .lex-app-shell[data-paper-texture="dark-slate"] .lex-download-dock .text-muted,
+    body[data-paper-texture="dark-slate"] .lex-download-dock .text-muted {
+      color: #b0ada6;
+    }
+
+    .lex-app-shell[data-paper-texture="dark-slate"] .lex-download-dock .bg-hairline,
+    .lex-app-shell[data-paper-texture="dark-slate"] .lex-download-dock .bg-hairline\/70,
+    .lex-app-shell[data-paper-texture="dark-slate"] .lex-download-dock .bg-hairline\/60,
+    body[data-paper-texture="dark-slate"] .lex-download-dock .bg-hairline,
+    body[data-paper-texture="dark-slate"] .lex-download-dock .bg-hairline\/70,
+    body[data-paper-texture="dark-slate"] .lex-download-dock .bg-hairline\/60 {
+      background-color: #3a3a3a;
+    }
+
+    .lex-app-shell[data-paper-texture="dark-slate"] .lex-download-dock .hover\:bg-hairline:hover,
+    body[data-paper-texture="dark-slate"] .lex-download-dock .hover\:bg-hairline:hover {
+      background-color: #383838;
+    }
   }
 
   .lex-card-enter {

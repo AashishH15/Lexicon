@@ -166,4 +166,120 @@ describe("ModelDownloadDock", () => {
     });
     expect(onDismiss).toHaveBeenCalledTimes(1);
   });
+
+  it("renders GPU package downloading state with hardware link", async () => {
+    const onOpen = vi.fn();
+    const gpuState = {
+      type: "gpu",
+      isDownloading: true,
+      packageName: "NVIDIA CUDA 12.4 Acceleration Pack",
+      backend: "CUDA",
+      state: "downloading",
+      bytesDone: 200000000,
+      bytesTotal: 536000000,
+      progressPct: 37,
+      error: null,
+      isComplete: false,
+    };
+
+    await act(async () => {
+      root.render(
+        <ModelDownloadDock
+          downloadState={gpuState}
+          onOpenSettings={onOpen}
+          onCancel={vi.fn()}
+          onDismiss={vi.fn()}
+        />
+      );
+    });
+
+    expect(container.textContent).toContain("Downloading GPU Pack");
+    expect(container.textContent).toContain("CUDA");
+    expect(container.textContent).toContain("37%");
+    expect(container.textContent).toContain("View in Hardware Settings");
+
+    const card = container.querySelector('[data-testid="model-download-dock"]');
+    await act(async () => {
+      card.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    expect(onOpen).toHaveBeenCalledWith("hardware");
+  });
+
+  it("renders GPU package extracting and ready states", async () => {
+    await act(async () => {
+      root.render(
+        <ModelDownloadDock
+          downloadState={{
+            type: "gpu",
+            isDownloading: true,
+            backend: "Vulkan",
+            state: "extracting",
+            bytesDone: 42000000,
+            bytesTotal: 42000000,
+            progressPct: 99,
+          }}
+          onOpenSettings={vi.fn()}
+          onCancel={vi.fn()}
+          onDismiss={vi.fn()}
+        />
+      );
+    });
+
+    expect(container.textContent).toContain("Extracting GPU Pack");
+
+    await act(async () => {
+      root.render(
+        <ModelDownloadDock
+          downloadState={{
+            type: "gpu",
+            isDownloading: false,
+            backend: "Vulkan",
+            state: "ready",
+            isComplete: true,
+          }}
+          onOpenSettings={vi.fn()}
+          onCancel={vi.fn()}
+          onDismiss={vi.fn()}
+        />
+      );
+    });
+
+    expect(container.textContent).toContain("GPU Acceleration Ready");
+    expect(container.textContent).toContain("GPU acceleration is active");
+  });
+
+  it("includes lex-download-dock class for paper texture styling without rogue dark mode", async () => {
+    await act(async () => {
+      root.render(
+        <ModelDownloadDock
+          downloadState={defaultState}
+          onOpenSettings={vi.fn()}
+          onCancel={vi.fn()}
+          onDismiss={vi.fn()}
+        />
+      );
+    });
+
+    const card = container.querySelector('[data-testid="model-download-dock"]');
+    expect(card.classList.contains("lex-download-dock")).toBe(true);
+    expect(card.className).not.toContain("dark:bg-zinc-900");
+  });
+
+  it("supports custom className for stacked dock layouts", async () => {
+    await act(async () => {
+      root.render(
+        <ModelDownloadDock
+          downloadState={defaultState}
+          className="custom-stack-item"
+          onOpenSettings={vi.fn()}
+          onCancel={vi.fn()}
+          onDismiss={vi.fn()}
+        />
+      );
+    });
+
+    const card = container.querySelector('[data-testid="model-download-dock"]');
+    expect(card.classList.contains("custom-stack-item")).toBe(true);
+  });
 });
+

@@ -90,3 +90,12 @@ def test_ai_gpu_packages_activate(client):
                 mock_conf.assert_called_once()
                 mock_reload.assert_called_once()
 
+
+def test_ai_status_includes_active_gpu_download(client):
+    with patch("gpu_manager.active_package_download", return_value={"package": "vulkan", "state": "downloading"}):
+        resp = client.get("/ai/status")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "active_gpu_download" in data
+        assert data["active_gpu_download"] == {"package": "vulkan", "state": "downloading"}
+

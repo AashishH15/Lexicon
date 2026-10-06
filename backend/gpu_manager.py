@@ -355,6 +355,22 @@ def get_package_status(package_id: str) -> dict:
     return dict(PACKAGE_STATUS[package_id])
 
 
+def active_package_download() -> dict | None:
+    """Return status dictionary for an actively downloading or extracting package.
+
+    Returns None when no GPU package is downloading.
+    """
+    for pkg_id, status in list(PACKAGE_STATUS.items()):
+        if status.get("state") in ("downloading", "extracting"):
+            spec = PACKAGE_REGISTRY.get(pkg_id, {})
+            return {
+                **status,
+                "name": spec.get("name", pkg_id),
+                "backend": spec.get("backend", pkg_id),
+            }
+    return None
+
+
 def _is_cancelled(package_id: str) -> bool:
     with _CANCEL_LOCK:
         return package_id in _CANCELLED_PACKAGES

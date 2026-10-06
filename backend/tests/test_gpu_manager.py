@@ -234,3 +234,27 @@ def test_uninstall_package_locked_file_fallback(tmp_path):
         assert gpu_manager.is_package_installed("cuda") is False
 
 
+def test_active_package_download():
+    gpu_manager.PACKAGE_STATUS.clear()
+    assert gpu_manager.active_package_download() is None
+
+    gpu_manager.PACKAGE_STATUS["cuda"] = {
+        "package": "cuda",
+        "state": "downloading",
+        "bytes_done": 12345,
+        "bytes_total": 536551897,
+        "progress_pct": 2.3,
+        "speed_mbps": 12.5,
+        "error": None,
+    }
+    active = gpu_manager.active_package_download()
+    assert active is not None
+    assert active["package"] == "cuda"
+    assert active["state"] == "downloading"
+    assert active["progress_pct"] == 2.3
+    assert "NVIDIA CUDA" in active["name"]
+
+    gpu_manager.PACKAGE_STATUS["cuda"]["state"] = "ready"
+    assert gpu_manager.active_package_download() is None
+
+

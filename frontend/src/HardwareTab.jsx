@@ -97,6 +97,11 @@ export default function HardwareTab() {
         if (current.status?.state === "ready") {
           clearInterval(timer);
           setActivePackageId(null);
+          window.dispatchEvent(
+            new CustomEvent("lexicon:gpu-download-complete", {
+              detail: { package: current },
+            })
+          );
           try {
             await restartBackend();
           } catch {}
@@ -126,6 +131,12 @@ export default function HardwareTab() {
     try {
       setPackActionLoading(true);
       setError(null);
+      const target = gpuPackages.find((p) => p.id === pkgId) || { id: pkgId };
+      window.dispatchEvent(
+        new CustomEvent("lexicon:gpu-download-start", {
+          detail: { package: target },
+        })
+      );
       setGpuPackages((prev) =>
         prev.map((p) =>
           p.id === pkgId
@@ -158,6 +169,11 @@ export default function HardwareTab() {
 
   async function handleCancelPack(pkgId) {
     try {
+      window.dispatchEvent(
+        new CustomEvent("lexicon:gpu-download-cancel", {
+          detail: { packageId: pkgId },
+        })
+      );
       await cancelGpuPackageInstall(pkgId);
       setActivePackageId(null);
       await loadPackages();

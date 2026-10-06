@@ -92,6 +92,8 @@ import {
   getAiStatus,
   getModelStatus,
   cancelModelDownload,
+  getGpuPackages,
+  cancelGpuPackageInstall,
   setAiPreference,
   setProofreadingLanguage,
   ensureBackend,
@@ -688,15 +690,49 @@ export default function App() {
           isComplete: false,
         });
       }
+      if (
+        s.active_gpu_download &&
+        (s.active_gpu_download.state === "downloading" ||
+          s.active_gpu_download.state === "extracting")
+      ) {
+        const agd = s.active_gpu_download;
+        setGpuDownload({
+          type: "gpu",
+          isDownloading: true,
+          packageId: agd.package,
+          packageName: agd.name || agd.package,
+          backend: agd.backend || "GPU",
+          state: agd.state,
+          bytesDone: agd.bytes_done || 0,
+          bytesTotal: agd.bytes_total || 0,
+          progressPct: agd.progress_pct || 0,
+          error: agd.error || null,
+          isComplete: false,
+        });
+      }
     } catch {
       setAiConfigured(false);
     }
   }, []);
 
   const [modelDownload, setModelDownload] = useState({
+    type: "model",
     isDownloading: false,
     modelKey: "2b",
     tierLabel: "Standard",
+    state: "idle",
+    bytesDone: 0,
+    bytesTotal: 0,
+    progressPct: 0,
+    error: null,
+    isComplete: false,
+  });
+  const [gpuDownload, setGpuDownload] = useState({
+    type: "gpu",
+    isDownloading: false,
+    packageId: null,
+    packageName: "",
+    backend: "",
     state: "idle",
     bytesDone: 0,
     bytesTotal: 0,
@@ -710,6 +746,7 @@ export default function App() {
     const tierName =
       key === "0.8b" ? "Light" : key === "quality" ? "Quality" : "Standard";
     setModelDownload({
+      type: "model",
       isDownloading: true,
       modelKey: key,
       tierLabel: tierName,
@@ -743,10 +780,54 @@ export default function App() {
     );
   }, [modelDownload.modelKey]);
 
+  const handleStartGpuDownload = useCallback((pkg) => {
+    setGpuDownload({
+      type: "gpu",
+      isDownloading: true,
+      packageId: pkg.id,
+      packageName: pkg.name || pkg.id,
+      backend: pkg.backend || "GPU",
+      state: "downloading",
+      bytesDone: 0,
+      bytesTotal: pkg.download_size_bytes || 0,
+      progressPct: 1,
+      error: null,
+      isComplete: false,
+    });
+  }, []);
+
+  const handleCancelGpuDownload = useCallback(async () => {
+    const pkgId = gpuDownload.packageId;
+    if (pkgId) {
+      try {
+        await cancelGpuPackageInstall(pkgId);
+      } catch {
+        /* best-effort */
+      }
+    }
+    setGpuDownload((prev) => ({
+      ...prev,
+      isDownloading: false,
+      state: "idle",
+      error: null,
+      isComplete: false,
+    }));
+    window.dispatchEvent(
+      new CustomEvent("lexicon:gpu-download-cancel", {
+        detail: { packageId: pkgId },
+      })
+    );
+  }, [gpuDownload.packageId]);
+
   const handleOpenSettingsToEngine = useCallback(() => {
     setSettingsOpen(true);
     setSettingsActiveTab("ai");
     setSettingsFocusKey("lex-engine-section");
+  }, []);
+
+  const handleOpenSettingsToHardware = useCallback(() => {
+    setSettingsOpen(true);
+    setSettingsActiveTab("hardware");
   }, []);
 
   useEffect(() => {
@@ -790,15 +871,112 @@ export default function App() {
       refreshAiConfigured();
     };
 
+    const handleGpuStart = (e) => {
+      const pkg = e.detail?.package;
+      if (pkg) handleStartGpuDownload(pkg);
+    };
+    const handleGpuCancel = () => {
+      setGpuDownload((prev) => ({
+        ...prev,
+        isDownloading: false,
+        state: "idle",
+        error: null,
+        isComplete: false,
+      }));
+    };
+    const handleGpuComplete = (e) => {
+      const pkg = e.detail?.package;
+      setGpuDownload((prev) => ({
+        ...prev,
+        isDownloading: false,
+        isComplete: true,
+        state: "ready",
+        backend: pkg?.backend || prev.backend,
+        error: null,
+      }));
+      refreshAiConfigured();
+    };
+
     window.addEventListener("lexicon:model-download-start", handleDownloadStart);
     window.addEventListener("lexicon:model-download-cancel", handleDownloadCancel);
     window.addEventListener("lexicon:model-download-complete", handleDownloadComplete);
+    window.addEventListener("lexicon:gpu-download-start", handleGpuStart);
+    window.addEventListener("lexicon:gpu-download-cancel", handleGpuCancel);
+    window.addEventListener("lexicon:gpu-download-complete", handleGpuComplete);
     return () => {
       window.removeEventListener("lexicon:model-download-start", handleDownloadStart);
       window.removeEventListener("lexicon:model-download-cancel", handleDownloadCancel);
       window.removeEventListener("lexicon:model-download-complete", handleDownloadComplete);
+      window.removeEventListener("lexicon:gpu-download-start", handleGpuStart);
+      window.removeEventListener("lexicon:gpu-download-cancel", handleGpuCancel);
+      window.removeEventListener("lexicon:gpu-download-complete", handleGpuComplete);
     };
-  }, [refreshAiConfigured]);
+  }, [refreshAiConfigured, handleStartGpuDownload]);
+
+  // Global GPU package download polling keeps progress alive across tab switches and closed modals
+  useEffect(() => {
+    if (!gpuDownload.isDownloading || !gpuDownload.packageId) return undefined;
+    const pkgId = gpuDownload.packageId;
+    const timer = setInterval(async () => {
+      try {
+        const data = await getGpuPackages();
+        const pkgs = data.packages || [];
+        const current = pkgs.find((p) => p.id === pkgId);
+        if (!current) {
+          clearInterval(timer);
+          return;
+        }
+        const st = current.status;
+        if (st?.state === "downloading" || st?.state === "extracting") {
+          setGpuDownload((prev) => ({
+            ...prev,
+            state: st.state,
+            bytesDone: st.bytes_done || 0,
+            bytesTotal: st.bytes_total || 0,
+            progressPct: st.progress_pct || 0,
+          }));
+          window.dispatchEvent(
+            new CustomEvent("lexicon:gpu-download-progress", {
+              detail: { packageId: pkgId, status: st },
+            })
+          );
+        } else if (st?.state === "ready") {
+          setGpuDownload((prev) => ({
+            ...prev,
+            isDownloading: false,
+            isComplete: true,
+            state: "ready",
+            bytesDone: st.bytes_done || 0,
+            bytesTotal: st.bytes_total || 0,
+            progressPct: 100,
+          }));
+          refreshAiConfigured();
+          window.dispatchEvent(
+            new CustomEvent("lexicon:gpu-download-complete", {
+              detail: { package: current },
+            })
+          );
+        } else if (st?.state === "error") {
+          setGpuDownload((prev) => ({
+            ...prev,
+            isDownloading: false,
+            state: "error",
+            error: st.error || "GPU package download failed",
+          }));
+        } else if (st?.state === "cancelled") {
+          setGpuDownload((prev) => ({
+            ...prev,
+            isDownloading: false,
+            state: "idle",
+            error: null,
+          }));
+        }
+      } catch {
+        /* best effort */
+      }
+    }, 400);
+    return () => clearInterval(timer);
+  }, [gpuDownload.isDownloading, gpuDownload.packageId, refreshAiConfigured]);
 
   // Global model download polling keeps progress alive across tab switches and closed modals
   useEffect(() => {
@@ -4383,24 +4561,63 @@ export default function App() {
         />
       </Suspense>
 
-      {(modelDownload.isDownloading ||
-        modelDownload.isComplete ||
-        Boolean(modelDownload.error)) &&
-        !(settingsOpen && settingsActiveTab === "ai") && (
-          <ModelDownloadDock
-            downloadState={modelDownload}
-            onOpenSettings={handleOpenSettingsToEngine}
-            onCancel={handleCancelModelDownload}
-            onDismiss={() =>
-              setModelDownload((prev) => ({
-                ...prev,
-                isDownloading: false,
-                error: null,
-                isComplete: false,
-              }))
-            }
-          />
-        )}
+      {/* Active Download Docks Container (Bottom-Right Stack) */}
+      {(() => {
+        const showModelDock =
+          (modelDownload.isDownloading ||
+            modelDownload.isComplete ||
+            Boolean(modelDownload.error)) &&
+          !(settingsOpen && settingsActiveTab === "ai");
+        const showGpuDock =
+          (gpuDownload.isDownloading ||
+            gpuDownload.isComplete ||
+            Boolean(gpuDownload.error)) &&
+          !(settingsOpen && settingsActiveTab === "hardware");
+
+        if (!showModelDock && !showGpuDock) return null;
+
+        return (
+          <aside
+            aria-label="Active downloads"
+            className="fixed bottom-6 right-6 z-60 flex flex-col-reverse gap-3 pointer-events-none items-end"
+          >
+            {showModelDock && (
+              <div className="pointer-events-auto">
+                <ModelDownloadDock
+                  downloadState={modelDownload}
+                  onOpenSettings={handleOpenSettingsToEngine}
+                  onCancel={handleCancelModelDownload}
+                  onDismiss={() =>
+                    setModelDownload((prev) => ({
+                      ...prev,
+                      isDownloading: false,
+                      error: null,
+                      isComplete: false,
+                    }))
+                  }
+                />
+              </div>
+            )}
+            {showGpuDock && (
+              <div className="pointer-events-auto">
+                <ModelDownloadDock
+                  downloadState={gpuDownload}
+                  onOpenSettings={handleOpenSettingsToHardware}
+                  onCancel={handleCancelGpuDownload}
+                  onDismiss={() =>
+                    setGpuDownload((prev) => ({
+                      ...prev,
+                      isDownloading: false,
+                      error: null,
+                      isComplete: false,
+                    }))
+                  }
+                />
+              </div>
+            )}
+          </aside>
+        );
+      })()}
 
       <Suspense fallback={null}>
         {aiSetupOpen && (
