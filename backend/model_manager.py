@@ -369,6 +369,21 @@ def models_ready() -> dict:
     return {key: _already_installed(key) for key in MODELS}
 
 
+def active_model_download() -> dict | None:
+    """Return status of an active model download or verification."""
+    for key in MODELS:
+        st = MODEL_STATUS.get(key)
+        if st and st.get("state") in ("downloading", "verifying"):
+            return {
+                "model_key": key,
+                "state": st["state"],
+                "bytes_done": st.get("bytes_done", 0),
+                "bytes_total": st.get("bytes_total", 0),
+                "error": st.get("error"),
+            }
+    return None
+
+
 def _update_progress(model_key: str, done: int, total: int) -> None:
     """Streamed-download progress -> that key's status entry."""
     MODEL_STATUS[model_key]["bytes_done"] = done

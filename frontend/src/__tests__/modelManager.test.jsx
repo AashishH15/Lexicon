@@ -849,4 +849,64 @@ describe("ModelManager Memory Residency and Eager Switching", () => {
     );
     expect(api.loadAiModel).toHaveBeenCalledWith("quality");
   });
+
+  it("restores download progress when initialStatus has active_download", async () => {
+    api.getAiStatus.mockResolvedValue({
+      models_ready: { "2b": false },
+      model_key: "2b",
+      preference: { backend: "bundled", model_key: "2b" },
+      active_download: {
+        model_key: "2b",
+        state: "downloading",
+        bytes_done: 1200000000,
+        bytes_total: 3000000000,
+      },
+    });
+
+    await act(async () => {
+      root.render(
+        <ModelManager
+          mode="settings"
+          initialStatus={{
+            models_ready: { "2b": false },
+            model_key: "2b",
+            active_download: {
+              model_key: "2b",
+              state: "downloading",
+              bytes_done: 1200000000,
+              bytes_total: 3000000000,
+            },
+          }}
+        />
+      );
+    });
+
+    expect(container.textContent).toContain("Downloading model");
+    expect(container.textContent).toContain("1200 / 3000 MB");
+  });
+
+  it("updates download state and progress when activeDownload prop changes", async () => {
+    api.getAiStatus.mockResolvedValue({
+      models_ready: { "2b": false },
+      model_key: "2b",
+      preference: { backend: "bundled", model_key: "2b" },
+    });
+
+    await act(async () => {
+      root.render(
+        <ModelManager
+          mode="settings"
+          activeDownload={{
+            isDownloading: true,
+            modelKey: "2b",
+            bytesDone: 1500000000,
+            bytesTotal: 3000000000,
+          }}
+        />
+      );
+    });
+
+    expect(container.textContent).toContain("Downloading model");
+    expect(container.textContent).toContain("1500 / 3000 MB");
+  });
 });

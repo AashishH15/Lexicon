@@ -204,6 +204,9 @@ export default function ModelManager({
   onConfigured,
   renderFooter,
   initialStatus = null,
+  activeDownload = null,
+  onStartDownload = null,
+  onCancelDownload = null,
 }) {
   const initialStatusRef = useRef(initialStatus);
   const [status, setStatus] = useState(() => ({
@@ -241,9 +244,35 @@ export default function ModelManager({
   const [lmStudioUrlDraft, setLmStudioUrlDraft] = useState(DEFAULT_LM_STUDIO_URL);
   const [lmStudioApiKeyDraft, setLmStudioApiKeyDraft] = useState("");
   const [lmStudioApiKeyConfigured, setLmStudioApiKeyConfigured] = useState(false);
-  const [modelKey, setModelKey] = useState(adviseModelKey());
-  const [phase, setPhase] = useState("choose"); // choose | downloading | done | error
-  const [progress, setProgress] = useState(null);
+  const [modelKey, setModelKey] = useState(() => {
+    if (initialStatus?.active_download?.model_key) {
+      return initialStatus.active_download.model_key;
+    }
+    if (activeDownload?.modelKey) {
+      return activeDownload.modelKey;
+    }
+    return adviseModelKey();
+  });
+  const [phase, setPhase] = useState(() => {
+    if (initialStatus?.active_download?.state === "downloading") return "downloading";
+    if (activeDownload?.isDownloading) return "downloading";
+    return "choose";
+  });
+  const [progress, setProgress] = useState(() => {
+    if (initialStatus?.active_download) {
+      return {
+        bytes_done: initialStatus.active_download.bytes_done || 0,
+        bytes_total: initialStatus.active_download.bytes_total || 0,
+      };
+    }
+    if (activeDownload?.isDownloading) {
+      return {
+        bytes_done: activeDownload.bytesDone || 0,
+        bytes_total: activeDownload.bytesTotal || 0,
+      };
+    }
+    return null;
+  });
   const [deletingKey, setDeletingKey] = useState(null);
   const [error, setError] = useState("");
   // Tier switch in flight. Show it until the save and refresh land.
@@ -337,6 +366,12 @@ export default function ModelManager({
     } catch {
       /* best-effort */
     }
+    onCancelDownload?.(activeUpgradeTier);
+    window.dispatchEvent(
+      new CustomEvent("lexicon:model-download-cancel", {
+        detail: { modelKey: activeUpgradeTier },
+      })
+    );
     setUpgradePhase("prompt");
     setUpgradeProgress(null);
   }
@@ -346,6 +381,12 @@ export default function ModelManager({
     setUpgradeProgress({ bytes_done: 0, bytes_total: 0 });
     setUpgradeError("");
     setUpgradeCleanupError("");
+    onStartDownload?.(targetKey);
+    window.dispatchEvent(
+      new CustomEvent("lexicon:model-download-start", {
+        detail: { modelKey: targetKey },
+      })
+    );
 
     if (upgradeTimerRef.current) clearInterval(upgradeTimerRef.current);
     upgradeTimerRef.current = setInterval(async () => {
@@ -366,6 +407,11 @@ export default function ModelManager({
       if (res && res.state === "cancelled") {
         setUpgradePhase("prompt");
         setUpgradeProgress(null);
+        window.dispatchEvent(
+          new CustomEvent("lexicon:model-download-cancel", {
+            detail: { modelKey: targetKey },
+          })
+        );
         return;
       }
       let cleanupError = res?.cleanup_error || "";
@@ -378,6 +424,11 @@ export default function ModelManager({
       refreshStatus();
       setUpgradeCleanupError(cleanupError);
       setUpgradePhase("complete");
+      window.dispatchEvent(
+        new CustomEvent("lexicon:model-download-complete", {
+          detail: { modelKey: targetKey },
+        })
+      );
       if (onPreferenceChange) {
         onPreferenceChange({
           backend: "bundled",
@@ -440,6 +491,20 @@ export default function ModelManager({
           Boolean(s.preference?.lmstudio_api_key_configured)
         );
         if (!lmStudioApiKeyChangedRef.current) setLmStudioApiKeyDraft("");
+        if (
+          s.active_download &&
+          (s.active_download.state === "downloading" ||
+            s.active_download.state === "verifying")
+        ) {
+          const dlKey = s.active_download.model_key || "2b";
+          setModelKey(dlKey);
+          setPhase("downloading");
+          setProgress({
+            bytes_done: s.active_download.bytes_done || 0,
+            bytes_total: s.active_download.bytes_total || 0,
+          });
+          startPolling();
+        }
       })
       .catch(() => {
         // Keep a seeded answer when the refresh fails. A quiet backend
@@ -489,6 +554,58 @@ export default function ModelManager({
       cancelled = true;
     };
   }, [mode]);
+
+  // Synchronize with external active download state across tab switches
+  useEffect(() => {
+    if (!activeDownload) return;
+    if (activeDownload.isDownloading) {
+      setPhase("downloading");
+      if (activeDownload.modelKey) {
+        setModelKey(activeDownload.modelKey);
+      }
+      setProgress({
+        bytes_done: activeDownload.bytesDone,
+        bytes_total: activeDownload.bytesTotal,
+      });
+      if (!pollRef.current) {
+        startPolling();
+      }
+    } else if (activeDownload.isComplete) {
+      stopPolling();
+      setPhase("done");
+      refreshStatus();
+    } else if (activeDownload.state === "idle" && phase === "downloading") {
+      stopPolling();
+      setPhase("choose");
+      setProgress(null);
+    }
+  }, [
+    activeDownload?.isDownloading,
+    activeDownload?.isComplete,
+    activeDownload?.state,
+    activeDownload?.modelKey,
+    activeDownload?.bytesDone,
+    activeDownload?.bytesTotal,
+  ]);
+
+  // Listen for global download progress events dispatched by parent application shell
+  useEffect(() => {
+    const handleProgressEvent = (e) => {
+      const d = e.detail;
+      if (!d) return;
+      if (d.modelKey === modelKey || !modelKey) {
+        setPhase("downloading");
+        setProgress({
+          bytes_done: d.bytesDone || 0,
+          bytes_total: d.bytesTotal || 0,
+        });
+      }
+    };
+    window.addEventListener("lexicon:model-download-progress", handleProgressEvent);
+    return () => {
+      window.removeEventListener("lexicon:model-download-progress", handleProgressEvent);
+    };
+  }, [modelKey]);
 
   useEffect(() => {
     return () => {
@@ -675,11 +792,19 @@ export default function ModelManager({
     setProgress({ bytes_done: 0, bytes_total: 0 });
     setReclaimMessage("");
     startPolling();
+    onStartDownload?.(modelKey);
+    window.dispatchEvent(
+      new CustomEvent("lexicon:model-download-start", { detail: { modelKey } })
+    );
     try {
       const res = await downloadModel(modelKey);
       if (res && res.state === "cancelled") {
         stopPolling();
         setPhase("choose");
+        onCancelDownload?.(modelKey);
+        window.dispatchEvent(
+          new CustomEvent("lexicon:model-download-cancel", { detail: { modelKey } })
+        );
         return;
       }
       const st = await getModelStatus(modelKey);
@@ -688,6 +813,9 @@ export default function ModelManager({
       refreshStatus();
       if (st.state === "ready") {
         setPhase("done");
+        window.dispatchEvent(
+          new CustomEvent("lexicon:model-download-complete", { detail: { modelKey } })
+        );
         if (res && res.reclaimed_message) {
           setReclaimMessage(res.reclaimed_message);
         } else if (res && res.legacy_reclaimed) {
@@ -697,6 +825,10 @@ export default function ModelManager({
         }
       } else if (st.state === "cancelled") {
         setPhase("choose");
+        onCancelDownload?.(modelKey);
+        window.dispatchEvent(
+          new CustomEvent("lexicon:model-download-cancel", { detail: { modelKey } })
+        );
       } else {
         setPhase("error");
         setError(st.error || "Download did not complete.");
@@ -705,6 +837,10 @@ export default function ModelManager({
       stopPolling();
       if (exc.message && exc.message.toLowerCase().includes("cancelled")) {
         setPhase("choose");
+        onCancelDownload?.(modelKey);
+        window.dispatchEvent(
+          new CustomEvent("lexicon:model-download-cancel", { detail: { modelKey } })
+        );
       } else {
         setPhase("error");
         setError(exc.message || "Download failed.");
@@ -719,11 +855,19 @@ export default function ModelManager({
     setPhase("downloading");
     setProgress({ bytes_done: 0, bytes_total: 0 });
     startPolling();
+    onStartDownload?.(targetKey);
+    window.dispatchEvent(
+      new CustomEvent("lexicon:model-download-start", { detail: { modelKey: targetKey } })
+    );
     try {
       const res = await downloadModel(targetKey);
       if (res && res.state === "cancelled") {
         stopPolling();
         setPhase("choose");
+        onCancelDownload?.(targetKey);
+        window.dispatchEvent(
+          new CustomEvent("lexicon:model-download-cancel", { detail: { modelKey: targetKey } })
+        );
         return;
       }
       const st = await getModelStatus(targetKey);
@@ -732,6 +876,9 @@ export default function ModelManager({
       refreshStatus();
       if (st.state === "ready") {
         setPhase("done");
+        window.dispatchEvent(
+          new CustomEvent("lexicon:model-download-complete", { detail: { modelKey: targetKey } })
+        );
         if (res && res.reclaimed_message) {
           setReclaimMessage(res.reclaimed_message);
         } else {
@@ -750,6 +897,10 @@ export default function ModelManager({
         if (onConfigured) onConfigured();
       } else if (st.state === "cancelled") {
         setPhase("choose");
+        onCancelDownload?.(targetKey);
+        window.dispatchEvent(
+          new CustomEvent("lexicon:model-download-cancel", { detail: { modelKey: targetKey } })
+        );
       } else {
         setPhase("error");
         setError(st.error || "Upgrade did not complete.");
@@ -758,6 +909,10 @@ export default function ModelManager({
       stopPolling();
       if (exc.message && exc.message.toLowerCase().includes("cancelled")) {
         setPhase("choose");
+        onCancelDownload?.(targetKey);
+        window.dispatchEvent(
+          new CustomEvent("lexicon:model-download-cancel", { detail: { modelKey: targetKey } })
+        );
       } else {
         setPhase("error");
         setError(exc.message || "Upgrade download failed.");
@@ -768,13 +923,17 @@ export default function ModelManager({
   async function handleCancel() {
     stopPolling();
     try {
-      await cancelModelDownload();
+      await cancelModelDownload(modelKey);
     } catch {
       /* best-effort */
     }
     refreshStatus();
     setPhase("choose");
     setProgress(null);
+    onCancelDownload?.(modelKey);
+    window.dispatchEvent(
+      new CustomEvent("lexicon:model-download-cancel", { detail: { modelKey } })
+    );
   }
 
   async function handleDelete(key) {

@@ -9,7 +9,9 @@ if str(BACKEND_DIR) not in sys.path:
 
 from model_manager import (  # noqa: E402
     MODELS,
+    MODEL_STATUS,
     _already_installed,
+    active_model_download,
     is_legacy_installed,
     is_primary_installed,
     model_path,
@@ -128,3 +130,25 @@ def test_models_ready_includes_quality_tier():
     ready = models_ready()
     assert "quality" in ready
     assert isinstance(ready["quality"], bool)
+
+
+def test_active_model_download_none_when_idle():
+    MODEL_STATUS.clear()
+    assert active_model_download() is None
+
+
+def test_active_model_download_returns_active_tier_when_downloading():
+    MODEL_STATUS.clear()
+    MODEL_STATUS["2b"] = {
+        "state": "downloading",
+        "bytes_done": 500_000_000,
+        "bytes_total": 2_500_000_000,
+        "error": None,
+    }
+    active = active_model_download()
+    assert active is not None
+    assert active["model_key"] == "2b"
+    assert active["state"] == "downloading"
+    assert active["bytes_done"] == 500_000_000
+    assert active["bytes_total"] == 2_500_000_000
+    MODEL_STATUS.clear()

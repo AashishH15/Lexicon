@@ -54,6 +54,7 @@ from inference import (
 )
 from languagetool import check_text, close_tool
 from model_manager import (
+    active_model_download,
     cancel_download,
     cleanup_legacy_model,
     delete_model,
@@ -463,6 +464,7 @@ def ai_status():
         "upgrade_tier_name": upgrade_info.get("tier_name"),
         "upgrade_info": upgrade_info,
         "tier_upgrades": tier_upgrades,
+        "active_download": active_model_download(),
         "gpu_info": detect_gpu_hardware(),
         "hardware": get_hardware_diagnostics(),
     }

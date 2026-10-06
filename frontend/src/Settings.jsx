@@ -528,8 +528,16 @@ export default function Settings({
   onContinueIdleSecondsChange,
   continueTemperature = CONTINUE_TEMPERATURE_DEFAULT,
   onContinueTemperatureChange,
+  activeModelDownload = null,
+  onActiveTabChange = null,
+  onStartModelDownload = null,
+  onCancelModelDownload = null,
 }) {
   const [activeTab, setActiveTab] = useState("general");
+
+  useEffect(() => {
+    onActiveTabChange?.(activeTab);
+  }, [activeTab, onActiveTabChange]);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchFocused, setSearchFocused] = useState(false);
   const [editingShortcuts, setEditingShortcuts] = useState(false);
@@ -1978,6 +1986,9 @@ export default function Settings({
                     <ModelManager
                       mode="settings"
                       initialStatus={initialAiStatus}
+                      activeDownload={activeModelDownload}
+                      onStartDownload={onStartModelDownload}
+                      onCancelDownload={onCancelModelDownload}
                       onPreferenceChange={(pref) => {
                         return setAiPreference(
                           pref.backend,

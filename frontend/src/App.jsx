@@ -38,6 +38,7 @@ import GrammarTooltip from "./GrammarTooltip.jsx";
 import DiffPopover from "./DiffPopover.jsx";
 import ConfirmModal from "./ConfirmModal.jsx";
 import TemplateGalleryModal from "./TemplateGalleryModal.jsx";
+import ModelDownloadDock from "./ModelDownloadDock.jsx";
 import { SETTINGS_DEFAULTS } from "./Settings.jsx";
 const Settings = lazy(() => import("./Settings.jsx"));
 const AiSetupModal = lazy(() => import("./AiSetupModal.jsx"));
@@ -89,6 +90,8 @@ import {
 import {
   checkGrammar,
   getAiStatus,
+  getModelStatus,
+  cancelModelDownload,
   setAiPreference,
   setProofreadingLanguage,
   ensureBackend,
@@ -659,10 +662,220 @@ export default function App() {
       setAiActiveBackend(s.active_backend || "");
       setAiDevice(s.preference?.device || "");
       setAiStatusDetail(s);
+      if (
+        s.active_download &&
+        (s.active_download.state === "downloading" ||
+          s.active_download.state === "verifying")
+      ) {
+        const ad = s.active_download;
+        const tierName =
+          ad.model_key === "0.8b"
+            ? "Light"
+            : ad.model_key === "quality"
+            ? "Quality"
+            : "Standard";
+        setModelDownload({
+          isDownloading: true,
+          modelKey: ad.model_key,
+          tierLabel: tierName,
+          state: ad.state,
+          bytesDone: ad.bytes_done || 0,
+          bytesTotal: ad.bytes_total || 0,
+          progressPct: ad.bytes_total
+            ? Math.round((ad.bytes_done / ad.bytes_total) * 100)
+            : 0,
+          error: ad.error || null,
+          isComplete: false,
+        });
+      }
     } catch {
       setAiConfigured(false);
     }
   }, []);
+
+  const [modelDownload, setModelDownload] = useState({
+    isDownloading: false,
+    modelKey: "2b",
+    tierLabel: "Standard",
+    state: "idle",
+    bytesDone: 0,
+    bytesTotal: 0,
+    progressPct: 0,
+    error: null,
+    isComplete: false,
+  });
+  const [settingsActiveTab, setSettingsActiveTab] = useState("general");
+
+  const handleStartModelDownload = useCallback((key) => {
+    const tierName =
+      key === "0.8b" ? "Light" : key === "quality" ? "Quality" : "Standard";
+    setModelDownload({
+      isDownloading: true,
+      modelKey: key,
+      tierLabel: tierName,
+      state: "downloading",
+      bytesDone: 0,
+      bytesTotal: 0,
+      progressPct: 0,
+      error: null,
+      isComplete: false,
+    });
+  }, []);
+
+  const handleCancelModelDownload = useCallback(async () => {
+    const key = modelDownload.modelKey;
+    try {
+      await cancelModelDownload(key);
+    } catch {
+      /* best-effort */
+    }
+    setModelDownload((prev) => ({
+      ...prev,
+      isDownloading: false,
+      state: "idle",
+      error: null,
+      isComplete: false,
+    }));
+    window.dispatchEvent(
+      new CustomEvent("lexicon:model-download-cancel", {
+        detail: { modelKey: key },
+      })
+    );
+  }, [modelDownload.modelKey]);
+
+  const handleOpenSettingsToEngine = useCallback(() => {
+    setSettingsOpen(true);
+    setSettingsActiveTab("ai");
+    setSettingsFocusKey("lex-engine-section");
+  }, []);
+
+  useEffect(() => {
+    const handleDownloadStart = (e) => {
+      const key = e.detail?.modelKey || "2b";
+      const tierName =
+        key === "0.8b" ? "Light" : key === "quality" ? "Quality" : "Standard";
+      setModelDownload({
+        isDownloading: true,
+        modelKey: key,
+        tierLabel: tierName,
+        state: "downloading",
+        bytesDone: 0,
+        bytesTotal: 0,
+        progressPct: 0,
+        error: null,
+        isComplete: false,
+      });
+    };
+    const handleDownloadCancel = () => {
+      setModelDownload((prev) => ({
+        ...prev,
+        isDownloading: false,
+        state: "idle",
+        error: null,
+        isComplete: false,
+      }));
+    };
+    const handleDownloadComplete = (e) => {
+      const key = e.detail?.modelKey || "2b";
+      const tierName =
+        key === "0.8b" ? "Light" : key === "quality" ? "Quality" : "Standard";
+      setModelDownload((prev) => ({
+        ...prev,
+        isDownloading: false,
+        isComplete: true,
+        state: "ready",
+        tierLabel: tierName,
+        error: null,
+      }));
+      refreshAiConfigured();
+    };
+
+    window.addEventListener("lexicon:model-download-start", handleDownloadStart);
+    window.addEventListener("lexicon:model-download-cancel", handleDownloadCancel);
+    window.addEventListener("lexicon:model-download-complete", handleDownloadComplete);
+    return () => {
+      window.removeEventListener("lexicon:model-download-start", handleDownloadStart);
+      window.removeEventListener("lexicon:model-download-cancel", handleDownloadCancel);
+      window.removeEventListener("lexicon:model-download-complete", handleDownloadComplete);
+    };
+  }, [refreshAiConfigured]);
+
+  // Global model download polling keeps progress alive across tab switches and closed modals
+  useEffect(() => {
+    if (!modelDownload.isDownloading || !modelDownload.modelKey) return undefined;
+    const key = modelDownload.modelKey;
+    const timer = setInterval(async () => {
+      try {
+        const st = await getModelStatus(key);
+        if (st.state === "downloading" || st.state === "verifying") {
+          const pct = st.bytes_total
+            ? Math.round((st.bytes_done / st.bytes_total) * 100)
+            : 0;
+          setModelDownload((prev) => ({
+            ...prev,
+            state: st.state,
+            bytesDone: st.bytes_done,
+            bytesTotal: st.bytes_total,
+            progressPct: pct,
+          }));
+          window.dispatchEvent(
+            new CustomEvent("lexicon:model-download-progress", {
+              detail: {
+                modelKey: key,
+                state: st.state,
+                bytesDone: st.bytes_done,
+                bytesTotal: st.bytes_total,
+                progressPct: pct,
+              },
+            })
+          );
+        } else if (st.state === "ready") {
+          setModelDownload((prev) => ({
+            ...prev,
+            isDownloading: false,
+            isComplete: true,
+            state: "ready",
+            bytesDone: st.bytes_done,
+            bytesTotal: st.bytes_total,
+            progressPct: 100,
+          }));
+          refreshAiConfigured();
+          window.dispatchEvent(new CustomEvent("lexicon:ai-configured"));
+          window.dispatchEvent(
+            new CustomEvent("lexicon:model-download-complete", {
+              detail: { modelKey: key },
+            })
+          );
+        } else if (st.state === "error") {
+          setModelDownload((prev) => ({
+            ...prev,
+            isDownloading: false,
+            state: "error",
+            error: st.error || "Download failed",
+          }));
+        } else if (st.state === "cancelled") {
+          setModelDownload((prev) => ({
+            ...prev,
+            isDownloading: false,
+            state: "idle",
+            error: null,
+          }));
+        }
+      } catch {
+        /* ignore transient poll error */
+      }
+    }, 500);
+
+    return () => clearInterval(timer);
+  }, [modelDownload.isDownloading, modelDownload.modelKey, refreshAiConfigured]);
+
+  useEffect(() => {
+    if (!modelDownload.isComplete) return undefined;
+    const timer = setTimeout(() => {
+      setModelDownload((prev) => ({ ...prev, isComplete: false }));
+    }, 4000);
+    return () => clearTimeout(timer);
+  }, [modelDownload.isComplete]);
 
   useEffect(() => {
     refreshAiConfigured();
@@ -4163,8 +4376,31 @@ export default function App() {
           onContinueTemperatureChange={handleContinueTemperatureChange}
           continueIdleSeconds={continueIdleSeconds}
           onContinueIdleSecondsChange={handleContinueIdleSecondsChange}
+          activeModelDownload={modelDownload}
+          onActiveTabChange={setSettingsActiveTab}
+          onStartModelDownload={handleStartModelDownload}
+          onCancelModelDownload={handleCancelModelDownload}
         />
       </Suspense>
+
+      {(modelDownload.isDownloading ||
+        modelDownload.isComplete ||
+        Boolean(modelDownload.error)) &&
+        !(settingsOpen && settingsActiveTab === "ai") && (
+          <ModelDownloadDock
+            downloadState={modelDownload}
+            onOpenSettings={handleOpenSettingsToEngine}
+            onCancel={handleCancelModelDownload}
+            onDismiss={() =>
+              setModelDownload((prev) => ({
+                ...prev,
+                isDownloading: false,
+                error: null,
+                isComplete: false,
+              }))
+            }
+          />
+        )}
 
       <Suspense fallback={null}>
         {aiSetupOpen && (
