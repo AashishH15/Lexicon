@@ -3,6 +3,7 @@ import re
 import shutil
 import socket
 import subprocess
+import sys
 import threading
 import time
 from pathlib import Path
@@ -68,9 +69,15 @@ JVM_MEMORY_FLAGS = [
 def _java_executable(home: str) -> str | None:
     if not home:
         return None
+    clean_home = _strip_extended_path(home)
     name = "java.exe" if os.name == "nt" else "java"
-    candidate = os.path.join(_strip_extended_path(home), "bin", name)
-    return candidate if os.path.isfile(candidate) else None
+    standard = os.path.join(clean_home, "bin", name)
+    if os.path.isfile(standard):
+        return standard
+    mac_bundle = os.path.join(clean_home, "Contents", "Home", "bin", name)
+    if os.path.isfile(mac_bundle):
+        return mac_bundle
+    return None
 
 
 def _strip_extended_path(path: str) -> str:
@@ -97,13 +104,33 @@ def _ensure_bundled_java_on_path() -> None:
         if not java_exe:
             continue
         java_bin = os.path.dirname(java_exe)
+        resolved_home = os.path.dirname(java_bin)
         current = os.environ.get("PATH", "")
         parts = [_strip_extended_path(p) for p in current.split(os.pathsep) if p]
         parts = [p for p in parts if os.path.normcase(p) != os.path.normcase(java_bin)]
         os.environ["PATH"] = os.pathsep.join([java_bin, *parts])
-        os.environ["JAVA_HOME"] = home
-        os.environ["LEXICON_JAVA_HOME"] = home
+        os.environ["JAVA_HOME"] = resolved_home
+        os.environ["LEXICON_JAVA_HOME"] = resolved_home
         return
+
+
+def _mac_jdk_installed() -> bool:
+    """Return true when macOS reports an installed JDK.
+
+    /usr/bin/java is a stub. Running it opens the Java install dialog.
+    /usr/libexec/java_home reports a JDK and does not open that dialog.
+    """
+    try:
+        result = subprocess.run(
+            ["/usr/libexec/java_home"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            timeout=5,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return False
+    return result.returncode == 0
 
 
 def _resolve_java() -> str:
@@ -114,6 +141,13 @@ def _resolve_java() -> str:
             return java_exe
     java_exe = shutil.which("java")
     if java_exe:
+        stub = os.path.normpath("/usr/bin/java")
+        if sys.platform == "darwin" and os.path.normpath(java_exe) == stub:
+            if not _mac_jdk_installed():
+                raise RuntimeError(
+                    "LanguageTool requires Java 17 or later. "
+                    "Install Java or configure LEXICON_JAVA_HOME."
+                )
         return java_exe
     raise RuntimeError(
         "LanguageTool requires Java 17 or later. "

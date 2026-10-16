@@ -204,7 +204,16 @@ fn start_backend(_app_handle: &tauri::AppHandle) -> Result<BackendProcess, Strin
             .map_err(|error| format!("failed to resolve resource dir: {error}"))?;
 
         let jre_dir = resource_dir.join("jre");
-        if jre_dir.is_dir() {
+        let mac_home = jre_dir.join("Contents").join("Home");
+        let standard_java = jre_dir.join("bin").join("java");
+        let mac_java = mac_home.join("bin").join("java");
+        // Use Contents/Home only when that bundle contains java.
+        // A directory without the binary must not replace jre/bin/java.
+        if standard_java.is_file() {
+            jre_dir.to_string_lossy().to_string()
+        } else if mac_java.is_file() {
+            mac_home.to_string_lossy().to_string()
+        } else if jre_dir.is_dir() {
             jre_dir.to_string_lossy().to_string()
         } else {
             String::new()
@@ -216,10 +225,11 @@ fn start_backend(_app_handle: &tauri::AppHandle) -> Result<BackendProcess, Strin
     #[cfg(all(unix, not(debug_assertions)))]
     {
         use std::os::unix::fs::PermissionsExt;
-        let executable = _app_handle
+        let resource_dir = _app_handle
             .path()
             .resource_dir()
-            .map_err(|error| format!("failed to resolve resource dir: {error}"))?
+            .map_err(|error| format!("failed to resolve resource dir: {error}"))?;
+        let executable = resource_dir
             .join("lexicon-backend")
             .join(if cfg!(target_os = "windows") {
                 "lexicon-backend.exe"
@@ -231,6 +241,30 @@ fn start_backend(_app_handle: &tauri::AppHandle) -> Result<BackendProcess, Strin
             if perms.mode() & 0o111 == 0 {
                 perms.set_mode(0o755);
                 let _ = std::fs::set_permissions(&executable, perms);
+            }
+        }
+
+        let java_candidates = [
+            resource_dir.join("jre").join("bin").join("java"),
+            resource_dir
+                .join("jre")
+                .join("Contents")
+                .join("Home")
+                .join("bin")
+                .join("java"),
+        ];
+        for java_bin in java_candidates {
+            if let Ok(metadata) = std::fs::metadata(&java_bin) {
+                let mut perms = metadata.permissions();
+                if perms.mode() & 0o111 == 0 {
+                    perms.set_mode(0o755);
+                    std::fs::set_permissions(&java_bin, perms).map_err(|error| {
+                        format!(
+                            "failed to set Java executable permissions on {}: {error}",
+                            java_bin.display()
+                        )
+                    })?;
+                }
             }
         }
     }
@@ -275,10 +309,11 @@ fn start_backend(_app_handle: &tauri::AppHandle) -> Result<BackendProcess, Strin
     // 8000 cannot steal the desktop app's requests.
     cmd.env("LEXICON_PORT", BACKEND_PORT.to_string());
     cmd.env("LEXICON_HOST", "127.0.0.1");
-    cmd.env("LEXICON_JAVA_HOME", &java_home);
     if !java_home.is_empty() {
+        cmd.env("LEXICON_JAVA_HOME", &java_home);
         cmd.env("JAVA_HOME", &java_home);
     }
+
     cmd.stdin(Stdio::null());
     cmd.stdout(Stdio::null());
     cmd.stderr(Stdio::null());

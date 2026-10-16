@@ -32,6 +32,9 @@ def _resolve_jre_dir(base_dir: str) -> str | None:
     for candidate in candidates:
         if os.path.isfile(os.path.join(candidate, "bin", java_name)):
             return candidate
+        mac_home = os.path.join(candidate, "Contents", "Home")
+        if os.path.isfile(os.path.join(mac_home, "bin", java_name)):
+            return mac_home
     return None
 
 

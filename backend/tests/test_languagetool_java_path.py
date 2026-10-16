@@ -17,11 +17,22 @@ import launcher  # noqa: E402
 from languagetool import (  # noqa: E402
     _ensure_bundled_java_on_path,
     _java_executable,
+    _resolve_java,
     _should_inject_jvm_flags,
     _strip_extended_path,
 )
 
 JAVA_NAME = "java.exe" if os.name == "nt" else "java"
+
+
+def _make_mac_jre(root: Path) -> Path:
+    bin_dir = root / "Contents" / "Home" / "bin"
+    bin_dir.mkdir(parents=True, exist_ok=True)
+    java = bin_dir / JAVA_NAME
+    java.write_text("", encoding="utf-8")
+    if os.name != "nt":
+        java.chmod(0o755)
+    return java
 
 
 def _make_jre(root: Path) -> Path:
@@ -152,3 +163,89 @@ def test_java_executable_strips_extended_home(tmp_path):
     java = _make_jre(home)
     extended = "\\\\?\\" + str(home)
     assert _java_executable(extended) == str(java)
+
+
+def test_java_executable_resolves_mac_bundle(tmp_path):
+    jre_root = tmp_path / "jre"
+    java = _make_mac_jre(jre_root)
+    assert _java_executable(str(jre_root)) == str(java)
+
+
+def test_resolve_jre_dir_finds_mac_bundle(tmp_path):
+    resources = tmp_path / "resources"
+    sidecar_dir = resources / "lexicon-backend"
+    sidecar_dir.mkdir(parents=True)
+    shipped_jre = resources / "jre"
+    _make_mac_jre(shipped_jre)
+    expected_home = shipped_jre / "Contents" / "Home"
+
+    resolved = launcher._resolve_jre_dir(str(sidecar_dir))
+    assert resolved is not None
+    assert os.path.samefile(resolved, expected_home)
+
+
+def test_ensure_bundled_java_normalizes_mac_bundle(tmp_path, monkeypatch):
+    jre_root = tmp_path / "jre"
+    _make_mac_jre(jre_root)
+    expected_home = jre_root / "Contents" / "Home"
+    expected_bin = expected_home / "bin"
+
+    monkeypatch.setenv("LEXICON_JAVA_HOME", str(jre_root))
+    monkeypatch.delenv("JAVA_HOME", raising=False)
+    monkeypatch.setenv("PATH", str(tmp_path / "empty"))
+
+    _ensure_bundled_java_on_path()
+
+    parts = os.environ["PATH"].split(os.pathsep)
+    assert os.path.normcase(parts[0]) == os.path.normcase(str(expected_bin))
+    assert os.path.samefile(os.environ["JAVA_HOME"], expected_home)
+    assert os.path.samefile(os.environ["LEXICON_JAVA_HOME"], expected_home)
+
+
+class _Completed:
+    def __init__(self, returncode):
+        self.returncode = returncode
+
+
+def _patch_mac_stub(monkeypatch, returncode):
+    import languagetool
+
+    calls = []
+
+    def fake_run(cmd, **kwargs):
+        calls.append(list(cmd))
+        return _Completed(returncode)
+
+    monkeypatch.delenv("LEXICON_JAVA_HOME", raising=False)
+    monkeypatch.delenv("JAVA_HOME", raising=False)
+    monkeypatch.setattr(languagetool.sys, "platform", "darwin")
+    monkeypatch.setattr(languagetool.shutil, "which", lambda cmd: "/usr/bin/java")
+    monkeypatch.setattr(languagetool.subprocess, "run", fake_run)
+    return calls
+
+
+def test_resolve_jre_dir_prefers_standard_layout(tmp_path):
+    sidecar_dir = tmp_path / "lexicon-backend"
+    sidecar_dir.mkdir()
+    shipped_jre = tmp_path / "jre"
+    _make_jre(shipped_jre)
+    _make_mac_jre(shipped_jre)
+
+    resolved = launcher._resolve_jre_dir(str(sidecar_dir))
+    assert os.path.samefile(resolved, shipped_jre)
+
+
+def test_resolve_java_rejects_broken_mac_usr_bin_java(monkeypatch):
+    calls = _patch_mac_stub(monkeypatch, 1)
+
+    with pytest.raises(RuntimeError, match="LanguageTool requires Java 17 or later"):
+        _resolve_java()
+    assert calls == [["/usr/libexec/java_home"]]
+
+
+def test_resolve_java_accepts_working_mac_usr_bin_java(monkeypatch):
+    calls = _patch_mac_stub(monkeypatch, 0)
+
+    assert _resolve_java() == "/usr/bin/java"
+    assert calls == [["/usr/libexec/java_home"]]
+
