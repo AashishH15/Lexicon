@@ -13,6 +13,7 @@ Pinned artifacts:
   - "0.8b"-> bartowski/Qwen_Qwen3.5-0.8B-GGUF / Qwen_Qwen3.5-0.8B-Q8_0.gguf    (~0.84 GB)
 """
 
+import concurrent.futures
 import os
 import shutil
 import sys
@@ -21,6 +22,9 @@ import time
 
 import requests
 from huggingface_hub import hf_hub_url
+
+# Number of parallel workers for chunked GGUF model downloads.
+NUM_DOWNLOAD_WORKERS = 4
 
 # Safety margin added to the expected download size when checking free disk
 # space, so we don't start a multi-GB download that the disk can't finish.
@@ -386,8 +390,16 @@ def active_model_download() -> dict | None:
 
 def _update_progress(model_key: str, done: int, total: int) -> None:
     """Streamed-download progress -> that key's status entry."""
-    MODEL_STATUS[model_key]["bytes_done"] = done
-    MODEL_STATUS[model_key]["bytes_total"] = total
+    if model_key not in MODEL_STATUS:
+        MODEL_STATUS[model_key] = {
+            "state": "downloading",
+            "bytes_done": done,
+            "bytes_total": total,
+            "error": None,
+        }
+    else:
+        MODEL_STATUS[model_key]["bytes_done"] = done
+        MODEL_STATUS[model_key]["bytes_total"] = total
 
 
 def _free_space(path: str) -> int:
@@ -414,7 +426,10 @@ def delete_model(model_key: str) -> None:
     primary = primary_model_path(model_key)
     legacy = legacy_model_path(model_key)
     failures = []
-    for path in (primary, legacy):
+    candidates = [primary, legacy, f"{primary}.tmp"]
+    for i in range(16):
+        candidates.append(f"{primary}.part_{i}")
+    for path in candidates:
         if path and os.path.exists(path):
             try:
                 os.remove(path)
@@ -532,22 +547,10 @@ def _download_model_locked(model_key: str) -> dict:
     return dict(MODEL_STATUS[model_key])
 
 
-def _stream_download(model_key: str) -> str:
-    """Stream the pinned GGUF to disk with progress + resume support.
-
-    huggingface_hub 0.29.3's hf_hub_download has no progress callback, so we
-    resolve the file URL and stream it via requests. Resumes a partial file
-    with an HTTP Range request, and verifies the final size. Aborts cleanly
-    if cancel_download() is called.
-    """
-    spec = MODELS[model_key]
-    dest = primary_model_path(model_key)
-    url = hf_hub_url(repo_id=spec["repo_id"], filename=spec["filename"])
-
-    # Resume only a plausible partial GGUF. A full-size corrupt file must not
-    # be appended to or reported as ready on the next attempt.
+def _single_stream_download(url: str, dest: str, total_size: int, model_key: str) -> str:
+    """Download a file in a single stream with HTTP Range resume support."""
     resume_pos = os.path.getsize(dest) if os.path.exists(dest) else 0
-    expected_min = int(spec["size"] * 0.95)
+    expected_min = int(total_size * 0.95)
     invalid_existing = resume_pos >= expected_min
     if 4 <= resume_pos < expected_min:
         try:
@@ -565,24 +568,18 @@ def _stream_download(model_key: str) -> str:
 
     with requests.get(url, headers=headers, stream=True, timeout=30) as resp:
         resp.raise_for_status()
-        # Verify server honored partial content (206). If 200 OK is returned instead,
-        # the server/CDN ignored the Range header and sent full content from byte 0,
-        # so overwrite cleanly instead of appending duplicate bytes.
         if resume_pos > 0 and resp.status_code != 206:
             resume_pos = 0
             mode = "wb"
         else:
             mode = "ab" if resume_pos else "wb"
 
-        # The authoritative target file size on disk is spec["size"].
-        total = spec["size"]
-        _update_progress(model_key, resume_pos, total)
+        _update_progress(model_key, resume_pos, total_size)
         with open(dest, mode) as fh:
             for chunk in resp.iter_content(chunk_size=1 << 20):  # 1 MiB
                 if _is_cancelled(model_key):
                     with _CANCEL_LOCK:
                         _CANCELLED_KEYS.discard(model_key)
-                    # Leave the partial file; a later download resumes it.
                     MODEL_STATUS[model_key]["state"] = "cancelled"
                     MODEL_STATUS[model_key]["error"] = None
                     raise RuntimeError(f"Download of {model_key} cancelled by user.")
@@ -590,14 +587,249 @@ def _stream_download(model_key: str) -> str:
                     continue
                 fh.write(chunk)
                 resume_pos += len(chunk)
-                _update_progress(model_key, resume_pos, total)
+                _update_progress(model_key, resume_pos, total_size)
 
-    if os.path.getsize(dest) < int(spec["size"] * 0.95):
+    if os.path.getsize(dest) < int(total_size * 0.95):
         raise RuntimeError(
             f"Downloaded file is smaller than expected "
-            f"({os.path.getsize(dest)} < {spec['size']} bytes)"
+            f"({os.path.getsize(dest)} < {total_size} bytes)"
         )
     return dest
+
+
+def _parallel_chunk_download(
+    url: str,
+    dest: str,
+    total_size: int,
+    model_key: str,
+    num_workers: int = NUM_DOWNLOAD_WORKERS,
+) -> str:
+    """Download a file in parallel byte chunks with resume and fallback support."""
+    # Probe remote server for HTTP Range header support.
+    range_supported = False
+    try:
+        with requests.get(url, headers={"Range": "bytes=0-0"}, stream=True, timeout=15) as probe:
+            range_supported = (probe.status_code == 206)
+    except requests.RequestException:
+        range_supported = False
+
+    if not range_supported:
+        return _single_stream_download(url, dest, total_size, model_key)
+
+    worker_count = max(1, min(num_workers, total_size))
+    if worker_count == 1:
+        return _single_stream_download(url, dest, total_size, model_key)
+
+    part_size = total_size // worker_count
+    parts = []
+    for i in range(worker_count):
+        start = i * part_size
+        end = (total_size - 1) if (i == worker_count - 1) else ((i + 1) * part_size - 1)
+        expected_len = end - start + 1
+        part_path = f"{dest}.part_{i}"
+        parts.append((i, start, end, expected_len, part_path))
+
+    downloaded_bytes = [0] * worker_count
+    for i, _start, _end, expected_len, part_path in parts:
+        if os.path.exists(part_path):
+            cur_size = os.path.getsize(part_path)
+            if cur_size > expected_len:
+                try:
+                    os.remove(part_path)
+                except OSError as exc:
+                    raise RuntimeError(
+                        f"Could not replace oversized part file: {exc}"
+                    ) from exc
+                downloaded_bytes[i] = 0
+            else:
+                downloaded_bytes[i] = cur_size
+
+    # Assembly keeps one extra part on disk.
+    # A new download uses one stream when free space cannot hold that copy.
+    already = sum(downloaded_bytes)
+    largest_part = max(item[3] for item in parts)
+    parent = os.path.dirname(dest) or "."
+    if already == 0 and _free_space(parent) < total_size + largest_part + SPACE_MARGIN_BYTES:
+        return _single_stream_download(url, dest, total_size, model_key)
+
+    _update_progress(model_key, already, total_size)
+    progress_lock = threading.Lock()
+    range_rejected = threading.Event()
+
+    def _worker(part_index: int, start: int, end: int, expected_len: int, part_path: str) -> None:
+        max_retries = 3
+        for attempt in range(max_retries):
+            if _is_cancelled(model_key) or range_rejected.is_set():
+                return
+            if os.path.exists(part_path):
+                cur_size = os.path.getsize(part_path)
+            else:
+                cur_size = 0
+            if cur_size > expected_len:
+                try:
+                    os.remove(part_path)
+                except OSError as exc:
+                    raise RuntimeError(
+                        f"Could not replace oversized part file: {exc}"
+                    ) from exc
+                cur_size = 0
+            if cur_size >= expected_len:
+                with progress_lock:
+                    downloaded_bytes[part_index] = expected_len
+                    _update_progress(model_key, sum(downloaded_bytes), total_size)
+                return
+
+            part_offset = start + cur_size
+            headers = {"Range": f"bytes={part_offset}-{end}"}
+            mode = "ab" if cur_size > 0 else "wb"
+            try:
+                with requests.get(url, headers=headers, stream=True, timeout=30) as resp:
+                    # A status other than 206 is the whole file.
+                    # The part file must not store it.
+                    if resp.status_code != 206:
+                        range_rejected.set()
+                        return
+                    with open(part_path, mode) as fh:
+                        for chunk in resp.iter_content(chunk_size=1 << 20):
+                            if _is_cancelled(model_key) or range_rejected.is_set():
+                                return
+                            if not chunk:
+                                continue
+                            room = expected_len - cur_size
+                            if room <= 0:
+                                break
+                            if len(chunk) > room:
+                                chunk = chunk[:room]
+                            fh.write(chunk)
+                            cur_size += len(chunk)
+                            with progress_lock:
+                                downloaded_bytes[part_index] = cur_size
+                                _update_progress(model_key, sum(downloaded_bytes), total_size)
+            except requests.RequestException as exc:
+                if _is_cancelled(model_key) or range_rejected.is_set():
+                    return
+                if attempt == max_retries - 1:
+                    raise RuntimeError(f"Part {part_index} download failed: {exc}") from exc
+                time.sleep(0.5 * (attempt + 1))
+                continue
+            if _is_cancelled(model_key) or range_rejected.is_set():
+                return
+            if cur_size >= expected_len:
+                return
+        final_size = os.path.getsize(part_path) if os.path.exists(part_path) else 0
+        raise RuntimeError(
+            f"Part {part_index} download incomplete: {final_size} of {expected_len} bytes"
+        )
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=worker_count) as executor:
+        futures = [
+            executor.submit(_worker, i, start, end, expected_len, part_path)
+            for i, start, end, expected_len, part_path in parts
+        ]
+        for future in concurrent.futures.as_completed(futures):
+            if _is_cancelled(model_key):
+                for pending in futures:
+                    pending.cancel()
+                break
+            future.result()
+
+    if _is_cancelled(model_key):
+        with _CANCEL_LOCK:
+            _CANCELLED_KEYS.discard(model_key)
+        MODEL_STATUS[model_key]["state"] = "cancelled"
+        MODEL_STATUS[model_key]["error"] = None
+        raise RuntimeError(f"Download of {model_key} cancelled by user.")
+
+    if range_rejected.is_set():
+        for _i, _start, _end, _expected_len, part_path in parts:
+            if not os.path.exists(part_path):
+                continue
+            try:
+                os.remove(part_path)
+            except OSError:
+                # A locked part file must not block the single-stream fallback.
+                pass
+        return _single_stream_download(url, dest, total_size, model_key)
+
+    # Confirm all parts are complete before assembly.
+    for i, _start, _end, expected_len, part_path in parts:
+        if not os.path.exists(part_path) or os.path.getsize(part_path) != expected_len:
+            actual = os.path.getsize(part_path) if os.path.exists(part_path) else 0
+            raise RuntimeError(
+                f"Part {i} download incomplete: {actual} of {expected_len} bytes"
+            )
+
+    temp_dest = f"{dest}.tmp"
+    if os.path.exists(temp_dest):
+        try:
+            os.remove(temp_dest)
+        except OSError:
+            pass
+
+    # Rename first part to become the base destination file.
+    os.replace(parts[0][4], temp_dest)
+
+    # Append remaining parts in sequence and delete each source part.
+    with open(temp_dest, "ab") as out_fh:
+        for i in range(1, worker_count):
+            p_path = parts[i][4]
+            with open(p_path, "rb") as in_fh:
+                shutil.copyfileobj(in_fh, out_fh, length=16 * 1024 * 1024)
+            try:
+                os.remove(p_path)
+            except OSError:
+                pass
+
+    if os.path.exists(dest):
+        try:
+            os.remove(dest)
+        except OSError:
+            pass
+    os.replace(temp_dest, dest)
+
+    if os.path.getsize(dest) < int(total_size * 0.95):
+        raise RuntimeError(
+            f"Downloaded file is smaller than expected "
+            f"({os.path.getsize(dest)} < {total_size} bytes)"
+        )
+    return dest
+
+
+def _stream_download(model_key: str) -> str:
+    """Stream the pinned GGUF to disk with 4-worker chunk acceleration."""
+    spec = MODELS[model_key]
+    dest = primary_model_path(model_key)
+    url = hf_hub_url(repo_id=spec["repo_id"], filename=spec["filename"])
+
+    resume_pos = os.path.getsize(dest) if os.path.exists(dest) else 0
+    expected_min = int(spec["size"] * 0.95)
+    invalid_existing = resume_pos >= expected_min
+    if 4 <= resume_pos < expected_min:
+        try:
+            with open(dest, "rb") as fh:
+                invalid_existing = fh.read(4) != b"GGUF"
+        except OSError:
+            invalid_existing = True
+    if invalid_existing:
+        try:
+            os.remove(dest)
+        except OSError as exc:
+            raise RuntimeError(f"Could not replace invalid model file: {exc}") from exc
+        resume_pos = 0
+
+    if 0 < resume_pos < expected_min and not os.path.exists(f"{dest}.part_0"):
+        try:
+            os.remove(dest)
+        except OSError as exc:
+            raise RuntimeError(f"Could not replace partial model file: {exc}") from exc
+
+    return _parallel_chunk_download(
+        url=url,
+        dest=dest,
+        total_size=spec["size"],
+        model_key=model_key,
+        num_workers=NUM_DOWNLOAD_WORKERS,
+    )
 
 
 if __name__ == "__main__":
