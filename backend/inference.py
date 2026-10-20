@@ -444,11 +444,106 @@ def _cpu_name() -> str:
     return name
 
 
+# WMI AdapterRAM is a 32-bit field. Values near 4 GiB are truncated.
+_WMI_ADAPTER_RAM_CEILING = 4 * (1024**3)
+_WMI_ADAPTER_RAM_TRUNCATION_SLACK = 16 * (1024**2)
+
+
+def _coerce_u64(value) -> int:
+    """Convert JSON, WMI, or registry values to a non-negative integer."""
+    if value is None or isinstance(value, bool):
+        return 0
+    if isinstance(value, (list, tuple)):
+        try:
+            data = bytes(int(b) & 0xFF for b in value[:8])
+            data = data.ljust(8, b"\x00")
+            return int.from_bytes(data, "little", signed=False)
+        except (TypeError, ValueError, OverflowError):
+            return 0
+    try:
+        number = int(float(value))
+    except (TypeError, ValueError, OverflowError):
+        return 0
+    return number if number > 0 else 0
+
+
+def pick_adapter_vram_bytes(adapter_ram, registry_bytes) -> int:
+    """Pick dedicated VRAM bytes from WMI and the registry QWORD.
+
+    WMI AdapterRAM is a 32-bit field. A 16 GB adapter reports about 4 GB.
+    The registry QWORD holds the full size. Use it when WMI is empty or truncated.
+    Do not replace a small iGPU AdapterRAM value with a larger shared-memory guess.
+    """
+    wmi = _coerce_u64(adapter_ram)
+    qw = _coerce_u64(registry_bytes)
+    truncated = wmi >= (_WMI_ADAPTER_RAM_CEILING - _WMI_ADAPTER_RAM_TRUNCATION_SLACK)
+    if qw > 0 and (wmi <= 0 or truncated):
+        return qw
+    if wmi > 0:
+        return wmi
+    return qw
+
+
+def match_registry_vram(name, pnp_id, registry_rows) -> int:
+    """Return registry VRAM bytes for a controller name or PnP id."""
+    name_l = (name or "").strip().lower()
+    pnp_l = (pnp_id or "").strip().lower()
+    by_name = 0
+    for row in registry_rows or []:
+        match_id = (row.get("MatchingDeviceId") or "").strip().lower()
+        if pnp_l and match_id and pnp_l.startswith(match_id):
+            size = _coerce_u64(row.get("QwMemorySize"))
+            if size > 0:
+                return size
+        desc = (row.get("DriverDesc") or "").strip().lower()
+        if name_l and desc and name_l == desc:
+            by_name = _coerce_u64(row.get("QwMemorySize")) or by_name
+    return by_name
+
+
+def _parse_windows_video_payload(raw) -> tuple[list, list]:
+    """Split a PowerShell GPU payload into controllers and registry rows."""
+    if isinstance(raw, list):
+        return raw, []
+    if not isinstance(raw, dict):
+        return [], []
+    if "controllers" in raw or "registry" in raw:
+        controllers = raw.get("controllers") or []
+        registry = raw.get("registry") or []
+        if isinstance(controllers, dict):
+            controllers = [controllers]
+        if isinstance(registry, dict):
+            registry = [registry]
+        return controllers, registry
+    return [raw], []
+
+
 def _detect_windows_accelerators(results: dict, nv_info: dict) -> None:
+    # AdapterRAM cannot store more than 4 GiB. Read the 64-bit registry size
+    # in the same PowerShell call so AMD and Intel cards report true VRAM.
     ps_gpu = (
-        "Get-CimInstance Win32_VideoController | "
-        "Select-Object Name, AdapterRAM, PNPDeviceID, DriverVersion | "
-        "ConvertTo-Json -Compress"
+        "$reg = @(); "
+        "$class = 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Class\\"
+        "{4d36e968-e325-11ce-bfc1-08002be10318}'; "
+        "Get-ChildItem $class -ErrorAction SilentlyContinue | ForEach-Object { "
+        "$p = Get-ItemProperty $_.PSPath -ErrorAction SilentlyContinue; "
+        "if (-not $p) { return }; "
+        "$bytes = $p.'HardwareInformation.qwMemorySize'; "
+        "if ($null -eq $bytes) { return }; "
+        "if ($bytes -is [byte[]] -and $bytes.Length -ge 8) { "
+        "$val = [BitConverter]::ToUInt64($bytes, 0) "
+        "} else { try { $val = [uint64]$bytes } catch { return } }; "
+        "if ($val -le 0) { return }; "
+        "$reg += [PSCustomObject]@{ "
+        "DriverDesc = [string]$p.DriverDesc; "
+        "MatchingDeviceId = [string]$p.MatchingDeviceId; "
+        "QwMemorySize = $val "
+        "} "
+        "}; "
+        "$controllers = @(Get-CimInstance Win32_VideoController | "
+        "Select-Object Name, AdapterRAM, PNPDeviceID, DriverVersion); "
+        "[PSCustomObject]@{ controllers = $controllers; registry = $reg } | "
+        "ConvertTo-Json -Compress -Depth 5"
     )
     try:
         proc = subprocess.run(
@@ -459,9 +554,8 @@ def _detect_windows_accelerators(results: dict, nv_info: dict) -> None:
         )
         if proc.returncode == 0 and proc.stdout.strip():
             raw = json.loads(proc.stdout)
-            if isinstance(raw, dict):
-                raw = [raw]
-            for item in raw:
+            controllers, registry_rows = _parse_windows_video_payload(raw)
+            for item in controllers:
                 name = (item.get("Name") or "").strip()
                 if not name:
                     continue
@@ -493,14 +587,16 @@ def _detect_windows_accelerators(results: dict, nv_info: dict) -> None:
                     else:
                         is_integrated = True
 
-                # WMI AdapterRAM is limited to 4GB. Use nvidia-smi memory values when available.
                 vram_gb = None
                 if vendor == "NVIDIA" and nv_info.get("cuda_available") and nv_info.get("vram_gb"):
                     vram_gb = nv_info["vram_gb"]
                 else:
-                    ram_bytes = item.get("AdapterRAM")
-                    if ram_bytes and float(ram_bytes) > 0:
-                        vram_gb = round(float(ram_bytes) / (1024**3), 2)
+                    chosen = pick_adapter_vram_bytes(
+                        item.get("AdapterRAM"),
+                        match_registry_vram(name, pnp_id, registry_rows),
+                    )
+                    if chosen > 0:
+                        vram_gb = round(chosen / (1024**3), 2)
 
                 supported = bool(vendor == "NVIDIA" and nv_info.get("cuda_available"))
                 entry = {

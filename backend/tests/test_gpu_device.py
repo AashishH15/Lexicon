@@ -138,6 +138,160 @@ def test_detect_all_accelerators_windows_mock():
                 assert npu["vendor"] == "Intel"
 
 
+def test_pick_adapter_vram_bytes_uses_registry_when_wmi_hits_4gb_ceiling():
+    """WMI AdapterRAM is uint32. A 16 GB AMD/Intel card reports ~4 GB."""
+    wmi_capped = 4293918720  # ~3.99 GiB, the typical truncated WMI value
+    registry_16gb = 16 * (1024**3)
+    assert inference.pick_adapter_vram_bytes(wmi_capped, registry_16gb) == registry_16gb
+    assert inference.pick_adapter_vram_bytes(2**32 - 1, registry_16gb) == registry_16gb
+    intel_12gb = 12 * (1024**3)
+    assert inference.pick_adapter_vram_bytes(wmi_capped, intel_12gb) == intel_12gb
+
+
+def test_pick_adapter_vram_bytes_keeps_small_igpu_wmi():
+    """iGPU AdapterRAM below the 4 GiB ceiling is not truncated. Keep it."""
+    igpu_512mb = 536870912
+    shared_guess = 8 * (1024**3)
+    assert inference.pick_adapter_vram_bytes(igpu_512mb, shared_guess) == igpu_512mb
+    assert inference.pick_adapter_vram_bytes(igpu_512mb, None) == igpu_512mb
+    assert inference.pick_adapter_vram_bytes(igpu_512mb, 0) == igpu_512mb
+
+
+def test_pick_adapter_vram_bytes_uses_registry_when_wmi_empty():
+    registry_16gb = 16 * (1024**3)
+    assert inference.pick_adapter_vram_bytes(None, registry_16gb) == registry_16gb
+    assert inference.pick_adapter_vram_bytes(0, registry_16gb) == registry_16gb
+    assert inference.pick_adapter_vram_bytes(None, None) == 0
+
+
+def test_match_registry_vram_by_pnp_device_id():
+    rows = [
+        {
+            "DriverDesc": "AMD Radeon RX 7800 XT",
+            "MatchingDeviceId": r"PCI\VEN_1002&DEV_747E",
+            "QwMemorySize": 17179869184,
+        },
+        {
+            "DriverDesc": "AMD Radeon(TM) Graphics",
+            "MatchingDeviceId": r"PCI\VEN_1002&DEV_13C0",
+            "QwMemorySize": 536870912,
+        },
+    ]
+    pnp = r"PCI\VEN_1002&DEV_747E&SUBSYS_23231043&REV_C1\4&1234&0&0008"
+    assert (
+        inference.match_registry_vram("AMD Radeon RX 7800 XT", pnp, rows)
+        == 17179869184
+    )
+    assert (
+        inference.match_registry_vram(
+            "Some Other Name",
+            r"PCI\VEN_1002&DEV_13C0&SUBSYS_00000000",
+            rows,
+        )
+        == 536870912
+    )
+    assert inference.match_registry_vram("Unknown GPU", r"PCI\VEN_10DE&DEV_2783", rows) == 0
+
+
+def test_detect_windows_amd_discrete_vram_from_registry():
+    """A 16 GB AMD dGPU must not display the 4 GB WMI ceiling."""
+    mock_payload = {
+        "controllers": [
+            {
+                "Name": "AMD Radeon RX 7800 XT",
+                "AdapterRAM": 4293918720,
+                "PNPDeviceID": r"PCI\VEN_1002&DEV_747E&SUBSYS_23231043&REV_C1",
+            }
+        ],
+        "registry": [
+            {
+                "DriverDesc": "AMD Radeon RX 7800 XT",
+                "MatchingDeviceId": r"PCI\VEN_1002&DEV_747E",
+                "QwMemorySize": 17179869184,
+            }
+        ],
+        "npus": [],
+    }
+
+    def mock_subprocess_run(cmd, *args, **kwargs):
+        cmd_str = " ".join(cmd) if isinstance(cmd, list) else str(cmd)
+        result = MagicMock()
+        result.returncode = 0
+        result.stdout = (
+            __import__("json").dumps(mock_payload)
+            if "Win32_VideoController" in cmd_str
+            else ""
+        )
+        return result
+
+    with patch("sys.platform", "win32"):
+        with patch("subprocess.run", side_effect=mock_subprocess_run):
+            with patch.object(
+                inference,
+                "_query_nvidia_gpu",
+                return_value={
+                    "count": 0,
+                    "name": None,
+                    "vram_gb": 0.0,
+                    "backend": "None",
+                    "cuda_available": False,
+                },
+            ):
+                res = inference.detect_all_accelerators()
+                amd = next(d for d in res["dedicated"] if d["vendor"] == "AMD")
+                assert amd["name"] == "AMD Radeon RX 7800 XT"
+                assert amd["vram_gb"] == 16.0
+
+
+def test_detect_windows_intel_arc_vram_from_registry():
+    """Intel Arc hits the same 4 GB WMI ceiling as AMD dGPUs."""
+    mock_payload = {
+        "controllers": [
+            {
+                "Name": "Intel(R) Arc(TM) A770 Graphics",
+                "AdapterRAM": 4293918720,
+                "PNPDeviceID": r"PCI\VEN_8086&DEV_56A0&SUBSYS_00000000&REV_08",
+            }
+        ],
+        "registry": [
+            {
+                "DriverDesc": "Intel(R) Arc(TM) A770 Graphics",
+                "MatchingDeviceId": r"PCI\VEN_8086&DEV_56A0",
+                "QwMemorySize": 17179869184,
+            }
+        ],
+        "npus": [],
+    }
+
+    def mock_subprocess_run(cmd, *args, **kwargs):
+        cmd_str = " ".join(cmd) if isinstance(cmd, list) else str(cmd)
+        result = MagicMock()
+        result.returncode = 0
+        result.stdout = (
+            __import__("json").dumps(mock_payload)
+            if "Win32_VideoController" in cmd_str
+            else ""
+        )
+        return result
+
+    with patch("sys.platform", "win32"):
+        with patch("subprocess.run", side_effect=mock_subprocess_run):
+            with patch.object(
+                inference,
+                "_query_nvidia_gpu",
+                return_value={
+                    "count": 0,
+                    "name": None,
+                    "vram_gb": 0.0,
+                    "backend": "None",
+                    "cuda_available": False,
+                },
+            ):
+                res = inference.detect_all_accelerators()
+                intel = next(d for d in res["dedicated"] if d["vendor"] == "Intel")
+                assert intel["vram_gb"] == 16.0
+
+
 def test_ai_prefs_device_default_and_validation(tmp_path):
     prefs_file = tmp_path / "ai_prefs.json"
     with patch("ai_prefs.PREFS_PATH", str(prefs_file)):
