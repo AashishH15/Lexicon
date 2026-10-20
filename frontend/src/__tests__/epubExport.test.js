@@ -85,6 +85,10 @@ describe("buildEpub", () => {
     expect(opf).toContain('<meta property="dcterms:modified">');
     expect(opf).toContain('properties="nav"');
     expect(opf).toContain('<itemref idref="chapter1"/>');
+    const uuid = opf.match(
+      /<dc:identifier id="pub-id">urn:uuid:([0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})<\/dc:identifier>/i,
+    );
+    expect(uuid).not.toBeNull();
   });
 
   it("builds an EPUB 3 nav document linking to the chapter", async () => {
