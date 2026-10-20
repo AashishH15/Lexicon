@@ -11,13 +11,13 @@ are listed so the release reads honestly about what works today.
 
 ## v0.11.0 — Browser Extension, 3-Tier Local AI, GPU Acceleration, Deep Proofread & Continue/Expand
 
-Lexicon v0.11.0 is a major milestone that transforms Lexicon from a standalone desktop text editor into a comprehensive writing assistant ecosystem. This release introduces companion browser extensions for Chrome and Firefox, a new Quality local model tier plus upgraded Light and Standard GGUF pins, hybrid Deep Proofread, native GPU acceleration with modular CUDA and Vulkan runtime packages, real-time memory residency controls and auto-unloading, ghost Continue suggestions and Expand elaboration with added-sentence diffing, customizable keyboard shortcuts, direct LanguageTool integration without GPL wrappers, selectable PDF export improvements, and an empirical 1,050-sentence benchmark suite with Free-tier cloud comparisons.
+Lexicon v0.11.0 is a major milestone that transforms Lexicon from a standalone desktop text editor into a comprehensive writing assistant ecosystem. This release introduces companion browser extensions for Chrome and Firefox, a new Quality local model tier plus upgraded Light and Standard GGUF pins, hybrid Deep Proofread, native GPU acceleration with modular CUDA and Vulkan runtime packages, real-time memory residency controls and auto-unloading, a persistent download dock with four-worker parallel GGUF downloads, ghost Continue suggestions and Expand elaboration with added-sentence diffing, customizable keyboard shortcuts, loopback bearer-token authentication for the desktop sidecar and browser extensions, direct LanguageTool integration without GPL wrappers, selectable PDF export improvements, and an empirical 1,050-sentence benchmark suite with Free-tier cloud comparisons.
 
 ---
 
 ### What's New in v0.11.0:
 
-#### 🌐 Browser Extensions (Chrome & Firefox):
+#### Browser Extensions (Chrome & Firefox):
 - **Cross-Browser Companion**: Packaged extensions for Google Chrome (unpacked `.zip`) and Mozilla Firefox (`.xpi`), allowing users to bring Lexicon's grammar checking and text transforms into web textareas, inputs, and rich editors.
 - **In-Page Squiggles & Floating Suggestions**: Real-time error detection in the active browser tab via `detectEditable.js` and `squiggle.js`, paired with an interactive suggestions card (`suggestions.js`) for one-click fixes.
 - **Deep Shadow DOM & ContentEditable Support**: Accurately traverses nested shadow DOM boundaries and complex web editors without trapping keyboard focus.
@@ -32,15 +32,16 @@ Lexicon v0.11.0 is a major milestone that transforms Lexicon from a standalone d
 - **Keyboard Shortcut (`Alt+Shift+L`)**: Manifest command `lexicon-proofread` proofreads the focused text field from the keyboard on Chrome and Firefox.
 - **Shared Lex Status System (`lexStatus.js`)**: Consistent status icons and labels across the extension popup and suggestion UI (idle, checking, issues, all clear, no connection, disabled, error).
 - **Report / Feedback Affordance**: Extension popup includes a clear path to report issues; Settings → About & Feedback lists Chrome and Firefox extension packages.
-- **Desktop Handshake**: Backend CORS allowlist for pinned extension origins plus a health-check endpoint so the extension can confirm the local Lexicon sidecar is reachable.
+- **Loopback Bearer Authentication (`auth.py`, `/auth/handshake`)**: Desktop and extension clients authenticate to the local sidecar with an ephemeral bearer token. Public probes (`/health`, `/extension/ping`) stay open. `/auth/handshake` returns the token only to origin-checked desktop and pinned Chrome/Firefox extension origins (403 otherwise). A 401 triggers a re-handshake and retry. Tokens live in the user app-data path with owner-only permissions. CORS still allowlists those same origins.
 - **Run Deep Proofread in the Badge Panel**: every All clear offers a local-AI clarity and flow pass over the full field (chunked for long text), with clarity rows styled distinctly from grammar rows in the same list. A run that finds nothing says so instead of going silent.
 - **Deep Proofread Auto-Run Toggle (off by default)**: a new popup setting auto-runs the deeper check after an accepted fix. Dismissals never auto-run.
 - **Popup Engine Readout**: the popup header names the active engine (for example Standard · GPU, Ollama, or LM Studio) and hides itself when the backend is unreachable or unconfigured.
 - **Draggable Suggestion Panel**: the badge panel header carries a Phosphor grip handle. Drag the panel anywhere; it keeps its offset, follows the field on scroll, survives re-renders, and clamps so the header stays reachable.
 - **Scroll-True Squiggles**: textarea underlines now compensate page and field scroll, so they track the text while scrolling and stay visible on scrolled pages instead of drifting off-screen.
 - **Extension Follows the App Language**: the extension checks the proofreading language saved in the desktop app (German in the app means German in the extension) for keystroke checks, Tone rewrites, and Deep Proofread, falling back to American English against older backends.
+- **Extension Popup Restored**: Fixed a `prompts.js` syntax error that stopped `popup.js` from loading, so the Chrome/Firefox popup (proofread, rewrite, dictionary, and site pause) works again.
 
-#### 🧠 3-Tier Local LLM Architecture & Hybrid Deep Proofread:
+#### 3-Tier Local LLM Architecture & Hybrid Deep Proofread:
 - **New Quality Tier + Light/Standard Model Upgrades**: v0.11.0 introduces a third **Quality** download tier and replaces the previous Light and Standard GGUF pins with stronger curated models. Legacy Light/Standard files can be verified and cleaned up after a safe migration.
 - **3 Curated Model Tiers**:
   - **Light Tier**: Replaces the previous Light pin with **MiniCPM5-1B** (Q8_0, ~1.15 GB) for fast local rewrites on low-power devices and laptops.
@@ -54,13 +55,13 @@ Lexicon v0.11.0 is a major milestone that transforms Lexicon from a standalone d
 - **Automated Verification & Safe Migration**: Model upgrade system verifies GGUF magic bytes and executes a 1-token test inference via `llama_cpp` before safely cleaning up legacy Light/Standard model files.
 - **Model Manager UI (`ModelManager.jsx`)**: Responsive 3-column tier grid with equal-height cards, compact Phosphor action icons (`TrashSimple`, `ArrowsClockwise`), and color-coded status dots for bundled / Ollama / LM Studio / unconfigured states.
 - **Gold vs Purple Suggestion Badges**: Deterministic grammar/spelling cards use warm gold/amber badges; AI clarity and Deep Proofread suggestions use purple badges with a sparkle affordance and purple dotted underlines in the editor.
-- **Disabled Model Reasoning**: Transforms disable thinking (`think: false` / `enable_thinking: false`) and strip leaked `<think>` blocks so rewrites stay faster and free of reasoning chatter.
+- **Disabled Model Reasoning**: Transforms disable thinking (`think: false` / `enable_thinking: false`) and strip leaked `<think>` blocks with a linear scan so nested prefixes cannot stall inference. Rewrites stay faster and free of reasoning chatter.
 - **Bundled Backend Load Resilience**: Retries model load with `use_mmap=False` when mmap/permission failures occur, surfaces clear `Engine failed to load model` errors, and enables macOS `com.apple.security.cs.allow-jit` so llama.cpp can initialize under the app sandbox.
 - **Subsuming Clarity Rewrites**: an AI clarity rewrite now absorbs the grammar cards it fully covers instead of stacking behind them. Dismissing the rewrite restores the covered cards; accepting it clears both. Covered spans track later edits so follow-up dismissals stay accurate.
 - **Opt-In Auto Re-Check**: Deep Proofread and regular Proofread each get a persisted auto re-check toggle (off by default) that chains one verification pass after fixes empty the list. Dismissals, cancels, and errors never chain. Proofread now waits for a manual rescan by default, with Check again buttons in both empty states.
 - **Analysis Heading Info**: hovering the info mark by the Analysis heading explains when to use fast Proofread while writing versus the slower Deep Proofread clarity pass for finished drafts.
 
-#### ⚡ Hardware Acceleration, Diagnostics & Accelerator Inventory:
+#### Hardware Acceleration, Diagnostics & Accelerator Inventory:
 - **Universal Triple GPU Compute Support (CUDA + Metal + Vulkan)**: Vendor-agnostic GPU acceleration architecture enabling hardware offload across NVIDIA (CUDA), Apple Silicon (Metal), AMD (Radeon RX discrete and 700M/800M processor graphics via Vulkan), and Intel (Arc discrete and Iris Xe / Core Ultra integrated via Vulkan).
 - **Strict Compute Priority Hierarchy**:
   - *Apple Silicon (Metal)*: Discovers M-series GPUs with unified memory offloading on macOS arm64.
@@ -79,16 +80,26 @@ Lexicon v0.11.0 is a major milestone that transforms Lexicon from a standalone d
 - **Interactive Runtime Switching & Package Deletion**: Added animated indicators and responsive feedback when switching acceleration runtimes or deleting acceleration packs, ensuring immediate UI state synchronization with no lingering action buttons.
 - **Clear Dual-Level Explanation for Limit Model Offload**: Non-technical summary ("Keeps AI model layers strictly inside your dedicated GPU memory (VRAM) so slower system RAM is not used") paired with technical details on avoiding CPU/system memory layer splitting.
 - **Runtime Version Transparency**: Explicitly displays exact engine runtime versions (llama.cpp v0.3.34, CUDA 12.4, Vulkan 1.3+) and target hardware compatibility directly in the Hardware settings.
+- **Persisted GPU Runtime Choice (`preferred_backend.json`)**: The selected CUDA, Vulkan, or CPU backend is stored in app data and restored on launch. An explicit choice beats automatic CUDA-over-Vulkan ranking. CUDA is only auto-selected when an NVIDIA GPU is present.
+- **Clean Backend Restart on Runtime Switch**: Activating or removing a GPU pack now restarts the sidecar (`restart_backend`) so the new `llama.cpp` DLLs load without a full app relaunch.
+- **CUDA Companion DLL Recovery**: When NVIDIA CUDA is selected on Windows, missing runtime DLLs are copied from local CUDA or Python installs, then fetched from the official llama.cpp companion zip if they are still missing.
+
+#### Persistent Download Dock & Faster Model Downloads:
+- **Floating Download Dock (`ModelDownloadDock.jsx`)**: A bottom-right dock tracks model and GPU-pack downloads after you close Settings. It shows byte progress, percent, verifying or extracting states, cancel, dismiss, and a click-through to Lex's Engine or Hardware.
+- **Progress Survives Reloads**: Global download state hydrates from `active_download` / `active_gpu_download` on mount and polls every 500 ms while a download is active, so progress continues across modal closes, tab changes, and app reloads. Completing a download refreshes engine status.
+- **Four-Worker Parallel GGUF Downloads (`model_manager.py`)**: Model files download in parallel byte ranges (`NUM_DOWNLOAD_WORKERS = 4`) with resume of existing parts. Hosts without HTTP Range support fall back to a single stream.
+- **GPU Pack Progress in the Same Dock**: CUDA and Vulkan package downloads share the dock, including extracting and ready states, cancel, and a jump to Hardware settings. Onboarding can start a GPU pack download without losing the wizard.
 
 
-#### ⌨️ Customizable Keyboard Shortcuts System:
+#### Customizable Keyboard Shortcuts System:
 - **Dedicated Shortcuts Manager (`shortcuts.js`)**: Complete keyboard shortcut customization panel under Settings with modifier parsing (`Ctrl`, `Cmd`, `Alt`, `Shift`) and conflict detection.
 - **Application Commands**: Customizable shortcuts for Trigger Proofread, Accept Suggestion, Dismiss Suggestion, and Toggle Settings.
 - **Editor Commands**: Remappable formatting shortcuts for Bold, Italic, Underline, Strikethrough, Code, Headings 1 through 6, Lists, Blockquotes, Undo, and Redo.
 
-#### 🔍 Rule-Based Grammar & Style Engine Enhancements:
+#### Rule-Based Grammar & Style Engine Enhancements:
 - **Direct LanguageTool HTTP Client**: Removed the `language-tool-python` GPL wrapper dependency. Lexicon now communicates directly with the local LanguageTool Java server via its own lightweight, asynchronous HTTP client.
 - **Standalone LT 6.8 Installer**: Added an automated installer for source checkouts that downloads LanguageTool 6.8 and verifies its SHA-256 archive checksum before extracting.
+- **macOS Bundled JRE Resolution**: Packaged macOS builds resolve Java from both `jre/bin/java` and the `Contents/Home` bundle layout, set `JAVA_HOME` / `LEXICON_JAVA_HOME`, and skip the `/usr/bin/java` stub that opens Apple's Java install dialog when no JDK is present.
 - **LanguageTool Picky Mode**: Configured LanguageTool requests with `level=picky` for comprehensive grammatical, stylistic, and punctuation coverage.
 - **Proper-Noun Spelling Shield**: Suppresses mid-sentence TitleCase spelling false positives (names and entities) while still flagging sentence-initial issues and common dictionary typos.
 - **POS Lite Heuristic Engine**: Added lightweight part-of-speech tagging to accurately resolve tricky subject-verb agreement across bare plurals and collective nouns.
@@ -104,40 +115,44 @@ Lexicon v0.11.0 is a major milestone that transforms Lexicon from a standalone d
 - **UTF-16-Safe Match Offsets**: Grammar enhancement offsets use UTF-16 units so emoji and other multi-byte characters stay aligned with the editor.
 - **Context-Aware Grammar Scanning & Caching (`grammarScan.js`, `grammarCache.js`)**: Implemented paragraph-level hashing with cache hit/miss telemetry, skipping checks for untouched paragraphs during continuous writing.
 
-#### 📄 Export & Desktop Status:
+#### Export & Desktop Status:
 - **Selectable PDF Export Preview**: Export flow adds a clean preview before save. Windows uses WebView2 native PDF rendering with browser headers/footers disabled; macOS and Linux continue through system print preview.
 - **Clearer PDF Export Guidance**: Export options explain how to keep selectable text and improve failure messaging when a destination cannot preserve it.
 - **Shared Lex Status in the App**: Review and related surfaces use the same Lex status language/icons as the extension for proofread and AI states.
+- **Unpredictable EPUB Identifiers**: EPUB package UUIDs use cryptographic random bytes instead of `Math.random()`, so exported identifiers cannot be predicted.
 
-#### 🤖 External AI Providers (LM Studio & Ollama):
+#### External AI Providers (LM Studio & Ollama):
 - **LM Studio Integration**: Full support for LM Studio via its local OpenAI-compatible API (`localhost:1234`), custom server URLs, and Bearer API key authentication.
 - **Model Auto-Detection**: Detects available and currently loaded models in LM Studio and Ollama, displaying loaded model status in the Model Manager.
 - **Streamed Responses & Request Cancellation**: Streamed token generation for Ollama and LM Studio transforms, backed by `_start_transform_job` / `_remove_transform_job` request IDs for instant cancellation.
 
-#### 📊 Empirical 1,050-Sentence GEC Benchmark Suite:
+#### Empirical 1,050-Sentence GEC Benchmark Suite:
 - **Authentic Evaluation Corpus (`gecFluencyBenchmark.json`)**: 1,050 carefully curated sentences across JFLEG (fluency and naturalness), BEA-2019 (grammatical error correction), and LOCNESS (clean native-speaker controls to measure false-positive rate).
 - **Deterministic Evaluation CLI (`npm run benchmark:gec`)**: Standardized benchmark runner computing Precision, Recall, $F_{0.5}$ (weighting precision 4x), and Clean Sentence FPR.
 - **Interactive Public Benchmark Showcase (`website/benchmark.html`)**: Interactive web dashboard featuring Pareto efficiency frontiers (speed vs. accuracy), leaderboard/matrix views, and head-to-head comparisons against publicly available Free Grammarly and QuillBot interfaces under a disclosed protocol.
 - **Comparative Disclaimers**: Benchmark page and Terms of Service document Free-only testing, method limits, and that results are suite-specific independent evaluations (not vendor affiliation or paid-SKU claims).
 
-#### 🛡️ System, Desktop, Website & Compliance Polish:
-- **Desktop Autostart Persistence & Startup Hygiene**: Added an option to start Lexicon automatically with the operating system, minimizing to the system tray for instant background availability. Autostart preference is reliably preserved across application updates, cleanly registers in Windows/terminal autostart lists, and removes lingering debug registry entries on boot.
+#### System, Desktop, Website & Compliance Polish:
+- **Desktop Autostart Persistence & Startup Hygiene**: Added an option to start Lexicon automatically with the operating system, minimizing to the system tray for instant background availability. Autostart preference is reliably preserved across application updates, cleanly registers in Windows/terminal autostart lists, and removes lingering debug registry entries on boot. The Windows NSIS installer now writes the Run key at install (`installer_hooks.nsh`) and removes that key plus StartupApproved tracking on uninstall.
+- **Safer Error Responses**: HTTP handlers return generic details instead of raw exception text, so host paths cannot leak to the desktop client or extension. Java-missing grammar failures still name Java without echoing the exception.
 - **Cross-Platform Process Termination**: Replaced Windows-specific `taskkill` with targeted process-tree termination for the Java LanguageTool process.
 - **Third-Party License Notices (`THIRD_PARTY_NOTICES.md`)**: Comprehensive license disclosures for LanguageTool 6.8, the bundled JRE, frontend and Rust dependencies, and browser extension libraries. Release packaging includes LICENSE and notices in installers and extension packages.
 - **LanguageTool Independence**: Explicit documentation clarifying that Lexicon is an independent, local-first project not affiliated with LanguageTool.
 - **Paper Texture & Light-Theme Surfaces**: Applied `lex-paper-surface` across dialogs, popovers, editor surfaces, and menus; theme-aware skeleton shimmer on Warm Cream / Linen / Newsprint; light-theme popover and portal coverage (including body-mounted slash-command menus); CSS nesting / `@layer` cleanup to silence stylesheet warnings while keeping Plain White and Dark Slate behavior intact.
 - **Settings Navigation & Copy**: Moved **Lex's Engine** higher in the Settings tab order and clarified the local-processing blurb so built-in proofreading and local AI stay on-device, the extension only talks to the app on this computer, and network use is limited to model downloads, updates, or an external AI server you configure.
-- **Brand & Asset Refresh**: Replaced generic icons with the official Lex brand mascot avatar, refined website navigation, and added Discord links across README, app, and site.
+- **Brand & Asset Refresh**: Replaced generic icons with the official Lex brand mascot avatar, added idle, all-clear, and happy-blue mascot stills, refined website navigation, and added Discord links across README, app, and site.
 - **Mobile Hamburger Drawer**: Marketing site uses a hamburger nav toggle that opens a mobile drawer for primary links across homepage, benchmark, privacy, and terms pages.
 - **Website Extension & Install Guidance**: Marketing site documents the browser extension beta, FAQ entries, and Windows SmartScreen / macOS Gatekeeper warnings for unsigned builds.
+- **Express in English Website Demo**: Language chips and live samples now include Chinese, French, German, Hindi, and Spanish, with accurate source text (including Chinese and Hindi) instead of placeholder European-only copy. FAQ wording covers dozens of source languages.
+- **Patched Editor, Import, and Build Dependencies**: TipTap 3.30.5, ProseMirror View 1.42.3, xmldom 0.8.15, KaTeX 0.18.2, Vite 7.3.7, and related pins close XSS, XML injection, prototype, and path-read issues without changing writing features.
 - **Privacy & Terms Updates**: Privacy Policy and Terms of Service updated for browser-extension loopback use, shared dictionary sync, local GPU/hardware display (not sent to Lexicon), Hugging Face model downloads, optional external AI endpoints, and benchmark comparative claims.
 
-#### ✍️ Express in English (Multilingual Transcreation):
+#### Express in English (Multilingual Transcreation):
 - **Six Tones From Any Language**: Write a short thought in Spanish, German, French, Chinese, Hindi, or plain English and get back natural English in six voices, starting with Auto, a faithful translation that keeps the source register with no tone picked, plus Professional, Casual, Friendly, Formal, and Concise in a single local-model pass (Standard or Quality tiers).
 - **Two Ways In**: Run it from the sidebar under Refinement or straight from the selection bubble. Selections up to 600 characters run directly; longer picks get a nudge to shorten, and an empty selection opens a paste-and-Run card.
 - **Replace in One Undo**: Replace Selection swaps the exact highlight in a single step, so one Ctrl+Z (Cmd+Z on macOS) restores the original, keeps bold and italics, and leaves the cursor right after the new text. Copy includes brief confirmation feedback.
 
-#### 🔄 Engine Status & Switching You Can Trust:
+#### Engine Status & Switching You Can Trust:
 - **Honest Tier Switching & Instant Model Loading**: Picking a downloaded tier now shows an explicit "Switching to…" state, immediately unloads the previous model from memory, and loads the newly selected model into RAM/VRAM right away. System resource monitors and UI telemetry accurately reflect the active model in real time rather than waiting for an AI generation task.
 - **Explicit Memory Residency Controls**: Added "Load into memory" and "Unload from memory" buttons in Settings, enabling users to pre-load model weights into VRAM/RAM or manually free memory at any time.
 - **Concise Active Status Indicators**: Replaced lengthy "loaded into memory" labels with a compact `● Active` (green dot) indicator when loaded versus `○ Installed` (gray dot) when idle on disk, keeping the interface clean and preventing text from running off screen.
@@ -154,7 +169,7 @@ Lexicon v0.11.0 is a major milestone that transforms Lexicon from a standalone d
 - **Switching Language Refreshes Results**: changing the proofreading language re-runs whichever analysis is displayed (Proofread or Deep Proofread) and clears stale cards otherwise, so suggestions always match the selected variant. Failures name the language.
 - **Shared Language Preference**: the selected variant persists in the backend alongside the AI preference, so the desktop app and the browser extension check the same language. Switching never unloads the model.
 
-#### ➡️ Continue & Expand (AI Drafting Aids):
+#### Continue & Expand (AI Drafting Aids):
 - **Continue — Ghost Continuation at the Cursor**: Generates the next 1–3 sentences in the same voice and style without repeating input text. Sends the trailing 800 characters before the cursor with calibrated temperature sampling for natural, context-aware onward text.
 - **Calibrated Suggestion Tone Presets**: Replaced uncalibrated 0.7 temperature sampling with a dedicated 3-tier segmented control in Settings → Continue. Lower sampling limits error rate and mid-sentence drift on small local models:
   - **Precise (0.2)**: Conservative, tightly scoped continuation and elaboration for academic, legal, or professional work where accuracy is paramount.
@@ -172,7 +187,13 @@ Lexicon v0.11.0 is a major milestone that transforms Lexicon from a standalone d
 - **New Shortcuts**: Customizable app-scoped `Continue writing` (`Mod+Alt+N`), `Expand selection` (`Mod+Alt+E`), and `Express in English` (`Mod+Alt+X`), all searchable in Settings → Shortcuts with keyword aliases.
 - **Transform Plumbing**: `useTransform` passes through `temperature` and `maxTokens` end-to-end to `/transform` and local inference backends, and Expand cards carry `sourceText` through chunked runs for accurate diffing.
 
-#### 🔍 Suggestion Diff Popover & Multi-Part Fixes:
+#### Structure Tools & Transform Cards:
+- **Desktop Structure Tools (Summary, Key Points, List, Table)**: Structure actions work on the whole draft or a selection. Whole-draft results offer **Insert at Top of Draft** as the primary action, with **Replace entire draft…** behind an "Overwrite entire draft?" confirmation. Selection results offer **Replace Selection** and **Insert Below**.
+- **Safer Selection Lifecycle**: Triggering a selection transform collapses the highlight so a second run defaults to the entire draft unless you select again.
+- **Compact Transform Cards**: Single-row header with an icon-only Copy button so cards stay readable in a narrow Review panel. Confirmation wells stay recessed in Dark Slate and keep visible Cancel outlines on Warm Cream, Linen, and Newsprint.
+- **Structure Section Tooltip**: The Actions sidebar explains when to use Summary, Key Points, List, and Table.
+
+#### Suggestion Diff Popover & Multi-Part Fixes:
 - **Diff Popover for Rewrite-Class Tools** (`DiffPopover.jsx` + `wordDiff.js`): Rewrite, all nine tones, Concise, and Expand results open in a centered modal with Original | Suggestion columns (stacked on narrow screens), inline red-strike/green word diffs via token-LCS alignment, and Apply / Dismiss / Esc / backdrop-close. The panel shows a compact button-card (tool badge, preview, Review + Dismiss) that opens it; clearing results retires an open popover. Summary-class tools keep their result cards.
 - **Multi-Part Apply & Dismiss** (`transformCards.js`): dismissing one chunk removes only that card, and each apply measures the real document delta so later chunks shift into place — sequential applies in any order land correctly instead of writing into stale ranges.
 
@@ -182,10 +203,10 @@ Lexicon v0.11.0 is a major milestone that transforms Lexicon from a standalone d
 
 ### Quick Downloads:
 
-- 🪟 **[Windows x64 Setup](https://github.com/AashishH15/Lexicon/releases/download/v0.10.3/Lexicon_0.10.3_x64-setup.exe)**: Standard installer for modern 64-bit Windows PCs (Intel / AMD).
-- 🍏 **[macOS Apple Silicon DMG](https://github.com/AashishH15/Lexicon/releases/download/v0.10.3/Lexicon_0.10.3_aarch64.dmg)**: For modern Apple Silicon Macs (M1, M2, M3, M4 chips).
-- 🐧 **[Linux x64 DEB](https://github.com/AashishH15/Lexicon/releases/tag/v0.10.3)**: Debian package (`.deb`) for 64-bit Linux distributions (Ubuntu, Debian, Mint, Pop!_OS).
-- 📦 **[View All Assets & Checksums](https://github.com/AashishH15/Lexicon/releases/tag/v0.10.3)**: Complete list of installers including ARM64 Windows, x86 Windows, Intel macOS, and Linux x64 DEB.
+- **[Windows x64 Setup](https://github.com/AashishH15/Lexicon/releases/download/v0.10.3/Lexicon_0.10.3_x64-setup.exe)**: Standard installer for modern 64-bit Windows PCs (Intel / AMD).
+- **[macOS Apple Silicon DMG](https://github.com/AashishH15/Lexicon/releases/download/v0.10.3/Lexicon_0.10.3_aarch64.dmg)**: For modern Apple Silicon Macs (M1, M2, M3, M4 chips).
+- **[Linux x64 DEB](https://github.com/AashishH15/Lexicon/releases/tag/v0.10.3)**: Debian package (`.deb`) for 64-bit Linux distributions (Ubuntu, Debian, Mint, Pop!_OS).
+- **[View All Assets & Checksums](https://github.com/AashishH15/Lexicon/releases/tag/v0.10.3)**: Complete list of installers including ARM64 Windows, x86 Windows, Intel macOS, and Linux x64 DEB.
 
 ### What's Fixed in v0.10.3:
 
@@ -200,39 +221,39 @@ Lexicon v0.11.0 is a major milestone that transforms Lexicon from a standalone d
 
 ### Quick Downloads:
 
-- 🪟 **[Windows x64 Setup](https://github.com/AashishH15/Lexicon/releases/download/v0.10.2/Lexicon_0.10.2_x64-setup.exe)**: Standard installer for modern 64-bit Windows PCs (Intel / AMD).
-- 🍏 **[macOS Apple Silicon DMG](https://github.com/AashishH15/Lexicon/releases/download/v0.10.2/Lexicon_0.10.2_aarch64.dmg)**: For modern Apple Silicon Macs (M1, M2, M3, M4 chips).
-- 🐧 **[Linux x64 DEB](https://github.com/AashishH15/Lexicon/releases/tag/v0.10.2)**: Debian package (`.deb`) for 64-bit Linux distributions (Ubuntu, Debian, Mint, Pop!_OS).
-- 📦 **[View All Assets & Checksums](https://github.com/AashishH15/Lexicon/releases/tag/v0.10.2)**: Complete list of installers including ARM64 Windows, x86 Windows, Intel macOS, and Linux x64 DEB.
+- **[Windows x64 Setup](https://github.com/AashishH15/Lexicon/releases/download/v0.10.2/Lexicon_0.10.2_x64-setup.exe)**: Standard installer for modern 64-bit Windows PCs (Intel / AMD).
+- **[macOS Apple Silicon DMG](https://github.com/AashishH15/Lexicon/releases/download/v0.10.2/Lexicon_0.10.2_aarch64.dmg)**: For modern Apple Silicon Macs (M1, M2, M3, M4 chips).
+- **[Linux x64 DEB](https://github.com/AashishH15/Lexicon/releases/tag/v0.10.2)**: Debian package (`.deb`) for 64-bit Linux distributions (Ubuntu, Debian, Mint, Pop!_OS).
+- **[View All Assets & Checksums](https://github.com/AashishH15/Lexicon/releases/tag/v0.10.2)**: Complete list of installers including ARM64 Windows, x86 Windows, Intel macOS, and Linux x64 DEB.
 
 ### What's New & Fixed in v0.10.2:
 
-#### 🌐 Multi-Language Proofreading:
+#### Multi-Language Proofreading:
 - **49 Languages & Dialects**: Shared `languages.js` catalog for Settings and Onboarding, covering every LanguageTool 6.8 grammar locale Lexicon exposes — English variants pinned at the top, all others sorted alphabetically (including Catalan Balearic/Valencian, Portuguese Angola/Mozambique preAO, Spanish voseo, Simple German, and more).
 - **Searchable Language Dropdown**: Replaced the short native `<select>` with a searchable picker that shows display names and LanguageTool codes.
 - **Relevance-Ranked Search**: Typing codes like `es` or `ta` now surfaces Spanish and Tamil first (exact code → code prefix → name prefix → word start → loose substring), so mid-word noise like “States / Catalan / Chinese” no longer buries the intended language.
 - **Catalog Tests**: Added `languages.test.js` covering count, uniqueness, English pin order, alphabetical labels, official naming for voseo/preAO/Swiss/Simple German, and exclusion of LibreOffice aliases plus spellcheck-only Norwegian.
 - **Language Info Tooltip**: Settings and Onboarding language labels include an info icon asking users to report Lexicon implementation issues (language not loading/applying), not LanguageTool grammar-rule quality.
 
-#### 🧭 Onboarding Polish:
+#### Onboarding Polish:
 - **Beta Updates Opt-In**: Final onboarding step now includes a “Receive Beta Updates” toggle (same `lexicon:betaOptIn` preference as Settings) plus a feedback link.
 - **Faster Modal Close**: Onboarding finish/close no longer awaits AI refresh before dismissing the modal, so the wizard closes immediately.
 - **Paper Texture Beta Badge**: Onboarding Paper Texture now matches Settings with the Beta badge and edge-case feedback tooltip.
 
-#### 🔧 Desktop Dev / Sidecar Reliability:
+#### Desktop Dev / Sidecar Reliability:
 - **Tauri Always Uses Port 18000**: `api.js` now routes Tauri runtime (including `tauri dev`) to the sidecar on `127.0.0.1:18000`, so a website preview or other process on port 8000 can no longer steal `/ai/status` and produce false CORS/404 failures. Bare browser Vite still expects uvicorn on 8000.
 - **Bundled JRE on PATH (Windows grammar-engine fix)**: Fixed “Grammar engine unreachable” with `/grammar/check` returning HTTP 500 on Windows installs that have no system Java. Lexicon's direct LanguageTool HTTP client now prepends the bundled `jre/bin` to `PATH` in the Tauri sidecar environment, the frozen sidecar launcher, and immediately before starting the Java server.
 - **Correct Bundled JRE Lookup**: The sidecar launcher previously looked for `jre` *inside* its own folder, but the installer ships `jre` as a sibling resource of `lexicon-backend`, so the bundled runtime was never detected by the backend itself. It now resolves either layout and verifies the `java` binary actually exists.
 - **Actionable Engine Errors**: `/grammar/check` now returns a `503` with a JSON `detail` (for example, a missing Java runtime or LanguageTool server JAR) instead of an unhandled `500`, and the Review panel surfaces a targeted recovery hint rather than a generic offline message.
 
-#### ↩️ Rollback Catalog:
+#### Rollback Catalog:
 - **Fallback Releases**: Previous Releases & Rollback offline fallback list is now **v0.10.1**, **v0.9.1**, and **v0.8.5**.
 
-#### 🌐 Website:
+#### Website:
 - Trust strip **0 Ads** → **45+ Languages**.
 - Removed the outdated “Appearance presets arrive in v0.10.0…” disclaimer (and its unused CSS).
 
-#### 🔤 Typography & Paper Engine (v0.10 Feature Suite):
+#### Typography & Paper Engine (v0.10 Feature Suite):
 - **Typography Presets**: Switch between Default (System Sans), Editorial (Newsreader Serif), Modern (Inter Sans), and Monospace (JetBrains Mono) with instant live rendering.
 - **Paper Surface Textures**: 5 canvas textures with customizable page colors and surround chrome.
 - **Accessibility & Reading Modes**: Built-in Bionic Reading mode and OpenDyslexic font support.
@@ -246,21 +267,21 @@ Lexicon v0.11.0 is a major milestone that transforms Lexicon from a standalone d
 
 ### Quick Downloads:
 
-- 🪟 **[Windows x64 Setup](https://github.com/AashishH15/Lexicon/releases/download/v0.10.1/Lexicon_0.10.1_x64-setup.exe)**: Standard installer for modern 64-bit Windows PCs (Intel / AMD).
-- 🍏 **[macOS Apple Silicon DMG](https://github.com/AashishH15/Lexicon/releases/download/v0.10.1/Lexicon_0.10.1_aarch64.dmg)**: For modern Apple Silicon Macs (M1, M2, M3, M4 chips).
-- 🐧 **[Linux x64 DEB](https://github.com/AashishH15/Lexicon/releases/tag/v0.10.1)**: Debian package (`.deb`) for 64-bit Linux distributions (Ubuntu, Debian, Mint, Pop!_OS).
-- 📦 **[View All Assets & Checksums](https://github.com/AashishH15/Lexicon/releases/tag/v0.10.1)**: Complete list of installers including ARM64 Windows, x86 Windows, Intel macOS, and Linux x64 DEB.
+- **[Windows x64 Setup](https://github.com/AashishH15/Lexicon/releases/download/v0.10.1/Lexicon_0.10.1_x64-setup.exe)**: Standard installer for modern 64-bit Windows PCs (Intel / AMD).
+- **[macOS Apple Silicon DMG](https://github.com/AashishH15/Lexicon/releases/download/v0.10.1/Lexicon_0.10.1_aarch64.dmg)**: For modern Apple Silicon Macs (M1, M2, M3, M4 chips).
+- **[Linux x64 DEB](https://github.com/AashishH15/Lexicon/releases/tag/v0.10.1)**: Debian package (`.deb`) for 64-bit Linux distributions (Ubuntu, Debian, Mint, Pop!_OS).
+- **[View All Assets & Checksums](https://github.com/AashishH15/Lexicon/releases/tag/v0.10.1)**: Complete list of installers including ARM64 Windows, x86 Windows, Intel macOS, and Linux x64 DEB.
 
 ### What's New & Fixed in v0.10.1:
 
-#### 🎨 Onboarding Studio Overhaul:
+#### Onboarding Studio Overhaul:
 - **Spacious 5-Step Flow**: Expanded Lexicon Setup modal into a clean 5-step onboarding wizard.
 - **In-Card Live Text Previews**: Added live typography preview boxes showing authentic `JetBrains Mono`, `Inter`, `Newsreader`, and `Geist Sans` directly inside option cards.
 - **Accessibility Previews**: Added live Bionic Reading and OpenDyslexic preview boxes.
 - **Paper Texture Cards**: Added color swatch dots and active checkmark badges for `Plain White`, `Cream`, `Linen`, `Newsprint`, and `Dark Slate`.
 - **Dark Mode Contrast**: Hardened WCAG contrast for step badges and action buttons across all themes.
 
-#### 🔤 Typography & Paper Engine (v0.10 Feature Suite):
+#### Typography & Paper Engine (v0.10 Feature Suite):
 - **Typography Presets**: Switch between Default (System Sans), Editorial (Newsreader Serif), Modern (Inter Sans), and Monospace (JetBrains Mono) with instant live rendering.
 - **Paper Surface Textures**: 5 canvas textures with customizable page colors and surround chrome.
 - **Accessibility & Reading Modes**: Built-in Bionic Reading mode and OpenDyslexic font support.
@@ -274,10 +295,10 @@ Lexicon v0.11.0 is a major milestone that transforms Lexicon from a standalone d
 
 ### Quick Downloads:
 
-- 🪟 **[Windows x64 Setup](https://github.com/AashishH15/Lexicon/releases/download/v0.10.0/Lexicon_0.10.0_x64-setup.exe)**: Standard installer for modern 64-bit Windows PCs (Intel / AMD).
-- 🍏 **[macOS Apple Silicon DMG](https://github.com/AashishH15/Lexicon/releases/download/v0.10.0/Lexicon_0.10.0_aarch64.dmg)**: For modern Apple Silicon Macs (M1, M2, M3, M4 chips).
-- 🐧 **[Linux x64 DEB](https://github.com/AashishH15/Lexicon/releases/tag/v0.10.0)**: Debian package (`.deb`) for 64-bit Linux distributions (Ubuntu, Debian, Mint, Pop!_OS).
-- 📦 **[View All Assets & Checksums](https://github.com/AashishH15/Lexicon/releases/tag/v0.10.0)**: Complete list of installers including ARM64 Windows, x86 Windows, Intel macOS, and Linux x64 DEB.
+- **[Windows x64 Setup](https://github.com/AashishH15/Lexicon/releases/download/v0.10.0/Lexicon_0.10.0_x64-setup.exe)**: Standard installer for modern 64-bit Windows PCs (Intel / AMD).
+- **[macOS Apple Silicon DMG](https://github.com/AashishH15/Lexicon/releases/download/v0.10.0/Lexicon_0.10.0_aarch64.dmg)**: For modern Apple Silicon Macs (M1, M2, M3, M4 chips).
+- **[Linux x64 DEB](https://github.com/AashishH15/Lexicon/releases/tag/v0.10.0)**: Debian package (`.deb`) for 64-bit Linux distributions (Ubuntu, Debian, Mint, Pop!_OS).
+- **[View All Assets & Checksums](https://github.com/AashishH15/Lexicon/releases/tag/v0.10.0)**: Complete list of installers including ARM64 Windows, x86 Windows, Intel macOS, and Linux x64 DEB.
 
 ---
 
@@ -341,10 +362,10 @@ Lexicon v0.11.0 is a major milestone that transforms Lexicon from a standalone d
 
 ### Quick Downloads:
 
-- 🪟 **[Windows x64 Setup](https://github.com/AashishH15/Lexicon/releases/download/v0.9.1/Lexicon_0.9.1_x64-setup.exe)**: Standard installer for modern 64-bit Windows PCs (Intel / AMD).
-- 🍏 **[macOS Apple Silicon DMG](https://github.com/AashishH15/Lexicon/releases/download/v0.9.1/Lexicon_0.9.1_aarch64.dmg)**: For modern Apple Silicon Macs (M1, M2, M3, M4 chips).
-- 🐧 **[Linux x64 DEB](https://github.com/AashishH15/Lexicon/releases/tag/v0.9.1)**: Debian package (`.deb`) for 64-bit Linux distributions (Ubuntu, Debian, Mint, Pop!_OS).
-- 📦 **[View All Assets & Checksums](https://github.com/AashishH15/Lexicon/releases/tag/v0.9.1)**: Complete list of installers including ARM64 Windows, x86 Windows, Intel macOS, and Linux x64 DEB.
+- **[Windows x64 Setup](https://github.com/AashishH15/Lexicon/releases/download/v0.9.1/Lexicon_0.9.1_x64-setup.exe)**: Standard installer for modern 64-bit Windows PCs (Intel / AMD).
+- **[macOS Apple Silicon DMG](https://github.com/AashishH15/Lexicon/releases/download/v0.9.1/Lexicon_0.9.1_aarch64.dmg)**: For modern Apple Silicon Macs (M1, M2, M3, M4 chips).
+- **[Linux x64 DEB](https://github.com/AashishH15/Lexicon/releases/tag/v0.9.1)**: Debian package (`.deb`) for 64-bit Linux distributions (Ubuntu, Debian, Mint, Pop!_OS).
+- **[View All Assets & Checksums](https://github.com/AashishH15/Lexicon/releases/tag/v0.9.1)**: Complete list of installers including ARM64 Windows, x86 Windows, Intel macOS, and Linux x64 DEB.
 
 ---
 
@@ -368,10 +389,10 @@ Lexicon v0.11.0 is a major milestone that transforms Lexicon from a standalone d
 
 ### Quick Downloads:
 
-- 🪟 **[Windows x64 Setup](https://github.com/AashishH15/Lexicon/releases/download/v0.9.0/Lexicon_0.9.0_x64-setup.exe)**: Standard installer for modern 64-bit Windows PCs (Intel / AMD).
-- 🍏 **[macOS Apple Silicon DMG](https://github.com/AashishH15/Lexicon/releases/download/v0.9.0/Lexicon_0.9.0_aarch64.dmg)**: For modern Apple Silicon Macs (M1, M2, M3, M4 chips).
-- 🐧 **[Linux x64 DEB](https://github.com/AashishH15/Lexicon/releases/tag/v0.9.0)**: Debian package (`.deb`) for 64-bit Linux distributions (Ubuntu, Debian, Mint, Pop!_OS).
-- 📦 **[View All Assets & Checksums](https://github.com/AashishH15/Lexicon/releases/tag/v0.9.0)**: Complete list of installers including ARM64 Windows, x86 Windows, Intel macOS, and Linux x64 DEB.
+- **[Windows x64 Setup](https://github.com/AashishH15/Lexicon/releases/download/v0.9.0/Lexicon_0.9.0_x64-setup.exe)**: Standard installer for modern 64-bit Windows PCs (Intel / AMD).
+- **[macOS Apple Silicon DMG](https://github.com/AashishH15/Lexicon/releases/download/v0.9.0/Lexicon_0.9.0_aarch64.dmg)**: For modern Apple Silicon Macs (M1, M2, M3, M4 chips).
+- **[Linux x64 DEB](https://github.com/AashishH15/Lexicon/releases/tag/v0.9.0)**: Debian package (`.deb`) for 64-bit Linux distributions (Ubuntu, Debian, Mint, Pop!_OS).
+- **[View All Assets & Checksums](https://github.com/AashishH15/Lexicon/releases/tag/v0.9.0)**: Complete list of installers including ARM64 Windows, x86 Windows, Intel macOS, and Linux x64 DEB.
 
 ---
 
@@ -457,9 +478,9 @@ Lexicon v0.11.0 is a major milestone that transforms Lexicon from a standalone d
 
 ### Quick Downloads:
 
-- 🪟 **[Windows x64 Setup](https://github.com/AashishH15/Lexicon/releases/download/v0.8.0/Lexicon_0.8.0_x64-setup.exe)**: Standard installer for modern 64-bit Windows PCs (Intel / AMD).
-- 🍏 **[macOS Apple Silicon DMG](https://github.com/AashishH15/Lexicon/releases/download/v0.8.0/Lexicon_0.8.0_aarch64.dmg)**: For modern Apple Silicon Macs (M1, M2, M3, M4 chips).
-- 📦 **[View All Assets & Checksums](https://github.com/AashishH15/Lexicon/releases/tag/v0.8.0)**: Complete list of installers including ARM64 Windows, x86 Windows, and Intel macOS.
+- **[Windows x64 Setup](https://github.com/AashishH15/Lexicon/releases/download/v0.8.0/Lexicon_0.8.0_x64-setup.exe)**: Standard installer for modern 64-bit Windows PCs (Intel / AMD).
+- **[macOS Apple Silicon DMG](https://github.com/AashishH15/Lexicon/releases/download/v0.8.0/Lexicon_0.8.0_aarch64.dmg)**: For modern Apple Silicon Macs (M1, M2, M3, M4 chips).
+- **[View All Assets & Checksums](https://github.com/AashishH15/Lexicon/releases/tag/v0.8.0)**: Complete list of installers including ARM64 Windows, x86 Windows, and Intel macOS.
 
 ---
 
@@ -523,9 +544,9 @@ Lexicon v0.8.0 introduces high-speed rule-based prose style checking, integrated
 
 ### Quick Downloads:
 
-- 🪟 **[Windows x64 Setup](https://github.com/AashishH15/Lexicon/releases/download/v0.7.0/Lexicon_0.7.0_x64-setup.exe)**: Standard installer for modern 64-bit Windows PCs (Intel / AMD).
-- 🍏 **[macOS Apple Silicon DMG](https://github.com/AashishH15/Lexicon/releases/download/v0.7.0/Lexicon_0.7.0_aarch64.dmg)**: For modern Apple Silicon Macs (M1, M2, M3, M4 chips).
-- 📦 **[View All Assets & Checksums](https://github.com/AashishH15/Lexicon/releases/tag/v0.7.0)**: Complete list of installers including ARM64 Windows, x86 Windows, and Intel macOS.
+- **[Windows x64 Setup](https://github.com/AashishH15/Lexicon/releases/download/v0.7.0/Lexicon_0.7.0_x64-setup.exe)**: Standard installer for modern 64-bit Windows PCs (Intel / AMD).
+- **[macOS Apple Silicon DMG](https://github.com/AashishH15/Lexicon/releases/download/v0.7.0/Lexicon_0.7.0_aarch64.dmg)**: For modern Apple Silicon Macs (M1, M2, M3, M4 chips).
+- **[View All Assets & Checksums](https://github.com/AashishH15/Lexicon/releases/tag/v0.7.0)**: Complete list of installers including ARM64 Windows, x86 Windows, and Intel macOS.
 
 ---
 
@@ -586,9 +607,9 @@ Lexicon is a private, local-first writing assistant designed for calm, distracti
 
 ### Quick Downloads (Most Popular Releases):
 
-- 🪟 **[Windows x64 Setup (Most Popular)](https://github.com/AashishH15/Lexicon/releases/download/v0.6.0/Lexicon_0.6.0_x64-setup.exe)**: Standard installer for modern 64-bit Windows PCs (Intel / AMD).
-- 🍏 **[macOS Apple Silicon DMG (Most Popular)](https://github.com/AashishH15/Lexicon/releases/download/v0.6.0/Lexicon_0.6.0_aarch64.dmg)**: For modern Apple Silicon Macs (M1, M2, M3, M4 chips).
-- 📦 **[View All 15 Platform Assets & Checksums](https://github.com/AashishH15/Lexicon/releases/tag/v0.6.0)**: Complete list of installers including ARM64 Windows, x86 Windows, and Intel macOS.
+- **[Windows x64 Setup (Most Popular)](https://github.com/AashishH15/Lexicon/releases/download/v0.6.0/Lexicon_0.6.0_x64-setup.exe)**: Standard installer for modern 64-bit Windows PCs (Intel / AMD).
+- **[macOS Apple Silicon DMG (Most Popular)](https://github.com/AashishH15/Lexicon/releases/download/v0.6.0/Lexicon_0.6.0_aarch64.dmg)**: For modern Apple Silicon Macs (M1, M2, M3, M4 chips).
+- **[View All 15 Platform Assets & Checksums](https://github.com/AashishH15/Lexicon/releases/tag/v0.6.0)**: Complete list of installers including ARM64 Windows, x86 Windows, and Intel macOS.
 
 ---
 
