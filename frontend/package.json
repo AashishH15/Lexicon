@@ -71,6 +71,7 @@
     "js-yaml": "4.3.2",
     "undici": "7.29.1",
     "source-map-js": "1.2.2",
-    "brace-expansion": "1.1.21"
+    "brace-expansion": "1.1.21",
+    "browserslist": "4.28.7"
   }
 }
