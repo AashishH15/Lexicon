@@ -1,0 +1,37 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule:
+      interval: weekly
+    groups:
+      frontend-npm:
+        patterns:
+          - "*"
+
+  - package-ecosystem: pip
+    directory: /backend
+    schedule:
+      interval: weekly
+    groups:
+      backend-pip:
+        patterns:
+          - "*"
+
+  - package-ecosystem: cargo
+    directory: /frontend/src-tauri
+    schedule:
+      interval: weekly
+    groups:
+      tauri-cargo:
+        patterns:
+          - "*"
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      github-actions:
+        patterns:
+          - "*"
