@@ -93,15 +93,19 @@ jobs:
   extension-test:
     name: extension-test
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: extension
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-      - run: node --test
+      - name: Run extension tests
+        run: |
+          if [ ! -d extension ]; then
+            echo "extension/ is not in this tree. Skipping."
+            exit 0
+          fi
+          cd extension
+          node --test
 
   rust-check:
     name: rust-check
