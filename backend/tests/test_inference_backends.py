@@ -789,3 +789,21 @@ def test_idle_timeout_unloads_active_bundled_model(monkeypatch):
     inference._CACHED_BUNDLED_LLM["llm"] = None
     inference._LAST_AI_ACTIVITY_TIME = 0.0
 
+
+def test_strip_think_removes_paired_blocks_and_keeps_unclosed_text():
+    assert inference.strip_think("Hello <think>secret</think> world") == "Hello world"
+    assert inference.strip_think("<think>only</think>") == ""
+    assert inference.strip_think("no tags") == "no tags"
+    assert inference.strip_think("<think>unclosed") == "<think>unclosed"
+    assert inference.strip_think("<think>a<think>b</think>c") == "c"
+    assert inference.strip_think("<think>one</think>\n\nVisible") == "Visible"
+
+
+def test_strip_think_is_linear_on_repeated_open_tags():
+    payload = "<think>" * 20000
+    started = time.perf_counter()
+    result = inference.strip_think(payload)
+    elapsed = time.perf_counter() - started
+    assert result == payload
+    assert elapsed < 0.25
+

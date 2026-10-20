@@ -251,7 +251,8 @@ SYSTEM_PROMPT = (
 # `think: false`. LM Studio and llama.cpp Qwen templates use
 # `enable_thinking: false` (not reasoning_effort off/none — Qwen3.8 rejects
 # those values). Any leaked block is still stripped from the output.
-THINK_TAG_RE = re.compile(r"<think>.*?</think>\s*", re.DOTALL)
+_THINK_OPEN = "<think>"
+_THINK_CLOSE = "</think>"
 
 # Approximate transformer layer counts for VRAM-limited GPU offload.
 _MODEL_LAYER_COUNTS = {
@@ -265,8 +266,30 @@ _VRAM_HEADROOM_BYTES = int(1.25 * 1024**3)
 
 
 def strip_think(text: str) -> str:
-    """Remove any leaked reasoning block from a model output."""
-    cleaned = THINK_TAG_RE.sub("", text).strip()
+    """Remove leaked reasoning blocks from model output.
+
+    Scan once from left to right. A backtracking regex on nested
+    ``<think>`` prefixes can take polynomial time.
+    """
+    parts: list[str] = []
+    index = 0
+    length = len(text)
+    open_len = len(_THINK_OPEN)
+    close_len = len(_THINK_CLOSE)
+    while index < length:
+        start = text.find(_THINK_OPEN, index)
+        if start == -1:
+            parts.append(text[index:])
+            break
+        parts.append(text[index:start])
+        end = text.find(_THINK_CLOSE, start + open_len)
+        if end == -1:
+            parts.append(text[start:])
+            break
+        index = end + close_len
+        while index < length and text[index] in " \t\r\n":
+            index += 1
+    cleaned = "".join(parts).strip()
     if cleaned.startswith("Thinking Process:") and ("[" in cleaned or "{" in cleaned):
         bracket_indices = [cleaned.find(c) for c in ("[", "{") if cleaned.find(c) != -1]
         if bracket_indices:
