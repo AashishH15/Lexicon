@@ -123,5 +123,7 @@ jobs:
       - uses: swatinem/rust-cache@v2
         with:
           workspaces: frontend/src-tauri
+      - name: Create placeholder sidecar resources
+        run: mkdir -p lexicon-backend jre models
       - run: cargo check
       - run: cargo test
