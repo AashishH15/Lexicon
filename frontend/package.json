@@ -69,6 +69,7 @@
     "@xmldom/xmldom": "0.8.15",
     "@vitest/mocker": "4.1.11",
     "js-yaml": "4.3.2",
-    "undici": "7.29.1"
+    "undici": "7.29.1",
+    "source-map-js": "1.2.2"
   }
 }
