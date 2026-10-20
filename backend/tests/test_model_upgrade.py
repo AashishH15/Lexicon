@@ -284,7 +284,7 @@ def test_model_delete_endpoint_surfaces_file_removal_failure():
         response = client.post("/model/delete", json={"model_key": "2b"})
 
     assert response.status_code == 500
-    assert response.json()["error"] == "locked"
+    assert response.json()["error"] == "model_delete_failed"
 
 
 def test_model_verify_endpoint(tmp_path):

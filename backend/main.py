@@ -295,12 +295,14 @@ def dictionary_add(request: DictionaryWordRequest):
     """Add one dictionary word without replacing concurrent changes."""
     try:
         return {"ok": True, **add_dictionary_word(request.word)}
-    except ValueError as exc:
-        return JSONResponse(status_code=400, content={"error": str(exc)})
-    except OSError as exc:
+    except ValueError:
+        return JSONResponse(
+            status_code=400, content={"error": "Dictionary word cannot be empty."}
+        )
+    except OSError:
         return JSONResponse(
             status_code=503,
-            content={"error": "dictionary_unavailable", "detail": str(exc)},
+            content={"error": "dictionary_unavailable"},
         )
 
 
@@ -309,12 +311,14 @@ def dictionary_remove(request: DictionaryWordRequest):
     """Remove one dictionary word without replacing concurrent changes."""
     try:
         return {"ok": True, **remove_dictionary_word(request.word)}
-    except ValueError as exc:
-        return JSONResponse(status_code=400, content={"error": str(exc)})
-    except OSError as exc:
+    except ValueError:
+        return JSONResponse(
+            status_code=400, content={"error": "Dictionary word cannot be empty."}
+        )
+    except OSError:
         return JSONResponse(
             status_code=503,
-            content={"error": "dictionary_unavailable", "detail": str(exc)},
+            content={"error": "dictionary_unavailable"},
         )
 
 
@@ -349,8 +353,8 @@ def ai_load(request: ModelLoadRequest | None = None):
     try:
         info = load_bundled_model(request.model_key if request else None)
         return {"loaded": True, **info}
-    except Exception as exc:
-        return JSONResponse(status_code=500, content={"error": str(exc), "detail": str(exc)})
+    except Exception:
+        return JSONResponse(status_code=500, content={"error": "model_load_failed"})
 
 
 @app.post("/ai/unload")
@@ -378,13 +382,15 @@ def grammar_check(request: GrammarRequest):
         matches = check_text(request.text, request.language, ignore)
         return {"matches": matches}
     except Exception as exc:
-        # Surface a clear message (e.g. "can't find Java") instead of a bare
-        # unhandled 500 so Review can show a useful diagnostic.
+        # Keep the Java-missing hint. Do not return exception text or paths.
+        detail = "grammar_engine_unavailable"
+        if "java" in str(exc).lower():
+            detail = "can't find Java"
         return JSONResponse(
             status_code=503,
             content={
                 "error": "grammar_engine_unavailable",
-                "detail": str(exc) or exc.__class__.__name__,
+                "detail": detail,
             },
         )
 
@@ -730,10 +736,10 @@ def model_delete(request: ModelDownloadRequest):
     """Remove a downloaded GGUF (user switched models / freed space)."""
     try:
         delete_model(request.model_key)
-    except ValueError as exc:
-        return JSONResponse(status_code=400, content={"error": str(exc)})
-    except OSError as exc:
-        return JSONResponse(status_code=500, content={"error": str(exc)})
+    except ValueError:
+        return JSONResponse(status_code=400, content={"error": "unknown_model"})
+    except OSError:
+        return JSONResponse(status_code=500, content={"error": "model_delete_failed"})
     return {"deleted": request.model_key}
 
 
@@ -753,8 +759,8 @@ def model_cleanup_legacy(request: ModelDownloadRequest):
         )
     try:
         result = cleanup_legacy_model(request.model_key, primary_verified=True)
-    except ValueError as exc:
-        return JSONResponse(status_code=400, content={"error": str(exc)})
+    except ValueError:
+        return JSONResponse(status_code=400, content={"error": "unknown_model"})
     if result.get("error"):
         return JSONResponse(status_code=500, content=result)
     return result
@@ -777,12 +783,12 @@ def model_download(request: ModelDownloadRequest):
     """
     try:
         status = download_model(request.model_key)
-    except ValueError as exc:
-        return JSONResponse(status_code=400, content={"error": str(exc)})
+    except ValueError:
+        return JSONResponse(status_code=400, content={"error": "unknown_model"})
     except RuntimeError as exc:
         if "cancelled" in str(exc).lower():
             return {"state": "cancelled", "error": None}
-        return JSONResponse(status_code=500, content={"error": str(exc)})
+        return JSONResponse(status_code=500, content={"error": "model_download_failed"})
     if status.get("state") == "ready":
         current = load_prefs()
         save_prefs(
@@ -830,20 +836,20 @@ def transform(request: TransformRequest):
             request.text,
             **opts,
         )
-    except InferenceCancelled as exc:
+    except InferenceCancelled:
         return JSONResponse(
             status_code=499,
-            content={"error": str(exc), "detail": str(exc)},
+            content={"error": "cancelled"},
         )
-    except InferenceUnavailable as exc:
+    except InferenceUnavailable:
         return JSONResponse(
             status_code=503,
-            content={"error": str(exc), "detail": str(exc)},
+            content={"error": "inference_unavailable"},
         )
-    except Exception as exc:
+    except Exception:
         return JSONResponse(
             status_code=500,
-            content={"error": str(exc), "detail": str(exc)},
+            content={"error": "transform_failed"},
         )
     finally:
         _remove_transform_job(job_id, job)
