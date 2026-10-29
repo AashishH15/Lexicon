@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=Lexicon
+GenericName=Writing Assistant
+Comment=Local-first grammar and AI writing assistant
+Exec=lexicon
+Icon=io.github.AashishH15.Lexicon
+Terminal=false
+Categories=Office;WordProcessor;
+Keywords=grammar;spelling;proofreading;writing;LanguageTool;
+StartupWMClass=lexicon
+StartupNotify=true

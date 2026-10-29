@@ -388,8 +388,97 @@ jobs:
           path: extension/dist/lexicon-firefox-*.xpi
           if-no-files-found: error
 
+  flatpak:
+    name: Build Linux Flatpak bundle
+    needs: desktop
+    runs-on: ubuntu-latest
+    # flatpak-builder needs unprivileged user namespaces for bwrap. AppArmor
+    # blocks them on Ubuntu 24.04 runners, so the build runs in Flathub's
+    # privileged CI image.
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-51
+      options: --privileged
+    defaults:
+      run:
+        shell: bash
+    env:
+      # flathub/shared-modules commit that provides libayatana-appindicator.
+      SHARED_MODULES_COMMIT: d1ab132e6480acefc5c510ee13d8d586d36cab19
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: lexicon-linux-x64
+          path: linux-deb
+
+      - name: Prepare Flatpak sources
+        id: prepare
+        working-directory: packaging/flatpak
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          debs=(../../linux-deb/*.deb)
+          if [[ ${#debs[@]} -ne 1 ]]; then
+            echo "Expected one .deb in lexicon-linux-x64, found ${#debs[@]}"
+            exit 1
+          fi
+          cp "${debs[0]}" lexicon.deb
+          git clone https://github.com/flathub/shared-modules.git shared-modules
+          git -C shared-modules checkout --detach "$SHARED_MODULES_COMMIT"
+          python3 - <<'PY'
+          import os
+          from datetime import datetime, timezone
+          from pathlib import Path
+          from xml.sax.saxutils import escape, quoteattr
+
+          tag = os.environ["RELEASE_TAG"]
+          version = tag.removeprefix("v")
+          repository = os.environ["REPOSITORY"]
+          # AppStream sorts "~" before the final release: 0.11.0~beta.7 < 0.11.0.
+          appstream_version = version.replace("-", "~", 1)
+          release_type = "development" if "-" in version else "stable"
+          date = datetime.now(timezone.utc).date().isoformat()
+          details_url = f"https://github.com/{repository}/releases/tag/{tag}"
+
+          path = Path("io.github.AashishH15.Lexicon.metainfo.xml")
+          metainfo = path.read_text(encoding="utf-8")
+          if "<releases>" in metainfo:
+              raise SystemExit("The metainfo file already has a <releases> element")
+          releases = (
+              "  <releases>\n"
+              f"    <release version={quoteattr(appstream_version)} date=\"{date}\" type=\"{release_type}\">\n"
+              f"      <url type=\"details\">{escape(details_url)}</url>\n"
+              "    </release>\n"
+              "  </releases>\n"
+          )
+          path.write_text(
+              metainfo.replace("</component>", releases + "</component>", 1),
+              encoding="utf-8",
+          )
+          PY
+          echo "bundle=Lexicon_${RELEASE_TAG#v}_x86_64.flatpak" >> "$GITHUB_OUTPUT"
+
+      - name: Build Flatpak bundle
+        uses: flatpak/flatpak-github-actions/flatpak-builder@v6
+        with:
+          manifest-path: packaging/flatpak/io.github.AashishH15.Lexicon.yml
+          bundle: ${{ steps.prepare.outputs.bundle }}
+          cache: false
+          upload-artifact: false
+
+      - name: Upload Flatpak bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: lexicon-linux-flatpak
+          path: ${{ steps.prepare.outputs.bundle }}
+          if-no-files-found: error
+
   release:
-    needs: [desktop, extension-chrome, extension-firefox]
+    needs: [desktop, flatpak, extension-chrome, extension-firefox]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -456,6 +545,7 @@ jobs:
           - **macOS Intel**: Intel Macs
           - **macOS Apple Silicon**: M-series Macs
           - **Linux x64**: 64-bit Linux (.deb for Ubuntu, Debian, Mint, Pop!_OS)
+          - **Linux Flatpak**: 64-bit Linux on any distribution with Flatpak (.flatpak). Install it with `flatpak install --user <file>.flatpak`. The Flatpak build does not update itself; install the newer .flatpak file to update.
 
           macOS builds are unsigned. On first open, right-click the app and choose Open, or run:
           `xattr -dr com.apple.quarantine /Applications/Lexicon.app`
@@ -560,6 +650,7 @@ jobs:
             artifacts/lexicon-macos-x64/*
             artifacts/lexicon-macos-arm64/*
             artifacts/lexicon-linux-x64/*
+            artifacts/lexicon-linux-flatpak/*
             artifacts/lexicon-chrome-extension/*
             artifacts/lexicon-firefox-extension/*
             artifacts/latest.json

@@ -125,6 +125,12 @@ fn launched_from_autostart() -> bool {
     env::args().any(|argument| argument == AUTOSTART_ARG)
 }
 
+// Flatpak sets FLATPAK_ID for every process in the sandbox. A Flatpak build
+// cannot replace its own files or write the host autostart entry.
+fn running_in_flatpak() -> bool {
+    env::var_os("FLATPAK_ID").is_some_and(|id| !id.is_empty())
+}
+
 #[cfg(target_os = "windows")]
 #[cfg_attr(debug_assertions, allow(dead_code))]
 fn user_disabled_in_task_manager() -> bool {
@@ -948,11 +954,21 @@ pub struct UpdateMetadata {
 struct PendingUpdate(Mutex<Option<Update>>);
 
 #[tauri::command]
+fn updates_managed_by_flatpak() -> bool {
+    running_in_flatpak()
+}
+
+#[tauri::command]
 async fn fetch_update(
     app: tauri::AppHandle,
     pending: tauri::State<'_, PendingUpdate>,
     beta: bool,
 ) -> Result<Option<UpdateMetadata>, String> {
+    // The Flatpak build gets new versions from a new Flatpak install.
+    // The update check must not send a network request there.
+    if running_in_flatpak() {
+        return Ok(None);
+    }
     let endpoint = if beta {
         BETA_UPDATE_ENDPOINT
     } else {
@@ -990,6 +1006,9 @@ async fn install_update(
     pending: tauri::State<'_, PendingUpdate>,
     on_event: Channel<DownloadEvent>,
 ) -> Result<(), String> {
+    if running_in_flatpak() {
+        return Err("the Flatpak build cannot install updates".to_string());
+    }
     let update = pending
         .0
         .lock()
@@ -1105,7 +1124,7 @@ fn main() {
             {
                 // Restore startup registration on launch or update,
                 // unless the user disabled Lexicon in their OS startup manager.
-                if !user_disabled_in_task_manager() {
+                if !running_in_flatpak() && !user_disabled_in_task_manager() {
                     let autolaunch = app.autolaunch();
                     if let Ok(false) = autolaunch.is_enabled() {
                         if let Err(error) = autolaunch.enable() {
@@ -1219,6 +1238,7 @@ fn main() {
             restart_backend,
             get_auth_token,
             prepare_for_update,
+            updates_managed_by_flatpak,
             fetch_update,
             install_update,
             native_pdf_export,
@@ -1262,5 +1282,26 @@ mod tests {
     fn test_user_disabled_in_task_manager_execution() {
         // Must execute cleanly without panic.
         let _ = user_disabled_in_task_manager();
+    }
+
+    #[test]
+    fn test_running_in_flatpak_reads_flatpak_id() {
+        // This test is the only test that changes FLATPAK_ID.
+        // Parallel tests must not set or remove this variable.
+        let original = env::var_os("FLATPAK_ID");
+
+        env::remove_var("FLATPAK_ID");
+        assert!(!running_in_flatpak());
+
+        env::set_var("FLATPAK_ID", "");
+        assert!(!running_in_flatpak());
+
+        env::set_var("FLATPAK_ID", "io.github.AashishH15.Lexicon");
+        assert!(running_in_flatpak());
+
+        match original {
+            Some(value) => env::set_var("FLATPAK_ID", value),
+            None => env::remove_var("FLATPAK_ID"),
+        }
     }
 }

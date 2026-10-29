@@ -95,6 +95,20 @@ If Gatekeeper blocks Lexicon:
 ### Linux
 
 - **DEB (`.deb`)** - Debian, Ubuntu, Linux Mint, Pop!_OS, etc.
+- **Flatpak (`.flatpak`)** - Fedora, Arch, openSUSE, and other x86_64
+  distributions with [Flatpak](https://flatpak.org/setup/) installed
+
+To install the Flatpak build, download the `.flatpak` file and run:
+
+```bash
+flatpak install --user Lexicon_<version>_x86_64.flatpak
+```
+
+On first install, Flatpak downloads the GNOME runtime that Lexicon uses from
+Flathub, and adds the Flathub remote if it is missing. The Flatpak build keeps models and the user
+dictionary in `~/.local/share/Lexicon`, the same folder as the `.deb` build.
+The Flatpak build is not on Flathub, does not update itself, and does not
+register Lexicon to start at login.
 
 ## First launch
 
@@ -122,6 +136,10 @@ models and other app data in the user profile, so models do not need to be
 downloaded again after an update. Packaged builds enable operating-system
 startup by default and may run in the system tray while checking for updates.
 After initial setup, an operating-system startup disable is respected.
+
+The Linux Flatpak build does not check for updates. To update it, download the
+newest `.flatpak` file from the releases page and install it with the same
+`flatpak install --user` command. The installed app and its data stay in place.
 
 ## What Lexicon includes
 
@@ -326,7 +344,7 @@ or engine returns HTTP 503 with an actionable error instead of HTTP 500.
 ## Platform and release status
 
 The release workflow builds desktop installers for Windows (x86, x64, ARM64),
-macOS (Intel and Apple Silicon), and Linux x64 (`.deb`). Builds are triggered
+macOS (Intel and Apple Silicon), and Linux x64 (`.deb` and `.flatpak`). Builds are triggered
 from version tags and attached to published GitHub release artifacts.
 
 ## Technology

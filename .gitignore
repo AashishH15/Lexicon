@@ -22,6 +22,14 @@ Cargo.lock
 !frontend/src-tauri/jre/.gitkeep
 !frontend/src-tauri/models/.gitkeep
 
+# Flatpak build inputs and output
+packaging/flatpak/lexicon.deb
+packaging/flatpak/shared-modules/
+packaging/flatpak/.flatpak-builder/
+packaging/flatpak/build-dir/
+packaging/flatpak/repo/
+packaging/flatpak/*.flatpak
+
 # Environment
 .env
 .tauri/

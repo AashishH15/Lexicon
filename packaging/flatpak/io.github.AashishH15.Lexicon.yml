@@ -1,0 +1,67 @@
+# This manifest packs the Linux release .deb into a single-file Flatpak bundle.
+# The release workflow copies the .deb to lexicon.deb and clones
+# https://github.com/flathub/shared-modules into shared-modules/ before the build.
+# Flathub does not accept this manifest, because Flathub builds apps from source.
+id: io.github.AashishH15.Lexicon
+runtime: org.gnome.Platform
+runtime-version: '51'
+sdk: org.gnome.Sdk
+command: lexicon
+
+build-options:
+  # CMake 4.x in the GNOME 51 SDK installs to lib64 when no libdir is set.
+  # The runtime linker and pkg-config search /app/lib only.
+  libdir: /app/lib
+
+finish-args:
+  # Tauri v2 renders through WebKitGTK 4.1 on GTK 3.
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --share=ipc
+  - --device=dri
+  # The browser extension connects to the backend on 127.0.0.1:18000.
+  # The host browser can reach that port only if the app shares the host
+  # network namespace. Model downloads and Ollama or LM Studio servers
+  # also use this permission.
+  - --share=network
+  # Tray icon: the StatusNotifierItem D-Bus host must also read the icon
+  # file that tray-icon writes to $XDG_RUNTIME_DIR/tray-icon.
+  - --talk-name=org.kde.StatusNotifierWatcher
+  - --filesystem=xdg-run/tray-icon:create
+  # The backend writes models, the user dictionary and GPU packs to the
+  # fixed path ~/.local/share/Lexicon. This keeps the .deb storage path.
+  - --filesystem=xdg-data/Lexicon:create
+
+modules:
+  - shared-modules/libayatana-appindicator/libayatana-appindicator-gtk3.json
+
+  - name: lexicon
+    buildsystem: simple
+    sources:
+      - type: file
+        path: lexicon.deb
+        only-arches:
+          - x86_64
+      - type: file
+        path: io.github.AashishH15.Lexicon.desktop
+      - type: file
+        path: io.github.AashishH15.Lexicon.metainfo.xml
+      # Flatpak does not export PNG icons larger than 512x512, and the
+      # release .deb ships only a 1024x1024 icon.
+      - type: dir
+        path: icons
+        dest: icons
+    build-commands:
+      - ar x lexicon.deb data.tar.gz
+      - tar -xzf data.tar.gz
+      - install -Dm755 usr/bin/lexicon /app/bin/lexicon
+      # Tauri resolves resources from <exe dir>/../lib/<productName>.
+      - mkdir -p /app/lib
+      - cp -a usr/lib/Lexicon /app/lib/Lexicon
+      - install -Dm644 io.github.AashishH15.Lexicon.desktop -t /app/share/applications
+      - install -Dm644 io.github.AashishH15.Lexicon.metainfo.xml -t /app/share/metainfo
+      - |
+        for size in 128 256 512; do
+          install -Dm644 icons/icon-${size}.png \
+            /app/share/icons/hicolor/${size}x${size}/apps/io.github.AashishH15.Lexicon.png
+        done

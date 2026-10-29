@@ -19,6 +19,7 @@ vi.mock("@tauri-apps/plugin-process", () => ({
 
 import {
   updaterIsAvailable,
+  updatesManagedByFlatpak,
   checkForUpdate,
   installUpdate,
 } from "../updater.js";
@@ -50,6 +51,26 @@ describe("updaterIsAvailable", () => {
 
   it("is true in production with the Tauri runtime", () => {
     expect(updaterIsAvailable()).toBe(true);
+  });
+});
+
+describe("updatesManagedByFlatpak", () => {
+  it("returns false outside the Tauri runtime without invoking", async () => {
+    delete window.__TAURI_INTERNALS__;
+    expect(await updatesManagedByFlatpak()).toBe(false);
+    expect(invokeMock).not.toHaveBeenCalled();
+  });
+
+  it("returns false in dev mode without invoking", async () => {
+    vi.stubEnv("DEV", true);
+    expect(await updatesManagedByFlatpak()).toBe(false);
+    expect(invokeMock).not.toHaveBeenCalled();
+  });
+
+  it("asks the desktop shell in production builds", async () => {
+    invokeMock.mockResolvedValue(true);
+    expect(await updatesManagedByFlatpak()).toBe(true);
+    expect(invokeMock).toHaveBeenCalledWith("updates_managed_by_flatpak");
   });
 });
 

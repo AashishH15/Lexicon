@@ -171,6 +171,10 @@ def main() -> None:
         ROOT / "extension" / "shared" / "icons" / "icon-32.png": resize_icon(icon, 32),
         ROOT / "extension" / "shared" / "icons" / "icon-48.png": resize_icon(icon, 48),
         ROOT / "extension" / "shared" / "icons" / "icon-128.png": resize_icon(icon, 128),
+        # Flatpak does not export PNG app icons larger than 512x512.
+        ROOT / "packaging" / "flatpak" / "icons" / "icon-128.png": resize_icon(icon, 128),
+        ROOT / "packaging" / "flatpak" / "icons" / "icon-256.png": resize_icon(icon, 256),
+        ROOT / "packaging" / "flatpak" / "icons" / "icon-512.png": resize_icon(icon, 512),
     }
 
     for path, image in targets.items():

@@ -123,6 +123,7 @@ import {
   checkForUpdate,
   installUpdate,
   updaterIsAvailable,
+  updatesManagedByFlatpak,
 } from "./updater.js";
 import UpdateBanner from "./UpdateBanner.jsx";
 import UpdateModal from "./UpdateModal.jsx";
@@ -484,6 +485,17 @@ export default function App() {
         dismissed: false,
       }));
       try {
+        if (await updatesManagedByFlatpak()) {
+          setUpdateState({
+            status: "unavailable",
+            update: null,
+            message:
+              "The Flatpak build does not update itself. To update, install the newest Lexicon .flatpak file from the GitHub releases page.",
+            progress: null,
+            dismissed: false,
+          });
+          return null;
+        }
         const update = await checkForUpdate({ beta });
         if (!update) {
           setUpdateState({

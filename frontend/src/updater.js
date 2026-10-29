@@ -9,6 +9,15 @@ export function updaterIsAvailable() {
   return isTauriRuntime() && !import.meta.env.DEV;
 }
 
+// A Flatpak install cannot replace its own files, so the shell reports it
+// and the app shows how to update instead of offering an install.
+export async function updatesManagedByFlatpak() {
+  if (!updaterIsAvailable()) {
+    return false;
+  }
+  return invoke("updates_managed_by_flatpak");
+}
+
 export async function checkForUpdate({ beta = false } = {}) {
   if (!updaterIsAvailable()) {
     return null;

@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- The release workflow adds a releases element with the version of each tag. -->
+<component type="desktop-application">
+  <id>io.github.AashishH15.Lexicon</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT</project_license>
+
+  <name>Lexicon</name>
+  <summary>Local-first grammar and AI writing assistant</summary>
+  <developer id="io.github.aashishh15">
+    <name>Aashish Harishchandre</name>
+  </developer>
+
+  <description>
+    <p>
+      Lexicon is a writing editor with proofreading and AI rewrites that run on your computer by default.
+    </p>
+    <ul>
+      <li>LanguageTool checks grammar and spelling locally. Proofreading works without an AI model.</li>
+      <li>An optional local AI model powers rewrites after you choose to download it.</li>
+      <li>Lexicon can also use an Ollama or LM Studio server that you configure.</li>
+      <li>A companion browser extension sends text to the local Lexicon app for checks in web pages.</li>
+    </ul>
+    <p>
+      There is no account and no Lexicon cloud document service. Model downloads and servers that you configure may use the network.
+    </p>
+  </description>
+
+  <launchable type="desktop-id">io.github.AashishH15.Lexicon.desktop</launchable>
+
+  <url type="homepage">https://lexicon-writer.pages.dev/</url>
+  <url type="bugtracker">https://github.com/AashishH15/Lexicon/issues</url>
+  <url type="vcs-browser">https://github.com/AashishH15/Lexicon</url>
+
+  <screenshots>
+    <screenshot type="default">
+      <caption>Proofreading issues in the editor</caption>
+      <image>https://raw.githubusercontent.com/AashishH15/Lexicon/master/media/Lex%20Status%20Screenshots/app-proofread-issues.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>The editor with no open checks</caption>
+      <image>https://raw.githubusercontent.com/AashishH15/Lexicon/master/media/Lex%20Status%20Screenshots/app-idle.png</image>
+    </screenshot>
+  </screenshots>
+
+  <branding>
+    <color type="primary" scheme_preference="light">#f7f7f5</color>
+  </branding>
+
+  <content_rating type="oars-1.1"/>
+
+  <requires>
+    <display_length compare="ge">900</display_length>
+  </requires>
+  <supports>
+    <control>keyboard</control>
+    <control>pointing</control>
+  </supports>
+</component>
