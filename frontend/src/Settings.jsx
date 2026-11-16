@@ -35,6 +35,7 @@ import CustomToolsSettings from "./CustomToolsSettings.jsx";
 import { TYPOGRAPHY_PRESETS } from "./typographyPresets.js";
 import { PAPER_TEXTURES } from "./paperTextures.js";
 import { READING_MODES } from "./readingMode.js";
+import { ZOOM_MIN, ZOOM_MAX, ZOOM_STEP } from "./uiZoom.js";
 import { setAiPreference, openExternalUrl } from "./api.js";
 
 const githubWeights = new Map([
@@ -119,6 +120,7 @@ export const SETTINGS_DEFAULTS = {
   typographyPreset: "current",
   paperTexture: "plain-white",
   readingMode: "off",
+  uiZoom: 100,
 };
 
 const isMac =
@@ -291,6 +293,12 @@ const SEARCH_INDEX = [
     ],
   },
   {
+    label: "Size (UI Zoom)",
+    tab: "appearance",
+    settingKey: "ui-zoom",
+    keywords: ["size", "zoom", "scale", "scaling", "tv", "large", "bigger"],
+  },
+  {
     label: "Typography Preset",
     tab: "appearance",
     settingKey: "typography-preset",
@@ -451,6 +459,8 @@ export default function Settings({
   paperTexture,
   onPaperTextureChange,
   readingMode,
+  uiZoom,
+  onUiZoomChange,
   onReadingModeChange,
   onResetDefaults,
   onCheckForUpdates,
@@ -487,7 +497,8 @@ export default function Settings({
     proseScanEnabled === SETTINGS_DEFAULTS.proseScanEnabled &&
     typographyPreset === SETTINGS_DEFAULTS.typographyPreset &&
     paperTexture === SETTINGS_DEFAULTS.paperTexture &&
-    readingMode === SETTINGS_DEFAULTS.readingMode;
+    readingMode === SETTINGS_DEFAULTS.readingMode &&
+    uiZoom === SETTINGS_DEFAULTS.uiZoom;
 
   const updateBusy = ["checking", "installing"].includes(updateState?.status);
   const updateButtonLabel =
@@ -1098,6 +1109,50 @@ export default function Settings({
                   <h2 className="font-serif text-xl font-bold text-ink pb-1">
                     Appearance
                   </h2>
+
+                  <div
+                    data-setting-key="ui-zoom"
+                    className={getHighlightClass("ui-zoom")}
+                  >
+                    <p className="font-mono text-[10px] uppercase tracking-widest text-muted">
+                      Size
+                    </p>
+                    <p className="mt-1 font-sans text-xs text-muted">
+                      Zoom the whole interface, useful for TVs and large
+                      displays. Shortcuts: Ctrl +, Ctrl -, Ctrl 0 to reset, or Ctrl + scroll wheel.
+                    </p>
+                    <div className="mt-3 flex items-center gap-3">
+                      <button
+                        type="button"
+                        aria-label="Zoom out"
+                        onClick={() => onUiZoomChange(uiZoom - ZOOM_STEP)}
+                        disabled={uiZoom <= ZOOM_MIN}
+                        className="rounded border border-hairline bg-canvas px-3 py-1.5 font-mono text-xs text-ink hover:border-muted disabled:opacity-40"
+                      >
+                        −
+                      </button>
+                      <span className="w-14 text-center font-mono text-xs text-ink">
+                        {uiZoom}%
+                      </span>
+                      <button
+                        type="button"
+                        aria-label="Zoom in"
+                        onClick={() => onUiZoomChange(uiZoom + ZOOM_STEP)}
+                        disabled={uiZoom >= ZOOM_MAX}
+                        className="rounded border border-hairline bg-canvas px-3 py-1.5 font-mono text-xs text-ink hover:border-muted disabled:opacity-40"
+                      >
+                        +
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onUiZoomChange(SETTINGS_DEFAULTS.uiZoom)}
+                        disabled={uiZoom === SETTINGS_DEFAULTS.uiZoom}
+                        className="ml-auto font-mono text-[10px] uppercase tracking-widest text-muted hover:text-ink disabled:opacity-40"
+                      >
+                        Reset
+                      </button>
+                    </div>
+                  </div>
 
                   <div
                     data-setting-key="typography-preset"
