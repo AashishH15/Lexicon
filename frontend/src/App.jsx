@@ -78,6 +78,15 @@ import {
   loadReadingMode,
 } from "./appearanceSettings.js";
 import {
+  applyUiZoom,
+  clampZoom,
+  loadUiZoom,
+  uiZoomKey,
+  ZOOM_STEP,
+  zoomShortcutAction,
+  zoomWheelAction,
+} from "./uiZoom.js";
+import {
   GrammarHighlight,
   buildTextWithMap,
   applyGrammarDecorations,
@@ -335,6 +344,7 @@ export default function App() {
   const [typographyPreset, setTypographyPreset] = useState(loadTypographyPreset);
   const [paperTexture, setPaperTexture] = useState(loadPaperTexture);
   const [readingMode, setReadingMode] = useState(loadReadingMode);
+  const [uiZoom, setUiZoom] = useState(loadUiZoom);
   const [userDictionary, setUserDictionary] = useState(loadDictionary);
   const [documentHistory, setDocumentHistory] = useState(() =>
     loadHistory(documentHistoryKey)
@@ -1465,6 +1475,36 @@ export default function App() {
     localStorage.setItem(languageKey, nextLanguage);
   }
 
+  useEffect(() => {
+    applyUiZoom(uiZoom);
+    try {
+      if (uiZoom === SETTINGS_DEFAULTS.uiZoom) {
+        localStorage.removeItem(uiZoomKey);
+      } else {
+        localStorage.setItem(uiZoomKey, String(uiZoom));
+      }
+    } catch {
+      // storage unavailable — zoom still applies for this session
+    }
+  }, [uiZoom]);
+
+  useEffect(() => {
+    const handleWheel = (event) => {
+      const action = zoomWheelAction(event);
+      if (!action) return;
+      event.preventDefault();
+      setUiZoom((current) =>
+        clampZoom(current + (action === "in" ? ZOOM_STEP : -ZOOM_STEP))
+      );
+    };
+    window.addEventListener("wheel", handleWheel, { passive: false });
+    return () => window.removeEventListener("wheel", handleWheel);
+  }, []);
+
+  function handleUiZoomChange(next) {
+    setUiZoom(clampZoom(next));
+  }
+
   function handleFontSizeChange(nextSize) {
     setFontSize(nextSize);
     localStorage.setItem(fontSizeKey, String(nextSize));
@@ -1658,6 +1698,7 @@ export default function App() {
     setTypographyPreset(SETTINGS_DEFAULTS.typographyPreset);
     setPaperTexture(SETTINGS_DEFAULTS.paperTexture);
     setReadingMode(SETTINGS_DEFAULTS.readingMode);
+    setUiZoom(SETTINGS_DEFAULTS.uiZoom);
     localStorage.removeItem(languageKey);
     localStorage.removeItem(fontSizeKey);
     localStorage.removeItem(focusModeKey);
@@ -1688,6 +1729,17 @@ export default function App() {
 
       if (event.key === "Escape") {
         setSettingsOpen((current) => (current ? false : current));
+        return;
+      }
+
+      const zoomAction = zoomShortcutAction(event);
+      if (zoomAction) {
+        event.preventDefault();
+        setUiZoom((current) =>
+          zoomAction === "reset"
+            ? SETTINGS_DEFAULTS.uiZoom
+            : clampZoom(current + (zoomAction === "in" ? ZOOM_STEP : -ZOOM_STEP))
+        );
         return;
       }
 
@@ -2550,6 +2602,8 @@ export default function App() {
           onLanguageChange={handleLanguageChange}
           fontSize={fontSize}
           onFontSizeChange={handleFontSizeChange}
+          uiZoom={uiZoom}
+          onUiZoomChange={handleUiZoomChange}
           lineSpacing={lineSpacing}
           onLineSpacingChange={handleLineSpacingChange}
           focusMode={focusMode}

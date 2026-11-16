@@ -299,6 +299,7 @@ describe("Settings smart defaults & reset", () => {
       typographyPreset: "current",
       paperTexture: "plain-white",
       readingMode: "off",
+      uiZoom: 100,
     });
   });
 
